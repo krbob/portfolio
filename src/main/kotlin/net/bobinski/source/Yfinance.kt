@@ -6,7 +6,8 @@ import net.bobinski.data.HistoricalPrice
 object Yfinance {
 
     fun get(symbol: String, period: Period): Collection<HistoricalPrice> {
-        ProcessBuilder("python3", "history.py", symbol, period.value).run {
+        //TODO create a separate dockerized service for this
+        ProcessBuilder("python3", "/bin/history.py", symbol, period.value).run {
             start()
         }.run {
             String(inputStream.readAllBytes())
