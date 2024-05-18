@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Analysis(
     val symbol: String,
-    val date: LocalDate,
     val generationTimeMs: Long,
+    val date: LocalDate,
+    val lastPrice: Double,
     val gain: Gain,
     val rsi: Rsi,
     val dividendYield: Double,

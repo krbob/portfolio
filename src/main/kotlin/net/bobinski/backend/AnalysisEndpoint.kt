@@ -3,6 +3,7 @@ package net.bobinski.backend
 import kotlinx.datetime.toKotlinLocalDate
 import net.bobinski.data.Analysis
 import net.bobinski.logic.CalculateGain
+import net.bobinski.logic.CalculateLastPrice
 import net.bobinski.logic.CalculateRsi
 import net.bobinski.logic.CalculateYield
 import net.bobinski.source.Backend
@@ -23,8 +24,9 @@ object AnalysisEndpoint {
 
             analysis = Analysis(
                 symbol = symbol,
-                date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
                 generationTimeMs = 0,
+                date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
+                lastPrice = CalculateLastPrice(data),
                 gain = Analysis.Gain(
                     monthly = CalculateGain.monthly(data),
                     quarterly = CalculateGain.quarterly(data),
