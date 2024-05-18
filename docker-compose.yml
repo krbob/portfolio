@@ -1,0 +1,18 @@
+services:
+  ktor-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7777:7777"
+    depends_on:
+      - python-backend
+    environment:
+      - BACKEND_URL=http://python-backend:7776
+
+  python-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "7776:7776"

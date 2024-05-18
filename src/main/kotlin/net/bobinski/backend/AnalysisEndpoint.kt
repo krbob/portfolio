@@ -2,24 +2,22 @@ package net.bobinski.backend
 
 import kotlinx.datetime.toKotlinLocalDate
 import net.bobinski.data.Analysis
-import net.bobinski.data.monthlyBars
-import net.bobinski.data.weeklyBars
 import net.bobinski.logic.CalculateGain
 import net.bobinski.logic.CalculateRsi
 import net.bobinski.logic.CalculateYield
-import net.bobinski.source.Yfinance
+import net.bobinski.source.Backend
 import java.time.Clock
 import java.time.LocalDate
 import kotlin.system.measureTimeMillis
 
 object AnalysisEndpoint {
 
-    fun forStock(symbol: String): Analysis {
+    suspend fun forStock(symbol: String): Analysis {
         var analysis: Analysis? = null
         val generationTime = measureTimeMillis {
-            val data = Yfinance.get(
+            val data = Backend.getHistory(
                 symbol,
-                Yfinance.Period._5y
+                Backend.Period._5y
             )//.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
             if (data.isEmpty()) throw IllegalArgumentException("No data for $symbol")
 
