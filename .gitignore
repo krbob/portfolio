@@ -4,6 +4,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 local.properties
+yfinance_cache.sqlite
 
 ### STS ###
 .apt_generated

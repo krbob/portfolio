@@ -1,6 +1,8 @@
+import io
+import json
+import requests_cache
 import yfinance as yf
 from dataclasses import dataclass
-import json
 
 
 @dataclass
@@ -32,7 +34,11 @@ def serialize(obj):
 
 
 def get_history(ticker, period):
-    data = yf.Ticker(ticker)
+    session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
+    session.headers['User-agent'] = 'portfolio/1.0'
+    # yf.utils.requests = session
+
+    data = yf.Ticker(ticker, session=session)
     history = data.history(period=period, auto_adjust=False)
     days = []
     for index, row in history.iterrows():
@@ -60,5 +66,14 @@ if __name__ == "__main__":
     ticker = sys.argv[1]
     period = sys.argv[2]
 
-    history = get_history(ticker, period)
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+
+    try:
+        history = get_history(ticker, period)
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
     print(history)
