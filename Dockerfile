@@ -1,14 +1,16 @@
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jdk as builder
 
 WORKDIR /app
 
 COPY . /app
 
-RUN ./gradlew installDist --no-daemon && \
-    cp -rf build/install/portfolio/bin/portfolio /bin/ &&  \
-    cp -rf build/install/portfolio/lib/* /lib/ && \
-    rm -rf /src /root/.cache /root/.gradle /root/.kotlin
+RUN ./gradlew installDist --no-daemon
+
+FROM eclipse-temurin:17-jre
+
+COPY --from=builder /app/build/install/portfolio/bin /bin
+COPY --from=builder  /app/build/install/portfolio/lib /lib
 
 EXPOSE 7777
 
-ENTRYPOINT ["/bin/portfolio"]
+ENTRYPOINT ["portfolio"]

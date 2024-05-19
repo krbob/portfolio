@@ -1,5 +1,7 @@
 .gradle
 build/
+dist/
+app.spec
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
