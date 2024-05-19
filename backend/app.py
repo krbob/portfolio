@@ -26,10 +26,32 @@ class HistoricalPrice:
             'dividend': self.dividend
         }
 
+
+@dataclass
+class BasicInfo:
+    name: str
+    pe_ratio: float
+    pb_ratio: float
+    eps: float
+    roe: float
+    market_cap: float
+
+    def to_json(self):
+        return {
+            'name': self.name,
+            'pe_ratio': self.pe_ratio,
+            'pb_ratio': self.pb_ratio,
+            'eps': self.eps,
+            'roe': self.roe,
+            'market_cap': self.market_cap
+        }
+
+
 def serialize(obj):
-    if isinstance(obj, HistoricalPrice):
+    if isinstance(obj, (HistoricalPrice, BasicInfo)):
         return obj.to_json()
     return obj
+
 
 def get_history(symbol, period):
     session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
@@ -53,6 +75,24 @@ def get_history(symbol, period):
 
     return days
 
+
+def get_basic_info(symbol):
+    session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
+    session.headers['User-agent'] = 'portfolio/1.0'
+
+    data = yf.Ticker(symbol, session=session)
+    info = data.info
+
+    return BasicInfo(
+        name=info.get('longName', None),
+        pe_ratio=info.get('forwardPE', None),
+        pb_ratio=info.get('priceToBook', None),
+        eps=info.get('trailingEps', None),
+        roe=info.get('returnOnEquity', None),
+        market_cap=info.get('marketCap', None)
+    )
+
+
 @app.route('/history', methods=['GET'])
 def history_endpoint():
     symbol = request.args.get('symbol')
@@ -70,6 +110,25 @@ def history_endpoint():
 
     return jsonify([day.to_json() for day in history])
 
+
+@app.route('/info', methods=['GET'])
+def info_endpoint():
+    symbol = request.args.get('symbol')
+
+    if not symbol:
+        return jsonify({"error": "Parameter 'symbol' is required"}), 400
+
+    try:
+        info = get_basic_info(symbol)
+    except yf.shared.exceptions.YFinanceError as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+    return jsonify(info.to_json())
+
+
 if __name__ == '__main__':
     from waitress import serve
+
     serve(app, host='0.0.0.0', port=7776)

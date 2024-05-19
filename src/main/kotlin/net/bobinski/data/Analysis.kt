@@ -6,12 +6,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Analysis(
     val symbol: String,
-    val generationTimeMs: Long,
+    val name: String,
     val date: LocalDate,
     val lastPrice: Double,
     val gain: Gain,
     val rsi: Rsi,
     val dividendYield: Double,
+    val peRatio: Float?,
+    val pbRatio: Float?,
+    val eps: Float?,
+    val roe: Float?,
+    val marketCap: Float?,
+    val generationTimeMs: Long
 ) {
 
     @Serializable

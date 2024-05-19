@@ -7,6 +7,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import net.bobinski.Config
+import net.bobinski.data.BasicInfo
 import net.bobinski.data.HistoricalPrice
 
 object Backend {
@@ -20,6 +21,12 @@ object Backend {
     suspend fun getHistory(symbol: String, period: Period): Collection<HistoricalPrice> {
         return client
             .get("${Config.backendUrl}/history?symbol=$symbol&period=${period.value}")
+            .body()
+    }
+
+    suspend fun getInfo(symbol: String): BasicInfo {
+        return client
+            .get("${Config.backendUrl}/info?symbol=$symbol")
             .body()
     }
 
