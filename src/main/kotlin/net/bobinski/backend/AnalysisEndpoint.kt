@@ -1,7 +1,11 @@
 package net.bobinski.backend
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.toKotlinLocalDate
 import net.bobinski.data.Analysis
+import net.bobinski.data.BasicInfo
+import net.bobinski.data.HistoricalPrice
 import net.bobinski.logic.CalculateGain
 import net.bobinski.logic.CalculateLastPrice
 import net.bobinski.logic.CalculateRsi
@@ -12,12 +16,20 @@ import java.time.LocalDate
 
 object AnalysisEndpoint {
 
+    private val locks = mutableMapOf<String, Mutex>()
+
     suspend fun forStock(symbol: String): Analysis {
-        val info = Backend.getInfo(symbol)
-        val history = Backend.getHistory(
-            symbol,
-            Backend.Period._5y
-        )//.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
+        val backendData = getLock(symbol).withLock {
+            val info = Backend.getInfo(symbol)
+            val history = Backend.getHistory(
+                symbol,
+                Backend.Period._5y
+            )//.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
+            BackendData(info, history)
+        }
+        val info = backendData.info
+        val history = backendData.history
+
         if (info.name == null || history.isEmpty()) throw IllegalArgumentException("No data for $symbol")
 
         return Analysis(
@@ -46,5 +58,20 @@ object AnalysisEndpoint {
             roe = info.roe,
             marketCap = info.marketCap
         )
+    }
+
+    private fun getLock(key: String): Mutex {
+        return locks.getOrPut(key) { Mutex() }
+    }
+
+    @JvmInline
+    private value class BackendData(private val value: Pair<BasicInfo, Collection<HistoricalPrice>>) {
+        constructor(info: BasicInfo, history: Collection<HistoricalPrice>)
+                : this(Pair(info, history))
+
+        val info: BasicInfo
+            get() = value.first
+        val history: Collection<HistoricalPrice>
+            get() = value.second
     }
 }
