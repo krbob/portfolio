@@ -16,8 +16,7 @@ data class Analysis(
     val pbRatio: Float?,
     val eps: Float?,
     val roe: Float?,
-    val marketCap: Float?,
-    val generationTimeMs: Long
+    val marketCap: Float?
 ) {
 
     @Serializable

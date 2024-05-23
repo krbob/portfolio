@@ -9,7 +9,7 @@ import io.ktor.server.routing.get
 
 enum class Endpoint(private val configuration: Routing.() -> Unit) {
     ANALYSIS({
-        get("{stock?}") {
+        get("/analysis/{stock}") {
             try {
                 val stock = checkNotNull(call.parameters["stock"])
                 call.respond(AnalysisEndpoint.forStock(stock))
