@@ -1,9 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 import yfinance as yf
 import requests_cache
 from dataclasses import dataclass
+import logging
+import time
 
 app = Flask(__name__)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class HistoricalPrice:
@@ -26,7 +31,6 @@ class HistoricalPrice:
             'dividend': self.dividend
         }
 
-
 @dataclass
 class BasicInfo:
     name: str
@@ -46,12 +50,10 @@ class BasicInfo:
             'market_cap': self.market_cap
         }
 
-
 def serialize(obj):
     if isinstance(obj, (HistoricalPrice, BasicInfo)):
         return obj.to_json()
     return obj
-
 
 def get_history(symbol, period):
     session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
@@ -75,7 +77,6 @@ def get_history(symbol, period):
 
     return days
 
-
 def get_basic_info(symbol):
     session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
     session.headers['User-agent'] = 'portfolio/1.0'
@@ -92,12 +93,26 @@ def get_basic_info(symbol):
         market_cap=info.get('marketCap', None)
     )
 
+@app.before_request
+def start_timer():
+    g.start_time = time.time()
 
-@app.route('/history', methods=['GET'])
-def history_endpoint():
-    symbol = request.args.get('symbol')
-    period = request.args.get('period')
+@app.after_request
+def log_request_info(response):
+    if hasattr(g, 'start_time'):
+        duration = time.time() - g.start_time
+        duration_ms = int(duration * 1000)
+        log_params = [
+            response.status,
+            request.method,
+            request.path,
+            f"{duration_ms}ms"
+        ]
+        logger.info(" ".join(log_params))
+    return response
 
+@app.route('/history/<string:symbol>/<string:period>', methods=['GET'])
+def history_endpoint(symbol, period):
     if not symbol or not period:
         return jsonify({"error": "Parameters 'symbol' and 'period' are required"}), 400
 
@@ -110,11 +125,8 @@ def history_endpoint():
 
     return jsonify([day.to_json() for day in history])
 
-
-@app.route('/info', methods=['GET'])
-def info_endpoint():
-    symbol = request.args.get('symbol')
-
+@app.route('/info/<string:symbol>', methods=['GET'])
+def info_endpoint(symbol):
     if not symbol:
         return jsonify({"error": "Parameter 'symbol' is required"}), 400
 
@@ -126,7 +138,6 @@ def info_endpoint():
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
     return jsonify(info.to_json())
-
 
 if __name__ == '__main__':
     from waitress import serve

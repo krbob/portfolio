@@ -20,13 +20,13 @@ object Backend {
 
     suspend fun getHistory(symbol: String, period: Period): Collection<HistoricalPrice> {
         return client
-            .get("${Config.backendUrl}/history?symbol=$symbol&period=${period.value}")
+            .get("${Config.backendUrl}/history/$symbol/${period.value}")
             .body()
     }
 
     suspend fun getInfo(symbol: String): BasicInfo {
         return client
-            .get("${Config.backendUrl}/info?symbol=$symbol")
+            .get("${Config.backendUrl}/info/$symbol")
             .body()
     }
 
