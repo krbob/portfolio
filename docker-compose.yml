@@ -1,22 +1,16 @@
 services:
-  ktor-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  portfolio:
+    image: ghcr.io/krzybob/portfolio:main
     ports:
       - "7777:7777"
     depends_on:
-      - python-backend
+      - portfolio-backend
     environment:
-      - BACKEND_URL=http://python-backend:7776
-    pull_policy: build
+      - BACKEND_URL=http://portfolio-backend:7776
     restart: unless-stopped
 
-  python-backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+  portfolio-backend:
+    image: ghcr.io/krzybob/portfolio-backend:main
     ports:
       - "7776:7776"
-    pull_policy: build
     restart: unless-stopped
