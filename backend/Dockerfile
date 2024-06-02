@@ -1,4 +1,4 @@
-FROM python:3.11 as builder
+FROM python:3 as builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pyinstaller -y app.py
 
-FROM python:3.11-slim
+FROM python:3-slim
 
 WORKDIR /app
 

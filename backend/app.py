@@ -1,13 +1,12 @@
 from flask import Flask, request, jsonify, g
 import yfinance as yf
-import requests_cache
 from dataclasses import dataclass
 import logging
 import time
 
 app = Flask(__name__)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -50,20 +49,12 @@ class BasicInfo:
             'market_cap': self.market_cap
         }
 
-def serialize(obj):
-    if isinstance(obj, (HistoricalPrice, BasicInfo)):
-        return obj.to_json()
-    return obj
-
 def get_history(symbol, period):
-    session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
-    session.headers['User-agent'] = 'portfolio/1.0'
-
-    data = yf.Ticker(symbol, session=session)
+    data = yf.Ticker(symbol)
     history = data.history(period=period, auto_adjust=False)
     dividends = data.dividends
-    days = [
-        HistoricalPrice(
+    for index, row in history.iterrows():
+        yield HistoricalPrice(
             date=index.strftime('%Y-%m-%d'),
             open=row['Open'],
             close=row['Close'],
@@ -72,16 +63,9 @@ def get_history(symbol, period):
             volume=int(row['Volume']),
             dividend=dividends.loc[index] if index in dividends.index else 0.0
         )
-        for index, row in history.iterrows()
-    ]
-
-    return days
 
 def get_basic_info(symbol):
-    session = requests_cache.CachedSession('yfinance_cache', backend='sqlite', expire_after=1800)
-    session.headers['User-agent'] = 'portfolio/1.0'
-
-    data = yf.Ticker(symbol, session=session)
+    data = yf.Ticker(symbol)
     info = data.info
 
     return BasicInfo(
@@ -103,12 +87,15 @@ def log_request_info(response):
         duration = time.time() - g.start_time
         duration_ms = int(duration * 1000)
         log_params = [
-            response.status,
             request.method,
             request.path,
+            response.status,
             f"{duration_ms}ms"
         ]
         logger.info(" ".join(log_params))
+
+    response.headers['Cache-Control'] = 'public, max-age=1800'
+
     return response
 
 @app.route('/history/<string:symbol>/<string:period>', methods=['GET'])
@@ -118,8 +105,6 @@ def history_endpoint(symbol, period):
 
     try:
         history = get_history(symbol, period)
-    except yf.shared.exceptions.YFinanceError as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
@@ -132,8 +117,6 @@ def info_endpoint(symbol):
 
     try:
         info = get_basic_info(symbol)
-    except yf.shared.exceptions.YFinanceError as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 

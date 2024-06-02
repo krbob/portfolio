@@ -21,20 +21,20 @@ object AnalysisEndpoint {
     suspend fun forStock(symbol: String): Analysis {
         val backendData = getLock(symbol).withLock {
             val info = Backend.getInfo(symbol)
-            val history = Backend.getHistory(
-                symbol,
-                Backend.Period._5y
-            )//.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
+            if (info.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
+
+            val history = Backend.getHistory(symbol, Backend.Period._5y)
+            //.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
+            if (history.size <= 1) throw IllegalArgumentException("Missing history for $symbol")
+
             BackendData(info, history)
         }
         val info = backendData.info
         val history = backendData.history
 
-        if (info.name == null || history.isEmpty()) throw IllegalArgumentException("No data for $symbol")
-
         return Analysis(
             symbol = symbol,
-            name = info.name,
+            name = checkNotNull(info.name),
             date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
             lastPrice = CalculateLastPrice(history),
             gain = Analysis.Gain(

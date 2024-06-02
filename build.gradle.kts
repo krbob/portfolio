@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "net.bobinski"
-version = "0.0.1"
+version = "1.0"
 
 application {
     mainClass.set("net.bobinski.PortfolioKt")
