@@ -25,9 +25,12 @@ data class HistoricalPrice(
 )
 
 fun Collection<HistoricalPrice>.toBarSeries(): BarSeries =
-    BaseBarSeriesBuilder().withBars(sortedBy { it.date }.map { it.toBar() }).build()
+    BaseBarSeriesBuilder().withBars(sortedBy { it.date }.mapNotNull { it.toBar() }).build()
 
-private fun HistoricalPrice.toBar(): Bar {
+private fun HistoricalPrice.toBar(): Bar? {
+    if (setOf(open, close, low, high).any { it.isNaN() }) {
+        return null
+    }
     return BaseBar(
         /* timePeriod = */ Duration.ofDays(1),
         /* endTime = */ date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()),
