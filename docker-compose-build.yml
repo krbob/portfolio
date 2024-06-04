@@ -1,0 +1,20 @@
+services:
+  portfolio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7777:7777"
+    depends_on:
+      - portfolio-backend
+    environment:
+      - BACKEND_URL=http://portfolio-backend:7776
+    restart: unless-stopped
+
+  portfolio-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "7776:7776"
+    restart: unless-stopped
