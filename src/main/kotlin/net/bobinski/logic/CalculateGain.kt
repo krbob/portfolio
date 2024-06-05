@@ -20,7 +20,10 @@ object CalculateGain {
 private fun calculateFor(data: Collection<HistoricalPrice>, targetDate: LocalDate): Double {
     val currentPrice = data.maxBy { it.date }.close
     val oldPrice = data.filter { it.date.toJavaLocalDate() <= targetDate }
-        .maxBy { it.date }.close
+        .run {
+            takeIf { it.isNotEmpty() }?.maxBy { it.date }
+                ?: data.minBy { it.date }
+        }.close
 
     return (currentPrice - oldPrice) / oldPrice
 }

@@ -23,8 +23,10 @@ object AnalysisEndpoint {
             val info = Backend.getInfo(symbol)
             if (info.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
 
-            val history = Backend.getHistory(symbol, Backend.Period._5y)
+            var history = Backend.getHistory(symbol, Backend.Period._5y)
             //.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
+            if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._2y)
+            if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._1y)
             if (history.size <= 1) throw IllegalArgumentException("Missing history for $symbol")
 
             BackendData(info, history)
