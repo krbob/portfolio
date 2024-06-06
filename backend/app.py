@@ -3,6 +3,7 @@ import yfinance as yf
 from dataclasses import dataclass
 import logging
 import time
+import traceback
 
 app = Flask(__name__)
 
@@ -98,6 +99,12 @@ def log_request_info(response):
 
     return response
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    tb = traceback.format_exc()
+    logger.error(f"Exception: {str(e)}\n{tb}")
+    return jsonify({"error": "An internal error occurred"}), 500
+
 @app.route('/history/<string:symbol>/<string:period>', methods=['GET'])
 def history_endpoint(symbol, period):
     if not symbol or not period:
@@ -106,6 +113,7 @@ def history_endpoint(symbol, period):
     try:
         history = get_history(symbol, period)
     except Exception as e:
+        logger.error(f"Error fetching history for {symbol} over period {period}: {str(e)}")
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
     return jsonify([day.to_json() for day in history])
@@ -118,6 +126,7 @@ def info_endpoint(symbol):
     try:
         info = get_basic_info(symbol)
     except Exception as e:
+        logger.error(f"Error fetching info for {symbol}: {str(e)}")
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
     return jsonify(info.to_json())
