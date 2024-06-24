@@ -11,6 +11,4 @@ services:
 
   portfolio-backend:
     image: ghcr.io/krzybob/portfolio-backend:main
-    ports:
-      - "7776:7776"
     restart: unless-stopped

@@ -1,11 +1,7 @@
-val ktor_version: String by project
-val kotlin_version: String by project
-val logback_version: String by project
-
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("io.ktor.plugin") version "2.3.11"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
+    id("io.ktor.plugin") version "2.3.12"
 }
 
 group = "net.bobinski"
@@ -32,9 +28,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio")
     implementation("io.ktor:ktor-client-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
-    implementation("ch.qos.logback:logback-classic:$logback_version")
+    implementation("ch.qos.logback:logback-classic:1.5.6")
     implementation("org.ta4j:ta4j-core:0.16")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
-    testImplementation("io.ktor:ktor-server-tests-jvm")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }
