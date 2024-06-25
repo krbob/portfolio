@@ -1,17 +1,24 @@
-FROM eclipse-temurin:17-jdk as builder
+FROM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /app
 
-COPY . /app
+COPY gradle /app/gradle
+COPY build.gradle.kts gradle.properties gradlew settings.gradle.kts /app/
+COPY src /app/src
 
-RUN ./gradlew installDist --no-daemon
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew shadowJar --no-daemon
 
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY --from=builder /app/build/install/portfolio /app
+RUN useradd -m portfolio
+
+USER portfolio
+
+COPY --from=builder /app/build/libs/portfolio-all.jar portfolio.jar
 
 EXPOSE 7777
 
-ENTRYPOINT ["./bin/portfolio"]
+CMD ["java", "-jar", "portfolio.jar"]

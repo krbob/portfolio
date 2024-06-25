@@ -21,7 +21,7 @@ object Backend {
             json()
         }
         install(HttpCache) {
-            val cacheFile = Files.createDirectories(Paths.get("cache")).toFile()
+            val cacheFile = Files.createDirectories(Paths.get("/tmp/cache")).toFile()
             publicStorage(FileStorage(cacheFile))
         }
     }

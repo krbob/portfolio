@@ -1,19 +1,26 @@
-FROM python:3 as builder
+FROM python:3 AS builder
 
 WORKDIR /app
 
-COPY . /app
+COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+     pip install --no-cache-dir -r requirements.txt
 
-RUN pyinstaller -y app.py
+COPY app.py .
 
-FROM python:3-slim
+RUN pyinstaller --onefile app.py
+
+FROM debian:stable-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/dist/app /app
+RUN useradd -m portfolio
+
+USER portfolio
+
+COPY --from=builder /app/dist/app portfolio-backend
 
 EXPOSE 7776
 
-ENTRYPOINT ["./app"]
+CMD ["./portfolio-backend"]
