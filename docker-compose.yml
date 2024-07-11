@@ -1,6 +1,6 @@
 services:
   portfolio:
-    image: ghcr.io/krzybob/portfolio:main
+    image: ghcr.io/krbob/portfolio:main
     ports:
       - "7777:7777"
     depends_on:
@@ -10,5 +10,5 @@ services:
     restart: unless-stopped
 
   portfolio-backend:
-    image: ghcr.io/krzybob/portfolio-backend:main
+    image: ghcr.io/krbob/portfolio-backend:main
     restart: unless-stopped
