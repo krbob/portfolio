@@ -23,37 +23,48 @@ object AnalysisEndpoint {
             val info = Backend.getInfo(symbol)
             if (info.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
 
+            var lacking = false
             var history = Backend.getHistory(symbol, Backend.Period._5y)
             //.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
             if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._2y)
             if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._1y)
-            if (history.size <= 1) throw IllegalArgumentException("Missing history for $symbol")
+            if (history.size <= 1) {
+                lacking = true
+                history = Backend.getHistory(symbol, Backend.Period._1d)
+            }
+            if (history.isEmpty()) throw IllegalArgumentException("Missing history for $symbol")
 
-            BackendData(info, history)
+            BackendData(info, history, lacking)
         }
         val info = backendData.info
         val history = backendData.history
+        val lacking = backendData.lacking
 
         return Analysis(
             symbol = symbol,
             name = checkNotNull(info.name),
             date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
             lastPrice = CalculateLastPrice(history),
-            gain = Analysis.Gain(
-                monthly = CalculateGain.monthly(history),
-                quarterly = CalculateGain.quarterly(history),
-                yearly = CalculateGain.yearly(history)
-            ),
-            rsi = Analysis.Rsi(
-                daily = CalculateRsi.daily(history),
-                //weekly = CalculateRsi.weekly(data),
-                //monthly = CalculateRsi.monthly(data),
-                weekly = CalculateRsi.weeklyWithManualSplit(history),
-                monthly = CalculateRsi.monthlyWithManualSplit(history),
-                //weekly = CalculateRsi.forBars(data.weeklyBars()),
-                //monthly = CalculateRsi.forBars(data.monthlyBars())
-            ),
-            dividendYield = CalculateYield.yearly(history),
+            gain = Analysis.Gain(monthly = Double.NaN, quarterly = Double.NaN, yearly = Double.NaN)
+                .takeIf { lacking }
+                ?: Analysis.Gain(
+                    monthly = CalculateGain.monthly(history),
+                    quarterly = CalculateGain.quarterly(history),
+                    yearly = CalculateGain.yearly(history)
+                ),
+            rsi = Analysis.Rsi(daily = Double.NaN, weekly = Double.NaN, monthly = Double.NaN)
+                .takeIf { lacking }
+                ?: Analysis.Rsi(
+                    daily = CalculateRsi.daily(history),
+                    //weekly = CalculateRsi.weekly(data),
+                    //monthly = CalculateRsi.monthly(data),
+                    weekly = CalculateRsi.weeklyWithManualSplit(history),
+                    monthly = CalculateRsi.monthlyWithManualSplit(history),
+                    //weekly = CalculateRsi.forBars(data.weeklyBars()),
+                    //monthly = CalculateRsi.forBars(data.monthlyBars())
+                ),
+            dividendYield = Double.NaN.takeIf { lacking }
+                ?: CalculateYield.yearly(history),
             peRatio = info.peRatio,
             pbRatio = info.pbRatio,
             eps = info.eps,
@@ -67,13 +78,15 @@ object AnalysisEndpoint {
     }
 
     @JvmInline
-    private value class BackendData(private val value: Pair<BasicInfo, Collection<HistoricalPrice>>) {
-        constructor(info: BasicInfo, history: Collection<HistoricalPrice>)
-                : this(Pair(info, history))
+    private value class BackendData(private val value: Triple<BasicInfo, Collection<HistoricalPrice>, Boolean>) {
+        constructor(info: BasicInfo, history: Collection<HistoricalPrice>, lacking: Boolean = false)
+                : this(Triple(info, history, lacking))
 
         val info: BasicInfo
             get() = value.first
         val history: Collection<HistoricalPrice>
             get() = value.second
+        val lacking: Boolean
+            get() = value.third
     }
 }
