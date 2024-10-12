@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.0.0"
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
-    id("io.ktor.plugin") version "2.3.12"
+    kotlin("jvm") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
+    id("io.ktor.plugin") version "3.0.0"
 }
 
 group = "net.bobinski"
@@ -28,7 +28,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio")
     implementation("io.ktor:ktor-client-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
-    implementation("ch.qos.logback:logback-classic:1.5.6")
-    implementation("org.ta4j:ta4j-core:0.16")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+    implementation("ch.qos.logback:logback-classic:1.5.9")
+    implementation("org.ta4j:ta4j-core:0.17")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 }
