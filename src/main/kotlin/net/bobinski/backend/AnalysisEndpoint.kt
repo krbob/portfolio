@@ -25,7 +25,6 @@ object AnalysisEndpoint {
 
             var lacking = false
             var history = Backend.getHistory(symbol, Backend.Period._5y)
-            //.filterNot { it.date == LocalDate.now(Clock.systemUTC()).toKotlinLocalDate() }
             if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._2y)
             if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._1y)
             if (history.size <= 1) {
@@ -56,12 +55,8 @@ object AnalysisEndpoint {
                 .takeIf { lacking }
                 ?: Analysis.Rsi(
                     daily = CalculateRsi.daily(history),
-                    //weekly = CalculateRsi.weekly(data),
-                    //monthly = CalculateRsi.monthly(data),
                     weekly = CalculateRsi.weeklyWithManualSplit(history),
-                    monthly = CalculateRsi.monthlyWithManualSplit(history),
-                    //weekly = CalculateRsi.forBars(data.weeklyBars()),
-                    //monthly = CalculateRsi.forBars(data.monthlyBars())
+                    monthly = CalculateRsi.monthlyWithManualSplit(history)
                 ),
             dividendYield = Double.NaN.takeIf { lacking }
                 ?: CalculateYield.yearly(history),
