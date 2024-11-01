@@ -21,6 +21,8 @@ data class Analysis(
 
     @Serializable
     data class Gain(
+        val daily: Double,
+        val weekly: Double,
         val monthly: Double,
         val quarterly: Double,
         val yearly: Double

@@ -44,13 +44,19 @@ object AnalysisEndpoint {
             name = checkNotNull(info.name),
             date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
             lastPrice = CalculateLastPrice(history),
-            gain = Analysis.Gain(monthly = Double.NaN, quarterly = Double.NaN, yearly = Double.NaN)
-                .takeIf { lacking }
-                ?: Analysis.Gain(
-                    monthly = CalculateGain.monthly(history),
-                    quarterly = CalculateGain.quarterly(history),
-                    yearly = CalculateGain.yearly(history)
-                ),
+            gain = Analysis.Gain(
+                daily = Double.NaN,
+                weekly = Double.NaN,
+                monthly = Double.NaN,
+                quarterly = Double.NaN,
+                yearly = Double.NaN
+            ).takeIf { lacking } ?: Analysis.Gain(
+                daily = CalculateGain.daily(history),
+                weekly = CalculateGain.weekly(history),
+                monthly = CalculateGain.monthly(history),
+                quarterly = CalculateGain.quarterly(history),
+                yearly = CalculateGain.yearly(history)
+            ),
             rsi = Analysis.Rsi(daily = Double.NaN, weekly = Double.NaN, monthly = Double.NaN)
                 .takeIf { lacking }
                 ?: Analysis.Rsi(

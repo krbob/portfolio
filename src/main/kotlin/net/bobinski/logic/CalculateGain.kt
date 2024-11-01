@@ -7,6 +7,12 @@ import java.time.LocalDate
 
 object CalculateGain {
 
+    fun daily(data: Collection<HistoricalPrice>) =
+        calculateFor(data, LocalDate.now(Clock.systemUTC()).minusDays(1))
+
+    fun weekly(data: Collection<HistoricalPrice>) =
+        calculateFor(data, LocalDate.now(Clock.systemUTC()).minusWeeks(1))
+
     fun monthly(data: Collection<HistoricalPrice>) =
         calculateFor(data, LocalDate.now(Clock.systemUTC()).minusMonths(1))
 
