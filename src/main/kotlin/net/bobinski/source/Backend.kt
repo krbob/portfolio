@@ -7,6 +7,7 @@ import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.cache.storage.FileStorage
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import net.bobinski.Config
 import net.bobinski.data.BasicInfo
@@ -29,13 +30,13 @@ object Backend {
     suspend fun getHistory(symbol: String, period: Period): Collection<HistoricalPrice> {
         return client
             .get("${Config.backendUrl}/history/$symbol/${period.value}")
-            .body()
+            .run { if (status.isSuccess()) body() else emptySet() }
     }
 
-    suspend fun getInfo(symbol: String): BasicInfo {
+    suspend fun getInfo(symbol: String): BasicInfo? {
         return client
             .get("${Config.backendUrl}/info/$symbol")
-            .body()
+            .run { if (status.isSuccess()) body() else null }
     }
 
     enum class Period(val value: String) {

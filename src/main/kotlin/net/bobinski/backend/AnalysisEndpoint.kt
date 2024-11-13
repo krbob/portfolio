@@ -21,7 +21,7 @@ object AnalysisEndpoint {
     suspend fun forStock(symbol: String): Analysis {
         val backendData = getLock(symbol).withLock {
             val info = Backend.getInfo(symbol)
-            if (info.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
+            if (info?.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
 
             var lacking = false
             var history = Backend.getHistory(symbol, Backend.Period._5y)
