@@ -2,8 +2,8 @@
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/krbob/portfolio/ci-build.yml)
 ![](https://img.shields.io/badge/kotlin-2.0.21-orange)
-![](https://img.shields.io/badge/ktor-3.0.0-orange)
-![](https://img.shields.io/badge/yfinance-0.2.48-orange)
+![](https://img.shields.io/badge/ktor-3.0.1-orange)
+![](https://img.shields.io/badge/yfinance-0.2.49-orange)
 ![](https://img.shields.io/badge/ta4j-0.17-orange)
 
 ## About
