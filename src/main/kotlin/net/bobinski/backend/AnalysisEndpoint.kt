@@ -71,7 +71,7 @@ object AnalysisEndpoint {
             eps = info.eps,
             roe = info.roe,
             marketCap = info.marketCap
-        )
+        ).roundValues()
     }
 
     private fun getLock(key: String): Mutex {
