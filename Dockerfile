@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk AS builder
+FROM eclipse-temurin:17.0.13_11-jdk AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY src /app/src
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew shadowJar --no-daemon
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17.0.13_11-jre
 
 WORKDIR /app
 
