@@ -2,5 +2,8 @@
   "extends": [
     "config:recommended"
   ],
-  "automerge": true
+  "automerge": true,
+  "schedule": [
+    "* 0-6 1 * *"
+  ]
 }
