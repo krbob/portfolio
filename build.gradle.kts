@@ -30,5 +30,5 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json")
     implementation("ch.qos.logback:logback-classic:1.5.16")
     implementation("org.ta4j:ta4j-core:0.17")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 }
