@@ -1,4 +1,4 @@
 Flask==3.1.0
 waitress==3.0.2
 yfinance==0.2.54
-pyinstaller==6.11.1
+pyinstaller==6.12.0
