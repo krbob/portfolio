@@ -38,11 +38,11 @@ data class Analysis(
     fun roundValues() = copy(
         lastPrice = lastPrice.round(2),
         gain = Gain(
-            daily = gain.daily.round(2),
-            weekly = gain.weekly.round(2),
-            monthly = gain.monthly.round(2),
-            quarterly = gain.quarterly.round(2),
-            yearly = gain.yearly.round(2)
+            daily = gain.daily.round(3),
+            weekly = gain.weekly.round(3),
+            monthly = gain.monthly.round(3),
+            quarterly = gain.quarterly.round(3),
+            yearly = gain.yearly.round(3)
         ),
         rsi = Rsi(
             daily = rsi.daily.round(2),
