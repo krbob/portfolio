@@ -3,7 +3,9 @@
     "config:recommended"
   ],
   "automerge": true,
+  "timezone": "Europe/Warsaw",
   "schedule": [
     "* 0-6 1 * *"
-  ]
+  ],
+  "prHourlyLimit": 0
 }
