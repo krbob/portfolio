@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify, g
-import yfinance as yf
-from dataclasses import dataclass
 import logging
 import time
 import traceback
+import yfinance as yf
+from dataclasses import dataclass
+from flask import Flask, request, jsonify, g
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class HistoricalPrice:
@@ -31,6 +32,7 @@ class HistoricalPrice:
             'dividend': self.dividend
         }
 
+
 @dataclass
 class BasicInfo:
     name: str
@@ -50,6 +52,7 @@ class BasicInfo:
             'market_cap': self.market_cap
         }
 
+
 def get_history(symbol, period):
     data = yf.Ticker(symbol)
     history = data.history(period=period, auto_adjust=False)
@@ -65,6 +68,7 @@ def get_history(symbol, period):
             dividend=dividends.loc[index] if index in dividends.index else 0.0
         )
 
+
 def get_basic_info(symbol):
     data = yf.Ticker(symbol)
     info = data.info
@@ -78,9 +82,11 @@ def get_basic_info(symbol):
         market_cap=info.get('marketCap', None)
     )
 
+
 @app.before_request
 def start_timer():
     g.start_time = time.time()
+
 
 @app.after_request
 def log_request_info(response):
@@ -95,15 +101,22 @@ def log_request_info(response):
         ]
         logger.info(" ".join(log_params))
 
-    response.headers['Cache-Control'] = 'public, max-age=1800'
-
     return response
+
+
+@app.after_request
+def set_headers(response):
+    response.headers['Content-Type'] = 'application/json; charset=UTF-8'
+    response.headers['Cache-Control'] = 'public, max-age=1800'
+    return response
+
 
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
     logger.error(f"Exception: {str(e)}\n{tb}")
     return jsonify({"error": "An internal error occurred"}), 500
+
 
 @app.route('/history/<string:symbol>/<string:period>', methods=['GET'])
 def history_endpoint(symbol, period):
@@ -118,6 +131,7 @@ def history_endpoint(symbol, period):
 
     return jsonify([day.to_json() for day in history])
 
+
 @app.route('/info/<string:symbol>', methods=['GET'])
 def info_endpoint(symbol):
     if not symbol:
@@ -130,6 +144,7 @@ def info_endpoint(symbol):
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
     return jsonify(info.to_json())
+
 
 if __name__ == '__main__':
     from waitress import serve
