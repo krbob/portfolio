@@ -24,20 +24,22 @@ data class HistoricalPrice(
     val dividend: Double
 )
 
-fun Collection<HistoricalPrice>.toBarSeries(): BarSeries =
-    BaseBarSeriesBuilder().withBars(sortedBy { it.date }.mapNotNull { it.toBar() }).build()
+fun Collection<HistoricalPrice>.toBarSeries(conversion: Collection<HistoricalPrice>?): BarSeries =
+    BaseBarSeriesBuilder().withBars(sortedBy { it.date }.mapNotNull { day ->
+        day.toBar(conversion?.priceFor(day.date))
+    }).build()
 
-private fun HistoricalPrice.toBar(): Bar? {
+private fun HistoricalPrice.toBar(conversion: Double?): Bar? {
     if (setOf(open, close, low, high).any { it.isNaN() }) {
         return null
     }
     return BaseBar(
         /* timePeriod = */ Duration.ofDays(1),
         /* endTime = */ date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()),
-        /* openPrice = */ BigDecimal(open),
-        /* highPrice = */ BigDecimal(high),
-        /* lowPrice = */ BigDecimal(low),
-        /* closePrice = */ BigDecimal(close),
+        /* openPrice = */ BigDecimal(open.applyConversion(conversion)),
+        /* highPrice = */ BigDecimal(high.applyConversion(conversion)),
+        /* lowPrice = */ BigDecimal(low.applyConversion(conversion)),
+        /* closePrice = */ BigDecimal(close.applyConversion(conversion)),
         /* volume = */ BigDecimal(volume)
     )
 }
@@ -59,52 +61,6 @@ private fun List<HistoricalPrice>.intervalBy(comparator: (HistoricalPrice) -> In
     }
     return ret
 }
-
-fun Collection<HistoricalPrice>.weeklyBars(): BarSeries =
-    groupBy {
-        "${it.date.year}${String.format("%02d", it.date.monthNumber)}${
-            String.format("%02d", it.date.weekNumber)
-        }".toInt()
-    }
-        .run { keys.sorted().map { get(it).orEmpty() } }
-        .map { prices ->
-            BaseBar(
-                /* timePeriod = */ Duration.ofDays(7),
-                /* endTime = */
-                prices.maxOf { it.date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()) },
-                /* openPrice = */
-                BigDecimal(prices.minByOrNull { it.date }!!.open),
-                /* highPrice = */
-                BigDecimal(prices.maxOf { it.close }),
-                /* lowPrice = */
-                BigDecimal(prices.minOf { it.close }),
-                /* closePrice = */
-                BigDecimal(prices.maxByOrNull { it.date }!!.open),
-                /* volume = */
-                BigDecimal(prices.sumOf { it.volume })
-            )
-        }.run { BaseBarSeriesBuilder().withBars(this).build() }
-
-fun Collection<HistoricalPrice>.monthlyBars(): BarSeries =
-    groupBy { "${it.date.year}${String.format("%02d", it.date.monthNumber)}".toInt() }
-        .run { keys.sorted().map { get(it).orEmpty() } }
-        .map { prices ->
-            BaseBar(
-                /* timePeriod = */ Duration.ofDays(7),
-                /* endTime = */
-                prices.maxOf { it.date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()) },
-                /* openPrice = */
-                BigDecimal(prices.minByOrNull { it.date }!!.open),
-                /* highPrice = */
-                BigDecimal(prices.maxOf { it.close }),
-                /* lowPrice = */
-                BigDecimal(prices.minOf { it.close }),
-                /* closePrice = */
-                BigDecimal(prices.maxByOrNull { it.date }!!.open),
-                /* volume = */
-                BigDecimal(prices.sumOf { it.volume })
-            )
-        }.run { BaseBarSeriesBuilder().withBars(this).build() }
 
 val LocalDate.weekNumber: Int
     get() = java.time.LocalDate.of(year, month, dayOfMonth)

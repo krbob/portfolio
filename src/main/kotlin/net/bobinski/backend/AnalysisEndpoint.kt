@@ -18,32 +18,53 @@ object AnalysisEndpoint {
 
     private val locks = mutableMapOf<String, Mutex>()
 
-    suspend fun forStock(symbol: String): Analysis {
+    suspend fun forStock(symbol: String, currencyConversionSymbol: String? = null): Analysis {
         val backendData = getLock(symbol).withLock {
             val info = Backend.getInfo(symbol)
             if (info?.name == null) throw IllegalArgumentException("Unknown symbol: $symbol")
 
             var lacking = false
-            var history = Backend.getHistory(symbol, Backend.Period._5y)
-            if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._2y)
-            if (history.size <= 1) history = Backend.getHistory(symbol, Backend.Period._1y)
+            var period = Backend.Period._5y
+            var history = Backend.getHistory(symbol, period)
+            if (history.size <= 1) {
+                period = Backend.Period._2y
+                history = Backend.getHistory(symbol, period)
+            }
+            if (history.size <= 1) {
+                period = Backend.Period._1y
+                history = Backend.getHistory(symbol, period)
+            }
             if (history.size <= 1) {
                 lacking = true
                 history = Backend.getHistory(symbol, Backend.Period._1d)
             }
             if (history.isEmpty()) throw IllegalArgumentException("Missing history for $symbol")
 
-            BackendData(info, history, lacking)
+            val conversion = currencyConversionSymbol?.let { conversion ->
+                Backend.getHistory(conversion, period).also {
+                    if (it.size < history.size) {
+                        throw IllegalArgumentException("Not enough conversion history for $conversion")
+                    }
+                }
+            }
+
+            BackendData(
+                info = info,
+                history = history,
+                conversion = conversion,
+                lacking = lacking
+            )
         }
         val info = backendData.info
         val history = backendData.history
+        val conversion = backendData.conversion
         val lacking = backendData.lacking
 
         return Analysis(
             symbol = symbol,
             name = checkNotNull(info.name),
             date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
-            lastPrice = CalculateLastPrice(history),
+            lastPrice = CalculateLastPrice(history, conversion),
             gain = Analysis.Gain(
                 daily = Double.NaN,
                 weekly = Double.NaN,
@@ -51,21 +72,21 @@ object AnalysisEndpoint {
                 quarterly = Double.NaN,
                 yearly = Double.NaN
             ).takeIf { lacking } ?: Analysis.Gain(
-                daily = CalculateGain.daily(history),
-                weekly = CalculateGain.weekly(history),
-                monthly = CalculateGain.monthly(history),
-                quarterly = CalculateGain.quarterly(history),
-                yearly = CalculateGain.yearly(history)
+                daily = CalculateGain.daily(history, conversion),
+                weekly = CalculateGain.weekly(history, conversion),
+                monthly = CalculateGain.monthly(history, conversion),
+                quarterly = CalculateGain.quarterly(history, conversion),
+                yearly = CalculateGain.yearly(history, conversion)
             ),
             rsi = Analysis.Rsi(daily = Double.NaN, weekly = Double.NaN, monthly = Double.NaN)
                 .takeIf { lacking }
                 ?: Analysis.Rsi(
-                    daily = CalculateRsi.daily(history),
-                    weekly = CalculateRsi.weeklyWithManualSplit(history),
-                    monthly = CalculateRsi.monthlyWithManualSplit(history)
+                    daily = CalculateRsi.daily(history, conversion),
+                    weekly = CalculateRsi.weekly(history, conversion),
+                    monthly = CalculateRsi.monthly(history, conversion)
                 ),
             dividendYield = Double.NaN.takeIf { lacking }
-                ?: CalculateYield.yearly(history),
+                ?: CalculateYield.yearly(history, conversion),
             peRatio = info.peRatio,
             pbRatio = info.pbRatio,
             eps = info.eps,
@@ -78,16 +99,10 @@ object AnalysisEndpoint {
         return locks.getOrPut(key) { Mutex() }
     }
 
-    @JvmInline
-    private value class BackendData(private val value: Triple<BasicInfo, Collection<HistoricalPrice>, Boolean>) {
-        constructor(info: BasicInfo, history: Collection<HistoricalPrice>, lacking: Boolean = false)
-                : this(Triple(info, history, lacking))
-
-        val info: BasicInfo
-            get() = value.first
-        val history: Collection<HistoricalPrice>
-            get() = value.second
+    data class BackendData(
+        val info: BasicInfo,
+        val history: Collection<HistoricalPrice>,
+        val conversion: Collection<HistoricalPrice>?,
         val lacking: Boolean
-            get() = value.third
-    }
+    )
 }

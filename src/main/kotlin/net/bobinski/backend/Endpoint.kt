@@ -1,7 +1,6 @@
 package net.bobinski.backend
 
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Routing
@@ -20,6 +19,23 @@ enum class Endpoint(private val configuration: Routing.() -> Unit) {
                 call.respondText(e.message.orEmpty(), status = HttpStatusCode.NotFound)
             } catch (e: Exception) {
                 Logger.get(ANALYSIS::class.java)
+                    .error("InternalServerError exception: ${e.message}", e)
+                call.respondText(e.message.orEmpty(), status = HttpStatusCode.InternalServerError)
+            }
+        }
+    }),
+    ANALYSIS_WITH_CONVERSION({
+        get("/analysis/{stock}/conversion/{conversion}") {
+            try {
+                val stock = checkNotNull(call.parameters["stock"])
+                val conversion = checkNotNull(call.parameters["conversion"])
+                call.respond(AnalysisEndpoint.forStock(stock, conversion))
+            } catch (e: IllegalStateException) {
+                call.respondText(e.message.orEmpty(), status = HttpStatusCode.BadRequest)
+            } catch (e: IllegalArgumentException) {
+                call.respondText(e.message.orEmpty(), status = HttpStatusCode.NotFound)
+            } catch (e: Exception) {
+                Logger.get(ANALYSIS_WITH_CONVERSION::class.java)
                     .error("InternalServerError exception: ${e.message}", e)
                 call.respondText(e.message.orEmpty(), status = HttpStatusCode.InternalServerError)
             }
