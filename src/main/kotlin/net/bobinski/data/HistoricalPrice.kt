@@ -3,7 +3,7 @@ package net.bobinski.data
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.toJavaInstant
+import kotlinx.datetime.number
 import kotlinx.serialization.Serializable
 import org.ta4j.core.Bar
 import org.ta4j.core.BarSeries
@@ -14,6 +14,8 @@ import org.ta4j.core.num.NaN
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.temporal.WeekFields
+import kotlin.time.ExperimentalTime
+import kotlin.time.toJavaInstant
 
 @Serializable
 data class HistoricalPrice(
@@ -31,6 +33,7 @@ fun Collection<HistoricalPrice>.toBarSeries(conversion: Collection<HistoricalPri
         day.toBar(conversion?.priceFor(day.date))
     }).build()
 
+@OptIn(ExperimentalTime::class)
 private fun HistoricalPrice.toBar(conversion: Double?): Bar? {
     if (setOf(open, close, low, high).any { it.isNaN() }) {
         return null
@@ -54,7 +57,7 @@ fun Collection<HistoricalPrice>.weekly(): List<HistoricalPrice> =
     daily().intervalBy { it.date.weekNumber }
 
 fun Collection<HistoricalPrice>.monthly(): List<HistoricalPrice> =
-    daily().intervalBy { it.date.monthNumber }
+    daily().intervalBy { it.date.month.number }
 
 private fun List<HistoricalPrice>.intervalBy(comparator: (HistoricalPrice) -> Int): List<HistoricalPrice> {
     val ret = mutableListOf(first())
@@ -67,5 +70,5 @@ private fun List<HistoricalPrice>.intervalBy(comparator: (HistoricalPrice) -> In
 }
 
 val LocalDate.weekNumber: Int
-    get() = java.time.LocalDate.of(year, month, dayOfMonth)
+    get() = java.time.LocalDate.of(year, month.number, day)
         .get(WeekFields.of(DayOfWeek.MONDAY, 1).weekOfYear())
