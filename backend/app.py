@@ -107,7 +107,7 @@ def log_request_info(response):
 @app.after_request
 def set_headers(response):
     response.headers['Content-Type'] = 'application/json; charset=UTF-8'
-    response.headers['Cache-Control'] = 'public, max-age=1800'
+    response.headers['Cache-Control'] = 'public, max-age=60'
     return response
 
 
