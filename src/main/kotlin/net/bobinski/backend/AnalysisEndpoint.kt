@@ -40,7 +40,10 @@ object AnalysisEndpoint {
             }
             if (history.isEmpty()) throw IllegalArgumentException("Missing history for $symbol")
 
-            val conversion = currencyConversionSymbol?.let { conversion ->
+            val conversionInfo = currencyConversionSymbol?.let { conversion ->
+                Backend.getInfo(conversion)
+            }
+            val conversionHistory = currencyConversionSymbol?.let { conversion ->
                 Backend.getHistory(conversion, period).also {
                     if (it.size < history.size) {
                         throw IllegalArgumentException("Not enough conversion history for $conversion")
@@ -51,20 +54,22 @@ object AnalysisEndpoint {
             BackendData(
                 info = info,
                 history = history,
-                conversion = conversion,
+                conversionInfo = conversionInfo,
+                conversionHistory = conversionHistory,
                 lacking = lacking
             )
         }
         val info = backendData.info
         val history = backendData.history
-        val conversion = backendData.conversion
+        val conversionInfo = backendData.conversionInfo
+        val conversionHistory = backendData.conversionHistory
         val lacking = backendData.lacking
 
         return Analysis(
             symbol = symbol,
-            name = checkNotNull(info.name),
+            name = checkNotNull(info.name) + (conversionInfo?.let { " ${it.name}" } ?: ""),
             date = LocalDate.now(Clock.systemUTC()).toKotlinLocalDate(),
-            lastPrice = CalculateLastPrice(history, conversion),
+            lastPrice = CalculateLastPrice(history, conversionHistory),
             gain = Analysis.Gain(
                 daily = Double.NaN,
                 weekly = Double.NaN,
@@ -72,21 +77,21 @@ object AnalysisEndpoint {
                 quarterly = Double.NaN,
                 yearly = Double.NaN
             ).takeIf { lacking } ?: Analysis.Gain(
-                daily = CalculateGain.daily(history, conversion),
-                weekly = CalculateGain.weekly(history, conversion),
-                monthly = CalculateGain.monthly(history, conversion),
-                quarterly = CalculateGain.quarterly(history, conversion),
-                yearly = CalculateGain.yearly(history, conversion)
+                daily = CalculateGain.daily(history, conversionHistory),
+                weekly = CalculateGain.weekly(history, conversionHistory),
+                monthly = CalculateGain.monthly(history, conversionHistory),
+                quarterly = CalculateGain.quarterly(history, conversionHistory),
+                yearly = CalculateGain.yearly(history, conversionHistory)
             ),
             rsi = Analysis.Rsi(daily = Double.NaN, weekly = Double.NaN, monthly = Double.NaN)
                 .takeIf { lacking }
                 ?: Analysis.Rsi(
-                    daily = CalculateRsi.daily(history, conversion),
-                    weekly = CalculateRsi.weekly(history, conversion),
-                    monthly = CalculateRsi.monthly(history, conversion)
+                    daily = CalculateRsi.daily(history, conversionHistory),
+                    weekly = CalculateRsi.weekly(history, conversionHistory),
+                    monthly = CalculateRsi.monthly(history, conversionHistory)
                 ),
             dividendYield = Double.NaN.takeIf { lacking }
-                ?: CalculateYield.yearly(history, conversion),
+                ?: CalculateYield.yearly(history, conversionHistory),
             peRatio = info.peRatio,
             pbRatio = info.pbRatio,
             eps = info.eps,
@@ -102,7 +107,8 @@ object AnalysisEndpoint {
     data class BackendData(
         val info: BasicInfo,
         val history: Collection<HistoricalPrice>,
-        val conversion: Collection<HistoricalPrice>?,
+        val conversionInfo: BasicInfo?,
+        val conversionHistory: Collection<HistoricalPrice>?,
         val lacking: Boolean
     )
 }
