@@ -7,6 +7,5 @@ import net.bobinski.backend.Endpoint
 fun Application.configureRouting() {
     routing {
         Endpoint.ANALYSIS(this)
-        Endpoint.ANALYSIS_WITH_CONVERSION(this)
     }
 }

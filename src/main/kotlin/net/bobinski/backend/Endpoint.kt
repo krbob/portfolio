@@ -12,30 +12,14 @@ enum class Endpoint(private val configuration: Routing.() -> Unit) {
         get("/analysis/{stock}") {
             try {
                 val stock = checkNotNull(call.parameters["stock"])
-                call.respond(AnalysisEndpoint.forStock(stock))
-            } catch (e: IllegalStateException) {
-                call.respondText(e.message.orEmpty(), status = HttpStatusCode.BadRequest)
-            } catch (e: IllegalArgumentException) {
-                call.respondText(e.message.orEmpty(), status = HttpStatusCode.NotFound)
-            } catch (e: Exception) {
-                Logger.get(ANALYSIS::class.java)
-                    .error("InternalServerError exception: ${e.message}", e)
-                call.respondText(e.message.orEmpty(), status = HttpStatusCode.InternalServerError)
-            }
-        }
-    }),
-    ANALYSIS_WITH_CONVERSION({
-        get("/analysis/{stock}/conversion/{conversion}") {
-            try {
-                val stock = checkNotNull(call.parameters["stock"])
-                val conversion = checkNotNull(call.parameters["conversion"])
+                val conversion = call.request.queryParameters["conversion"]
                 call.respond(AnalysisEndpoint.forStock(stock, conversion))
             } catch (e: IllegalStateException) {
                 call.respondText(e.message.orEmpty(), status = HttpStatusCode.BadRequest)
             } catch (e: IllegalArgumentException) {
                 call.respondText(e.message.orEmpty(), status = HttpStatusCode.NotFound)
             } catch (e: Exception) {
-                Logger.get(ANALYSIS_WITH_CONVERSION::class.java)
+                Logger.get(ANALYSIS::class.java)
                     .error("InternalServerError exception: ${e.message}", e)
                 call.respondText(e.message.orEmpty(), status = HttpStatusCode.InternalServerError)
             }
