@@ -26,13 +26,13 @@ jobs:
         run: |
           echo "🛠️ Building and running containers locally for testing"
           docker compose -f docker-compose-build.yml up -d
-              
+          
           echo "⏳ Waiting for containers to start..."
           sleep 15
-              
+          
           echo "📦 Checking container status:"
           docker ps -a
-              
+          
           for container in $(docker compose -f docker-compose-build.yml ps -q); do
             status=$(docker inspect --format='{{.State.ExitCode}}' $container)
             if [ "$status" != "0" ]; then
@@ -41,10 +41,17 @@ jobs:
               exit 1
             fi
           done
-              
-          echo "🔍 Sending test request..."
-          curl --fail -X GET http://localhost:7777/analysis/aapl || (echo '❌ portfolio service did not respond properly' && exit 1)
-
+          
+          echo "🔍 Sending test requests..."
+          if ! curl --fail -X GET http://localhost:7777/analysis/aapl; then
+            echo "❌ analysis endpoint did not respond properly"
+            exit 1
+          fi
+          
+          if ! curl --fail -X GET "http://localhost:7777/analysis/aapl?conversion=eur=x"; then
+            echo "❌ analysis with conversion endpoint did not respond properly"
+            exit 1
+          fi
       - name: Clean up test containers
         if: always()
         run: docker compose -f docker-compose-build.yml down
