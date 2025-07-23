@@ -87,7 +87,7 @@ Supported converted fields:
 - `dividendYield`
 
 ```bash
-curl -X GET http://localhost:7777/analysis/aapl/conversion/eur=x
+curl -X GET http://localhost:7777/analysis/aapl?conversion=eur=x
 ```
 
 In this example, `eur=x` refers to the EUR/USD exchange rate symbol on Yahoo Finance. The API will apply the appropriate conversion to the above-listed fields before returning the result.
