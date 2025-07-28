@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "2.2.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.0"
-    id("io.ktor.plugin") version "3.2.2"
+    id("io.ktor.plugin") version "3.3.0-eap-115"
 }
 
 group = "net.bobinski"
