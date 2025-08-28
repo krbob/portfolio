@@ -74,12 +74,12 @@ def get_basic_info(symbol):
     info = data.info
 
     return BasicInfo(
-        name=info.get('longName', None),
-        pe_ratio=info.get('forwardPE', None),
-        pb_ratio=info.get('priceToBook', None),
-        eps=info.get('trailingEps', None),
-        roe=info.get('returnOnEquity', None),
-        market_cap=info.get('marketCap', None)
+        name=info.get('longName') or info.get('shortName'),
+        pe_ratio=info.get('forwardPE'),
+        pb_ratio=info.get('priceToBook'),
+        eps=info.get('trailingEps'),
+        roe=info.get('returnOnEquity'),
+        market_cap=info.get('marketCap')
     )
 
 
