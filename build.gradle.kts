@@ -28,7 +28,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio")
     implementation("io.ktor:ktor-client-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
-    implementation("ch.qos.logback:logback-classic:1.5.18")
+    implementation("ch.qos.logback:logback-classic:1.5.19")
     implementation("org.ta4j:ta4j-core:0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1-0.6.x-compat")
 }
