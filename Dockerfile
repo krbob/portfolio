@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25.0.1_8-jdk AS builder
+FROM eclipse-temurin:25.0.2_10-jdk AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY src /app/src
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew shadowJar --no-daemon
 
-FROM eclipse-temurin:25.0.1_8-jre
+FROM eclipse-temurin:25.0.2_10-jre
 
 WORKDIR /app
 
