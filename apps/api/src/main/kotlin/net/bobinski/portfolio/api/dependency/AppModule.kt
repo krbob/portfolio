@@ -1,11 +1,13 @@
 package net.bobinski.portfolio.api.dependency
 
+import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
@@ -41,11 +43,13 @@ import kotlinx.serialization.json.Json
 
 fun appModule(
     config: PersistenceConfig,
-    marketDataConfig: MarketDataConfig
+    marketDataConfig: MarketDataConfig,
+    backupConfig: BackupConfig
 ) = module {
     single<Clock> { Clock.systemUTC() }
     single { config }
     single { marketDataConfig }
+    single { backupConfig }
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
     single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystBaseUrl) }
@@ -146,6 +150,14 @@ fun appModule(
             accountRepository = get(),
             instrumentRepository = get(),
             transactionRepository = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioBackupService(
+            config = get(),
+            transferService = get(),
+            json = get(),
             clock = get()
         )
     }

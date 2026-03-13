@@ -43,6 +43,8 @@ portfolio/
 - repository storage can run in `memory` or `postgres` mode
 - default local mode remains `memory` for fast startup and tests
 - PostgreSQL wiring is available for the write model
+- server-side JSON backups can be created, listed, retained, and restored
+- optional backup scheduling is available in the API process
 
 ## Local database
 
@@ -69,3 +71,34 @@ PORTFOLIO_DB_PASSWORD=portfolio \
 ```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
+
+## Server backups
+
+The API can maintain server-side JSON backups of the canonical write model.
+
+Configuration keys:
+
+- `portfolio.backups.enabled`
+- `portfolio.backups.directory`
+- `portfolio.backups.intervalMinutes`
+- `portfolio.backups.retentionCount`
+
+Environment overrides:
+
+- `PORTFOLIO_BACKUPS_ENABLED`
+- `PORTFOLIO_BACKUPS_DIRECTORY`
+- `PORTFOLIO_BACKUPS_INTERVAL_MINUTES`
+- `PORTFOLIO_BACKUPS_RETENTION_COUNT`
+
+Default values:
+
+- scheduler disabled
+- directory `./data/backups`
+- interval `1440` minutes
+- retention `30` backups
+
+Available API endpoints:
+
+- `GET /v1/portfolio/backups`
+- `POST /v1/portfolio/backups/run`
+- `POST /v1/portfolio/backups/restore`

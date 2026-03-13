@@ -8,6 +8,10 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioBackupRecord
+import net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreRequest
+import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
+import net.bobinski.portfolio.api.domain.service.PortfolioBackupStatus
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
@@ -30,6 +34,7 @@ fun Route.portfolioRoute() {
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
+    val portfolioBackupService: PortfolioBackupService by inject()
 
     route("/v1/portfolio") {
         get("/overview") {
@@ -46,6 +51,19 @@ fun Route.portfolioRoute() {
 
         get("/returns") {
             call.respond(portfolioReturnsService.returns().toResponse())
+        }
+
+        get("/backups") {
+            call.respond(portfolioBackupService.status().toResponse())
+        }
+
+        post("/backups/run") {
+            call.respond(portfolioBackupService.createBackup().toResponse())
+        }
+
+        post("/backups/restore") {
+            val request = call.receive<RestorePortfolioBackupRequest>()
+            call.respond(portfolioBackupService.restoreBackup(request.toDomain()).toResponse())
         }
 
         get("/state/export") {
@@ -282,6 +300,49 @@ data class PortfolioImportIssueResponse(
     val severity: String,
     val code: String,
     val message: String
+)
+
+@Serializable
+data class PortfolioBackupStatusResponse(
+    val schedulerEnabled: Boolean,
+    val directory: String,
+    val intervalMinutes: Long,
+    val retentionCount: Int,
+    val running: Boolean,
+    val lastRunAt: String?,
+    val lastSuccessAt: String?,
+    val lastFailureAt: String?,
+    val lastFailureMessage: String?,
+    val backups: List<PortfolioBackupRecordResponse>
+)
+
+@Serializable
+data class PortfolioBackupRecordResponse(
+    val fileName: String,
+    val createdAt: String,
+    val exportedAt: String?,
+    val sizeBytes: Long,
+    val schemaVersion: Int?,
+    val accountCount: Int?,
+    val instrumentCount: Int?,
+    val transactionCount: Int?,
+    val isReadable: Boolean,
+    val errorMessage: String?
+)
+
+@Serializable
+data class RestorePortfolioBackupRequest(
+    val fileName: String,
+    val mode: String = "MERGE"
+)
+
+@Serializable
+data class PortfolioBackupRestoreResultResponse(
+    val fileName: String,
+    val mode: String,
+    val accountCount: Int,
+    val instrumentCount: Int,
+    val transactionCount: Int
 )
 
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
@@ -549,6 +610,50 @@ private fun PortfolioImportIssue.toResponse(): PortfolioImportIssueResponse = Po
     code = code,
     message = message
 )
+
+private fun PortfolioBackupStatus.toResponse(): PortfolioBackupStatusResponse = PortfolioBackupStatusResponse(
+    schedulerEnabled = schedulerEnabled,
+    directory = directory,
+    intervalMinutes = intervalMinutes,
+    retentionCount = retentionCount,
+    running = running,
+    lastRunAt = lastRunAt?.toString(),
+    lastSuccessAt = lastSuccessAt?.toString(),
+    lastFailureAt = lastFailureAt?.toString(),
+    lastFailureMessage = lastFailureMessage,
+    backups = backups.map(PortfolioBackupRecord::toResponse)
+)
+
+private fun PortfolioBackupRecord.toResponse(): PortfolioBackupRecordResponse = PortfolioBackupRecordResponse(
+    fileName = fileName,
+    createdAt = createdAt.toString(),
+    exportedAt = exportedAt?.toString(),
+    sizeBytes = sizeBytes,
+    schemaVersion = schemaVersion,
+    accountCount = accountCount,
+    instrumentCount = instrumentCount,
+    transactionCount = transactionCount,
+    isReadable = isReadable,
+    errorMessage = errorMessage
+)
+
+private fun RestorePortfolioBackupRequest.toDomain(): PortfolioBackupRestoreRequest = PortfolioBackupRestoreRequest(
+    fileName = fileName,
+    mode = try {
+        ImportMode.valueOf(mode)
+    } catch (_: IllegalArgumentException) {
+        throw IllegalArgumentException("mode must be one of ${ImportMode.entries.joinToString()}.")
+    }
+)
+
+private fun net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreResult.toResponse():
+    PortfolioBackupRestoreResultResponse = PortfolioBackupRestoreResultResponse(
+        fileName = fileName,
+        mode = mode.name,
+        accountCount = accountCount,
+        instrumentCount = instrumentCount,
+        transactionCount = transactionCount
+    )
 
 private fun String.toInstantOrThrow(field: String): java.time.Instant = try {
     java.time.Instant.parse(this)

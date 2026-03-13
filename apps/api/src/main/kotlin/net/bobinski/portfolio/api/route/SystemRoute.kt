@@ -33,13 +33,14 @@ fun Route.systemRoute(application: Application) {
                     stack = StackSummary(
                         web = "React 19 + TypeScript + Vite",
                         api = "Kotlin 2.3 + Ktor 3",
-                        database = "PostgreSQL (planned)"
+                        database = "PostgreSQL"
                     ),
                     capabilities = listOf(
                         "Transaction-based portfolio accounting",
                         "Full daily history reconstruction",
                         "ETF pricing via stock-analyst",
-                        "EDO valuation via edo-calculator"
+                        "EDO valuation via edo-calculator",
+                        "Server-side backup snapshots"
                     )
                 )
             )

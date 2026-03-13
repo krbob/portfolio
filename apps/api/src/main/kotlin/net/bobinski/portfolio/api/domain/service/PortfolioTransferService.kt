@@ -17,6 +17,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.serialization.Serializable
 
 class PortfolioTransferService(
     private val accountRepository: AccountRepository,
@@ -356,6 +357,7 @@ data class PortfolioSnapshot(
     val transactions: List<TransactionSnapshot>
 )
 
+@Serializable
 data class AccountSnapshot(
     val id: String,
     val name: String,
@@ -367,6 +369,7 @@ data class AccountSnapshot(
     val updatedAt: String
 )
 
+@Serializable
 data class InstrumentSnapshot(
     val id: String,
     val name: String,
@@ -381,6 +384,7 @@ data class InstrumentSnapshot(
     val updatedAt: String
 )
 
+@Serializable
 data class EdoTermsSnapshot(
     val purchaseDate: String,
     val firstPeriodRateBps: Int,
@@ -389,6 +393,7 @@ data class EdoTermsSnapshot(
     val maturityDate: String
 )
 
+@Serializable
 data class TransactionSnapshot(
     val id: String,
     val accountId: String,
