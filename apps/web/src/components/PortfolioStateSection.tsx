@@ -1,18 +1,27 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { SectionCard } from './SectionCard'
-import { useAccounts, useExportPortfolioState, useImportPortfolioState, useInstruments, useTransactions } from '../hooks/use-write-model'
-import type { PortfolioStateSnapshot } from '../api/write-model'
+import {
+  useAccounts,
+  useExportPortfolioState,
+  useImportPortfolioState,
+  useInstruments,
+  usePreviewPortfolioStateImport,
+  useTransactions,
+} from '../hooks/use-write-model'
+import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
 
 export function PortfolioStateSection() {
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
   const exportMutation = useExportPortfolioState()
+  const previewMutation = usePreviewPortfolioStateImport()
   const importMutation = useImportPortfolioState()
 
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE')
   const [selectedFileName, setSelectedFileName] = useState<string>('')
   const [selectedFileContent, setSelectedFileContent] = useState<string>('')
+  const [previewResult, setPreviewResult] = useState<PreviewPortfolioStateImportResult | null>(null)
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
 
@@ -31,16 +40,46 @@ export function PortfolioStateSection() {
     }
   }
 
+  async function handlePreviewClick() {
+    setImportFeedback(null)
+    setImportError(null)
+
+    if (selectedFileContent.trim() === '') {
+      setImportError('Choose a JSON snapshot file first.')
+      setPreviewResult(null)
+      return
+    }
+
+    try {
+      const snapshot = parseSelectedSnapshot(selectedFileContent)
+      const result = await previewMutation.mutateAsync({
+        mode: importMode,
+        snapshot,
+      })
+      setPreviewResult(result)
+      setImportFeedback(
+        result.isValid
+          ? 'Preview ready. The snapshot passed validation.'
+          : 'Preview ready. Resolve blocking issues before importing.',
+      )
+    } catch (error) {
+      setPreviewResult(null)
+      setImportError(error instanceof Error ? error.message : 'Preview failed.')
+    }
+  }
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) {
       setSelectedFileName('')
       setSelectedFileContent('')
+      setPreviewResult(null)
       return
     }
 
     setSelectedFileName(file.name)
     setSelectedFileContent(await file.text())
+    setPreviewResult(null)
     setImportFeedback(null)
     setImportError(null)
   }
@@ -55,16 +94,27 @@ export function PortfolioStateSection() {
       return
     }
 
+    if (previewResult == null) {
+      setImportError('Preview the selected snapshot before importing.')
+      return
+    }
+
+    if (!previewResult.isValid) {
+      setImportError('The selected snapshot has blocking issues. Fix them before importing.')
+      return
+    }
+
     if (importMode === 'REPLACE' && !window.confirm('Replace the current portfolio state with the imported snapshot?')) {
       return
     }
 
     try {
-      const snapshot = JSON.parse(selectedFileContent) as PortfolioStateSnapshot
+      const snapshot = parseSelectedSnapshot(selectedFileContent)
       const result = await importMutation.mutateAsync({
         mode: importMode,
         snapshot,
       })
+      setPreviewResult(null)
       setImportFeedback(
         `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments and ${result.transactionCount} transactions in ${result.mode} mode.`,
       )
@@ -122,7 +172,15 @@ export function PortfolioStateSection() {
 
           <label className="journal-filter">
             <span>Import mode</span>
-            <select value={importMode} onChange={(event) => setImportMode(event.target.value as 'MERGE' | 'REPLACE')}>
+            <select
+              value={importMode}
+              onChange={(event) => {
+                setImportMode(event.target.value as 'MERGE' | 'REPLACE')
+                setPreviewResult(null)
+                setImportFeedback(null)
+                setImportError(null)
+              }}
+            >
               <option value="MERGE">MERGE</option>
               <option value="REPLACE">REPLACE</option>
             </select>
@@ -137,25 +195,118 @@ export function PortfolioStateSection() {
             {selectedFileName !== '' ? `Selected file: ${selectedFileName}` : 'No snapshot file selected yet.'}
           </p>
 
+          {previewResult && (
+            <div className="transfer-preview">
+              <div className="holding-header">
+                <h5>Preview summary</h5>
+                <span className={`status-badge ${previewResult.isValid ? 'status-valued' : 'status-unavailable'}`}>
+                  {previewResult.isValid ? 'VALID' : 'BLOCKED'}
+                </span>
+              </div>
+
+              <div className="transfer-preview-grid">
+                <PreviewMetricCard
+                  label="Accounts"
+                  snapshotCount={previewResult.snapshotAccountCount}
+                  existingCount={previewResult.existingAccountCount}
+                  matchingCount={previewResult.matchingAccountCount}
+                />
+                <PreviewMetricCard
+                  label="Instruments"
+                  snapshotCount={previewResult.snapshotInstrumentCount}
+                  existingCount={previewResult.existingInstrumentCount}
+                  matchingCount={previewResult.matchingInstrumentCount}
+                />
+                <PreviewMetricCard
+                  label="Transactions"
+                  snapshotCount={previewResult.snapshotTransactionCount}
+                  existingCount={previewResult.existingTransactionCount}
+                  matchingCount={previewResult.matchingTransactionCount}
+                />
+              </div>
+
+              <p className="muted-copy">
+                {previewResult.mode === 'REPLACE'
+                  ? `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments and ${previewResult.existingTransactionCount} transactions.`
+                  : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments and ${previewResult.matchingTransactionCount} transactions by id.`}
+              </p>
+
+              {previewResult.issues.length > 0 && (
+                <ul className="transfer-issues">
+                  {previewResult.issues.map((issue) => (
+                    <li key={`${issue.code}:${issue.message}`} className={`transfer-issue transfer-issue-${issue.severity.toLowerCase()}`}>
+                      <strong>{issue.code}</strong>
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           <div className="form-actions">
-            <button type="submit" disabled={importMutation.isPending || selectedFileContent.trim() === ''}>
+            <button type="button" onClick={handlePreviewClick} disabled={previewMutation.isPending || selectedFileContent.trim() === ''}>
+              {previewMutation.isPending ? 'Previewing...' : 'Preview snapshot'}
+            </button>
+            <button
+              type="submit"
+              disabled={
+                importMutation.isPending ||
+                previewMutation.isPending ||
+                selectedFileContent.trim() === '' ||
+                previewResult == null ||
+                !previewResult.isValid
+              }
+            >
               {importMutation.isPending ? 'Importing...' : 'Import JSON'}
             </button>
           </div>
         </form>
       </div>
 
-      {(importFeedback || importError || exportMutation.error || importMutation.error) && (
+      {(importFeedback || importError || exportMutation.error || previewMutation.error || importMutation.error) && (
         <div className="overview-notes">
           {importFeedback && <p className="muted-copy">{importFeedback}</p>}
-          {(importError || exportMutation.error || importMutation.error) && (
+          {(importError || exportMutation.error || previewMutation.error || importMutation.error) && (
             <p className="form-error">
-              {importError ?? exportMutation.error?.message ?? importMutation.error?.message}
+              {importError ?? exportMutation.error?.message ?? previewMutation.error?.message ?? importMutation.error?.message}
             </p>
           )}
         </div>
       )}
     </SectionCard>
+  )
+}
+
+function PreviewMetricCard({
+  label,
+  snapshotCount,
+  existingCount,
+  matchingCount,
+}: {
+  label: string
+  snapshotCount: number
+  existingCount: number
+  matchingCount: number
+}) {
+  return (
+    <article className="transfer-preview-card">
+      <span>{label}</span>
+      <dl>
+        <div>
+          <dt>Snapshot</dt>
+          <dd>{snapshotCount}</dd>
+        </div>
+        <div>
+          <dt>Current</dt>
+          <dd>{existingCount}</dd>
+        </div>
+        <div>
+          <dt>Matching ids</dt>
+          <dd>{matchingCount}</dd>
+        </div>
+      </dl>
+    </article>
   )
 }
 
@@ -170,4 +321,12 @@ function downloadSnapshot(snapshot: PortfolioStateSnapshot) {
   link.click()
   link.remove()
   window.URL.revokeObjectURL(objectUrl)
+}
+
+function parseSelectedSnapshot(rawSnapshot: string): PortfolioStateSnapshot {
+  try {
+    return JSON.parse(rawSnapshot) as PortfolioStateSnapshot
+  } catch {
+    throw new Error('Snapshot file must contain valid JSON.')
+  }
 }

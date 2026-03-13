@@ -10,12 +10,14 @@ import {
   listAccounts,
   listInstruments,
   listTransactions,
+  previewPortfolioStateImport,
   updateTransaction,
   type CreateAccountPayload,
   type CreateInstrumentPayload,
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type CreateTransactionPayload,
+  type PreviewPortfolioStateImportResult,
   type PortfolioStateSnapshot,
   type UpdateTransactionPayload,
 } from '../api/write-model'
@@ -111,6 +113,13 @@ export function useImportTransactions() {
 export function useExportPortfolioState() {
   return useMutation({
     mutationFn: (): Promise<PortfolioStateSnapshot> => exportPortfolioState(),
+  })
+}
+
+export function usePreviewPortfolioStateImport() {
+  return useMutation({
+    mutationFn: (payload: ImportPortfolioStatePayload): Promise<PreviewPortfolioStateImportResult> =>
+      previewPortfolioStateImport(payload),
   })
 }
 

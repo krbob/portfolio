@@ -697,6 +697,98 @@ p {
   color: #58705f;
 }
 
+.transfer-preview {
+  display: grid;
+  gap: 14px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.transfer-preview h5 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.transfer-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.transfer-preview-card {
+  display: grid;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.transfer-preview-card span {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #58705f;
+}
+
+.transfer-preview-card dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.transfer-preview-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.transfer-preview-card dt {
+  color: #58705f;
+}
+
+.transfer-preview-card dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.transfer-issues {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transfer-issue {
+  display: grid;
+  gap: 4px;
+  border-left: 3px solid transparent;
+  padding-left: 12px;
+}
+
+.transfer-issue strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.transfer-issue-error {
+  border-color: rgba(155, 51, 36, 0.5);
+}
+
+.transfer-issue-error strong {
+  color: #8b2f1a;
+}
+
+.transfer-issue-warning {
+  border-color: rgba(122, 93, 22, 0.5);
+}
+
+.transfer-issue-warning strong {
+  color: #755815;
+}
+
 .value-positive {
   color: #1d6a39;
 }
@@ -792,6 +884,7 @@ p {
   .returns-grid,
   .returns-stat-grid,
   .transfer-grid,
+  .transfer-preview-grid,
   .transfer-layout,
   .journal-toolbar,
   .holding-item {

@@ -157,6 +157,30 @@ export interface ImportPortfolioStatePayload {
   snapshot: PortfolioStateSnapshot
 }
 
+export interface PortfolioImportIssue {
+  severity: 'ERROR' | 'WARNING'
+  code: string
+  message: string
+}
+
+export interface PreviewPortfolioStateImportResult {
+  mode: 'MERGE' | 'REPLACE'
+  schemaVersion: number
+  isValid: boolean
+  snapshotAccountCount: number
+  snapshotInstrumentCount: number
+  snapshotTransactionCount: number
+  existingAccountCount: number
+  existingInstrumentCount: number
+  existingTransactionCount: number
+  matchingAccountCount: number
+  matchingInstrumentCount: number
+  matchingTransactionCount: number
+  blockingIssueCount: number
+  warningCount: number
+  issues: PortfolioImportIssue[]
+}
+
 export interface ImportPortfolioStateResult {
   mode: 'MERGE' | 'REPLACE'
   accountCount: number
@@ -258,6 +282,13 @@ export function importTransactions(payload: ImportTransactionsPayload) {
 
 export function exportPortfolioState() {
   return requestJson<PortfolioStateSnapshot>('/api/v1/portfolio/state/export')
+}
+
+export function previewPortfolioStateImport(payload: ImportPortfolioStatePayload) {
+  return requestJson<PreviewPortfolioStateImportResult>('/api/v1/portfolio/state/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export function importPortfolioState(payload: ImportPortfolioStatePayload) {
