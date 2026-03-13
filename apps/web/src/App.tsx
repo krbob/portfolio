@@ -1,6 +1,8 @@
 import { AppShell } from './components/AppShell'
 import { AccountsSection } from './components/AccountsSection'
 import { InstrumentsSection } from './components/InstrumentsSection'
+import { HoldingsSection } from './components/HoldingsSection'
+import { PortfolioOverviewSection } from './components/PortfolioOverviewSection'
 import { TransactionsSection } from './components/TransactionsSection'
 import { useAppMeta } from './hooks/use-app-meta'
 
@@ -79,6 +81,9 @@ export function App() {
           </ul>
         </article>
       </section>
+
+      <PortfolioOverviewSection />
+      <HoldingsSection />
 
       <section className="workspace-grid">
         <AccountsSection />

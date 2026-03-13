@@ -25,6 +25,50 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            valuationState: 'BOOK_ONLY',
+            totalBookValuePln: '2000.00',
+            investedBookValuePln: '1005.00',
+            cashBalancePln: '995.00',
+            netContributionsPln: '2000.00',
+            equityBookValuePln: '1005.00',
+            bondBookValuePln: '0.00',
+            cashBookValuePln: '995.00',
+            accountCount: 1,
+            instrumentCount: 1,
+            activeHoldingCount: 1,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWCE',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'EUR',
+              quantity: '6',
+              averageCostPerUnitPln: '100.50',
+              costBasisPln: '603.00',
+              bookValuePln: '603.00',
+              transactionCount: 2,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -49,6 +93,10 @@ describe('App', () => {
     expect(screen.getByText(/dashboard shell/i)).toBeInTheDocument()
     expect(await screen.findByText(/portfolio dev/i)).toBeInTheDocument()
     expect(screen.getByText(/transaction-based portfolio accounting/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /holdings/i })).toBeInTheDocument()
+    expect(screen.getByText(/book-only/i)).toBeInTheDocument()
+    expect(screen.getByText(/vwce/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /transactions/i })).toBeInTheDocument()

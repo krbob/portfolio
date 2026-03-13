@@ -23,7 +23,10 @@ export function useCreateAccount() {
   return useMutation({
     mutationFn: (payload: CreateAccountPayload) => createAccount(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+      ])
     },
   })
 }
@@ -40,7 +43,11 @@ export function useCreateInstrument() {
   return useMutation({
     mutationFn: (payload: CreateInstrumentPayload) => createInstrument(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['instruments'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['instruments'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+      ])
     },
   })
 }
@@ -61,6 +68,8 @@ export function useCreateTransaction() {
         queryClient.invalidateQueries({ queryKey: ['transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['instruments'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
       ])
     },
   })
