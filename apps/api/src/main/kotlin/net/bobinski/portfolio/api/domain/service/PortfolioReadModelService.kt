@@ -1,5 +1,8 @@
 package net.bobinski.portfolio.api.domain.service
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
@@ -8,6 +11,10 @@ import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.InstrumentValuation
+import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
+import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
@@ -19,40 +26,58 @@ class PortfolioReadModelService(
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
     private val transactionRepository: TransactionRepository,
+    private val currentInstrumentValuationProvider: CurrentInstrumentValuationProvider,
     private val clock: Clock
 ) {
     suspend fun overview(): PortfolioOverview {
-        val snapshot = buildSnapshot()
+        val snapshot = buildValuedSnapshot()
         val investedBookValuePln = snapshot.holdings.sumOf { it.costBasisPln }
+        val investedCurrentValuePln = snapshot.holdings.sumOf { it.effectiveCurrentValuePln() }
         val equityBookValuePln = snapshot.holdings
             .filter { it.instrument.assetClass == AssetClass.EQUITIES }
             .sumOf { it.costBasisPln }
+        val equityCurrentValuePln = snapshot.holdings
+            .filter { it.instrument.assetClass == AssetClass.EQUITIES }
+            .sumOf { it.effectiveCurrentValuePln() }
         val bondBookValuePln = snapshot.holdings
             .filter { it.instrument.assetClass == AssetClass.BONDS }
             .sumOf { it.costBasisPln }
+        val bondCurrentValuePln = snapshot.holdings
+            .filter { it.instrument.assetClass == AssetClass.BONDS }
+            .sumOf { it.effectiveCurrentValuePln() }
         val cashBookValuePln = snapshot.cashBalancePln
         val totalBookValuePln = investedBookValuePln.add(cashBookValuePln, MONEY_CONTEXT)
+        val totalCurrentValuePln = investedCurrentValuePln.add(cashBookValuePln, MONEY_CONTEXT)
 
         return PortfolioOverview(
             asOf = LocalDate.now(clock),
-            valuationState = ValuationState.BOOK_ONLY,
+            valuationState = snapshot.valuationState,
             totalBookValuePln = totalBookValuePln.money(),
+            totalCurrentValuePln = totalCurrentValuePln.money(),
             investedBookValuePln = investedBookValuePln.money(),
+            investedCurrentValuePln = investedCurrentValuePln.money(),
             cashBalancePln = cashBookValuePln.money(),
             netContributionsPln = snapshot.netContributionsPln.money(),
             equityBookValuePln = equityBookValuePln.money(),
+            equityCurrentValuePln = equityCurrentValuePln.money(),
             bondBookValuePln = bondBookValuePln.money(),
+            bondCurrentValuePln = bondCurrentValuePln.money(),
             cashBookValuePln = cashBookValuePln.money(),
+            cashCurrentValuePln = cashBookValuePln.money(),
+            totalUnrealizedGainPln = totalCurrentValuePln.subtract(totalBookValuePln, MONEY_CONTEXT).money(),
             accountCount = snapshot.accounts.size,
             instrumentCount = snapshot.instruments.size,
             activeHoldingCount = snapshot.holdings.size,
+            valuedHoldingCount = snapshot.holdings.count { it.valuationStatus == HoldingValuationStatus.VALUED },
+            unvaluedHoldingCount = snapshot.holdings.count { it.valuationStatus != HoldingValuationStatus.VALUED },
+            valuationIssueCount = snapshot.holdings.count { it.valuationIssue != null },
             missingFxTransactions = snapshot.missingFxTransactions,
             unsupportedCorrectionTransactions = snapshot.unsupportedCorrectionTransactions
         )
     }
 
     suspend fun holdings(): List<HoldingSnapshot> {
-        val snapshot = buildSnapshot()
+        val snapshot = buildValuedSnapshot()
 
         return snapshot.holdings
             .sortedWith(compareBy({ it.account.name.lowercase() }, { it.instrument.name.lowercase() }))
@@ -73,12 +98,52 @@ class PortfolioReadModelService(
                     },
                     costBasisPln = holding.costBasisPln.money(),
                     bookValuePln = holding.costBasisPln.money(),
+                    currentPricePln = holding.currentPricePln?.money(),
+                    currentValuePln = holding.currentValuePln?.money(),
+                    unrealizedGainPln = holding.unrealizedGainPln?.money(),
+                    valuedAt = holding.valuedAt,
+                    valuationStatus = holding.valuationStatus,
+                    valuationIssue = holding.valuationIssue,
                     transactionCount = holding.transactionCount
                 )
             }
     }
 
-    private suspend fun buildSnapshot(): PortfolioLedgerSnapshot {
+    private suspend fun buildValuedSnapshot(): PortfolioValuationSnapshot {
+        val ledgerSnapshot = buildLedgerSnapshot()
+        val valuations = valueInstruments(ledgerSnapshot.holdings.map { it.instrument })
+        val holdings = ledgerSnapshot.holdings.map { holding ->
+            holding.toValuedHolding(valuations[holding.instrument.id])
+        }
+
+        return PortfolioValuationSnapshot(
+            accounts = ledgerSnapshot.accounts,
+            instruments = ledgerSnapshot.instruments,
+            holdings = holdings,
+            cashBalancePln = ledgerSnapshot.cashBalancePln,
+            netContributionsPln = ledgerSnapshot.netContributionsPln,
+            missingFxTransactions = ledgerSnapshot.missingFxTransactions,
+            unsupportedCorrectionTransactions = ledgerSnapshot.unsupportedCorrectionTransactions,
+            valuationState = when {
+                holdings.isEmpty() -> ValuationState.MARK_TO_MARKET
+                holdings.all { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.MARK_TO_MARKET
+                holdings.none { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.BOOK_ONLY
+                else -> ValuationState.PARTIALLY_VALUED
+            }
+        )
+    }
+
+    private suspend fun valueInstruments(instruments: List<Instrument>): Map<UUID, InstrumentValuationResult> = coroutineScope {
+        instruments
+            .distinctBy { it.id }
+            .map { instrument ->
+                async { instrument.id to currentInstrumentValuationProvider.value(instrument) }
+            }
+            .awaitAll()
+            .toMap()
+    }
+
+    private suspend fun buildLedgerSnapshot(): PortfolioLedgerSnapshot {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
         val transactions = transactionRepository.list()
@@ -189,6 +254,54 @@ class PortfolioReadModelService(
         )
     }
 
+    private fun MutableHolding.toValuedHolding(valuation: InstrumentValuationResult?): ValuedHolding = when (valuation) {
+        is InstrumentValuationResult.Success -> toValuedHolding(valuation.valuation)
+        is InstrumentValuationResult.Failure -> ValuedHolding(
+            account = account,
+            instrument = instrument,
+            quantity = quantity,
+            costBasisPln = costBasisPln,
+            currentPricePln = null,
+            currentValuePln = null,
+            unrealizedGainPln = null,
+            valuedAt = null,
+            valuationStatus = valuation.type.toHoldingValuationStatus(),
+            valuationIssue = valuation.reason,
+            transactionCount = transactionCount
+        )
+
+        null -> ValuedHolding(
+            account = account,
+            instrument = instrument,
+            quantity = quantity,
+            costBasisPln = costBasisPln,
+            currentPricePln = null,
+            currentValuePln = null,
+            unrealizedGainPln = null,
+            valuedAt = null,
+            valuationStatus = HoldingValuationStatus.UNAVAILABLE,
+            valuationIssue = "Instrument valuation was not attempted.",
+            transactionCount = transactionCount
+        )
+    }
+
+    private fun MutableHolding.toValuedHolding(valuation: InstrumentValuation): ValuedHolding {
+        val currentValuePln = valuation.pricePerUnitPln.multiply(quantity, MONEY_CONTEXT).money()
+        return ValuedHolding(
+            account = account,
+            instrument = instrument,
+            quantity = quantity,
+            costBasisPln = costBasisPln,
+            currentPricePln = valuation.pricePerUnitPln.money(),
+            currentValuePln = currentValuePln,
+            unrealizedGainPln = currentValuePln.subtract(costBasisPln, MONEY_CONTEXT).money(),
+            valuedAt = valuation.valuedAt,
+            valuationStatus = HoldingValuationStatus.VALUED,
+            valuationIssue = null,
+            transactionCount = transactionCount
+        )
+    }
+
     private fun Transaction.toConvertedAmountsOrNull(): ConvertedTransactionAmounts? {
         val grossPln = convertToPln(grossAmount) ?: return null
         val feePln = convertToPln(feeAmount) ?: return null
@@ -206,6 +319,11 @@ class PortfolioReadModelService(
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
+
+    private fun InstrumentValuationFailureType.toHoldingValuationStatus(): HoldingValuationStatus = when (this) {
+        InstrumentValuationFailureType.UNAVAILABLE -> HoldingValuationStatus.UNAVAILABLE
+        InstrumentValuationFailureType.UNSUPPORTED -> HoldingValuationStatus.UNSUPPORTED
+    }
 
     private data class HoldingKey(
         val accountId: UUID,
@@ -226,6 +344,22 @@ class PortfolioReadModelService(
         val taxPln: BigDecimal
     )
 
+    private data class ValuedHolding(
+        val account: Account,
+        val instrument: Instrument,
+        val quantity: BigDecimal,
+        val costBasisPln: BigDecimal,
+        val currentPricePln: BigDecimal?,
+        val currentValuePln: BigDecimal?,
+        val unrealizedGainPln: BigDecimal?,
+        val valuedAt: LocalDate?,
+        val valuationStatus: HoldingValuationStatus,
+        val valuationIssue: String?,
+        val transactionCount: Int
+    ) {
+        fun effectiveCurrentValuePln(): BigDecimal = currentValuePln ?: costBasisPln
+    }
+
     private data class PortfolioLedgerSnapshot(
         val accounts: List<Account>,
         val instruments: List<Instrument>,
@@ -234,6 +368,17 @@ class PortfolioReadModelService(
         val netContributionsPln: BigDecimal,
         val missingFxTransactions: Int,
         val unsupportedCorrectionTransactions: Int
+    )
+
+    private data class PortfolioValuationSnapshot(
+        val accounts: List<Account>,
+        val instruments: List<Instrument>,
+        val holdings: List<ValuedHolding>,
+        val cashBalancePln: BigDecimal,
+        val netContributionsPln: BigDecimal,
+        val missingFxTransactions: Int,
+        val unsupportedCorrectionTransactions: Int,
+        val valuationState: ValuationState
     )
 
     private companion object {
@@ -245,15 +390,24 @@ data class PortfolioOverview(
     val asOf: LocalDate,
     val valuationState: ValuationState,
     val totalBookValuePln: BigDecimal,
+    val totalCurrentValuePln: BigDecimal,
     val investedBookValuePln: BigDecimal,
+    val investedCurrentValuePln: BigDecimal,
     val cashBalancePln: BigDecimal,
     val netContributionsPln: BigDecimal,
     val equityBookValuePln: BigDecimal,
+    val equityCurrentValuePln: BigDecimal,
     val bondBookValuePln: BigDecimal,
+    val bondCurrentValuePln: BigDecimal,
     val cashBookValuePln: BigDecimal,
+    val cashCurrentValuePln: BigDecimal,
+    val totalUnrealizedGainPln: BigDecimal,
     val accountCount: Int,
     val instrumentCount: Int,
     val activeHoldingCount: Int,
+    val valuedHoldingCount: Int,
+    val unvaluedHoldingCount: Int,
+    val valuationIssueCount: Int,
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int
 )
@@ -270,9 +424,23 @@ data class HoldingSnapshot(
     val averageCostPerUnitPln: BigDecimal,
     val costBasisPln: BigDecimal,
     val bookValuePln: BigDecimal,
+    val currentPricePln: BigDecimal?,
+    val currentValuePln: BigDecimal?,
+    val unrealizedGainPln: BigDecimal?,
+    val valuedAt: LocalDate?,
+    val valuationStatus: HoldingValuationStatus,
+    val valuationIssue: String?,
     val transactionCount: Int
 )
 
 enum class ValuationState {
-    BOOK_ONLY
+    BOOK_ONLY,
+    PARTIALLY_VALUED,
+    MARK_TO_MARKET
+}
+
+enum class HoldingValuationStatus {
+    VALUED,
+    UNAVAILABLE,
+    UNSUPPORTED
 }

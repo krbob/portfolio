@@ -15,42 +15,60 @@ class RemoteCurrentInstrumentValuationProvider(
 ) : CurrentInstrumentValuationProvider {
     override suspend fun value(instrument: Instrument): InstrumentValuationResult {
         if (!config.enabled) {
-            return InstrumentValuationResult.Failure("Market data integration is disabled.")
+            return InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNAVAILABLE,
+                reason = "Market data integration is disabled."
+            )
         }
 
         return try {
             when (instrument.valuationSource) {
                 ValuationSource.STOCK_ANALYST -> valueFromStockAnalyst(instrument)
                 ValuationSource.EDO_CALCULATOR -> valueFromEdoCalculator(instrument)
-                ValuationSource.MANUAL -> InstrumentValuationResult.Failure("Manual valuation is not implemented.")
+                ValuationSource.MANUAL -> InstrumentValuationResult.Failure(
+                    type = InstrumentValuationFailureType.UNSUPPORTED,
+                    reason = "Manual valuation is not implemented."
+                )
             }
         } catch (exception: MarketDataClientException) {
-            InstrumentValuationResult.Failure(exception.message ?: "Market data request failed.")
+            InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNAVAILABLE,
+                reason = exception.message ?: "Market data request failed."
+            )
         } catch (exception: Exception) {
-            InstrumentValuationResult.Failure(exception.message ?: "Unexpected market data error.")
+            InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNAVAILABLE,
+                reason = exception.message ?: "Unexpected market data error."
+            )
         }
     }
 
     private suspend fun valueFromStockAnalyst(instrument: Instrument): InstrumentValuationResult {
         val symbol = instrument.symbol
-            ?: return InstrumentValuationResult.Failure("Instrument does not define a market symbol.")
+            ?: return InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNSUPPORTED,
+                reason = "Instrument does not define a market symbol."
+            )
         val quote = stockAnalystClient.quoteInPln(symbol)
         return InstrumentValuationResult.Success(
             InstrumentValuation(
-                pricePerUnitPln = quote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                valuedAt = quote.date.toString()
+                pricePerUnitPln = quote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
+                valuedAt = quote.date
             )
         )
     }
 
     private suspend fun valueFromEdoCalculator(instrument: Instrument): InstrumentValuationResult {
         val terms = instrument.edoTerms
-            ?: return InstrumentValuationResult.Failure("EDO instrument does not define terms.")
+            ?: return InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNSUPPORTED,
+                reason = "EDO instrument does not define terms."
+            )
         val value = edoCalculatorClient.unitValueInPln(terms = terms)
         return InstrumentValuationResult.Success(
             InstrumentValuation(
-                pricePerUnitPln = value.totalValue.setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                valuedAt = value.asOf.toString()
+                pricePerUnitPln = value.totalValue.setScale(2, RoundingMode.HALF_UP),
+                valuedAt = value.asOf
             )
         )
     }

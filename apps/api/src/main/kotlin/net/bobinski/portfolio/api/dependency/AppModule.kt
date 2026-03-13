@@ -73,6 +73,7 @@ fun appModule(
             accountRepository = get(),
             instrumentRepository = get(),
             transactionRepository = get(),
+            currentInstrumentValuationProvider = get(),
             clock = get()
         )
     }
