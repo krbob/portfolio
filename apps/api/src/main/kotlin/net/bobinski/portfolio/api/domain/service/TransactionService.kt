@@ -21,18 +21,7 @@ class TransactionService(
     suspend fun list(): List<Transaction> = transactionRepository.list()
 
     suspend fun create(command: CreateTransactionCommand): Transaction {
-        val account = accountRepository.get(command.accountId)
-            ?: throw ResourceNotFoundException("Account ${command.accountId} was not found.")
-
-        if (!account.isActive) {
-            throw IllegalArgumentException("Transactions cannot target inactive accounts.")
-        }
-
-        command.instrumentId?.let { instrumentId ->
-            instrumentRepository.get(instrumentId)
-                ?: throw ResourceNotFoundException("Instrument $instrumentId was not found.")
-        }
-
+        validateReferences(command)
         val now = Instant.now(clock)
         return transactionRepository.save(
             Transaction(
@@ -54,6 +43,53 @@ class TransactionService(
                 updatedAt = now
             )
         )
+    }
+
+    suspend fun update(id: UUID, command: CreateTransactionCommand): Transaction {
+        val existing = transactionRepository.get(id)
+            ?: throw ResourceNotFoundException("Transaction $id was not found.")
+        validateReferences(command)
+
+        return transactionRepository.save(
+            Transaction(
+                id = existing.id,
+                accountId = command.accountId,
+                instrumentId = command.instrumentId,
+                type = command.type,
+                tradeDate = command.tradeDate,
+                settlementDate = command.settlementDate,
+                quantity = command.quantity,
+                unitPrice = command.unitPrice,
+                grossAmount = command.grossAmount,
+                feeAmount = command.feeAmount,
+                taxAmount = command.taxAmount,
+                currency = command.currency.uppercase(),
+                fxRateToPln = command.fxRateToPln,
+                notes = command.notes.trim(),
+                createdAt = existing.createdAt,
+                updatedAt = Instant.now(clock)
+            )
+        )
+    }
+
+    suspend fun delete(id: UUID) {
+        if (!transactionRepository.delete(id)) {
+            throw ResourceNotFoundException("Transaction $id was not found.")
+        }
+    }
+
+    private suspend fun validateReferences(command: CreateTransactionCommand) {
+        val account = accountRepository.get(command.accountId)
+            ?: throw ResourceNotFoundException("Account ${command.accountId} was not found.")
+
+        if (!account.isActive) {
+            throw IllegalArgumentException("Transactions cannot target inactive accounts.")
+        }
+
+        command.instrumentId?.let { instrumentId ->
+            instrumentRepository.get(instrumentId)
+                ?: throw ResourceNotFoundException("Instrument $instrumentId was not found.")
+        }
     }
 }
 

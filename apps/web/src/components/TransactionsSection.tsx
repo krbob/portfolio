@@ -1,6 +1,14 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { SectionCard } from './SectionCard'
-import { useAccounts, useCreateTransaction, useInstruments, useTransactions } from '../hooks/use-write-model'
+import {
+  useAccounts,
+  useCreateTransaction,
+  useDeleteTransaction,
+  useInstruments,
+  useTransactions,
+  useUpdateTransaction,
+} from '../hooks/use-write-model'
+import type { Transaction } from '../api/write-model'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -25,7 +33,10 @@ export function TransactionsSection() {
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
   const createTransactionMutation = useCreateTransaction()
+  const updateTransactionMutation = useUpdateTransaction()
+  const deleteTransactionMutation = useDeleteTransaction()
   const [form, setForm] = useState(initialForm)
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
@@ -37,31 +48,67 @@ export function TransactionsSection() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    createTransactionMutation.mutate(
-      {
-        accountId: form.accountId,
-        instrumentId: requiresInstrument ? form.instrumentId : null,
-        type: form.type,
-        tradeDate: form.tradeDate,
-        settlementDate: form.settlementDate,
-        quantity: requiresInstrument ? form.quantity : null,
-        unitPrice: requiresInstrument ? form.unitPrice : null,
-        grossAmount: form.grossAmount,
-        feeAmount: form.feeAmount,
-        taxAmount: form.taxAmount,
-        currency: form.currency,
-        fxRateToPln: form.fxRateToPln || null,
-        notes: form.notes,
-      },
-      {
-        onSuccess: () =>
-          setForm((current) => ({
-            ...initialForm,
-            accountId: current.accountId,
-            currency: current.currency,
-          })),
-      },
-    )
+    const payload = {
+      accountId: form.accountId,
+      instrumentId: requiresInstrument ? form.instrumentId : null,
+      type: form.type,
+      tradeDate: form.tradeDate,
+      settlementDate: form.settlementDate,
+      quantity: requiresInstrument ? form.quantity : null,
+      unitPrice: requiresInstrument ? form.unitPrice : null,
+      grossAmount: form.grossAmount,
+      feeAmount: form.feeAmount,
+      taxAmount: form.taxAmount,
+      currency: form.currency,
+      fxRateToPln: form.fxRateToPln || null,
+      notes: form.notes,
+    }
+
+    if (editingTransactionId) {
+      updateTransactionMutation.mutate(
+        {
+          id: editingTransactionId,
+          ...payload,
+        },
+        {
+          onSuccess: () => resetForm(),
+        },
+      )
+      return
+    }
+
+    createTransactionMutation.mutate(payload, {
+      onSuccess: () =>
+        setForm((current) => ({
+          ...initialForm,
+          accountId: current.accountId,
+          currency: current.currency,
+        })),
+    })
+  }
+
+  function startEditing(transaction: Transaction) {
+    setEditingTransactionId(transaction.id)
+    setForm({
+      accountId: transaction.accountId,
+      instrumentId: transaction.instrumentId ?? '',
+      type: transaction.type,
+      tradeDate: transaction.tradeDate,
+      settlementDate: transaction.settlementDate ?? transaction.tradeDate,
+      quantity: transaction.quantity ?? '',
+      unitPrice: transaction.unitPrice ?? '',
+      grossAmount: transaction.grossAmount,
+      feeAmount: transaction.feeAmount,
+      taxAmount: transaction.taxAmount,
+      currency: transaction.currency,
+      fxRateToPln: transaction.fxRateToPln ?? '',
+      notes: transaction.notes,
+    })
+  }
+
+  function resetForm() {
+    setEditingTransactionId(null)
+    setForm(initialForm)
   }
 
   return (
@@ -225,11 +272,30 @@ export function TransactionsSection() {
             />
           </label>
 
-          <button type="submit" disabled={!canSubmit || createTransactionMutation.isPending}>
-            {createTransactionMutation.isPending ? 'Saving...' : 'Add transaction'}
-          </button>
-          {createTransactionMutation.error && (
-            <p className="form-error">{createTransactionMutation.error.message}</p>
+          <div className="form-actions">
+            <button
+              type="submit"
+              disabled={
+                !canSubmit || createTransactionMutation.isPending || updateTransactionMutation.isPending
+              }
+            >
+              {createTransactionMutation.isPending || updateTransactionMutation.isPending
+                ? 'Saving...'
+                : editingTransactionId
+                  ? 'Save changes'
+                  : 'Add transaction'}
+            </button>
+
+            {editingTransactionId && (
+              <button type="button" className="button-secondary" onClick={resetForm}>
+                Cancel edit
+              </button>
+            )}
+          </div>
+          {(createTransactionMutation.error || updateTransactionMutation.error) && (
+            <p className="form-error">
+              {createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message}
+            </p>
           )}
         </form>
 
@@ -248,11 +314,28 @@ export function TransactionsSection() {
                 <p>
                   {transaction.tradeDate}
                   {transaction.instrumentId ? ` · instrument ${transaction.instrumentId.slice(0, 8)}` : ''}
+                  {transaction.notes ? ` · ${transaction.notes}` : ''}
                 </p>
               </div>
-              <span className="list-badge">{transaction.accountId.slice(0, 8)}</span>
+              <div className="list-item-actions">
+                <span className="list-badge">{transaction.accountId.slice(0, 8)}</span>
+                <button type="button" className="button-secondary" onClick={() => startEditing(transaction)}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="button-danger"
+                  onClick={() => deleteTransactionMutation.mutate(transaction.id)}
+                  disabled={deleteTransactionMutation.isPending}
+                >
+                  Delete
+                </button>
+              </div>
             </article>
           ))}
+          {deleteTransactionMutation.error && (
+            <p className="form-error">{deleteTransactionMutation.error.message}</p>
+          )}
         </div>
       </div>
     </SectionCard>

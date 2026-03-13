@@ -282,9 +282,32 @@ p {
   font-weight: 600;
 }
 
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .entity-form button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.button-secondary,
+.button-danger {
+  min-height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(19, 32, 24, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0 14px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.button-danger {
+  border-color: rgba(155, 51, 36, 0.25);
+  color: #9b3324;
 }
 
 .form-span-wide {
@@ -323,6 +346,14 @@ p {
   padding: 8px 10px;
   font-size: 0.78rem;
   color: #314238;
+}
+
+.list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .overview-grid {

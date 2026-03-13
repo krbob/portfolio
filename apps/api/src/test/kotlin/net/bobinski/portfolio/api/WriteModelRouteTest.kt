@@ -2,6 +2,8 @@ package net.bobinski.portfolio.api
 
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.delete
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -99,5 +101,69 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("Account 1f6f0cb3-8ef7-4700-b05b-c91470ca6b44 was not found."))
+    }
+
+    @Test
+    fun `transactions can be updated and deleted`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountResponse = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Primary",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        val accountId = Regex("\"id\":\\s*\"([^\"]+)\"").find(accountResponse.bodyAsText())!!.groupValues[1]
+
+        val createResponse = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-03-01",
+                  "settlementDate": "2026-03-01",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        val transactionId = Regex("\"id\":\\s*\"([^\"]+)\"").find(createResponse.bodyAsText())!!.groupValues[1]
+
+        val updateResponse = client.put("/v1/transactions/$transactionId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-03-02",
+                  "settlementDate": "2026-03-02",
+                  "grossAmount": "1250.00",
+                  "currency": "PLN",
+                  "notes": "Adjusted"
+                }
+                """.trimIndent()
+            )
+        }
+        val deleteResponse = client.delete("/v1/transactions/$transactionId")
+        val listResponse = client.get("/v1/transactions")
+
+        assertEquals(HttpStatusCode.OK, updateResponse.status)
+        assertTrue(updateResponse.bodyAsText().contains("\"grossAmount\": \"1250.00\""))
+        assertTrue(updateResponse.bodyAsText().contains("\"notes\": \"Adjusted\""))
+        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+        assertEquals("[]", listResponse.bodyAsText())
     }
 }

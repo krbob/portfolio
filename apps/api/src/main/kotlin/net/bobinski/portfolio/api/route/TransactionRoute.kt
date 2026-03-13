@@ -3,8 +3,10 @@ package net.bobinski.portfolio.api.route
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.put
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
@@ -29,6 +31,22 @@ fun Route.transactionRoute() {
             val request = call.receive<CreateTransactionRequest>()
             val transaction = transactionService.create(request.toCommand())
             call.respond(HttpStatusCode.Created, transaction.toResponse())
+        }
+
+        route("/{id}") {
+            put {
+                val id = call.parameters["id"]?.let { parseUuid(it, "id") }
+                    ?: throw IllegalArgumentException("id path parameter is required.")
+                val request = call.receive<CreateTransactionRequest>()
+                call.respond(transactionService.update(id, request.toCommand()).toResponse())
+            }
+
+            delete {
+                val id = call.parameters["id"]?.let { parseUuid(it, "id") }
+                    ?: throw IllegalArgumentException("id path parameter is required.")
+                transactionService.delete(id)
+                call.respond(HttpStatusCode.NoContent)
+            }
         }
     }
 }

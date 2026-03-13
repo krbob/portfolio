@@ -55,18 +55,46 @@ class JdbcTransactionRepository(
 
     override suspend fun save(transaction: Transaction): Transaction {
         dataSource.connection.use { connection ->
-            connection.insertTransaction(transaction)
+            connection.upsertTransaction(transaction)
         }
         return transaction
     }
 
-    private fun Connection.insertTransaction(transaction: Transaction) {
+    override suspend fun delete(id: UUID): Boolean =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                delete from transactions
+                where id = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setObject(1, id)
+                statement.executeUpdate() > 0
+            }
+        }
+
+    private fun Connection.upsertTransaction(transaction: Transaction) {
         prepareStatement(
             """
             insert into transactions (
                 id, account_id, instrument_id, type, trade_date, settlement_date, quantity, unit_price,
                 gross_amount, fee_amount, tax_amount, currency, fx_rate_to_pln, notes, created_at, updated_at
             ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict (id) do update set
+                account_id = excluded.account_id,
+                instrument_id = excluded.instrument_id,
+                type = excluded.type,
+                trade_date = excluded.trade_date,
+                settlement_date = excluded.settlement_date,
+                quantity = excluded.quantity,
+                unit_price = excluded.unit_price,
+                gross_amount = excluded.gross_amount,
+                fee_amount = excluded.fee_amount,
+                tax_amount = excluded.tax_amount,
+                currency = excluded.currency,
+                fx_rate_to_pln = excluded.fx_rate_to_pln,
+                notes = excluded.notes,
+                updated_at = excluded.updated_at
             """.trimIndent()
         ).use { statement ->
             statement.setObject(1, transaction.id)

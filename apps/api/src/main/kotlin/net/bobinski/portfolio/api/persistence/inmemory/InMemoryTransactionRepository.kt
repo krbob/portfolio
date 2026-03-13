@@ -16,4 +16,6 @@ class InMemoryTransactionRepository : TransactionRepository {
         transactions[transaction.id] = transaction
         return transaction
     }
+
+    override suspend fun delete(id: UUID): Boolean = transactions.remove(id) != null
 }

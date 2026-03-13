@@ -87,6 +87,10 @@ export interface CreateTransactionPayload {
   notes?: string
 }
 
+export interface UpdateTransactionPayload extends CreateTransactionPayload {
+  id: string
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -143,4 +147,31 @@ export function createTransaction(payload: CreateTransactionPayload) {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export function updateTransaction(payload: UpdateTransactionPayload) {
+  const { id, ...body } = payload
+  return requestJson<Transaction>(`/api/v1/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteTransaction(id: string) {
+  const response = await fetch(`/api/v1/transactions/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`
+    try {
+      const body = (await response.json()) as { message?: string }
+      if (body.message) {
+        message = body.message
+      }
+    } catch {
+      // Keep generic fallback.
+    }
+    throw new Error(message)
+  }
 }
