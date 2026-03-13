@@ -156,6 +156,84 @@ class PortfolioReadModelRouteTest {
         assertTrue(body.contains("\"missingFxTransactions\": 1"))
     }
 
+    @Test
+    fun `allocation returns drift against configured targets`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val equityInstrumentId = createInstrument()
+        val bondInstrumentId = createBondInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "10000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$equityInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "60",
+              "unitPrice": "100.00",
+              "grossAmount": "6000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$bondInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-03",
+              "settlementDate": "2026-03-03",
+              "quantity": "20",
+              "unitPrice": "100.00",
+              "grossAmount": "2000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val saveTargetsResponse = client.post("/v1/portfolio/targets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "items": [
+                    { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                    { "assetClass": "BONDS", "targetWeight": "0.20" },
+                    { "assetClass": "CASH", "targetWeight": "0.00" }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, saveTargetsResponse.status)
+
+        val response = client.get("/v1/portfolio/allocation")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"configured\": true"))
+        assertTrue(body.contains("\"targetWeightSumPct\": \"100.00\""))
+        assertTrue(body.contains("\"suggestedContributionPln\": \"2000.00\""))
+        assertTrue(body.contains("\"status\": \"UNDERWEIGHT\""))
+    }
+
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(
         baseCurrency: String = "PLN"
     ): String {
@@ -187,6 +265,31 @@ class PortfolioReadModelRouteTest {
                   "symbol": "VWCE.DE",
                   "currency": "EUR",
                   "valuationSource": "STOCK_ANALYST"
+                }
+                """.trimIndent()
+            )
+        }
+        return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createBondInstrument(): String {
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "EDO 2036",
+                  "kind": "BOND_EDO",
+                  "assetClass": "BONDS",
+                  "currency": "PLN",
+                  "valuationSource": "EDO_CALCULATOR",
+                  "edoTerms": {
+                    "purchaseDate": "2026-03-03",
+                    "firstPeriodRateBps": 500,
+                    "marginBps": 150,
+                    "principalUnits": 20,
+                    "maturityDate": "2036-03-03"
+                  }
                 }
                 """.trimIndent()
             )

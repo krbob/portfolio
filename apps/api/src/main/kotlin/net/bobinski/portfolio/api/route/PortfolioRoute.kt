@@ -13,6 +13,10 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
+import net.bobinski.portfolio.api.domain.model.AssetClass
+import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
+import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
+import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupRecord
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreRequest
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
@@ -26,18 +30,23 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportPreview
 import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
 import net.bobinski.portfolio.api.domain.service.ImportMode
+import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
+import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
+    val portfolioAllocationService: PortfolioAllocationService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
+    val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
 
@@ -56,6 +65,19 @@ fun Route.portfolioRoute() {
 
         get("/returns") {
             call.respond(portfolioReturnsService.returns().toResponse())
+        }
+
+        get("/allocation") {
+            call.respond(portfolioAllocationService.summary().toResponse())
+        }
+
+        get("/targets") {
+            call.respond(portfolioTargetService.list().map { it.toResponse() })
+        }
+
+        post("/targets") {
+            val request = call.receive<ReplacePortfolioTargetsRequest>()
+            call.respond(portfolioTargetService.replace(request.toDomain()).map { it.toResponse() })
         }
 
         get("/backups") {
@@ -191,6 +213,50 @@ data class PortfolioDailyHistoryPointResponse(
 data class PortfolioReturnsResponse(
     val asOf: String,
     val periods: List<PortfolioReturnPeriodResponse>
+)
+
+@Serializable
+data class PortfolioTargetResponse(
+    val id: String,
+    val assetClass: String,
+    val targetWeight: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class ReplacePortfolioTargetsRequest(
+    val items: List<PortfolioTargetRequestItem>
+)
+
+@Serializable
+data class PortfolioTargetRequestItem(
+    val assetClass: String,
+    val targetWeight: String
+)
+
+@Serializable
+data class PortfolioAllocationResponse(
+    val asOf: String,
+    val valuationState: String,
+    val configured: Boolean,
+    val targetWeightSumPct: String,
+    val totalCurrentValuePln: String,
+    val availableCashPln: String,
+    val buckets: List<PortfolioAllocationBucketResponse>
+)
+
+@Serializable
+data class PortfolioAllocationBucketResponse(
+    val assetClass: String,
+    val currentValuePln: String,
+    val currentWeightPct: String,
+    val targetWeightPct: String?,
+    val targetValuePln: String?,
+    val driftPctPoints: String?,
+    val gapValuePln: String?,
+    val suggestedContributionPln: String,
+    val status: String
 )
 
 @Serializable
@@ -447,6 +513,46 @@ private fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPointR
 private fun PortfolioReturns.toResponse(): PortfolioReturnsResponse = PortfolioReturnsResponse(
     asOf = asOf.toString(),
     periods = periods.map { it.toResponse() }
+)
+
+private fun net.bobinski.portfolio.api.domain.model.PortfolioTarget.toResponse(): PortfolioTargetResponse =
+    PortfolioTargetResponse(
+        id = id.toString(),
+        assetClass = assetClass.name,
+        targetWeight = targetWeight.toPlainString(),
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt.toString()
+    )
+
+private fun ReplacePortfolioTargetsRequest.toDomain() = ReplacePortfolioTargetsCommand(
+    items = items.map { item ->
+        ReplacePortfolioTargetItem(
+            assetClass = AssetClass.valueOf(item.assetClass),
+            targetWeight = item.targetWeight.toBigDecimal()
+        )
+    }
+)
+
+private fun PortfolioAllocationSummary.toResponse(): PortfolioAllocationResponse = PortfolioAllocationResponse(
+    asOf = asOf.toString(),
+    valuationState = valuationState.name,
+    configured = configured,
+    targetWeightSumPct = targetWeightSumPct.toPlainString(),
+    totalCurrentValuePln = totalCurrentValuePln.toPlainString(),
+    availableCashPln = availableCashPln.toPlainString(),
+    buckets = buckets.map { it.toResponse() }
+)
+
+private fun PortfolioAllocationBucket.toResponse(): PortfolioAllocationBucketResponse = PortfolioAllocationBucketResponse(
+    assetClass = assetClass.name,
+    currentValuePln = currentValuePln.toPlainString(),
+    currentWeightPct = currentWeightPct.toPlainString(),
+    targetWeightPct = targetWeightPct?.toPlainString(),
+    targetValuePln = targetValuePln?.toPlainString(),
+    driftPctPoints = driftPctPoints?.toPlainString(),
+    gapValuePln = gapValuePln?.toPlainString(),
+    suggestedContributionPln = suggestedContributionPln.toPlainString(),
+    status = status.name
 )
 
 private fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = PortfolioReturnPeriodResponse(

@@ -4,13 +4,16 @@ import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
+import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionService
@@ -31,9 +34,11 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
 import java.net.http.HttpClient
 import org.koin.dsl.module
@@ -97,10 +102,12 @@ fun appModule(
         single<DataSource> { get<PersistenceResources>().dataSource }
         single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
         single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
+        single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
     } else {
         single<AccountRepository> { InMemoryAccountRepository() }
         single<InstrumentRepository> { InMemoryInstrumentRepository() }
+        single<PortfolioTargetRepository> { InMemoryPortfolioTargetRepository() }
         single<TransactionRepository> { InMemoryTransactionRepository() }
     }
 
@@ -115,6 +122,12 @@ fun appModule(
         )
     }
     single {
+        PortfolioTargetService(
+            portfolioTargetRepository = get(),
+            clock = get()
+        )
+    }
+    single {
         PortfolioReadModelService(
             accountRepository = get(),
             instrumentRepository = get(),
@@ -122,6 +135,12 @@ fun appModule(
             currentInstrumentValuationProvider = get(),
             transactionFxConversionService = get(),
             clock = get()
+        )
+    }
+    single {
+        PortfolioAllocationService(
+            portfolioTargetRepository = get(),
+            portfolioReadModelService = get()
         )
     }
     single {
