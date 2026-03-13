@@ -80,10 +80,21 @@ This starts:
 
 - `portfolio-postgres`
 - `portfolio-api`
+- `portfolio-web`
 - named volume `portfolio-backup-data` mounted at `/srv/portfolio/backups`
 
 The Compose API profile enables server backups by default and stores them on the named volume.
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
+The web UI is exposed on `http://127.0.0.1:4174`.
+
+To run the full stack with live market data without persisting those URLs in the repo:
+
+```bash
+PORTFOLIO_MARKET_DATA_ENABLED=true \
+PORTFOLIO_STOCK_ANALYST_BASE_URL=https://stock.bobinski.net/api \
+PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://edo.bobinski.net \
+docker compose --profile app up -d --build
+```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 

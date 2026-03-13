@@ -28,18 +28,34 @@ services:
       PORTFOLIO_DB_JDBC_URL: jdbc:postgresql://portfolio-postgres:5432/portfolio
       PORTFOLIO_DB_USERNAME: portfolio
       PORTFOLIO_DB_PASSWORD: portfolio
-      PORTFOLIO_MARKET_DATA_ENABLED: "false"
-      PORTFOLIO_BACKUPS_ENABLED: "true"
-      PORTFOLIO_BACKUPS_DIRECTORY: /srv/portfolio/backups
-      PORTFOLIO_BACKUPS_INTERVAL_MINUTES: "1440"
-      PORTFOLIO_BACKUPS_RETENTION_COUNT: "30"
+      PORTFOLIO_MARKET_DATA_ENABLED: "${PORTFOLIO_MARKET_DATA_ENABLED:-false}"
+      PORTFOLIO_STOCK_ANALYST_BASE_URL: "${PORTFOLIO_STOCK_ANALYST_BASE_URL:-http://127.0.0.1:18080}"
+      PORTFOLIO_EDO_CALCULATOR_BASE_URL: "${PORTFOLIO_EDO_CALCULATOR_BASE_URL:-http://127.0.0.1:18081}"
+      PORTFOLIO_BACKUPS_ENABLED: "${PORTFOLIO_BACKUPS_ENABLED:-true}"
+      PORTFOLIO_BACKUPS_DIRECTORY: "${PORTFOLIO_BACKUPS_DIRECTORY:-/srv/portfolio/backups}"
+      PORTFOLIO_BACKUPS_INTERVAL_MINUTES: "${PORTFOLIO_BACKUPS_INTERVAL_MINUTES:-1440}"
+      PORTFOLIO_BACKUPS_RETENTION_COUNT: "${PORTFOLIO_BACKUPS_RETENTION_COUNT:-30}"
     depends_on:
       portfolio-postgres:
         condition: service_healthy
     ports:
       - "18082:18082"
     volumes:
-      - portfolio-backup-data:/srv/portfolio/backups
+      - portfolio-backup-data:${PORTFOLIO_BACKUPS_DIRECTORY:-/srv/portfolio/backups}
+    restart: unless-stopped
+
+  portfolio-web:
+    profiles: ["app"]
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: portfolio-web
+    environment:
+      VITE_API_PROXY_TARGET: "${PORTFOLIO_WEB_API_PROXY_TARGET:-http://portfolio-api:18082}"
+    depends_on:
+      - portfolio-api
+    ports:
+      - "4174:4174"
     restart: unless-stopped
 
 volumes:
