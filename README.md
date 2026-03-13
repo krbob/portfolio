@@ -97,6 +97,7 @@ docker compose --profile app up -d --build
 ```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
+See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current implementation roadmap.
 
 ## Server backups
 
