@@ -26,6 +26,10 @@ dependencies {
     implementation("io.insert-koin:koin-ktor:4.1.1")
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
     implementation("ch.qos.logback:logback-classic:1.5.32")
+    implementation("com.zaxxer:HikariCP:6.3.0")
+    implementation("org.flywaydb:flyway-core:11.13.2")
+    implementation("org.flywaydb:flyway-database-postgresql:11.13.2")
+    implementation("org.postgresql:postgresql:42.7.8")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")

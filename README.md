@@ -43,4 +43,18 @@ portfolio/
 - repository storage is currently in-memory
 - PostgreSQL wiring is the next backend milestone
 
+## Local database
+
+For local PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+The default backend config expects PostgreSQL at `127.0.0.1:15432` with:
+
+- database: `portfolio`
+- user: `portfolio`
+- password: `portfolio`
+
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.

@@ -8,3 +8,8 @@ ktor:
 portfolio:
   name: "Portfolio"
   stage: "dev"
+  persistence:
+    mode: "memory"
+    jdbcUrl: "jdbc:postgresql://127.0.0.1:15432/portfolio"
+    username: "portfolio"
+    password: "portfolio"
