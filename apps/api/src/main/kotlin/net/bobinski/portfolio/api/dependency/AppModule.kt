@@ -5,6 +5,7 @@ import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
@@ -41,6 +42,14 @@ fun appModule(config: PersistenceConfig) = module {
             transactionRepository = get(),
             accountRepository = get(),
             instrumentRepository = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioReadModelService(
+            accountRepository = get(),
+            instrumentRepository = get(),
+            transactionRepository = get(),
             clock = get()
         )
     }

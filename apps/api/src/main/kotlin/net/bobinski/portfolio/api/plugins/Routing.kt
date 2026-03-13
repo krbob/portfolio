@@ -6,6 +6,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import net.bobinski.portfolio.api.route.accountRoute
 import net.bobinski.portfolio.api.route.instrumentRoute
+import net.bobinski.portfolio.api.route.portfolioRoute
 import net.bobinski.portfolio.api.route.systemRoute
 import net.bobinski.portfolio.api.route.transactionRoute
 
@@ -18,6 +19,7 @@ fun Application.configureRouting() {
         systemRoute(this@configureRouting)
         accountRoute()
         instrumentRoute()
+        portfolioRoute()
         transactionRoute()
     }
 }
