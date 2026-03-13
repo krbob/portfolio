@@ -1,12 +1,27 @@
 import { SectionCard } from './SectionCard'
 import { usePortfolioOverview } from '../hooks/use-read-model'
 
-function formatCurrency(value: string) {
+function formatCurrency(value: string | null | undefined) {
+  if (value == null) {
+    return 'Unavailable'
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'PLN',
     maximumFractionDigits: 2,
   }).format(Number(value))
+}
+
+function formatSignedCurrency(value: string | null | undefined) {
+  if (value == null) {
+    return 'Unavailable'
+  }
+  const amount = Number(value)
+  const formatted = formatCurrency(value)
+  if (amount > 0) {
+    return `+${formatted}`
+  }
+  return formatted
 }
 
 export function PortfolioOverviewSection() {
@@ -17,17 +32,24 @@ export function PortfolioOverviewSection() {
     <SectionCard
       eyebrow="Read model"
       title="Portfolio overview"
-      description="Current read model is book-only: cash plus average-cost holdings derived from transactions."
+      description="Current valuation uses market data when available and falls back to book basis for positions that could not be priced."
     >
       <div className="overview-grid">
         <article className="overview-stat">
-          <span>Total book value</span>
-          <strong>{data ? formatCurrency(data.totalBookValuePln) : '...'}</strong>
+          <span>Total current value</span>
+          <strong>{data ? formatCurrency(data.totalCurrentValuePln) : '...'}</strong>
         </article>
 
         <article className="overview-stat">
-          <span>Invested book value</span>
-          <strong>{data ? formatCurrency(data.investedBookValuePln) : '...'}</strong>
+          <span>Total unrealized P/L</span>
+          <strong className={data ? gainClassName(data.totalUnrealizedGainPln) : undefined}>
+            {data ? formatSignedCurrency(data.totalUnrealizedGainPln) : '...'}
+          </strong>
+        </article>
+
+        <article className="overview-stat">
+          <span>Invested current value</span>
+          <strong>{data ? formatCurrency(data.investedCurrentValuePln) : '...'}</strong>
         </article>
 
         <article className="overview-stat">
@@ -36,19 +58,20 @@ export function PortfolioOverviewSection() {
         </article>
 
         <article className="overview-stat">
-          <span>Net contributions</span>
-          <strong>{data ? formatCurrency(data.netContributionsPln) : '...'}</strong>
-        </article>
-
-        <article className="overview-stat">
-          <span>Active holdings</span>
-          <strong>{data?.activeHoldingCount ?? '...'}</strong>
-        </article>
-
-        <article className="overview-stat">
-          <span>Read model issues</span>
+          <span>Valuation coverage</span>
           <strong>
-            {data ? data.missingFxTransactions + data.unsupportedCorrectionTransactions : '...'}
+            {data ? `${data.valuedHoldingCount}/${data.activeHoldingCount}` : '...'}
+          </strong>
+        </article>
+
+        <article className="overview-stat">
+          <span>Total issues</span>
+          <strong>
+            {data
+              ? data.valuationIssueCount +
+                data.missingFxTransactions +
+                data.unsupportedCorrectionTransactions
+              : '...'}
           </strong>
         </article>
       </div>
@@ -58,15 +81,36 @@ export function PortfolioOverviewSection() {
       {data && (
         <div className="overview-notes">
           <p>
-            Allocation by book basis: equities {formatCurrency(data.equityBookValuePln)}, bonds{' '}
-            {formatCurrency(data.bondBookValuePln)}, cash {formatCurrency(data.cashBookValuePln)}.
+            Current allocation: equities {formatCurrency(data.equityCurrentValuePln)}, bonds{' '}
+            {formatCurrency(data.bondCurrentValuePln)}, cash {formatCurrency(data.cashCurrentValuePln)}.
           </p>
           <p>
-            Valuation state {data.valuationState}. Missing FX transactions: {data.missingFxTransactions}.
-            Unsupported corrections: {data.unsupportedCorrectionTransactions}.
+            Book basis: total {formatCurrency(data.totalBookValuePln)}, invested{' '}
+            {formatCurrency(data.investedBookValuePln)}, net contributions{' '}
+            {formatCurrency(data.netContributionsPln)}.
+          </p>
+          <p>
+            Valuation state {data.valuationState}. Unvalued holdings: {data.unvaluedHoldingCount}.
+            Valuation issues: {data.valuationIssueCount}. Missing FX transactions:{' '}
+            {data.missingFxTransactions}. Unsupported corrections:{' '}
+            {data.unsupportedCorrectionTransactions}.
           </p>
         </div>
       )}
     </SectionCard>
   )
+}
+
+function gainClassName(value: string | null | undefined) {
+  if (value == null) {
+    return undefined
+  }
+  const amount = Number(value)
+  if (amount > 0) {
+    return 'value-positive'
+  }
+  if (amount < 0) {
+    return 'value-negative'
+  }
+  return undefined
 }

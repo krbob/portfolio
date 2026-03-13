@@ -2,15 +2,24 @@ export interface PortfolioOverview {
   asOf: string
   valuationState: string
   totalBookValuePln: string
+  totalCurrentValuePln: string
   investedBookValuePln: string
+  investedCurrentValuePln: string
   cashBalancePln: string
   netContributionsPln: string
   equityBookValuePln: string
+  equityCurrentValuePln: string
   bondBookValuePln: string
+  bondCurrentValuePln: string
   cashBookValuePln: string
+  cashCurrentValuePln: string
+  totalUnrealizedGainPln: string
   accountCount: number
   instrumentCount: number
   activeHoldingCount: number
+  valuedHoldingCount: number
+  unvaluedHoldingCount: number
+  valuationIssueCount: number
   missingFxTransactions: number
   unsupportedCorrectionTransactions: number
 }
@@ -27,6 +36,12 @@ export interface PortfolioHolding {
   averageCostPerUnitPln: string
   costBasisPln: string
   bookValuePln: string
+  currentPricePln: string | null
+  currentValuePln: string | null
+  unrealizedGainPln: string | null
+  valuedAt: string | null
+  valuationStatus: string
+  valuationIssue: string | null
   transactionCount: number
 }
 

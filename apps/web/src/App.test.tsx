@@ -31,15 +31,24 @@ describe('App', () => {
             asOf: '2026-03-13',
             valuationState: 'BOOK_ONLY',
             totalBookValuePln: '2000.00',
+            totalCurrentValuePln: '2000.00',
             investedBookValuePln: '1005.00',
+            investedCurrentValuePln: '1005.00',
             cashBalancePln: '995.00',
             netContributionsPln: '2000.00',
             equityBookValuePln: '1005.00',
+            equityCurrentValuePln: '1005.00',
             bondBookValuePln: '0.00',
+            bondCurrentValuePln: '0.00',
             cashBookValuePln: '995.00',
+            cashCurrentValuePln: '995.00',
+            totalUnrealizedGainPln: '0.00',
             accountCount: 1,
             instrumentCount: 1,
             activeHoldingCount: 1,
+            valuedHoldingCount: 0,
+            unvaluedHoldingCount: 1,
+            valuationIssueCount: 1,
             missingFxTransactions: 0,
             unsupportedCorrectionTransactions: 0,
           }),
@@ -62,6 +71,12 @@ describe('App', () => {
               averageCostPerUnitPln: '100.50',
               costBasisPln: '603.00',
               bookValuePln: '603.00',
+              currentPricePln: null,
+              currentValuePln: null,
+              unrealizedGainPln: null,
+              valuedAt: null,
+              valuationStatus: 'UNAVAILABLE',
+              valuationIssue: 'Quote service unavailable.',
               transactionCount: 2,
             },
           ]),
@@ -95,7 +110,7 @@ describe('App', () => {
     expect(screen.getByText(/transaction-based portfolio accounting/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /holdings/i })).toBeInTheDocument()
-    expect(screen.getByText(/book-only/i)).toBeInTheDocument()
+    expect(screen.getByText(/valuation state/i)).toBeInTheDocument()
     expect(screen.getByText(/vwce/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()
