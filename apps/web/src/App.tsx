@@ -1,31 +1,81 @@
+import { AppShell } from './components/AppShell'
+import { useAppMeta } from './hooks/use-app-meta'
+
+function formatStage(stage: string) {
+  return stage.toUpperCase()
+}
+
 export function App() {
+  const { data, isLoading, isError } = useAppMeta()
+
   return (
-    <main className="app-shell">
+    <AppShell>
       <section className="hero-card">
-        <p className="eyebrow">Portfolio</p>
-        <h1>Self-hosted portfolio tracking for long-term investing.</h1>
+        <div className="hero-header">
+          <div>
+            <p className="eyebrow">Dashboard shell</p>
+            <h2 className="hero-title">A calm control panel for a long-term portfolio.</h2>
+          </div>
+
+          <div className="status-pill">
+            {isLoading && 'Connecting API'}
+            {isError && 'API unavailable'}
+            {data && `${data.name} ${formatStage(data.stage)}`}
+          </div>
+        </div>
+
         <p className="hero-copy">
-          The first iteration focuses on a clean web foundation, transaction-based accounting, and a
-          backend that will own reconstruction of portfolio history.
+          This first slice wires the web app to the API and defines the shape of the product: web-first,
+          transaction-based, and rebuildable from raw portfolio events plus market data.
         </p>
       </section>
 
-      <section className="grid">
-        <article className="panel">
-          <h2>Frontend</h2>
-          <p>React, TypeScript, Vite, and a deliberately small initial surface.</p>
+      <section className="summary-grid">
+        <article className="panel metric-card">
+          <span className="metric-label">API stage</span>
+          <strong>{data ? formatStage(data.stage) : '...'}</strong>
         </article>
 
-        <article className="panel">
-          <h2>Backend</h2>
-          <p>Kotlin and Ktor, aligned with the existing market-data and EDO services.</p>
+        <article className="panel metric-card">
+          <span className="metric-label">Version</span>
+          <strong>{data?.version ?? '...'}</strong>
         </article>
 
-        <article className="panel">
-          <h2>Data model</h2>
-          <p>Transactions are the source of truth. Daily snapshots will be rebuildable cache.</p>
+        <article className="panel metric-card">
+          <span className="metric-label">System state</span>
+          <strong>{isError ? 'Degraded' : isLoading ? 'Loading' : 'Healthy'}</strong>
         </article>
       </section>
-    </main>
+
+      <section className="detail-grid">
+        <article className="panel stack-card">
+          <h3>Chosen stack</h3>
+          <dl className="stack-list">
+            <div>
+              <dt>Web</dt>
+              <dd>{data?.stack.web ?? 'Loading...'}</dd>
+            </div>
+            <div>
+              <dt>API</dt>
+              <dd>{data?.stack.api ?? 'Loading...'}</dd>
+            </div>
+            <div>
+              <dt>Data</dt>
+              <dd>{data?.stack.database ?? 'Loading...'}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article className="panel capabilities-card">
+          <h3>Planned capabilities</h3>
+          <ul>
+            {(data?.capabilities ?? []).map((capability) => (
+              <li key={capability}>{capability}</li>
+            ))}
+            {!data && <li>Loading capabilities...</li>}
+          </ul>
+        </article>
+      </section>
+    </AppShell>
   )
 }
