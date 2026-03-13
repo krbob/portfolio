@@ -41,7 +41,8 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 
 - PostgreSQL planned for production data
 - relational schema already drafted in SQL migrations
-- current write-model implementation uses in-memory repositories until PostgreSQL wiring is added
+- current write-model implementation can run in `memory` or `postgres` mode
+- PostgreSQL mode uses Flyway migrations on startup
 
 ## First delivery slices
 

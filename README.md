@@ -40,8 +40,9 @@ portfolio/
 
 - backend write-model API exists for accounts, instruments, and transactions
 - domain model and initial PostgreSQL schema are defined
-- repository storage is currently in-memory
-- PostgreSQL wiring is the next backend milestone
+- repository storage can run in `memory` or `postgres` mode
+- default local mode remains `memory` for fast startup and tests
+- PostgreSQL wiring is available for the write model
 
 ## Local database
 

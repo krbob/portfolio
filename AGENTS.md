@@ -42,5 +42,6 @@ The product is optimized for:
 2. Add app shell, health endpoints, and configuration surfaces.
 3. Define core domain model and persistence schema.
 4. Implement the first write-model API for accounts, instruments, and transactions.
-5. Replace in-memory repositories with PostgreSQL-backed persistence.
+5. Support PostgreSQL-backed persistence for the write model.
 6. Add portfolio overview, holdings, and timeline reconstruction.
+7. Rebuild historical daily snapshots from transactions and external market data.

@@ -2,11 +2,14 @@ package net.bobinski.portfolio.api.plugins
 
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.dependency.appModule
 import org.koin.ktor.plugin.Koin
 
 fun Application.configureDependencyInjection() {
+    val persistenceConfig = PersistenceConfig.from(environment.config)
+
     install(Koin) {
-        modules(appModule)
+        modules(appModule(persistenceConfig))
     }
 }

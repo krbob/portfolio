@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.persistence.config
 
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.config.propertyOrNull
 
 data class PersistenceConfig(
     val mode: PersistenceMode,
@@ -12,10 +13,12 @@ data class PersistenceConfig(
 
     companion object {
         fun from(config: ApplicationConfig): PersistenceConfig = PersistenceConfig(
-            mode = config.property("portfolio.persistence.mode").getString().let(PersistenceMode::from),
-            jdbcUrl = config.property("portfolio.persistence.jdbcUrl").getString(),
-            username = config.property("portfolio.persistence.username").getString(),
-            password = config.property("portfolio.persistence.password").getString()
+            mode = config.propertyOrNull("portfolio.persistence.mode")?.getString()?.let(PersistenceMode::from)
+                ?: PersistenceMode.MEMORY,
+            jdbcUrl = config.propertyOrNull("portfolio.persistence.jdbcUrl")?.getString()
+                ?: "jdbc:postgresql://127.0.0.1:15432/portfolio",
+            username = config.propertyOrNull("portfolio.persistence.username")?.getString() ?: "portfolio",
+            password = config.propertyOrNull("portfolio.persistence.password")?.getString() ?: "portfolio"
         )
     }
 }
