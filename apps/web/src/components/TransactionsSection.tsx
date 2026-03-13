@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { SectionCard } from './SectionCard'
 import {
   useAccounts,
@@ -29,6 +29,16 @@ const initialForm = {
   notes: '',
 }
 
+const initialJournalFilters = {
+  search: '',
+  accountId: 'ALL',
+  instrumentId: 'ALL',
+  type: 'ALL',
+  currency: 'ALL',
+  sort: 'tradeDate-desc',
+  pageSize: '10',
+}
+
 export function TransactionsSection() {
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
@@ -42,6 +52,8 @@ export function TransactionsSection() {
   const [importCsv, setImportCsv] = useState('')
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
@@ -50,6 +62,104 @@ export function TransactionsSection() {
   const canSubmit = useMemo(() => {
     return form.accountId !== '' && (!requiresInstrument || form.instrumentId !== '')
   }, [form.accountId, form.instrumentId, requiresInstrument])
+
+  const accountNameById = useMemo(
+    () => new Map(accountOptions.map((account) => [account.id, account.name])),
+    [accountOptions],
+  )
+  const instrumentById = useMemo(
+    () => new Map(instrumentOptions.map((instrument) => [instrument.id, instrument])),
+    [instrumentOptions],
+  )
+
+  const journalRows = useMemo(() => {
+    return (transactionsQuery.data ?? []).map((transaction) => {
+      const instrument = transaction.instrumentId ? instrumentById.get(transaction.instrumentId) ?? null : null
+      return {
+        transaction,
+        accountName: accountNameById.get(transaction.accountId) ?? transaction.accountId.slice(0, 8),
+        instrumentName: instrument?.name ?? null,
+        instrumentSymbol: instrument?.symbol ?? null,
+      }
+    })
+  }, [transactionsQuery.data, accountNameById, instrumentById])
+
+  const currencyOptions = useMemo(() => {
+    return Array.from(new Set(journalRows.map((row) => row.transaction.currency))).sort()
+  }, [journalRows])
+
+  const filteredRows = useMemo(() => {
+    const search = journalFilters.search.trim().toLowerCase()
+    return journalRows.filter((row) => {
+      if (journalFilters.accountId !== 'ALL' && row.transaction.accountId !== journalFilters.accountId) {
+        return false
+      }
+      if (
+        journalFilters.instrumentId !== 'ALL' &&
+        (row.transaction.instrumentId ?? '') !== journalFilters.instrumentId
+      ) {
+        return false
+      }
+      if (journalFilters.type !== 'ALL' && row.transaction.type !== journalFilters.type) {
+        return false
+      }
+      if (journalFilters.currency !== 'ALL' && row.transaction.currency !== journalFilters.currency) {
+        return false
+      }
+      if (search === '') {
+        return true
+      }
+
+      const haystack = [
+        row.transaction.type,
+        row.transaction.tradeDate,
+        row.transaction.settlementDate ?? '',
+        row.transaction.grossAmount,
+        row.transaction.quantity ?? '',
+        row.transaction.unitPrice ?? '',
+        row.transaction.currency,
+        row.transaction.notes,
+        row.accountName,
+        row.instrumentName ?? '',
+        row.instrumentSymbol ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(search)
+    })
+  }, [journalFilters, journalRows])
+
+  const sortedRows = useMemo(() => {
+    const rows = [...filteredRows]
+    rows.sort((left, right) => compareJournalRows(left, right, journalFilters.sort))
+    return rows
+  }, [filteredRows, journalFilters.sort])
+
+  const pageSize = Number(journalFilters.pageSize)
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize))
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedRows.slice(start, start + pageSize)
+  }, [currentPage, pageSize, sortedRows])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [
+    journalFilters.accountId,
+    journalFilters.currency,
+    journalFilters.instrumentId,
+    journalFilters.pageSize,
+    journalFilters.search,
+    journalFilters.sort,
+    journalFilters.type,
+  ])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -114,6 +224,13 @@ export function TransactionsSection() {
   function resetForm() {
     setEditingTransactionId(null)
     setForm(initialForm)
+  }
+
+  function updateJournalFilter(name: keyof typeof initialJournalFilters, value: string) {
+    setJournalFilters((current) => ({
+      ...current,
+      [name]: value,
+    }))
   }
 
   function handleImportSubmit(event: FormEvent<HTMLFormElement>) {
@@ -345,7 +462,7 @@ export function TransactionsSection() {
               className="import-textarea"
               value={importCsv}
               onChange={(event) => setImportCsv(event.target.value)}
-              placeholder={`account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes\nPrimary,DEPOSIT,2026-03-01,2026-03-01,,,1000.00,0,0,PLN,,Initial funding`}
+              placeholder={`account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes\nPrimary,DEPOSIT,2026-03-01,2026-03-01,,,,1000.00,0,0,PLN,,Initial funding`}
             />
 
             <div className="form-actions">
@@ -360,25 +477,174 @@ export function TransactionsSection() {
             )}
           </form>
 
+          <section className="journal-card">
+            <div className="section-header">
+              <p className="eyebrow">Journal</p>
+              <h4>Transaction journal</h4>
+              <p>
+                Filter and sort the canonical event stream before editing or deleting rows.
+              </p>
+            </div>
+
+            <div className="journal-toolbar">
+              <label className="journal-filter journal-filter-wide">
+                <span>Search</span>
+                <input
+                  value={journalFilters.search}
+                  onChange={(event) => updateJournalFilter('search', event.target.value)}
+                  placeholder="Type, account, instrument, note, amount..."
+                />
+              </label>
+
+              <label className="journal-filter">
+                <span>Account</span>
+                <select
+                  value={journalFilters.accountId}
+                  onChange={(event) => updateJournalFilter('accountId', event.target.value)}
+                >
+                  <option value="ALL">All accounts</option>
+                  {accountOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="journal-filter">
+                <span>Instrument</span>
+                <select
+                  value={journalFilters.instrumentId}
+                  onChange={(event) => updateJournalFilter('instrumentId', event.target.value)}
+                >
+                  <option value="ALL">All instruments</option>
+                  {instrumentOptions.map((instrument) => (
+                    <option key={instrument.id} value={instrument.id}>
+                      {instrument.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="journal-filter">
+                <span>Type</span>
+                <select
+                  value={journalFilters.type}
+                  onChange={(event) => updateJournalFilter('type', event.target.value)}
+                >
+                  <option value="ALL">All types</option>
+                  {['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'].map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="journal-filter">
+                <span>Currency</span>
+                <select
+                  value={journalFilters.currency}
+                  onChange={(event) => updateJournalFilter('currency', event.target.value)}
+                >
+                  <option value="ALL">All currencies</option>
+                  {currencyOptions.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="journal-filter">
+                <span>Sort</span>
+                <select
+                  value={journalFilters.sort}
+                  onChange={(event) => updateJournalFilter('sort', event.target.value)}
+                >
+                  <option value="tradeDate-desc">Trade date newest</option>
+                  <option value="tradeDate-asc">Trade date oldest</option>
+                  <option value="grossAmount-desc">Gross amount high to low</option>
+                  <option value="grossAmount-asc">Gross amount low to high</option>
+                  <option value="type-asc">Type A to Z</option>
+                  <option value="account-asc">Account A to Z</option>
+                  <option value="createdAt-desc">Recently created</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="journal-summary">
+              <span>
+                Showing {pagedRows.length} of {sortedRows.length} matching rows ({journalRows.length} total).
+              </span>
+
+              <div className="journal-pagination">
+                <label className="journal-page-size">
+                  <span>Rows</span>
+                  <select
+                    value={journalFilters.pageSize}
+                    onChange={(event) => updateJournalFilter('pageSize', event.target.value)}
+                  >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage <= 1}
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage >= totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </section>
+
           {transactionsQuery.isLoading && <p className="muted-copy">Loading transactions...</p>}
           {transactionsQuery.isError && (
             <p className="form-error">{transactionsQuery.error.message}</p>
           )}
           {transactionsQuery.data?.length === 0 && <p className="muted-copy">No transactions yet.</p>}
-          {transactionsQuery.data?.map((transaction) => (
+          {transactionsQuery.data?.length !== 0 && pagedRows.length === 0 && (
+            <p className="muted-copy">No journal rows match the current filters.</p>
+          )}
+          {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
             <article className="list-item" key={transaction.id}>
-              <div>
+              <div className="transaction-row-main">
                 <strong>
-                  {transaction.type} · {transaction.grossAmount} {transaction.currency}
+                  {transaction.type} · {transaction.grossAmount} {transaction.currency} · {accountName}
                 </strong>
                 <p>
-                  {transaction.tradeDate}
-                  {transaction.instrumentId ? ` · instrument ${transaction.instrumentId.slice(0, 8)}` : ''}
+                  trade {transaction.tradeDate}
+                  {transaction.settlementDate ? ` · settle ${transaction.settlementDate}` : ''}
+                  {instrumentName ? ` · ${instrumentName}` : ''}
+                  {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
+                  {transaction.quantity ? ` · qty ${transaction.quantity}` : ''}
+                  {transaction.unitPrice ? ` · px ${transaction.unitPrice}` : ''}
                   {transaction.notes ? ` · ${transaction.notes}` : ''}
+                </p>
+                <p className="transaction-row-meta">
+                  fee {transaction.feeAmount} · tax {transaction.taxAmount}
+                  {transaction.fxRateToPln ? ` · fx ${transaction.fxRateToPln}` : ''}
+                  {` · created ${transaction.createdAt.slice(0, 10)}`}
                 </p>
               </div>
               <div className="list-item-actions">
-                <span className="list-badge">{transaction.accountId.slice(0, 8)}</span>
+                <span className="list-badge">{transaction.id.slice(0, 8)}</span>
                 <button type="button" className="button-secondary" onClick={() => startEditing(transaction)}>
                   Edit
                 </button>
@@ -533,4 +799,44 @@ function parseCsv(text: string): string[][] {
 function detectDelimiter(text: string): ',' | ';' {
   const firstLine = text.split(/\r?\n/, 1)[0] ?? ''
   return firstLine.split(';').length > firstLine.split(',').length ? ';' : ','
+}
+
+function compareJournalRows(
+  left: {
+    transaction: Transaction
+    accountName: string
+    instrumentName: string | null
+  },
+  right: {
+    transaction: Transaction
+    accountName: string
+    instrumentName: string | null
+  },
+  sort: string,
+) {
+  switch (sort) {
+    case 'tradeDate-asc':
+      return compareStrings(left.transaction.tradeDate, right.transaction.tradeDate)
+    case 'grossAmount-desc':
+      return compareNumbers(right.transaction.grossAmount, left.transaction.grossAmount)
+    case 'grossAmount-asc':
+      return compareNumbers(left.transaction.grossAmount, right.transaction.grossAmount)
+    case 'type-asc':
+      return compareStrings(left.transaction.type, right.transaction.type)
+    case 'account-asc':
+      return compareStrings(left.accountName, right.accountName)
+    case 'createdAt-desc':
+      return compareStrings(right.transaction.createdAt, left.transaction.createdAt)
+    case 'tradeDate-desc':
+    default:
+      return compareStrings(right.transaction.tradeDate, left.transaction.tradeDate)
+  }
+}
+
+function compareStrings(left: string, right: string) {
+  return left.localeCompare(right)
+}
+
+function compareNumbers(left: string, right: string) {
+  return Number(left) - Number(right)
 }

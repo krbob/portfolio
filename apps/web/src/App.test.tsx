@@ -233,5 +233,6 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /transactions/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /transaction journal/i })).toBeInTheDocument()
   })
 })

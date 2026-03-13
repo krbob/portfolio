@@ -364,6 +364,82 @@ p {
   background: rgba(19, 32, 24, 0.04);
 }
 
+.journal-card {
+  display: grid;
+  gap: 16px;
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.journal-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.journal-filter {
+  display: grid;
+  gap: 6px;
+}
+
+.journal-filter-wide {
+  grid-column: span 2;
+}
+
+.journal-filter span,
+.journal-page-size span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58705f;
+}
+
+.journal-filter input,
+.journal-filter select,
+.journal-page-size select {
+  border-radius: 14px;
+  border: 1px solid rgba(19, 32, 24, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  color: inherit;
+}
+
+.journal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #314238;
+  font-size: 0.92rem;
+}
+
+.journal-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.journal-page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transaction-row-main {
+  display: grid;
+  gap: 6px;
+}
+
+.transaction-row-meta {
+  color: #7b8d81;
+  font-size: 0.86rem;
+}
+
 .import-card h4 {
   margin: 0;
   font-size: 1rem;
@@ -658,6 +734,7 @@ p {
   .history-summary-grid,
   .returns-grid,
   .returns-stat-grid,
+  .journal-toolbar,
   .holding-item {
     grid-template-columns: 1fr;
   }
@@ -678,6 +755,10 @@ p {
 
   .holding-stats {
     grid-template-columns: 1fr;
+  }
+
+  .journal-filter-wide {
+    grid-column: auto;
   }
 
   .sidebar,
