@@ -12,6 +12,8 @@ import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
@@ -40,6 +42,13 @@ fun appModule(
     single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorBaseUrl) }
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
+            config = get(),
+            stockAnalystClient = get(),
+            edoCalculatorClient = get()
+        )
+    }
+    single<HistoricalInstrumentValuationProvider> {
+        RemoteHistoricalInstrumentValuationProvider(
             config = get(),
             stockAnalystClient = get(),
             edoCalculatorClient = get()

@@ -5,6 +5,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import java.math.BigDecimal
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -40,6 +42,28 @@ class StockAnalystClient(
             lastPrice = payload.lastPrice
         )
     }
+
+    suspend fun historyInPln(symbol: String): List<HistoricalPricePoint> = withContext(Dispatchers.IO) {
+        val encodedSymbol = URLEncoder.encode(symbol, StandardCharsets.UTF_8).replace("+", "%20")
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("${baseUrl.trimEnd('/')}/history/$encodedSymbol?period=max&interval=1d&currency=PLN"))
+            .timeout(Duration.ofSeconds(20))
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() !in 200..299) {
+            throw MarketDataClientException("stock-analyst history returned HTTP ${response.statusCode()} for symbol $symbol.")
+        }
+
+        val payload = json.decodeFromString<StockAnalystHistoryResponse>(response.body())
+        payload.prices.map { price ->
+            HistoricalPricePoint(
+                date = LocalDate.parse(price.date),
+                closePricePln = BigDecimal.valueOf(price.close)
+            )
+        }
+    }
 }
 
 data class StockAnalystQuote(
@@ -55,4 +79,15 @@ private data class StockAnalystQuoteResponse(
     val currency: String? = null,
     val date: String,
     @SerialName("lastPrice") val lastPrice: Double
+)
+
+@Serializable
+private data class StockAnalystHistoryResponse(
+    val prices: List<StockAnalystHistoryPriceResponse>
+)
+
+@Serializable
+private data class StockAnalystHistoryPriceResponse(
+    val date: String,
+    val close: Double
 )

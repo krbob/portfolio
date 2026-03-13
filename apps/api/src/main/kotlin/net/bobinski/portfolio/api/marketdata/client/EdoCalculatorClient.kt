@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.EdoTerms
+import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import java.math.BigDecimal
 import java.net.URI
 import java.net.http.HttpClient
@@ -39,6 +40,33 @@ class EdoCalculatorClient(
         )
     }
 
+    suspend fun historyInPln(
+        terms: EdoTerms,
+        from: LocalDate? = null,
+        to: LocalDate? = null
+    ): List<HistoricalPricePoint> = withContext(Dispatchers.IO) {
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(buildHistoryUrl(terms = terms, from = from, to = to)))
+            .timeout(Duration.ofSeconds(20))
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() !in 200..299) {
+            throw MarketDataClientException(
+                "edo-calculator history returned HTTP ${response.statusCode()} for purchase date ${terms.purchaseDate}."
+            )
+        }
+
+        val payload = json.decodeFromString<EdoHistoryResponse>(response.body())
+        payload.points.map { point ->
+            HistoricalPricePoint(
+                date = LocalDate.parse(point.date),
+                closePricePln = point.totalValue.toBigDecimal()
+            )
+        }
+    }
+
     private fun buildUrl(terms: EdoTerms, asOf: LocalDate?): String {
         val path = if (asOf == null) "/edo/value" else "/edo/value/at"
         val params = linkedMapOf(
@@ -59,6 +87,30 @@ class EdoCalculatorClient(
         return "${baseUrl.trimEnd('/')}$path?$queryString"
     }
 
+    private fun buildHistoryUrl(terms: EdoTerms, from: LocalDate?, to: LocalDate?): String {
+        val params = linkedMapOf(
+            "purchaseYear" to terms.purchaseDate.year.toString(),
+            "purchaseMonth" to terms.purchaseDate.monthValue.toString(),
+            "purchaseDay" to terms.purchaseDate.dayOfMonth.toString(),
+            "firstPeriodRate" to terms.firstPeriodRateBps.toDecimalRate(),
+            "margin" to terms.marginBps.toDecimalRate(),
+            "principal" to "100"
+        )
+        if (from != null) {
+            params["fromYear"] = from.year.toString()
+            params["fromMonth"] = from.monthValue.toString()
+            params["fromDay"] = from.dayOfMonth.toString()
+        }
+        if (to != null) {
+            params["toYear"] = to.year.toString()
+            params["toMonth"] = to.monthValue.toString()
+            params["toDay"] = to.dayOfMonth.toString()
+        }
+
+        val queryString = params.entries.joinToString("&") { (key, value) -> "$key=$value" }
+        return "${baseUrl.trimEnd('/')}/edo/history?$queryString"
+    }
+
     private fun Int.toDecimalRate(): String =
         BigDecimal(this).divide(BigDecimal(100)).stripTrailingZeros().toPlainString()
 }
@@ -76,5 +128,16 @@ private data class EdoCalculatorResponse(
 
 @Serializable
 private data class EdoValueResponse(
+    val totalValue: String
+)
+
+@Serializable
+private data class EdoHistoryResponse(
+    val points: List<EdoHistoryPointResponse>
+)
+
+@Serializable
+private data class EdoHistoryPointResponse(
+    val date: String,
     val totalValue: String
 )
