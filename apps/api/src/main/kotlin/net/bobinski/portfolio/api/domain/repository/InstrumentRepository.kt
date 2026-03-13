@@ -7,4 +7,5 @@ interface InstrumentRepository {
     suspend fun list(): List<Instrument>
     suspend fun get(id: UUID): Instrument?
     suspend fun save(instrument: Instrument): Instrument
+    suspend fun deleteAll()
 }

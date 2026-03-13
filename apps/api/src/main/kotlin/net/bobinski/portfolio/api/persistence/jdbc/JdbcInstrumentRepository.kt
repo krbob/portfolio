@@ -43,8 +43,9 @@ class JdbcInstrumentRepository(
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
-                connection.insertInstrument(instrument)
-                instrument.edoTerms?.let { connection.insertEdoTerms(instrument.id, it) }
+                connection.upsertInstrument(instrument)
+                connection.deleteEdoTerms(instrument.id)
+                instrument.edoTerms?.let { connection.upsertEdoTerms(instrument.id, it) }
                 connection.commit()
             } catch (exception: Exception) {
                 connection.rollback()
@@ -56,12 +57,37 @@ class JdbcInstrumentRepository(
         return instrument
     }
 
-    private fun Connection.insertInstrument(instrument: Instrument) {
+    override suspend fun deleteAll() {
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                connection.prepareStatement("delete from edo_terms").use { it.executeUpdate() }
+                connection.prepareStatement("delete from instruments").use { it.executeUpdate() }
+                connection.commit()
+            } catch (exception: Exception) {
+                connection.rollback()
+                throw exception
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+    }
+
+    private fun Connection.upsertInstrument(instrument: Instrument) {
         prepareStatement(
             """
             insert into instruments (
                 id, name, kind, asset_class, symbol, currency, valuation_source, is_active, created_at, updated_at
             ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict (id) do update set
+                name = excluded.name,
+                kind = excluded.kind,
+                asset_class = excluded.asset_class,
+                symbol = excluded.symbol,
+                currency = excluded.currency,
+                valuation_source = excluded.valuation_source,
+                is_active = excluded.is_active,
+                updated_at = excluded.updated_at
             """.trimIndent()
         ).use { statement ->
             statement.setObject(1, instrument.id)
@@ -82,12 +108,18 @@ class JdbcInstrumentRepository(
         }
     }
 
-    private fun Connection.insertEdoTerms(instrumentId: UUID, edoTerms: EdoTerms) {
+    private fun Connection.upsertEdoTerms(instrumentId: UUID, edoTerms: EdoTerms) {
         prepareStatement(
             """
             insert into edo_terms (
                 instrument_id, purchase_date, first_period_rate_bps, margin_bps, principal_units, maturity_date
             ) values (?, ?, ?, ?, ?, ?)
+            on conflict (instrument_id) do update set
+                purchase_date = excluded.purchase_date,
+                first_period_rate_bps = excluded.first_period_rate_bps,
+                margin_bps = excluded.margin_bps,
+                principal_units = excluded.principal_units,
+                maturity_date = excluded.maturity_date
             """.trimIndent()
         ).use { statement ->
             statement.setObject(1, instrumentId)
@@ -96,6 +128,13 @@ class JdbcInstrumentRepository(
             statement.setInt(4, edoTerms.marginBps)
             statement.setInt(5, edoTerms.principalUnits)
             statement.setObject(6, edoTerms.maturityDate)
+            statement.executeUpdate()
+        }
+    }
+
+    private fun Connection.deleteEdoTerms(instrumentId: UUID) {
+        prepareStatement("delete from edo_terms where instrument_id = ?").use { statement ->
+            statement.setObject(1, instrumentId)
             statement.executeUpdate()
         }
     }

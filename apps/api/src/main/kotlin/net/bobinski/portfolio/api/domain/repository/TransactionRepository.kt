@@ -8,4 +8,5 @@ interface TransactionRepository {
     suspend fun get(id: UUID): Transaction?
     suspend fun save(transaction: Transaction): Transaction
     suspend fun delete(id: UUID): Boolean
+    suspend fun deleteAll()
 }

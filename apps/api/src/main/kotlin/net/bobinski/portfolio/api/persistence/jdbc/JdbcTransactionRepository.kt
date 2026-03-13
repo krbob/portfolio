@@ -73,6 +73,14 @@ class JdbcTransactionRepository(
             }
         }
 
+    override suspend fun deleteAll() {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement("delete from transactions").use { statement ->
+                statement.executeUpdate()
+            }
+        }
+    }
+
     private fun Connection.upsertTransaction(transaction: Transaction) {
         prepareStatement(
             """

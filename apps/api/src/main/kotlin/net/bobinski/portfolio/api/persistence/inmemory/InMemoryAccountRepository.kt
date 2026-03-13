@@ -16,4 +16,8 @@ class InMemoryAccountRepository : AccountRepository {
         accounts[account.id] = account
         return account
     }
+
+    override suspend fun deleteAll() {
+        accounts.clear()
+    }
 }

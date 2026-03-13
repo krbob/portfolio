@@ -16,4 +16,8 @@ class InMemoryInstrumentRepository : InstrumentRepository {
         instruments[instrument.id] = instrument
         return instrument
     }
+
+    override suspend fun deleteAll() {
+        instruments.clear()
+    }
 }

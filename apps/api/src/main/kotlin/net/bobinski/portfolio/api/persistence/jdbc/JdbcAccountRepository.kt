@@ -48,17 +48,32 @@ class JdbcAccountRepository(
 
     override suspend fun save(account: Account): Account {
         dataSource.connection.use { connection ->
-            connection.insertAccount(account)
+            connection.upsertAccount(account)
         }
         return account
     }
 
-    private fun Connection.insertAccount(account: Account) {
+    override suspend fun deleteAll() {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement("delete from accounts").use { statement ->
+                statement.executeUpdate()
+            }
+        }
+    }
+
+    private fun Connection.upsertAccount(account: Account) {
         prepareStatement(
             """
             insert into accounts (
                 id, name, institution, type, base_currency, is_active, created_at, updated_at
             ) values (?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict (id) do update set
+                name = excluded.name,
+                institution = excluded.institution,
+                type = excluded.type,
+                base_currency = excluded.base_currency,
+                is_active = excluded.is_active,
+                updated_at = excluded.updated_at
             """.trimIndent()
         ).use { statement ->
             statement.setObject(1, account.id)

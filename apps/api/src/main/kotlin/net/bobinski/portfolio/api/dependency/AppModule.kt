@@ -9,6 +9,7 @@ import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
@@ -137,6 +138,14 @@ fun appModule(
             transactionFxConversionService = get(),
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioTransferService(
+            accountRepository = get(),
+            instrumentRepository = get(),
+            transactionRepository = get(),
             clock = get()
         )
     }

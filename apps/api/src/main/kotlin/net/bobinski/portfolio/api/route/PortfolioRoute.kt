@@ -1,8 +1,10 @@
 package net.bobinski.portfolio.api.route
 
 import io.ktor.server.response.respond
+import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
@@ -14,6 +16,10 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
+import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
+import net.bobinski.portfolio.api.domain.service.ImportMode
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import org.koin.ktor.ext.inject
 
@@ -21,6 +27,7 @@ fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
+    val portfolioTransferService: PortfolioTransferService by inject()
 
     route("/v1/portfolio") {
         get("/overview") {
@@ -37,6 +44,16 @@ fun Route.portfolioRoute() {
 
         get("/returns") {
             call.respond(portfolioReturnsService.returns().toResponse())
+        }
+
+        get("/state/export") {
+            call.respond(portfolioTransferService.exportState().toResponse())
+        }
+
+        post("/state/import") {
+            val request = call.receive<ImportPortfolioStateRequest>()
+            val result = portfolioTransferService.importState(request.toDomain())
+            call.respond(result.toResponse())
         }
     }
 }
@@ -154,6 +171,85 @@ data class ReturnMetricResponse(
     val annualizedMoneyWeightedReturn: String?
 )
 
+@Serializable
+data class PortfolioSnapshotResponse(
+    val schemaVersion: Int,
+    val exportedAt: String,
+    val accounts: List<AccountSnapshotResponse>,
+    val instruments: List<InstrumentSnapshotResponse>,
+    val transactions: List<TransactionSnapshotResponse>
+)
+
+@Serializable
+data class AccountSnapshotResponse(
+    val id: String,
+    val name: String,
+    val institution: String,
+    val type: String,
+    val baseCurrency: String,
+    val isActive: Boolean,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class InstrumentSnapshotResponse(
+    val id: String,
+    val name: String,
+    val kind: String,
+    val assetClass: String,
+    val symbol: String?,
+    val currency: String,
+    val valuationSource: String,
+    val edoTerms: EdoTermsSnapshotResponse?,
+    val isActive: Boolean,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class EdoTermsSnapshotResponse(
+    val purchaseDate: String,
+    val firstPeriodRateBps: Int,
+    val marginBps: Int,
+    val principalUnits: Int,
+    val maturityDate: String
+)
+
+@Serializable
+data class TransactionSnapshotResponse(
+    val id: String,
+    val accountId: String,
+    val instrumentId: String?,
+    val type: String,
+    val tradeDate: String,
+    val settlementDate: String?,
+    val quantity: String?,
+    val unitPrice: String?,
+    val grossAmount: String,
+    val feeAmount: String,
+    val taxAmount: String,
+    val currency: String,
+    val fxRateToPln: String?,
+    val notes: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class ImportPortfolioStateRequest(
+    val mode: String = "MERGE",
+    val snapshot: PortfolioSnapshotResponse
+)
+
+@Serializable
+data class PortfolioImportResultResponse(
+    val mode: String,
+    val accountCount: Int,
+    val instrumentCount: Int,
+    val transactionCount: Int
+)
+
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
     asOf = asOf.toString(),
     valuationState = valuationState.name,
@@ -259,3 +355,138 @@ private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricRespon
     moneyWeightedReturn = moneyWeightedReturn.toPlainString(),
     annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString()
 )
+
+private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(
+    schemaVersion = schemaVersion,
+    exportedAt = exportedAt.toString(),
+    accounts = accounts.map { snapshot ->
+        AccountSnapshotResponse(
+            id = snapshot.id,
+            name = snapshot.name,
+            institution = snapshot.institution,
+            type = snapshot.type,
+            baseCurrency = snapshot.baseCurrency,
+            isActive = snapshot.isActive,
+            createdAt = snapshot.createdAt,
+            updatedAt = snapshot.updatedAt
+        )
+    },
+    instruments = instruments.map { snapshot ->
+        InstrumentSnapshotResponse(
+            id = snapshot.id,
+            name = snapshot.name,
+            kind = snapshot.kind,
+            assetClass = snapshot.assetClass,
+            symbol = snapshot.symbol,
+            currency = snapshot.currency,
+            valuationSource = snapshot.valuationSource,
+            edoTerms = snapshot.edoTerms?.let { terms ->
+                EdoTermsSnapshotResponse(
+                    purchaseDate = terms.purchaseDate,
+                    firstPeriodRateBps = terms.firstPeriodRateBps,
+                    marginBps = terms.marginBps,
+                    principalUnits = terms.principalUnits,
+                    maturityDate = terms.maturityDate
+                )
+            },
+            isActive = snapshot.isActive,
+            createdAt = snapshot.createdAt,
+            updatedAt = snapshot.updatedAt
+        )
+    },
+    transactions = transactions.map { snapshot ->
+        TransactionSnapshotResponse(
+            id = snapshot.id,
+            accountId = snapshot.accountId,
+            instrumentId = snapshot.instrumentId,
+            type = snapshot.type,
+            tradeDate = snapshot.tradeDate,
+            settlementDate = snapshot.settlementDate,
+            quantity = snapshot.quantity,
+            unitPrice = snapshot.unitPrice,
+            grossAmount = snapshot.grossAmount,
+            feeAmount = snapshot.feeAmount,
+            taxAmount = snapshot.taxAmount,
+            currency = snapshot.currency,
+            fxRateToPln = snapshot.fxRateToPln,
+            notes = snapshot.notes,
+            createdAt = snapshot.createdAt,
+            updatedAt = snapshot.updatedAt
+        )
+    }
+)
+
+private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = PortfolioImportRequest(
+    mode = try {
+        ImportMode.valueOf(mode)
+    } catch (_: IllegalArgumentException) {
+        throw IllegalArgumentException("mode must be one of ${ImportMode.entries.joinToString()}.")
+    },
+    snapshot = PortfolioSnapshot(
+        schemaVersion = snapshot.schemaVersion,
+        exportedAt = java.time.Instant.parse(snapshot.exportedAt),
+        accounts = snapshot.accounts.map { account ->
+            net.bobinski.portfolio.api.domain.service.AccountSnapshot(
+                id = account.id,
+                name = account.name,
+                institution = account.institution,
+                type = account.type,
+                baseCurrency = account.baseCurrency,
+                isActive = account.isActive,
+                createdAt = account.createdAt,
+                updatedAt = account.updatedAt
+            )
+        },
+        instruments = snapshot.instruments.map { instrument ->
+            net.bobinski.portfolio.api.domain.service.InstrumentSnapshot(
+                id = instrument.id,
+                name = instrument.name,
+                kind = instrument.kind,
+                assetClass = instrument.assetClass,
+                symbol = instrument.symbol,
+                currency = instrument.currency,
+                valuationSource = instrument.valuationSource,
+                edoTerms = instrument.edoTerms?.let { terms ->
+                    net.bobinski.portfolio.api.domain.service.EdoTermsSnapshot(
+                        purchaseDate = terms.purchaseDate,
+                        firstPeriodRateBps = terms.firstPeriodRateBps,
+                        marginBps = terms.marginBps,
+                        principalUnits = terms.principalUnits,
+                        maturityDate = terms.maturityDate
+                    )
+                },
+                isActive = instrument.isActive,
+                createdAt = instrument.createdAt,
+                updatedAt = instrument.updatedAt
+            )
+        },
+        transactions = snapshot.transactions.map { transaction ->
+            net.bobinski.portfolio.api.domain.service.TransactionSnapshot(
+                id = transaction.id,
+                accountId = transaction.accountId,
+                instrumentId = transaction.instrumentId,
+                type = transaction.type,
+                tradeDate = transaction.tradeDate,
+                settlementDate = transaction.settlementDate,
+                quantity = transaction.quantity,
+                unitPrice = transaction.unitPrice,
+                grossAmount = transaction.grossAmount,
+                feeAmount = transaction.feeAmount,
+                taxAmount = transaction.taxAmount,
+                currency = transaction.currency,
+                fxRateToPln = transaction.fxRateToPln,
+                notes = transaction.notes,
+                createdAt = transaction.createdAt,
+                updatedAt = transaction.updatedAt
+            )
+        }
+    )
+)
+
+private fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toResponse(): PortfolioImportResultResponse =
+    PortfolioImportResultResponse(
+        mode = mode.name,
+        accountCount = accountCount,
+        instrumentCount = instrumentCount,
+        transactionCount = transactionCount
+    )

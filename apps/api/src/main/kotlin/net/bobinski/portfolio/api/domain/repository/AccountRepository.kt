@@ -7,4 +7,5 @@ interface AccountRepository {
     suspend fun list(): List<Account>
     suspend fun get(id: UUID): Account?
     suspend fun save(account: Account): Account
+    suspend fun deleteAll()
 }
