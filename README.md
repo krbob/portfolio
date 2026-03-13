@@ -87,12 +87,12 @@ The Compose API profile enables server backups by default and stores them on the
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
 The web UI is exposed on `http://127.0.0.1:4174`.
 
-To run the full stack with live market data without persisting those URLs in the repo:
+To run the full stack with live market data without persisting provider URLs in the repo:
 
 ```bash
 PORTFOLIO_MARKET_DATA_ENABLED=true \
-PORTFOLIO_STOCK_ANALYST_BASE_URL=https://stock.bobinski.net/api \
-PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://edo.bobinski.net \
+PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst-host/api \
+PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator-host \
 docker compose --profile app up -d --build
 ```
 
@@ -131,3 +131,21 @@ Available API endpoints:
 - `GET /v1/portfolio/backups/download?fileName=...`
 - `POST /v1/portfolio/backups/run`
 - `POST /v1/portfolio/backups/restore`
+
+## Demo data
+
+For a ready-made demo portfolio with multiple `VWRA.L` purchases and several `EDO` lots over roughly two years:
+
+```bash
+./scripts/import-demo-portfolio.sh
+```
+
+The script posts [demo/demo-portfolio-import.json](/Users/bob/stock/portfolio/demo/demo-portfolio-import.json) to the local API in `REPLACE` mode.
+
+If you are running the Docker profile and want to seed the PostgreSQL container directly:
+
+```bash
+./scripts/seed-demo-portfolio-docker.sh
+```
+
+The SQL fixture lives in [demo/demo-portfolio-seed.sql](/Users/bob/stock/portfolio/demo/demo-portfolio-seed.sql).
