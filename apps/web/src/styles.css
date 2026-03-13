@@ -371,6 +371,30 @@ p {
   background: rgba(19, 32, 24, 0.04);
 }
 
+.history-unit-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.unit-pill {
+  min-height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(19, 32, 24, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0 14px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.unit-pill-active {
+  background: #132018;
+  border-color: #132018;
+  color: #f8f4ea;
+}
+
 .history-chart {
   width: 100%;
   height: auto;

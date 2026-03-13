@@ -50,6 +50,7 @@ export interface PortfolioDailyHistory {
   until: string
   valuationState: string
   instrumentHistoryIssueCount: number
+  referenceSeriesIssueCount: number
   missingFxTransactions: number
   unsupportedCorrectionTransactions: number
   points: PortfolioDailyHistoryPoint[]
@@ -61,6 +62,12 @@ export interface PortfolioDailyHistoryPoint {
   totalCurrentValuePln: string
   netContributionsPln: string
   cashBalancePln: string
+  totalCurrentValueUsd: string | null
+  netContributionsUsd: string | null
+  cashBalanceUsd: string | null
+  totalCurrentValueAu: string | null
+  netContributionsAu: string | null
+  cashBalanceAu: string | null
   equityCurrentValuePln: string
   bondCurrentValuePln: string
   cashCurrentValuePln: string
