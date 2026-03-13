@@ -1,0 +1,111 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(194, 225, 206, 0.7), transparent 30%),
+    linear-gradient(180deg, #f6f2e8 0%, #f3efe4 100%);
+  color: #132018;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 48px 0 72px;
+}
+
+.hero-card,
+.panel {
+  border: 1px solid rgba(19, 32, 24, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 252, 246, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 24px 60px rgba(19, 32, 24, 0.08);
+}
+
+.hero-card {
+  padding: 32px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: #58705f;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  max-width: 12ch;
+  font-size: clamp(2.6rem, 5vw, 4.6rem);
+  line-height: 0.95;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.hero-copy {
+  max-width: 52rem;
+  margin-top: 20px;
+  line-height: 1.6;
+  color: #314238;
+  font-size: 1.05rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.panel {
+  padding: 24px;
+}
+
+.panel h2 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+.panel p {
+  line-height: 1.55;
+  color: #314238;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell {
+    width: min(100% - 24px, 1120px);
+    padding-top: 24px;
+    padding-bottom: 48px;
+  }
+
+  .hero-card,
+  .panel {
+    border-radius: 20px;
+  }
+
+  .hero-card {
+    padding: 24px;
+  }
+}

@@ -1,0 +1,10 @@
+ktor:
+  application:
+    modules:
+      - net.bobinski.portfolio.api.ApplicationKt.module
+  deployment:
+    port: 18082
+
+portfolio:
+  name: "Portfolio"
+  stage: "dev"
