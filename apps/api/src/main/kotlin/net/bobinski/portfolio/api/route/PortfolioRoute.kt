@@ -11,11 +11,16 @@ import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
+import net.bobinski.portfolio.api.domain.service.PortfolioReturns
+import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
+    val portfolioReturnsService: PortfolioReturnsService by inject()
 
     route("/v1/portfolio") {
         get("/overview") {
@@ -28,6 +33,10 @@ fun Route.portfolioRoute() {
 
         get("/history/daily") {
             call.respond(portfolioHistoryService.dailyHistory().toResponse())
+        }
+
+        get("/returns") {
+            call.respond(portfolioReturnsService.returns().toResponse())
         }
     }
 }
@@ -116,6 +125,35 @@ data class PortfolioDailyHistoryPointResponse(
     val valuedHoldingCount: Int
 )
 
+@Serializable
+data class PortfolioReturnsResponse(
+    val asOf: String,
+    val periods: List<PortfolioReturnPeriodResponse>
+)
+
+@Serializable
+data class PortfolioReturnPeriodResponse(
+    val key: String,
+    val label: String,
+    val requestedFrom: String,
+    val from: String,
+    val until: String,
+    val clippedToInception: Boolean,
+    val dayCount: Long,
+    val nominalPln: ReturnMetricResponse?,
+    val nominalUsd: ReturnMetricResponse?,
+    val realPln: ReturnMetricResponse?,
+    val inflationFrom: String?,
+    val inflationUntil: String?,
+    val inflationMultiplier: String?
+)
+
+@Serializable
+data class ReturnMetricResponse(
+    val moneyWeightedReturn: String,
+    val annualizedMoneyWeightedReturn: String?
+)
+
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
     asOf = asOf.toString(),
     valuationState = valuationState.name,
@@ -194,4 +232,30 @@ private fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPointR
     cashAllocationPct = cashAllocationPct.toPlainString(),
     activeHoldingCount = activeHoldingCount,
     valuedHoldingCount = valuedHoldingCount
+)
+
+private fun PortfolioReturns.toResponse(): PortfolioReturnsResponse = PortfolioReturnsResponse(
+    asOf = asOf.toString(),
+    periods = periods.map { it.toResponse() }
+)
+
+private fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = PortfolioReturnPeriodResponse(
+    key = key.name,
+    label = label,
+    requestedFrom = requestedFrom.toString(),
+    from = from.toString(),
+    until = until.toString(),
+    clippedToInception = clippedToInception,
+    dayCount = dayCount,
+    nominalPln = nominalPln?.toResponse(),
+    nominalUsd = nominalUsd?.toResponse(),
+    realPln = realPln?.toResponse(),
+    inflationFrom = inflation?.from?.toString(),
+    inflationUntil = inflation?.until?.toString(),
+    inflationMultiplier = inflation?.multiplier?.toPlainString()
+)
+
+private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricResponse(
+    moneyWeightedReturn = moneyWeightedReturn.toPlainString(),
+    annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString()
 )

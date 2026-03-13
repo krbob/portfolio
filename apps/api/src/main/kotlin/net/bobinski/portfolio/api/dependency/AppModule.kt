@@ -8,6 +8,7 @@ import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
@@ -16,10 +17,12 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteFxRateHistoryProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteInflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
@@ -72,6 +75,12 @@ fun appModule(
             stockAnalystClient = get()
         )
     }
+    single<InflationAdjustmentProvider> {
+        RemoteInflationAdjustmentProvider(
+            config = get(),
+            edoCalculatorClient = get()
+        )
+    }
     single {
         TransactionFxConversionService(
             fxRateHistoryProvider = get()
@@ -118,6 +127,16 @@ fun appModule(
             historicalInstrumentValuationProvider = get(),
             referenceSeriesProvider = get(),
             transactionFxConversionService = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioReturnsService(
+            transactionRepository = get(),
+            portfolioHistoryService = get(),
+            transactionFxConversionService = get(),
+            referenceSeriesProvider = get(),
+            inflationAdjustmentProvider = get(),
             clock = get()
         )
     }

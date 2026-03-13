@@ -13,6 +13,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.LocalDate
+import java.time.YearMonth
 
 class EdoCalculatorClient(
     private val httpClient: HttpClient,
@@ -67,6 +68,28 @@ class EdoCalculatorClient(
         }
     }
 
+    suspend fun inflationSince(from: YearMonth): InflationWindow = withContext(Dispatchers.IO) {
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(buildInflationSinceUrl(from = from)))
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() !in 200..299) {
+            throw MarketDataClientException(
+                "edo-calculator inflation returned HTTP ${response.statusCode()} for $from."
+            )
+        }
+
+        val payload = json.decodeFromString<EdoInflationResponse>(response.body())
+        InflationWindow(
+            from = YearMonth.parse(payload.from),
+            until = YearMonth.parse(payload.until),
+            multiplier = payload.multiplier.toBigDecimal()
+        )
+    }
+
     private fun buildUrl(terms: EdoTerms, asOf: LocalDate?): String {
         val path = if (asOf == null) "/edo/value" else "/edo/value/at"
         val params = linkedMapOf(
@@ -111,6 +134,9 @@ class EdoCalculatorClient(
         return "${baseUrl.trimEnd('/')}/edo/history?$queryString"
     }
 
+    private fun buildInflationSinceUrl(from: YearMonth): String =
+        "${baseUrl.trimEnd('/')}/inflation/since?year=${from.year}&month=${from.monthValue}"
+
     private fun Int.toDecimalRate(): String =
         BigDecimal(this).divide(BigDecimal(100)).stripTrailingZeros().toPlainString()
 }
@@ -118,6 +144,12 @@ class EdoCalculatorClient(
 data class EdoUnitValue(
     val asOf: LocalDate,
     val totalValue: BigDecimal
+)
+
+data class InflationWindow(
+    val from: YearMonth,
+    val until: YearMonth,
+    val multiplier: BigDecimal
 )
 
 @Serializable
@@ -140,4 +172,11 @@ private data class EdoHistoryResponse(
 private data class EdoHistoryPointResponse(
     val date: String,
     val totalValue: String
+)
+
+@Serializable
+private data class EdoInflationResponse(
+    val from: String,
+    val until: String,
+    val multiplier: String
 )

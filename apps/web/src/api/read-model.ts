@@ -78,6 +78,32 @@ export interface PortfolioDailyHistoryPoint {
   valuedHoldingCount: number
 }
 
+export interface PortfolioReturns {
+  asOf: string
+  periods: PortfolioReturnPeriod[]
+}
+
+export interface PortfolioReturnPeriod {
+  key: string
+  label: string
+  requestedFrom: string
+  from: string
+  until: string
+  clippedToInception: boolean
+  dayCount: number
+  nominalPln: ReturnMetric | null
+  nominalUsd: ReturnMetric | null
+  realPln: ReturnMetric | null
+  inflationFrom: string | null
+  inflationUntil: string | null
+  inflationMultiplier: string | null
+}
+
+export interface ReturnMetric {
+  moneyWeightedReturn: string
+  annualizedMoneyWeightedReturn: string | null
+}
+
 async function requestJson<T>(path: string): Promise<T> {
   const response = await fetch(path)
 
@@ -107,4 +133,8 @@ export function fetchPortfolioHoldings() {
 
 export function fetchPortfolioDailyHistory() {
   return requestJson<PortfolioDailyHistory>('/api/v1/portfolio/history/daily')
+}
+
+export function fetchPortfolioReturns() {
+  return requestJson<PortfolioReturns>('/api/v1/portfolio/returns')
 }

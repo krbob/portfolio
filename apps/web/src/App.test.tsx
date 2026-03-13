@@ -164,6 +164,41 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            periods: [
+              {
+                key: 'YTD',
+                label: 'YTD',
+                requestedFrom: '2026-01-01',
+                from: '2026-01-01',
+                until: '2026-03-13',
+                clippedToInception: false,
+                dayCount: 71,
+                nominalPln: {
+                  moneyWeightedReturn: '0.0412',
+                  annualizedMoneyWeightedReturn: '0.2263',
+                },
+                nominalUsd: {
+                  moneyWeightedReturn: '0.0381',
+                  annualizedMoneyWeightedReturn: '0.2070',
+                },
+                realPln: {
+                  moneyWeightedReturn: '0.0198',
+                  annualizedMoneyWeightedReturn: '0.1048',
+                },
+                inflationFrom: '2026-01',
+                inflationUntil: '2026-03',
+                inflationMultiplier: '1.021',
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -190,8 +225,10 @@ describe('App', () => {
     expect(screen.getByText(/transaction-based portfolio accounting/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /money-weighted returns/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /holdings/i })).toBeInTheDocument()
     expect(screen.getByText(/valuation state/i)).toBeInTheDocument()
+    expect(screen.getByText(/pln mwrr/i)).toBeInTheDocument()
     expect(screen.getByText(/vwce/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()

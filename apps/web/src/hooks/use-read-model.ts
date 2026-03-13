@@ -3,6 +3,7 @@ import {
   fetchPortfolioDailyHistory,
   fetchPortfolioHoldings,
   fetchPortfolioOverview,
+  fetchPortfolioReturns,
 } from '../api/read-model'
 
 export function usePortfolioOverview() {
@@ -23,5 +24,12 @@ export function usePortfolioDailyHistory() {
   return useQuery({
     queryKey: ['portfolio-daily-history'],
     queryFn: fetchPortfolioDailyHistory,
+  })
+}
+
+export function usePortfolioReturns() {
+  return useQuery({
+    queryKey: ['portfolio-returns'],
+    queryFn: fetchPortfolioReturns,
   })
 }
