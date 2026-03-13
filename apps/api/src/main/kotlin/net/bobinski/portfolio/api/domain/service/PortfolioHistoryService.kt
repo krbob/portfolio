@@ -30,6 +30,7 @@ class PortfolioHistoryService(
     private val transactionRepository: TransactionRepository,
     private val historicalInstrumentValuationProvider: HistoricalInstrumentValuationProvider,
     private val referenceSeriesProvider: ReferenceSeriesProvider,
+    private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock
 ) {
     suspend fun dailyHistory(): PortfolioDailyHistory {
@@ -64,6 +65,7 @@ class PortfolioHistoryService(
         val accountsById = accounts.associateBy(Account::id)
         val instrumentsById = instruments.associateBy(Instrument::id)
         val transactionsByDate = transactions.groupBy(Transaction::tradeDate)
+        val fxLookups = transactionFxConversionService.loadLookups(transactions)
         val holdings = linkedMapOf<HoldingKey, MutableHolding>()
 
         var cashBalancePln = BigDecimal.ZERO
@@ -75,7 +77,7 @@ class PortfolioHistoryService(
         var date = from
         while (!date.isAfter(until)) {
             transactionsByDate[date].orEmpty().forEach { transaction ->
-                val converted = transaction.toConvertedAmountsOrNull()
+                val converted = fxLookups.convertedAmountsOrNull(transaction)
                 if (converted == null) {
                     missingFxTransactions += 1
                     return@forEach
@@ -287,20 +289,6 @@ class PortfolioHistoryService(
         }
     }
 
-    private fun Transaction.toConvertedAmountsOrNull(): ConvertedTransactionAmounts? {
-        val grossPln = convertToPln(grossAmount) ?: return null
-        val feePln = convertToPln(feeAmount) ?: return null
-        val taxPln = convertToPln(taxAmount) ?: return null
-        return ConvertedTransactionAmounts(grossPln = grossPln, feePln = feePln, taxPln = taxPln)
-    }
-
-    private fun Transaction.convertToPln(amount: BigDecimal): BigDecimal? =
-        when {
-            currency == "PLN" -> amount.money()
-            fxRateToPln != null -> amount.multiply(fxRateToPln, MONEY_CONTEXT).money()
-            else -> null
-        }
-
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
 
     private fun BigDecimal.divideBy(
@@ -334,12 +322,6 @@ class PortfolioHistoryService(
         var quantity: BigDecimal = BigDecimal.ZERO,
         var costBasisPln: BigDecimal = BigDecimal.ZERO,
         var transactionCount: Int = 0
-    )
-
-    private data class ConvertedTransactionAmounts(
-        val grossPln: BigDecimal,
-        val feePln: BigDecimal,
-        val taxPln: BigDecimal
     )
 
     private data class HistoricalLoads(

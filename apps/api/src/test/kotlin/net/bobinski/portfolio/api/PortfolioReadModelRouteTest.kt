@@ -130,12 +130,12 @@ class PortfolioReadModelRouteTest {
     }
 
     @Test
-    fun `overview reports transactions missing fx conversion`() = testApplication {
+    fun `overview reports transactions missing fx conversion when lookup fails`() = testApplication {
         application {
             module()
         }
 
-        val accountId = createAccount(baseCurrency = "USD")
+        val accountId = createAccount(baseCurrency = "ZZZ")
         createTransaction(
             """
             {
@@ -144,7 +144,7 @@ class PortfolioReadModelRouteTest {
               "tradeDate": "2026-03-01",
               "settlementDate": "2026-03-01",
               "grossAmount": "100.00",
-              "currency": "USD"
+              "currency": "ZZZ"
             }
             """.trimIndent()
         )

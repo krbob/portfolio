@@ -8,15 +8,18 @@ import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteFxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
@@ -63,6 +66,17 @@ fun appModule(
             stockAnalystClient = get()
         )
     }
+    single<FxRateHistoryProvider> {
+        RemoteFxRateHistoryProvider(
+            config = get(),
+            stockAnalystClient = get()
+        )
+    }
+    single {
+        TransactionFxConversionService(
+            fxRateHistoryProvider = get()
+        )
+    }
 
     if (config.isPostgresEnabled) {
         single(createdAtStart = true) { PersistenceResources(config) }
@@ -92,6 +106,7 @@ fun appModule(
             instrumentRepository = get(),
             transactionRepository = get(),
             currentInstrumentValuationProvider = get(),
+            transactionFxConversionService = get(),
             clock = get()
         )
     }
@@ -102,6 +117,7 @@ fun appModule(
             transactionRepository = get(),
             historicalInstrumentValuationProvider = get(),
             referenceSeriesProvider = get(),
+            transactionFxConversionService = get(),
             clock = get()
         )
     }

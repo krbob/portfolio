@@ -10,6 +10,8 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
+import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
@@ -97,18 +99,44 @@ class PortfolioHistoryServiceTest {
         assertEquals(null, history.points[1].totalCurrentValueUsd)
     }
 
+    @Test
+    fun `daily history resolves missing fx from historical rates`() = runBlocking {
+        val fixture = historyFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(
+            depositTransaction(
+                grossAmount = "100.00",
+                currency = "USD"
+            )
+        )
+        fixture.fxRateProvider.values["USD"] = FxRateHistoryResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(0, history.missingFxTransactions)
+        assertEquals(3, history.points.size)
+        assertEquals(BigDecimal("400.00"), history.points[0].totalCurrentValuePln)
+        assertEquals(BigDecimal("400.00"), history.points[2].netContributionsPln)
+    }
+
     private fun historyFixture(): HistoryFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
         val referenceProvider = FakeReferenceSeriesProvider()
+        val fxRateProvider = FakeFxRateHistoryProvider()
         val service = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = historyProvider,
             referenceSeriesProvider = referenceProvider,
+            transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
             clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC)
         )
         return HistoryFixture(
@@ -117,7 +145,8 @@ class PortfolioHistoryServiceTest {
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             historyProvider = historyProvider,
-            referenceProvider = referenceProvider
+            referenceProvider = referenceProvider,
+            fxRateProvider = fxRateProvider
         )
     }
 
@@ -145,20 +174,25 @@ class PortfolioHistoryServiceTest {
         updatedAt = CREATED_AT
     )
 
-    private fun depositTransaction(): Transaction = Transaction(
+    private fun depositTransaction(
+        grossAmount: String = "2000.00",
+        currency: String = "PLN",
+        fxRateToPln: BigDecimal? = null,
+        tradeDate: LocalDate = LocalDate.parse("2026-03-01")
+    ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("history-deposit".toByteArray()),
         accountId = ACCOUNT_ID,
         instrumentId = null,
         type = TransactionType.DEPOSIT,
-        tradeDate = LocalDate.parse("2026-03-01"),
-        settlementDate = LocalDate.parse("2026-03-01"),
+        tradeDate = tradeDate,
+        settlementDate = tradeDate,
         quantity = null,
         unitPrice = null,
-        grossAmount = BigDecimal("2000.00"),
+        grossAmount = BigDecimal(grossAmount),
         feeAmount = BigDecimal.ZERO,
         taxAmount = BigDecimal.ZERO,
-        currency = "PLN",
-        fxRateToPln = null,
+        currency = currency,
+        fxRateToPln = fxRateToPln,
         notes = "",
         createdAt = CREATED_AT,
         updatedAt = CREATED_AT
@@ -195,7 +229,8 @@ class PortfolioHistoryServiceTest {
         val instrumentRepository: InMemoryInstrumentRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val historyProvider: FakeHistoricalInstrumentValuationProvider,
-        val referenceProvider: FakeReferenceSeriesProvider
+        val referenceProvider: FakeReferenceSeriesProvider,
+        val fxRateProvider: FakeFxRateHistoryProvider
     )
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {
@@ -219,6 +254,17 @@ class PortfolioHistoryServiceTest {
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
         override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
+    }
+
+    private class FakeFxRateHistoryProvider : FxRateHistoryProvider {
+        val values: MutableMap<String, FxRateHistoryResult> = linkedMapOf()
+
+        override suspend fun dailyRateToPln(
+            currency: String,
+            from: LocalDate,
+            to: LocalDate
+        ): FxRateHistoryResult = values[currency]
+            ?: FxRateHistoryResult.Failure("No fake FX history for $currency.")
     }
 
     private companion object {

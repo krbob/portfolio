@@ -27,6 +27,7 @@ class PortfolioReadModelService(
     private val instrumentRepository: InstrumentRepository,
     private val transactionRepository: TransactionRepository,
     private val currentInstrumentValuationProvider: CurrentInstrumentValuationProvider,
+    private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock
 ) {
     suspend fun overview(): PortfolioOverview {
@@ -148,6 +149,7 @@ class PortfolioReadModelService(
         val instruments = instrumentRepository.list()
         val transactions = transactionRepository.list()
             .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+        val fxLookups = transactionFxConversionService.loadLookups(transactions)
 
         val accountsById = accounts.associateBy(Account::id)
         val instrumentsById = instruments.associateBy(Instrument::id)
@@ -159,7 +161,7 @@ class PortfolioReadModelService(
         var unsupportedCorrectionTransactions = 0
 
         transactions.forEach { transaction ->
-            val converted = transaction.toConvertedAmountsOrNull()
+            val converted = fxLookups.convertedAmountsOrNull(transaction)
             if (converted == null) {
                 missingFxTransactions += 1
                 return@forEach
@@ -302,20 +304,6 @@ class PortfolioReadModelService(
         )
     }
 
-    private fun Transaction.toConvertedAmountsOrNull(): ConvertedTransactionAmounts? {
-        val grossPln = convertToPln(grossAmount) ?: return null
-        val feePln = convertToPln(feeAmount) ?: return null
-        val taxPln = convertToPln(taxAmount) ?: return null
-        return ConvertedTransactionAmounts(grossPln = grossPln, feePln = feePln, taxPln = taxPln)
-    }
-
-    private fun Transaction.convertToPln(amount: BigDecimal): BigDecimal? =
-        when {
-            currency == "PLN" -> amount.money()
-            fxRateToPln != null -> amount.multiply(fxRateToPln, MONEY_CONTEXT).money()
-            else -> null
-        }
-
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
@@ -336,12 +324,6 @@ class PortfolioReadModelService(
         var quantity: BigDecimal = BigDecimal.ZERO,
         var costBasisPln: BigDecimal = BigDecimal.ZERO,
         var transactionCount: Int = 0
-    )
-
-    private data class ConvertedTransactionAmounts(
-        val grossPln: BigDecimal,
-        val feePln: BigDecimal,
-        val taxPln: BigDecimal
     )
 
     private data class ValuedHolding(
