@@ -166,4 +166,60 @@ class WriteModelRouteTest {
         assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
         assertEquals("[]", listResponse.bodyAsText())
     }
+
+    @Test
+    fun `transactions can be imported in bulk`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountResponse = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Primary",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        val accountId = Regex("\"id\":\\s*\"([^\"]+)\"").find(accountResponse.bodyAsText())!!.groupValues[1]
+
+        val response = client.post("/v1/transactions/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "rows": [
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-01",
+                      "settlementDate": "2026-03-01",
+                      "grossAmount": "1000.00",
+                      "currency": "PLN"
+                    },
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-02",
+                      "settlementDate": "2026-03-02",
+                      "grossAmount": "250.00",
+                      "currency": "PLN",
+                      "notes": "second row"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        val listResponse = client.get("/v1/transactions")
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertTrue(response.bodyAsText().contains("\"createdCount\": 2"))
+        assertTrue(listResponse.bodyAsText().contains("\"notes\": \"second row\""))
+    }
 }

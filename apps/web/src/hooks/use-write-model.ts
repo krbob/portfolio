@@ -4,12 +4,14 @@ import {
   createInstrument,
   createTransaction,
   deleteTransaction,
+  importTransactions,
   listAccounts,
   listInstruments,
   listTransactions,
   updateTransaction,
   type CreateAccountPayload,
   type CreateInstrumentPayload,
+  type ImportTransactionsPayload,
   type CreateTransactionPayload,
   type UpdateTransactionPayload,
 } from '../api/write-model'
@@ -86,6 +88,16 @@ export function useDeleteTransaction() {
   const queryClient = useTransactionInvalidateQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: async () => {
+      await invalidateTransactionRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useImportTransactions() {
+  const queryClient = useTransactionInvalidateQueryClient()
+  return useMutation({
+    mutationFn: (payload: ImportTransactionsPayload) => importTransactions(payload),
     onSuccess: async () => {
       await invalidateTransactionRelatedQueries(queryClient)
     },

@@ -91,6 +91,15 @@ export interface UpdateTransactionPayload extends CreateTransactionPayload {
   id: string
 }
 
+export interface ImportTransactionsPayload {
+  rows: CreateTransactionPayload[]
+}
+
+export interface ImportTransactionsResult {
+  createdCount: number
+  transactions: Transaction[]
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -174,4 +183,11 @@ export async function deleteTransaction(id: string) {
     }
     throw new Error(message)
   }
+}
+
+export function importTransactions(payload: ImportTransactionsPayload) {
+  return requestJson<ImportTransactionsResult>('/api/v1/transactions/import', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

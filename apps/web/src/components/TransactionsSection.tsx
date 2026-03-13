@@ -4,11 +4,12 @@ import {
   useAccounts,
   useCreateTransaction,
   useDeleteTransaction,
+  useImportTransactions,
   useInstruments,
   useTransactions,
   useUpdateTransaction,
 } from '../hooks/use-write-model'
-import type { Transaction } from '../api/write-model'
+import type { CreateTransactionPayload, Transaction } from '../api/write-model'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -35,8 +36,12 @@ export function TransactionsSection() {
   const createTransactionMutation = useCreateTransaction()
   const updateTransactionMutation = useUpdateTransaction()
   const deleteTransactionMutation = useDeleteTransaction()
+  const importTransactionsMutation = useImportTransactions()
   const [form, setForm] = useState(initialForm)
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
+  const [importCsv, setImportCsv] = useState('')
+  const [importFeedback, setImportFeedback] = useState<string | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
@@ -109,6 +114,32 @@ export function TransactionsSection() {
   function resetForm() {
     setEditingTransactionId(null)
     setForm(initialForm)
+  }
+
+  function handleImportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setImportFeedback(null)
+    setImportError(null)
+
+    try {
+      const rows = parseImportRows({
+        csv: importCsv,
+        accountOptions,
+        instrumentOptions,
+      })
+
+      importTransactionsMutation.mutate(
+        { rows },
+        {
+          onSuccess: (result) => {
+            setImportFeedback(`Imported ${result.createdCount} transactions.`)
+            setImportCsv('')
+          },
+        },
+      )
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Import failed.')
+    }
   }
 
   return (
@@ -300,6 +331,35 @@ export function TransactionsSection() {
         </form>
 
         <div className="entity-list">
+          <form className="import-card" onSubmit={handleImportSubmit}>
+            <div className="section-header">
+              <p className="eyebrow">Batch import</p>
+              <h4>Paste canonical CSV</h4>
+              <p>
+                Headers: <code>account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes</code>.
+                Account matches by name or id. Instrument matches by name, symbol or id.
+              </p>
+            </div>
+
+            <textarea
+              className="import-textarea"
+              value={importCsv}
+              onChange={(event) => setImportCsv(event.target.value)}
+              placeholder={`account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes\nPrimary,DEPOSIT,2026-03-01,2026-03-01,,,1000.00,0,0,PLN,,Initial funding`}
+            />
+
+            <div className="form-actions">
+              <button type="submit" disabled={importTransactionsMutation.isPending || importCsv.trim() === ''}>
+                {importTransactionsMutation.isPending ? 'Importing...' : 'Import CSV'}
+              </button>
+            </div>
+
+            {importFeedback && <p className="muted-copy">{importFeedback}</p>}
+            {(importError || importTransactionsMutation.error) && (
+              <p className="form-error">{importError ?? importTransactionsMutation.error?.message}</p>
+            )}
+          </form>
+
           {transactionsQuery.isLoading && <p className="muted-copy">Loading transactions...</p>}
           {transactionsQuery.isError && (
             <p className="form-error">{transactionsQuery.error.message}</p>
@@ -340,4 +400,137 @@ export function TransactionsSection() {
       </div>
     </SectionCard>
   )
+}
+
+function parseImportRows({
+  csv,
+  accountOptions,
+  instrumentOptions,
+}: {
+  csv: string
+  accountOptions: Array<{ id: string; name: string }>
+  instrumentOptions: Array<{ id: string; name: string; symbol: string | null }>
+}): CreateTransactionPayload[] {
+  const rows = parseCsv(csv)
+  if (rows.length < 2) {
+    throw new Error('CSV import requires a header row and at least one data row.')
+  }
+
+  const headers = rows[0].map((header) => header.trim())
+  const requiredHeaders = ['account', 'type', 'tradeDate', 'grossAmount', 'currency']
+  requiredHeaders.forEach((header) => {
+    if (!headers.includes(header)) {
+      throw new Error(`Missing required CSV header: ${header}.`)
+    }
+  })
+
+  const accountLookup = new Map<string, string>()
+  accountOptions.forEach((account) => {
+    accountLookup.set(account.id.toLowerCase(), account.id)
+    accountLookup.set(account.name.trim().toLowerCase(), account.id)
+  })
+
+  const instrumentLookup = new Map<string, string>()
+  instrumentOptions.forEach((instrument) => {
+    instrumentLookup.set(instrument.id.toLowerCase(), instrument.id)
+    instrumentLookup.set(instrument.name.trim().toLowerCase(), instrument.id)
+    if (instrument.symbol) {
+      instrumentLookup.set(instrument.symbol.trim().toLowerCase(), instrument.id)
+    }
+  })
+
+  return rows.slice(1)
+    .filter((row) => row.some((value) => value.trim() !== ''))
+    .map((row, index) => {
+      const record = Object.fromEntries(headers.map((header, columnIndex) => [header, (row[columnIndex] ?? '').trim()]))
+      const rowNumber = index + 2
+      const accountId = accountLookup.get(record.account.toLowerCase())
+      if (!accountId) {
+        throw new Error(`Row ${rowNumber}: unknown account '${record.account}'.`)
+      }
+
+      const type = record.type.toUpperCase()
+      const requiresInstrument = type === 'BUY' || type === 'SELL'
+      const instrumentId = record.instrument ? instrumentLookup.get(record.instrument.toLowerCase()) ?? null : null
+      if (requiresInstrument && instrumentId == null) {
+        throw new Error(`Row ${rowNumber}: instrument is required for ${type}.`)
+      }
+
+      return {
+        accountId,
+        instrumentId,
+        type,
+        tradeDate: requireValue(record.tradeDate, 'tradeDate', rowNumber),
+        settlementDate: record.settlementDate || record.tradeDate || null,
+        quantity: record.quantity || null,
+        unitPrice: record.unitPrice || null,
+        grossAmount: requireValue(record.grossAmount, 'grossAmount', rowNumber),
+        feeAmount: record.feeAmount || '0',
+        taxAmount: record.taxAmount || '0',
+        currency: requireValue(record.currency, 'currency', rowNumber).toUpperCase(),
+        fxRateToPln: record.fxRateToPln || null,
+        notes: record.notes || '',
+      } satisfies CreateTransactionPayload
+    })
+}
+
+function requireValue(value: string | undefined, field: string, rowNumber: number): string {
+  if (!value || value.trim() === '') {
+    throw new Error(`Row ${rowNumber}: ${field} is required.`)
+  }
+  return value.trim()
+}
+
+function parseCsv(text: string): string[][] {
+  const delimiter = detectDelimiter(text)
+  const rows: string[][] = []
+  let currentField = ''
+  let currentRow: string[] = []
+  let inQuotes = false
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    const next = text[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentField += '"'
+        index += 1
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (!inQuotes && char === delimiter) {
+      currentRow.push(currentField)
+      currentField = ''
+      continue
+    }
+
+    if (!inQuotes && (char === '\n' || char === '\r')) {
+      if (char === '\r' && next === '\n') {
+        index += 1
+      }
+      currentRow.push(currentField)
+      rows.push(currentRow)
+      currentField = ''
+      currentRow = []
+      continue
+    }
+
+    currentField += char
+  }
+
+  if (currentField !== '' || currentRow.length > 0) {
+    currentRow.push(currentField)
+    rows.push(currentRow)
+  }
+
+  return rows
+}
+
+function detectDelimiter(text: string): ',' | ';' {
+  const firstLine = text.split(/\r?\n/, 1)[0] ?? ''
+  return firstLine.split(';').length > firstLine.split(',').length ? ';' : ','
 }

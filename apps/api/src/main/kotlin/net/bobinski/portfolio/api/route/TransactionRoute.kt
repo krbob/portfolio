@@ -33,6 +33,18 @@ fun Route.transactionRoute() {
             call.respond(HttpStatusCode.Created, transaction.toResponse())
         }
 
+        post("/import") {
+            val request = call.receive<ImportTransactionsRequest>()
+            val transactions = transactionService.importAll(request.rows.map { it.toCommand() })
+            call.respond(
+                HttpStatusCode.Created,
+                ImportTransactionsResponse(
+                    createdCount = transactions.size,
+                    transactions = transactions.map { it.toResponse() }
+                )
+            )
+        }
+
         route("/{id}") {
             put {
                 val id = call.parameters["id"]?.let { parseUuid(it, "id") }
@@ -69,6 +81,11 @@ data class CreateTransactionRequest(
 )
 
 @Serializable
+data class ImportTransactionsRequest(
+    val rows: List<CreateTransactionRequest>
+)
+
+@Serializable
 data class TransactionResponse(
     val id: String,
     val accountId: String,
@@ -86,6 +103,12 @@ data class TransactionResponse(
     val notes: String,
     val createdAt: String,
     val updatedAt: String
+)
+
+@Serializable
+data class ImportTransactionsResponse(
+    val createdCount: Int,
+    val transactions: List<TransactionResponse>
 )
 
 private fun CreateTransactionRequest.toCommand(): CreateTransactionCommand = CreateTransactionCommand(

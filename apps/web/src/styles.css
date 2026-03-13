@@ -356,6 +356,36 @@ p {
   justify-content: flex-end;
 }
 
+.import-card {
+  display: grid;
+  gap: 14px;
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.import-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.import-card p code {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.85em;
+}
+
+.import-textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  border-radius: 18px;
+  border: 1px solid rgba(19, 32, 24, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+  font: inherit;
+  color: inherit;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

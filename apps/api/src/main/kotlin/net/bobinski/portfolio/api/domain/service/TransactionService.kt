@@ -22,27 +22,17 @@ class TransactionService(
 
     suspend fun create(command: CreateTransactionCommand): Transaction {
         validateReferences(command)
-        val now = Instant.now(clock)
-        return transactionRepository.save(
-            Transaction(
-                id = UUID.randomUUID(),
-                accountId = command.accountId,
-                instrumentId = command.instrumentId,
-                type = command.type,
-                tradeDate = command.tradeDate,
-                settlementDate = command.settlementDate,
-                quantity = command.quantity,
-                unitPrice = command.unitPrice,
-                grossAmount = command.grossAmount,
-                feeAmount = command.feeAmount,
-                taxAmount = command.taxAmount,
-                currency = command.currency.uppercase(),
-                fxRateToPln = command.fxRateToPln,
-                notes = command.notes.trim(),
-                createdAt = now,
-                updatedAt = now
-            )
-        )
+        return saveNew(command, Instant.now(clock))
+    }
+
+    suspend fun importAll(commands: List<CreateTransactionCommand>): List<Transaction> {
+        require(commands.isNotEmpty()) { "Import requires at least one transaction row." }
+        commands.forEach { validateReferences(it) }
+
+        val baseTimestamp = Instant.now(clock)
+        return commands.mapIndexed { index, command ->
+            saveNew(command, baseTimestamp.plusMillis(index.toLong()))
+        }
     }
 
     suspend fun update(id: UUID, command: CreateTransactionCommand): Transaction {
@@ -91,6 +81,28 @@ class TransactionService(
                 ?: throw ResourceNotFoundException("Instrument $instrumentId was not found.")
         }
     }
+
+    private suspend fun saveNew(command: CreateTransactionCommand, timestamp: Instant): Transaction =
+        transactionRepository.save(
+            Transaction(
+                id = UUID.randomUUID(),
+                accountId = command.accountId,
+                instrumentId = command.instrumentId,
+                type = command.type,
+                tradeDate = command.tradeDate,
+                settlementDate = command.settlementDate,
+                quantity = command.quantity,
+                unitPrice = command.unitPrice,
+                grossAmount = command.grossAmount,
+                feeAmount = command.feeAmount,
+                taxAmount = command.taxAmount,
+                currency = command.currency.uppercase(),
+                fxRateToPln = command.fxRateToPln,
+                notes = command.notes.trim(),
+                createdAt = timestamp,
+                updatedAt = timestamp
+            )
+        )
 }
 
 data class CreateTransactionCommand(
