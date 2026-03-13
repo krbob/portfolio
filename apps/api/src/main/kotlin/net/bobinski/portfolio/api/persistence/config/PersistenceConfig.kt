@@ -13,13 +13,24 @@ data class PersistenceConfig(
 
     companion object {
         fun from(config: ApplicationConfig): PersistenceConfig = PersistenceConfig(
-            mode = config.propertyOrNull("portfolio.persistence.mode")?.getString()?.let(PersistenceMode::from)
+            mode = readSetting("PORTFOLIO_PERSISTENCE_MODE", config, "portfolio.persistence.mode")
+                ?.let(PersistenceMode::from)
                 ?: PersistenceMode.MEMORY,
-            jdbcUrl = config.propertyOrNull("portfolio.persistence.jdbcUrl")?.getString()
+            jdbcUrl = readSetting("PORTFOLIO_DB_JDBC_URL", config, "portfolio.persistence.jdbcUrl")
                 ?: "jdbc:postgresql://127.0.0.1:15432/portfolio",
-            username = config.propertyOrNull("portfolio.persistence.username")?.getString() ?: "portfolio",
-            password = config.propertyOrNull("portfolio.persistence.password")?.getString() ?: "portfolio"
+            username = readSetting("PORTFOLIO_DB_USERNAME", config, "portfolio.persistence.username")
+                ?: "portfolio",
+            password = readSetting("PORTFOLIO_DB_PASSWORD", config, "portfolio.persistence.password")
+                ?: "portfolio"
         )
+
+        private fun readSetting(
+            envKey: String,
+            config: ApplicationConfig,
+            configKey: String
+        ): String? = System.getenv(envKey)
+            ?.takeIf { it.isNotBlank() }
+            ?: config.propertyOrNull(configKey)?.getString()
     }
 }
 

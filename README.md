@@ -58,4 +58,14 @@ The default backend config expects PostgreSQL at `127.0.0.1:15432` with:
 - user: `portfolio`
 - password: `portfolio`
 
+To run the API in PostgreSQL mode without editing YAML, use:
+
+```bash
+PORTFOLIO_PERSISTENCE_MODE=postgres \
+PORTFOLIO_DB_JDBC_URL=jdbc:postgresql://127.0.0.1:15432/portfolio \
+PORTFOLIO_DB_USERNAME=portfolio \
+PORTFOLIO_DB_PASSWORD=portfolio \
+./gradlew run
+```
+
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
