@@ -70,6 +70,21 @@ PORTFOLIO_DB_PASSWORD=portfolio \
 ./gradlew run
 ```
 
+To run the API in Docker Compose with a persistent backup volume:
+
+```bash
+docker compose --profile app up -d --build
+```
+
+This starts:
+
+- `portfolio-postgres`
+- `portfolio-api`
+- named volume `portfolio-backup-data` mounted at `/srv/portfolio/backups`
+
+The Compose API profile enables server backups by default and stores them on the named volume.
+Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
+
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 
 ## Server backups
@@ -96,6 +111,8 @@ Default values:
 - directory `./data/backups`
 - interval `1440` minutes
 - retention `30` backups
+
+In the Docker Compose `app` profile the backup directory is set to `/srv/portfolio/backups` and backed by the named volume `portfolio-backup-data`.
 
 Available API endpoints:
 
