@@ -6,12 +6,16 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
+import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
+import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
+    val portfolioHistoryService: PortfolioHistoryService by inject()
 
     route("/v1/portfolio") {
         get("/overview") {
@@ -20,6 +24,10 @@ fun Route.portfolioRoute() {
 
         get("/holdings") {
             call.respond(portfolioReadModelService.holdings().map { it.toResponse() })
+        }
+
+        get("/history/daily") {
+            call.respond(portfolioHistoryService.dailyHistory().toResponse())
         }
     }
 }
@@ -73,6 +81,34 @@ data class HoldingResponse(
     val transactionCount: Int
 )
 
+@Serializable
+data class PortfolioDailyHistoryResponse(
+    val from: String,
+    val until: String,
+    val valuationState: String,
+    val instrumentHistoryIssueCount: Int,
+    val missingFxTransactions: Int,
+    val unsupportedCorrectionTransactions: Int,
+    val points: List<PortfolioDailyHistoryPointResponse>
+)
+
+@Serializable
+data class PortfolioDailyHistoryPointResponse(
+    val date: String,
+    val totalBookValuePln: String,
+    val totalCurrentValuePln: String,
+    val netContributionsPln: String,
+    val cashBalancePln: String,
+    val equityCurrentValuePln: String,
+    val bondCurrentValuePln: String,
+    val cashCurrentValuePln: String,
+    val equityAllocationPct: String,
+    val bondAllocationPct: String,
+    val cashAllocationPct: String,
+    val activeHoldingCount: Int,
+    val valuedHoldingCount: Int
+)
+
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
     asOf = asOf.toString(),
     valuationState = valuationState.name,
@@ -118,4 +154,30 @@ private fun HoldingSnapshot.toResponse(): HoldingResponse = HoldingResponse(
     valuationStatus = valuationStatus.name,
     valuationIssue = valuationIssue,
     transactionCount = transactionCount
+)
+
+private fun PortfolioDailyHistory.toResponse(): PortfolioDailyHistoryResponse = PortfolioDailyHistoryResponse(
+    from = from.toString(),
+    until = until.toString(),
+    valuationState = valuationState.name,
+    instrumentHistoryIssueCount = instrumentHistoryIssueCount,
+    missingFxTransactions = missingFxTransactions,
+    unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
+    points = points.map { it.toResponse() }
+)
+
+private fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPointResponse = PortfolioDailyHistoryPointResponse(
+    date = date.toString(),
+    totalBookValuePln = totalBookValuePln.toPlainString(),
+    totalCurrentValuePln = totalCurrentValuePln.toPlainString(),
+    netContributionsPln = netContributionsPln.toPlainString(),
+    cashBalancePln = cashBalancePln.toPlainString(),
+    equityCurrentValuePln = equityCurrentValuePln.toPlainString(),
+    bondCurrentValuePln = bondCurrentValuePln.toPlainString(),
+    cashCurrentValuePln = cashCurrentValuePln.toPlainString(),
+    equityAllocationPct = equityAllocationPct.toPlainString(),
+    bondAllocationPct = bondAllocationPct.toPlainString(),
+    cashAllocationPct = cashAllocationPct.toPlainString(),
+    activeHoldingCount = activeHoldingCount,
+    valuedHoldingCount = valuedHoldingCount
 )
