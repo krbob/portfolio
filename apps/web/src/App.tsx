@@ -2,6 +2,7 @@ import { AppShell } from './components/AppShell'
 import { AccountsSection } from './components/AccountsSection'
 import { InstrumentsSection } from './components/InstrumentsSection'
 import { HoldingsSection } from './components/HoldingsSection'
+import { PortfolioBackupsSection } from './components/PortfolioBackupsSection'
 import { PortfolioHistorySection } from './components/PortfolioHistorySection'
 import { PortfolioOverviewSection } from './components/PortfolioOverviewSection'
 import { PortfolioReturnsSection } from './components/PortfolioReturnsSection'
@@ -96,6 +97,7 @@ export function App() {
       </section>
 
       <PortfolioStateSection />
+      <PortfolioBackupsSection />
       <TransactionsSection />
     </AppShell>
   )

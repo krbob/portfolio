@@ -199,6 +199,37 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/backups')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            directory: '/srv/portfolio/backups',
+            intervalMinutes: 1440,
+            retentionCount: 30,
+            running: false,
+            lastRunAt: '2026-03-13T18:00:00Z',
+            lastSuccessAt: '2026-03-13T18:00:00Z',
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            backups: [
+              {
+                fileName: 'portfolio-backup-20260313T180000000Z.json',
+                createdAt: '2026-03-13T18:00:01Z',
+                exportedAt: '2026-03-13T18:00:00Z',
+                sizeBytes: 4096,
+                schemaVersion: 1,
+                accountCount: 1,
+                instrumentCount: 1,
+                transactionCount: 2,
+                isReadable: true,
+                errorMessage: null,
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -233,6 +264,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /backup and restore/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /server snapshots/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /transactions/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /transaction journal/i })).toBeInTheDocument()
   })

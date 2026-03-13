@@ -188,6 +188,45 @@ export interface ImportPortfolioStateResult {
   transactionCount: number
 }
 
+export interface PortfolioBackupRecord {
+  fileName: string
+  createdAt: string
+  exportedAt: string | null
+  sizeBytes: number
+  schemaVersion: number | null
+  accountCount: number | null
+  instrumentCount: number | null
+  transactionCount: number | null
+  isReadable: boolean
+  errorMessage: string | null
+}
+
+export interface PortfolioBackupStatus {
+  schedulerEnabled: boolean
+  directory: string
+  intervalMinutes: number
+  retentionCount: number
+  running: boolean
+  lastRunAt: string | null
+  lastSuccessAt: string | null
+  lastFailureAt: string | null
+  lastFailureMessage: string | null
+  backups: PortfolioBackupRecord[]
+}
+
+export interface RestorePortfolioBackupPayload {
+  fileName: string
+  mode: 'MERGE' | 'REPLACE'
+}
+
+export interface RestorePortfolioBackupResult {
+  fileName: string
+  mode: 'MERGE' | 'REPLACE'
+  accountCount: number
+  instrumentCount: number
+  transactionCount: number
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -282,6 +321,23 @@ export function importTransactions(payload: ImportTransactionsPayload) {
 
 export function exportPortfolioState() {
   return requestJson<PortfolioStateSnapshot>('/api/v1/portfolio/state/export')
+}
+
+export function listPortfolioBackups() {
+  return requestJson<PortfolioBackupStatus>('/api/v1/portfolio/backups')
+}
+
+export function runPortfolioBackup() {
+  return requestJson<PortfolioBackupRecord>('/api/v1/portfolio/backups/run', {
+    method: 'POST',
+  })
+}
+
+export function restorePortfolioBackup(payload: RestorePortfolioBackupPayload) {
+  return requestJson<RestorePortfolioBackupResult>('/api/v1/portfolio/backups/restore', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export function previewPortfolioStateImport(payload: ImportPortfolioStatePayload) {

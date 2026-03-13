@@ -9,16 +9,22 @@ import {
   importPortfolioState,
   listAccounts,
   listInstruments,
+  listPortfolioBackups,
   listTransactions,
   previewPortfolioStateImport,
+  restorePortfolioBackup,
+  runPortfolioBackup,
   updateTransaction,
   type CreateAccountPayload,
   type CreateInstrumentPayload,
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type CreateTransactionPayload,
+  type PortfolioBackupRecord,
   type PreviewPortfolioStateImportResult,
   type PortfolioStateSnapshot,
+  type RestorePortfolioBackupPayload,
+  type RestorePortfolioBackupResult,
   type UpdateTransactionPayload,
 } from '../api/write-model'
 
@@ -113,6 +119,37 @@ export function useImportTransactions() {
 export function useExportPortfolioState() {
   return useMutation({
     mutationFn: (): Promise<PortfolioStateSnapshot> => exportPortfolioState(),
+  })
+}
+
+export function usePortfolioBackups() {
+  return useQuery({
+    queryKey: ['portfolio-backups'],
+    queryFn: listPortfolioBackups,
+  })
+}
+
+export function useRunPortfolioBackup() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (): Promise<PortfolioBackupRecord> => runPortfolioBackup(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] })
+    },
+  })
+}
+
+export function useRestorePortfolioBackup() {
+  const queryClient = useTransactionInvalidateQueryClient()
+  return useMutation({
+    mutationFn: (payload: RestorePortfolioBackupPayload): Promise<RestorePortfolioBackupResult> =>
+      restorePortfolioBackup(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateTransactionRelatedQueries(queryClient),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+      ])
+    },
   })
 }
 
