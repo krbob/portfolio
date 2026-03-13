@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { SectionCard } from './SectionCard'
-import { usePortfolioBackups, useRestorePortfolioBackup, useRunPortfolioBackup } from '../hooks/use-write-model'
+import {
+  useDownloadPortfolioBackup,
+  usePortfolioBackups,
+  useRestorePortfolioBackup,
+  useRunPortfolioBackup,
+} from '../hooks/use-write-model'
 
 export function PortfolioBackupsSection() {
   const backupsQuery = usePortfolioBackups()
+  const downloadBackupMutation = useDownloadPortfolioBackup()
   const runBackupMutation = useRunPortfolioBackup()
   const restoreBackupMutation = useRestorePortfolioBackup()
 
@@ -41,6 +47,18 @@ export function PortfolioBackupsSection() {
       )
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Restore failed.')
+    }
+  }
+
+  async function handleDownloadClick(fileName: string) {
+    setFeedback(null)
+    setActionError(null)
+
+    try {
+      const downloadedFileName = await downloadBackupMutation.mutateAsync(fileName)
+      setFeedback(`Downloaded ${downloadedFileName}.`)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Download failed.')
     }
   }
 
@@ -150,6 +168,14 @@ export function PortfolioBackupsSection() {
               <div className="backup-item-actions">
                 <button
                   type="button"
+                  className="button-secondary"
+                  onClick={() => handleDownloadClick(backup.fileName)}
+                  disabled={downloadBackupMutation.isPending}
+                >
+                  {downloadBackupMutation.isPending ? 'Downloading...' : 'Download JSON'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleRestoreClick(backup.fileName)}
                   disabled={restoreBackupMutation.isPending || !backup.isReadable}
                 >
@@ -161,12 +187,15 @@ export function PortfolioBackupsSection() {
         </div>
       )}
 
-      {(feedback || actionError || runBackupMutation.error || restoreBackupMutation.error) && (
+      {(feedback || actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
         <div className="overview-notes">
           {feedback && <p className="muted-copy">{feedback}</p>}
-          {(actionError || runBackupMutation.error || restoreBackupMutation.error) && (
+          {(actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
             <p className="form-error">
-              {actionError ?? runBackupMutation.error?.message ?? restoreBackupMutation.error?.message}
+              {actionError ??
+                downloadBackupMutation.error?.message ??
+                runBackupMutation.error?.message ??
+                restoreBackupMutation.error?.message}
             </p>
           )}
         </div>

@@ -4,6 +4,7 @@ import {
   createInstrument,
   createTransaction,
   deleteTransaction,
+  downloadPortfolioBackup,
   exportPortfolioState,
   importTransactions,
   importPortfolioState,
@@ -136,6 +137,12 @@ export function useRunPortfolioBackup() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] })
     },
+  })
+}
+
+export function useDownloadPortfolioBackup() {
+  return useMutation({
+    mutationFn: (fileName: string): Promise<string> => downloadPortfolioBackup(fileName),
   })
 }
 

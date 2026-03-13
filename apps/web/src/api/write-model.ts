@@ -327,6 +327,36 @@ export function listPortfolioBackups() {
   return requestJson<PortfolioBackupStatus>('/api/v1/portfolio/backups')
 }
 
+export async function downloadPortfolioBackup(fileName: string) {
+  const response = await fetch(`/api/v1/portfolio/backups/download?fileName=${encodeURIComponent(fileName)}`)
+
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`
+    try {
+      const body = (await response.json()) as { message?: string }
+      if (body.message) {
+        message = body.message
+      }
+    } catch {
+      // Keep generic fallback.
+    }
+    throw new Error(message)
+  }
+
+  const suggestedFileName = extractFileName(response.headers.get('Content-Disposition')) ?? fileName
+  const blob = await response.blob()
+  const objectUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = suggestedFileName
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(objectUrl)
+
+  return suggestedFileName
+}
+
 export function runPortfolioBackup() {
   return requestJson<PortfolioBackupRecord>('/api/v1/portfolio/backups/run', {
     method: 'POST',
@@ -352,4 +382,13 @@ export function importPortfolioState(payload: ImportPortfolioStatePayload) {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+function extractFileName(contentDisposition: string | null) {
+  if (!contentDisposition) {
+    return null
+  }
+
+  const match = /filename="?([^"]+)"?/i.exec(contentDisposition)
+  return match?.[1] ?? null
 }

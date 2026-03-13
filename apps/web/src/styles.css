@@ -853,6 +853,8 @@ p {
 .backup-item-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .value-positive {

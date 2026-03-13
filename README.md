@@ -117,5 +117,6 @@ In the Docker Compose `app` profile the backup directory is set to `/srv/portfol
 Available API endpoints:
 
 - `GET /v1/portfolio/backups`
+- `GET /v1/portfolio/backups/download?fileName=...`
 - `POST /v1/portfolio/backups/run`
 - `POST /v1/portfolio/backups/restore`
