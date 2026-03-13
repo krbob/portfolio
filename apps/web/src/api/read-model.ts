@@ -45,6 +45,32 @@ export interface PortfolioHolding {
   transactionCount: number
 }
 
+export interface PortfolioDailyHistory {
+  from: string
+  until: string
+  valuationState: string
+  instrumentHistoryIssueCount: number
+  missingFxTransactions: number
+  unsupportedCorrectionTransactions: number
+  points: PortfolioDailyHistoryPoint[]
+}
+
+export interface PortfolioDailyHistoryPoint {
+  date: string
+  totalBookValuePln: string
+  totalCurrentValuePln: string
+  netContributionsPln: string
+  cashBalancePln: string
+  equityCurrentValuePln: string
+  bondCurrentValuePln: string
+  cashCurrentValuePln: string
+  equityAllocationPct: string
+  bondAllocationPct: string
+  cashAllocationPct: string
+  activeHoldingCount: number
+  valuedHoldingCount: number
+}
+
 async function requestJson<T>(path: string): Promise<T> {
   const response = await fetch(path)
 
@@ -70,4 +96,8 @@ export function fetchPortfolioOverview() {
 
 export function fetchPortfolioHoldings() {
   return requestJson<PortfolioHolding[]>('/api/v1/portfolio/holdings')
+}
+
+export function fetchPortfolioDailyHistory() {
+  return requestJson<PortfolioDailyHistory>('/api/v1/portfolio/history/daily')
 }

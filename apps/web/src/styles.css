@@ -331,6 +331,12 @@ p {
   gap: 12px;
 }
 
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .overview-stat {
   display: grid;
   gap: 8px;
@@ -353,6 +359,81 @@ p {
 }
 
 .overview-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.history-chart-card {
+  display: grid;
+  gap: 14px;
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.history-chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid line {
+  stroke: rgba(19, 32, 24, 0.1);
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.chart-line-primary {
+  stroke: #132018;
+}
+
+.chart-line-secondary {
+  stroke: #9b6b34;
+  stroke-dasharray: 8 8;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #314238;
+  font-size: 0.92rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-swatch-primary {
+  background: #132018;
+}
+
+.legend-swatch-secondary {
+  background: #9b6b34;
+}
+
+.legend-range {
+  color: #58705f;
+}
+
+.history-notes {
   display: grid;
   gap: 6px;
 }
@@ -448,6 +529,7 @@ p {
   .section-body-wide,
   .entity-form-wide,
   .overview-grid,
+  .history-summary-grid,
   .holding-item {
     grid-template-columns: 1fr;
   }

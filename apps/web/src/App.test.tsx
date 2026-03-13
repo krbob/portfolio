@@ -84,6 +84,67 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            from: '2026-03-01',
+            until: '2026-03-03',
+            valuationState: 'MARK_TO_MARKET',
+            instrumentHistoryIssueCount: 0,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+            points: [
+              {
+                date: '2026-03-01',
+                totalBookValuePln: '2000.00',
+                totalCurrentValuePln: '2000.00',
+                netContributionsPln: '2000.00',
+                cashBalancePln: '2000.00',
+                equityCurrentValuePln: '0.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '2000.00',
+                equityAllocationPct: '0.00',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '100.00',
+                activeHoldingCount: 0,
+                valuedHoldingCount: 0,
+              },
+              {
+                date: '2026-03-02',
+                totalBookValuePln: '2000.00',
+                totalCurrentValuePln: '2045.00',
+                netContributionsPln: '2000.00',
+                cashBalancePln: '995.00',
+                equityCurrentValuePln: '1050.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '995.00',
+                equityAllocationPct: '51.34',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '48.66',
+                activeHoldingCount: 1,
+                valuedHoldingCount: 1,
+              },
+              {
+                date: '2026-03-03',
+                totalBookValuePln: '2000.00',
+                totalCurrentValuePln: '2095.00',
+                netContributionsPln: '2000.00',
+                cashBalancePln: '995.00',
+                equityCurrentValuePln: '1100.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '995.00',
+                equityAllocationPct: '52.51',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '47.49',
+                activeHoldingCount: 1,
+                valuedHoldingCount: 1,
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -109,6 +170,7 @@ describe('App', () => {
     expect(await screen.findByText(/portfolio dev/i)).toBeInTheDocument()
     expect(screen.getByText(/transaction-based portfolio accounting/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /holdings/i })).toBeInTheDocument()
     expect(screen.getByText(/valuation state/i)).toBeInTheDocument()
     expect(screen.getByText(/vwce/i)).toBeInTheDocument()
