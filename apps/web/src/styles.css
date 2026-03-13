@@ -151,6 +151,12 @@ p {
   grid-template-columns: 1.15fr 1fr;
 }
 
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
 .panel {
   padding: 24px;
 }
@@ -214,10 +220,128 @@ p {
   color: #314238;
 }
 
+.section-card {
+  display: grid;
+  gap: 18px;
+}
+
+.section-header {
+  display: grid;
+  gap: 8px;
+}
+
+.section-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 18px;
+}
+
+.section-body-wide {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.entity-form {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.entity-form-wide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.entity-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.entity-form span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58705f;
+}
+
+.entity-form input,
+.entity-form select,
+.entity-form button {
+  border-radius: 14px;
+  border: 1px solid rgba(19, 32, 24, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  color: inherit;
+}
+
+.entity-form button {
+  cursor: pointer;
+  background: #132018;
+  color: #f8f4ea;
+  border-color: #132018;
+  font-weight: 600;
+}
+
+.entity-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.form-span-wide {
+  grid-column: span 2;
+}
+
+.entity-list {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.list-item {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.list-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.list-item p {
+  color: #58705f;
+  font-size: 0.92rem;
+}
+
+.list-badge {
+  border-radius: 999px;
+  background: rgba(19, 32, 24, 0.08);
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: #314238;
+}
+
+.form-error {
+  color: #8b2f1a;
+  line-height: 1.4;
+}
+
+.muted-copy {
+  color: #58705f;
+}
+
 @media (max-width: 900px) {
   .layout,
   .summary-grid,
-  .detail-grid {
+  .detail-grid,
+  .workspace-grid,
+  .section-body,
+  .section-body-wide,
+  .entity-form-wide {
     grid-template-columns: 1fr;
   }
 
@@ -229,6 +353,10 @@ p {
     width: min(100% - 24px, 1120px);
     padding-top: 24px;
     padding-bottom: 48px;
+  }
+
+  .form-span-wide {
+    grid-column: auto;
   }
 
   .sidebar,

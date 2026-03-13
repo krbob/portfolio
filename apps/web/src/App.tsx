@@ -1,4 +1,7 @@
 import { AppShell } from './components/AppShell'
+import { AccountsSection } from './components/AccountsSection'
+import { InstrumentsSection } from './components/InstrumentsSection'
+import { TransactionsSection } from './components/TransactionsSection'
 import { useAppMeta } from './hooks/use-app-meta'
 
 function formatStage(stage: string) {
@@ -76,6 +79,13 @@ export function App() {
           </ul>
         </article>
       </section>
+
+      <section className="workspace-grid">
+        <AccountsSection />
+        <InstrumentsSection />
+      </section>
+
+      <TransactionsSection />
     </AppShell>
   )
 }
