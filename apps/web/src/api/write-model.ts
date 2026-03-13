@@ -100,6 +100,70 @@ export interface ImportTransactionsResult {
   transactions: Transaction[]
 }
 
+export interface PortfolioStateSnapshot {
+  schemaVersion: number
+  exportedAt: string
+  accounts: Array<{
+    id: string
+    name: string
+    institution: string
+    type: string
+    baseCurrency: string
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  instruments: Array<{
+    id: string
+    name: string
+    kind: string
+    assetClass: string
+    symbol: string | null
+    currency: string
+    valuationSource: string
+    edoTerms: {
+      purchaseDate: string
+      firstPeriodRateBps: number
+      marginBps: number
+      principalUnits: number
+      maturityDate: string
+    } | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  transactions: Array<{
+    id: string
+    accountId: string
+    instrumentId: string | null
+    type: string
+    tradeDate: string
+    settlementDate: string | null
+    quantity: string | null
+    unitPrice: string | null
+    grossAmount: string
+    feeAmount: string
+    taxAmount: string
+    currency: string
+    fxRateToPln: string | null
+    notes: string
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+export interface ImportPortfolioStatePayload {
+  mode: 'MERGE' | 'REPLACE'
+  snapshot: PortfolioStateSnapshot
+}
+
+export interface ImportPortfolioStateResult {
+  mode: 'MERGE' | 'REPLACE'
+  accountCount: number
+  instrumentCount: number
+  transactionCount: number
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -187,6 +251,17 @@ export async function deleteTransaction(id: string) {
 
 export function importTransactions(payload: ImportTransactionsPayload) {
   return requestJson<ImportTransactionsResult>('/api/v1/transactions/import', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function exportPortfolioState() {
+  return requestJson<PortfolioStateSnapshot>('/api/v1/portfolio/state/export')
+}
+
+export function importPortfolioState(payload: ImportPortfolioStatePayload) {
+  return requestJson<ImportPortfolioStateResult>('/api/v1/portfolio/state/import', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

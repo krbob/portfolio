@@ -640,6 +640,63 @@ p {
   line-height: 1.5;
 }
 
+.transfer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.transfer-box {
+  display: grid;
+  gap: 8px;
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.transfer-box span {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #58705f;
+}
+
+.transfer-box strong {
+  font-size: 1.5rem;
+  line-height: 1.05;
+}
+
+.transfer-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.transfer-card {
+  display: grid;
+  gap: 14px;
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.transfer-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.transfer-file {
+  display: grid;
+  gap: 6px;
+}
+
+.transfer-file span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58705f;
+}
+
 .value-positive {
   color: #1d6a39;
 }
@@ -734,6 +791,8 @@ p {
   .history-summary-grid,
   .returns-grid,
   .returns-stat-grid,
+  .transfer-grid,
+  .transfer-layout,
   .journal-toolbar,
   .holding-item {
     grid-template-columns: 1fr;

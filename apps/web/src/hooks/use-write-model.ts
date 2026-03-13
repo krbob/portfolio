@@ -4,15 +4,19 @@ import {
   createInstrument,
   createTransaction,
   deleteTransaction,
+  exportPortfolioState,
   importTransactions,
+  importPortfolioState,
   listAccounts,
   listInstruments,
   listTransactions,
   updateTransaction,
   type CreateAccountPayload,
   type CreateInstrumentPayload,
+  type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type CreateTransactionPayload,
+  type PortfolioStateSnapshot,
   type UpdateTransactionPayload,
 } from '../api/write-model'
 
@@ -98,6 +102,22 @@ export function useImportTransactions() {
   const queryClient = useTransactionInvalidateQueryClient()
   return useMutation({
     mutationFn: (payload: ImportTransactionsPayload) => importTransactions(payload),
+    onSuccess: async () => {
+      await invalidateTransactionRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useExportPortfolioState() {
+  return useMutation({
+    mutationFn: (): Promise<PortfolioStateSnapshot> => exportPortfolioState(),
+  })
+}
+
+export function useImportPortfolioState() {
+  const queryClient = useTransactionInvalidateQueryClient()
+  return useMutation({
+    mutationFn: (payload: ImportPortfolioStatePayload) => importPortfolioState(payload),
     onSuccess: async () => {
       await invalidateTransactionRelatedQueries(queryClient)
     },

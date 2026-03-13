@@ -5,6 +5,7 @@ import { HoldingsSection } from './components/HoldingsSection'
 import { PortfolioHistorySection } from './components/PortfolioHistorySection'
 import { PortfolioOverviewSection } from './components/PortfolioOverviewSection'
 import { PortfolioReturnsSection } from './components/PortfolioReturnsSection'
+import { PortfolioStateSection } from './components/PortfolioStateSection'
 import { TransactionsSection } from './components/TransactionsSection'
 import { useAppMeta } from './hooks/use-app-meta'
 
@@ -94,6 +95,7 @@ export function App() {
         <InstrumentsSection />
       </section>
 
+      <PortfolioStateSection />
       <TransactionsSection />
     </AppShell>
   )
