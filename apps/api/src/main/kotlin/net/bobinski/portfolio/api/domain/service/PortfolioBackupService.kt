@@ -110,6 +110,14 @@ class PortfolioBackupService(
             )
         }
 
+    suspend fun downloadBackup(fileName: String): PortfolioBackupDownload = operationMutex.withLock {
+        val file = resolveBackupFile(fileName)
+        PortfolioBackupDownload(
+            fileName = file.fileName.toString(),
+            content = Files.readString(file)
+        )
+    }
+
     suspend fun runScheduledBackup(): PortfolioBackupRecord = createBackup(trigger = BackupTrigger.SCHEDULED)
 
     private fun listBackupsUnlocked(): List<PortfolioBackupRecord> {
@@ -256,6 +264,11 @@ data class PortfolioBackupRestoreResult(
     val accountCount: Int,
     val instrumentCount: Int,
     val transactionCount: Int
+)
+
+data class PortfolioBackupDownload(
+    val fileName: String,
+    val content: String
 )
 
 enum class BackupTrigger {

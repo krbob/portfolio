@@ -1,6 +1,11 @@
 package net.bobinski.portfolio.api.route
 
+import io.ktor.http.ContentDisposition
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -55,6 +60,20 @@ fun Route.portfolioRoute() {
 
         get("/backups") {
             call.respond(portfolioBackupService.status().toResponse())
+        }
+
+        get("/backups/download") {
+            val fileName = call.request.queryParameters["fileName"]
+                ?: throw IllegalArgumentException("fileName query parameter is required.")
+            val backup = portfolioBackupService.downloadBackup(fileName)
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, backup.fileName).toString()
+            )
+            call.respondText(
+                text = backup.content,
+                contentType = ContentType.Application.Json
+            )
         }
 
         post("/backups/run") {

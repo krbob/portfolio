@@ -5,6 +5,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.config.MapApplicationConfig
@@ -55,6 +56,7 @@ class PortfolioBackupRouteTest {
             createAccount(name = "Secondary")
 
             val listResponse = client.get("/v1/portfolio/backups")
+            val downloadResponse = client.get("/v1/portfolio/backups/download?fileName=$backupFileName")
             val restoreResponse = client.post("/v1/portfolio/backups/restore") {
                 contentType(ContentType.Application.Json)
                 setBody(
@@ -73,6 +75,9 @@ class PortfolioBackupRouteTest {
             assertEquals(HttpStatusCode.OK, listResponse.status)
             assertTrue(listResponse.bodyAsText().contains("\"schedulerEnabled\": false"))
             assertTrue(listResponse.bodyAsText().contains(backupFileName))
+            assertEquals(HttpStatusCode.OK, downloadResponse.status)
+            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 1"))
+            assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)
             assertEquals(HttpStatusCode.OK, restoreResponse.status)
             assertTrue(restoreResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
             assertTrue(accountsResponse.bodyAsText().contains("\"name\": \"Primary\""))
