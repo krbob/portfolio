@@ -14,7 +14,8 @@ import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
-import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
+import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
+import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
@@ -28,6 +29,7 @@ class PortfolioHistoryService(
     private val instrumentRepository: InstrumentRepository,
     private val transactionRepository: TransactionRepository,
     private val historicalInstrumentValuationProvider: HistoricalInstrumentValuationProvider,
+    private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val clock: Clock
 ) {
     suspend fun dailyHistory(): PortfolioDailyHistory {
@@ -43,6 +45,7 @@ class PortfolioHistoryService(
                 until = today,
                 valuationState = ValuationState.MARK_TO_MARKET,
                 instrumentHistoryIssueCount = 0,
+                referenceSeriesIssueCount = 0,
                 missingFxTransactions = 0,
                 unsupportedCorrectionTransactions = 0,
                 points = emptyList()
@@ -57,6 +60,7 @@ class PortfolioHistoryService(
             from = from,
             until = until
         )
+        val referenceLoads = loadReferenceSeries(from = from, until = until)
         val accountsById = accounts.associateBy(Account::id)
         val instrumentsById = instruments.associateBy(Instrument::id)
         val transactionsByDate = transactions.groupBy(Transaction::tradeDate)
@@ -176,6 +180,12 @@ class PortfolioHistoryService(
                 totalCurrentValuePln = totalCurrentValuePln,
                 netContributionsPln = netContributionsPln.money(),
                 cashBalancePln = cashCurrentValuePln,
+                totalCurrentValueUsd = totalCurrentValuePln.divideBy(referenceLoads.usdPln, date),
+                netContributionsUsd = netContributionsPln.money().divideBy(referenceLoads.usdPln, date),
+                cashBalanceUsd = cashCurrentValuePln.divideBy(referenceLoads.usdPln, date),
+                totalCurrentValueAu = totalCurrentValuePln.divideBy(referenceLoads.goldPln, date),
+                netContributionsAu = netContributionsPln.money().divideBy(referenceLoads.goldPln, date),
+                cashBalanceAu = cashCurrentValuePln.divideBy(referenceLoads.goldPln, date),
                 equityCurrentValuePln = equityCurrentValuePln.money(),
                 bondCurrentValuePln = bondCurrentValuePln.money(),
                 cashCurrentValuePln = cashCurrentValuePln,
@@ -194,6 +204,7 @@ class PortfolioHistoryService(
             until = until,
             valuationState = historyLoads.valuationState,
             instrumentHistoryIssueCount = historyLoads.issueCount,
+            referenceSeriesIssueCount = referenceLoads.issueCount,
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
             points = points
@@ -238,6 +249,29 @@ class PortfolioHistoryService(
         )
     }
 
+    private suspend fun loadReferenceSeries(
+        from: LocalDate,
+        until: LocalDate
+    ): ReferenceLoads = coroutineScope {
+        val usdDeferred = async { referenceSeriesProvider.usdPln(from = from, to = until) }
+        val goldDeferred = async { referenceSeriesProvider.goldPln(from = from, to = until) }
+
+        val usd = usdDeferred.await()
+        val gold = goldDeferred.await()
+
+        ReferenceLoads(
+            usdPln = when (usd) {
+                is ReferenceSeriesResult.Success -> usd.prices.toLookup()
+                is ReferenceSeriesResult.Failure -> TreeMap()
+            },
+            goldPln = when (gold) {
+                is ReferenceSeriesResult.Success -> gold.prices.toLookup()
+                is ReferenceSeriesResult.Failure -> TreeMap()
+            },
+            issueCount = listOf(usd, gold).count { it is ReferenceSeriesResult.Failure }
+        )
+    }
+
     private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
         associateTo(TreeMap()) { it.date to it.closePricePln.money() }
 
@@ -268,6 +302,17 @@ class PortfolioHistoryService(
         }
 
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
+
+    private fun BigDecimal.divideBy(
+        lookup: TreeMap<LocalDate, BigDecimal>,
+        date: LocalDate
+    ): BigDecimal? {
+        val divisor = lookup.floorEntry(date)?.value
+        if (divisor == null || divisor.signum() == 0) {
+            return null
+        }
+        return divide(divisor, 8, RoundingMode.HALF_UP).setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
+    }
 
     private fun BigDecimal.ratioOf(part: BigDecimal): BigDecimal =
         if (signum() <= 0 || part.signum() <= 0) {
@@ -303,6 +348,12 @@ class PortfolioHistoryService(
         val valuationState: ValuationState
     )
 
+    private data class ReferenceLoads(
+        val usdPln: TreeMap<LocalDate, BigDecimal>,
+        val goldPln: TreeMap<LocalDate, BigDecimal>,
+        val issueCount: Int
+    )
+
     private companion object {
         val MONEY_CONTEXT: MathContext = MathContext.DECIMAL64
     }
@@ -313,6 +364,7 @@ data class PortfolioDailyHistory(
     val until: LocalDate,
     val valuationState: ValuationState,
     val instrumentHistoryIssueCount: Int,
+    val referenceSeriesIssueCount: Int,
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
     val points: List<PortfolioDailyHistoryPoint>
@@ -324,6 +376,12 @@ data class PortfolioDailyHistoryPoint(
     val totalCurrentValuePln: BigDecimal,
     val netContributionsPln: BigDecimal,
     val cashBalancePln: BigDecimal,
+    val totalCurrentValueUsd: BigDecimal?,
+    val netContributionsUsd: BigDecimal?,
+    val cashBalanceUsd: BigDecimal?,
+    val totalCurrentValueAu: BigDecimal?,
+    val netContributionsAu: BigDecimal?,
+    val cashBalanceAu: BigDecimal?,
     val equityCurrentValuePln: BigDecimal,
     val bondCurrentValuePln: BigDecimal,
     val cashCurrentValuePln: BigDecimal,

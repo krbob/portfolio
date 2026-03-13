@@ -43,10 +43,11 @@ class StockAnalystClient(
         )
     }
 
-    suspend fun historyInPln(symbol: String): List<HistoricalPricePoint> = withContext(Dispatchers.IO) {
+    suspend fun history(symbol: String, currency: String? = null): List<HistoricalPricePoint> = withContext(Dispatchers.IO) {
         val encodedSymbol = URLEncoder.encode(symbol, StandardCharsets.UTF_8).replace("+", "%20")
+        val currencyQuery = currency?.let { "&currency=$it" } ?: ""
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("${baseUrl.trimEnd('/')}/history/$encodedSymbol?period=max&interval=1d&currency=PLN"))
+            .uri(URI.create("${baseUrl.trimEnd('/')}/history/$encodedSymbol?period=max&interval=1d$currencyQuery"))
             .timeout(Duration.ofSeconds(20))
             .GET()
             .build()
@@ -64,6 +65,8 @@ class StockAnalystClient(
             )
         }
     }
+
+    suspend fun historyInPln(symbol: String): List<HistoricalPricePoint> = history(symbol = symbol, currency = "PLN")
 }
 
 data class StockAnalystQuote(

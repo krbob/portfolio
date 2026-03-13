@@ -14,8 +14,10 @@ import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
@@ -53,6 +55,12 @@ fun appModule(
             config = get(),
             stockAnalystClient = get(),
             edoCalculatorClient = get()
+        )
+    }
+    single<ReferenceSeriesProvider> {
+        RemoteReferenceSeriesProvider(
+            config = get(),
+            stockAnalystClient = get()
         )
     }
 
@@ -93,6 +101,7 @@ fun appModule(
             instrumentRepository = get(),
             transactionRepository = get(),
             historicalInstrumentValuationProvider = get(),
+            referenceSeriesProvider = get(),
             clock = get()
         )
     }

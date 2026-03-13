@@ -13,6 +13,8 @@ import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
+import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
+import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
@@ -42,6 +44,18 @@ class PortfolioHistoryServiceTest {
                 pricePoint("2026-03-03", "110.00")
             )
         )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "4.00"),
+                pricePoint("2026-03-03", "4.10")
+            )
+        )
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "12000.00"),
+                pricePoint("2026-03-03", "12100.00")
+            )
+        )
 
         val history = fixture.service.dailyHistory()
 
@@ -53,6 +67,8 @@ class PortfolioHistoryServiceTest {
         assertEquals(BigDecimal("2000.00"), history.points[2].netContributionsPln)
         assertEquals(BigDecimal("52.51"), history.points[2].equityAllocationPct)
         assertEquals(1, history.points[2].valuedHoldingCount)
+        assertEquals(BigDecimal("510.97560976"), history.points[2].totalCurrentValueUsd)
+        assertEquals(BigDecimal("0.1731405"), history.points[2].totalCurrentValueAu)
     }
 
     @Test
@@ -68,13 +84,17 @@ class PortfolioHistoryServiceTest {
             type = InstrumentValuationFailureType.UNAVAILABLE,
             reason = "History API unavailable."
         )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Failure("USD series unavailable.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold series unavailable.")
 
         val history = fixture.service.dailyHistory()
 
         assertEquals(ValuationState.BOOK_ONLY, history.valuationState)
         assertEquals(1, history.instrumentHistoryIssueCount)
+        assertEquals(2, history.referenceSeriesIssueCount)
         assertEquals(BigDecimal("2000.00"), history.points[1].totalCurrentValuePln)
         assertEquals(0, history.points[1].valuedHoldingCount)
+        assertEquals(null, history.points[1].totalCurrentValueUsd)
     }
 
     private fun historyFixture(): HistoryFixture {
@@ -82,11 +102,13 @@ class PortfolioHistoryServiceTest {
         val instrumentRepository = InMemoryInstrumentRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
+        val referenceProvider = FakeReferenceSeriesProvider()
         val service = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = historyProvider,
+            referenceSeriesProvider = referenceProvider,
             clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC)
         )
         return HistoryFixture(
@@ -94,7 +116,8 @@ class PortfolioHistoryServiceTest {
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
-            historyProvider = historyProvider
+            historyProvider = historyProvider,
+            referenceProvider = referenceProvider
         )
     }
 
@@ -171,7 +194,8 @@ class PortfolioHistoryServiceTest {
         val accountRepository: InMemoryAccountRepository,
         val instrumentRepository: InMemoryInstrumentRepository,
         val transactionRepository: InMemoryTransactionRepository,
-        val historyProvider: FakeHistoricalInstrumentValuationProvider
+        val historyProvider: FakeHistoricalInstrumentValuationProvider,
+        val referenceProvider: FakeReferenceSeriesProvider
     )
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {
@@ -186,6 +210,15 @@ class PortfolioHistoryServiceTest {
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = "No fake history for ${instrument.name}."
             )
+    }
+
+    private class FakeReferenceSeriesProvider : ReferenceSeriesProvider {
+        var usd: ReferenceSeriesResult = ReferenceSeriesResult.Failure("USD not set.")
+        var gold: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Gold not set.")
+
+        override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
+
+        override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
     }
 
     private companion object {

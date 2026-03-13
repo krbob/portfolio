@@ -6,7 +6,9 @@ import io.ktor.server.config.propertyOrNull
 data class MarketDataConfig(
     val enabled: Boolean,
     val stockAnalystBaseUrl: String,
-    val edoCalculatorBaseUrl: String
+    val edoCalculatorBaseUrl: String,
+    val usdPlnSymbol: String,
+    val goldBenchmarkSymbol: String
 ) {
     companion object {
         fun from(config: ApplicationConfig): MarketDataConfig = MarketDataConfig(
@@ -23,6 +25,16 @@ data class MarketDataConfig(
                 config,
                 "portfolio.marketData.edoCalculatorBaseUrl"
             ) ?: "http://127.0.0.1:18081",
+            usdPlnSymbol = readSetting(
+                "PORTFOLIO_USDPLN_SYMBOL",
+                config,
+                "portfolio.marketData.usdPlnSymbol"
+            ) ?: "USDPLN=X",
+            goldBenchmarkSymbol = readSetting(
+                "PORTFOLIO_GOLD_BENCHMARK_SYMBOL",
+                config,
+                "portfolio.marketData.goldBenchmarkSymbol"
+            ) ?: "XAUUSD=X"
         )
 
         private fun readSetting(
