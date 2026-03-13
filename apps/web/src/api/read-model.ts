@@ -83,6 +83,28 @@ export interface PortfolioReturns {
   periods: PortfolioReturnPeriod[]
 }
 
+export interface PortfolioAllocationSummary {
+  asOf: string
+  valuationState: string
+  configured: boolean
+  targetWeightSumPct: string
+  totalCurrentValuePln: string
+  availableCashPln: string
+  buckets: PortfolioAllocationBucket[]
+}
+
+export interface PortfolioAllocationBucket {
+  assetClass: string
+  currentValuePln: string
+  currentWeightPct: string
+  targetWeightPct: string | null
+  targetValuePln: string | null
+  driftPctPoints: string | null
+  gapValuePln: string | null
+  suggestedContributionPln: string
+  status: 'UNDERWEIGHT' | 'OVERWEIGHT' | 'ON_TARGET' | 'UNCONFIGURED'
+}
+
 export interface PortfolioReturnPeriod {
   key: string
   label: string
@@ -137,4 +159,8 @@ export function fetchPortfolioDailyHistory() {
 
 export function fetchPortfolioReturns() {
   return requestJson<PortfolioReturns>('/api/v1/portfolio/returns')
+}
+
+export function fetchPortfolioAllocation() {
+  return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
 }

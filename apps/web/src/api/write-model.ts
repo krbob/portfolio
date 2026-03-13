@@ -227,6 +227,21 @@ export interface RestorePortfolioBackupResult {
   transactionCount: number
 }
 
+export interface PortfolioTarget {
+  id: string
+  assetClass: 'EQUITIES' | 'BONDS' | 'CASH'
+  targetWeight: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ReplacePortfolioTargetsPayload {
+  items: Array<{
+    assetClass: 'EQUITIES' | 'BONDS' | 'CASH'
+    targetWeight: string
+  }>
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -325,6 +340,17 @@ export function exportPortfolioState() {
 
 export function listPortfolioBackups() {
   return requestJson<PortfolioBackupStatus>('/api/v1/portfolio/backups')
+}
+
+export function listPortfolioTargets() {
+  return requestJson<PortfolioTarget[]>('/api/v1/portfolio/targets')
+}
+
+export function replacePortfolioTargets(payload: ReplacePortfolioTargetsPayload) {
+  return requestJson<PortfolioTarget[]>('/api/v1/portfolio/targets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function downloadPortfolioBackup(fileName: string) {

@@ -200,6 +200,84 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/allocation')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            valuationState: 'MARK_TO_MARKET',
+            configured: true,
+            targetWeightSumPct: '100.00',
+            totalCurrentValuePln: '2095.00',
+            availableCashPln: '995.00',
+            buckets: [
+              {
+                assetClass: 'EQUITIES',
+                currentValuePln: '1100.00',
+                currentWeightPct: '52.51',
+                targetWeightPct: '80.00',
+                targetValuePln: '1676.00',
+                driftPctPoints: '-27.49',
+                gapValuePln: '576.00',
+                suggestedContributionPln: '576.00',
+                status: 'UNDERWEIGHT',
+              },
+              {
+                assetClass: 'BONDS',
+                currentValuePln: '0.00',
+                currentWeightPct: '0.00',
+                targetWeightPct: '20.00',
+                targetValuePln: '419.00',
+                driftPctPoints: '-20.00',
+                gapValuePln: '419.00',
+                suggestedContributionPln: '419.00',
+                status: 'UNDERWEIGHT',
+              },
+              {
+                assetClass: 'CASH',
+                currentValuePln: '995.00',
+                currentWeightPct: '47.49',
+                targetWeightPct: '0.00',
+                targetValuePln: '0.00',
+                driftPctPoints: '47.49',
+                gapValuePln: '-995.00',
+                suggestedContributionPln: '0.00',
+                status: 'OVERWEIGHT',
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/targets')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'target-1',
+              assetClass: 'EQUITIES',
+              targetWeight: '0.80',
+              createdAt: '2026-03-13T10:00:00Z',
+              updatedAt: '2026-03-13T10:00:00Z',
+            },
+            {
+              id: 'target-2',
+              assetClass: 'BONDS',
+              targetWeight: '0.20',
+              createdAt: '2026-03-13T10:00:00Z',
+              updatedAt: '2026-03-13T10:00:00Z',
+            },
+            {
+              id: 'target-3',
+              assetClass: 'CASH',
+              targetWeight: '0.00',
+              createdAt: '2026-03-13T10:00:00Z',
+              updatedAt: '2026-03-13T10:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/backups')) {
         return new Response(
           JSON.stringify({
@@ -260,7 +338,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /money-weighted returns/i })).toBeInTheDocument()
-    expect(await screen.findByText(/valuation state/i)).toBeInTheDocument()
+    expect(await screen.findByText(/valuation state book_only/i)).toBeInTheDocument()
     expect(await screen.findByText(/pln mwrr/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()

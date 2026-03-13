@@ -629,6 +629,76 @@ p {
   gap: 12px;
 }
 
+.allocation-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 18px;
+}
+
+.allocation-target-panel,
+.allocation-bucket-list {
+  display: grid;
+  gap: 14px;
+}
+
+.allocation-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.allocation-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.allocation-form-note {
+  display: grid;
+  gap: 4px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.allocation-bucket-card {
+  display: grid;
+  gap: 14px;
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.allocation-bucket-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.allocation-bucket-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.allocation-bucket-stats div {
+  display: grid;
+  gap: 6px;
+}
+
+.allocation-bucket-stats dt {
+  color: #58705f;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.allocation-bucket-stats dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 .overview-stat {
   display: grid;
   gap: 8px;
@@ -1078,9 +1148,24 @@ p {
   color: #9b3324;
 }
 
+.status-underweight {
+  background: rgba(194, 132, 32, 0.16);
+  color: #8e5d12;
+}
+
+.status-overweight {
+  background: rgba(155, 51, 36, 0.12);
+  color: #9b3324;
+}
+
 .status-unsupported {
   background: rgba(122, 93, 22, 0.14);
   color: #755815;
+}
+
+.status-unconfigured {
+  background: rgba(88, 112, 95, 0.12);
+  color: #58705f;
 }
 
 .holding-stats {
@@ -1118,6 +1203,8 @@ p {
   .section-body,
   .section-body-wide,
   .entity-form-wide,
+  .allocation-workspace,
+  .allocation-summary-grid,
   .overview-grid,
   .history-summary-grid,
   .returns-grid,
@@ -1128,12 +1215,14 @@ p {
   .transfer-preview-grid,
   .transfer-layout,
   .journal-toolbar,
-  .holding-item {
+  .holding-item,
+  .allocation-bucket-stats {
     grid-template-columns: 1fr;
   }
 
   .hero-header,
-  .chart-header {
+  .chart-header,
+  .allocation-bucket-header {
     flex-direction: column;
   }
 

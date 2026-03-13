@@ -11,8 +11,10 @@ import {
   listAccounts,
   listInstruments,
   listPortfolioBackups,
+  listPortfolioTargets,
   listTransactions,
   previewPortfolioStateImport,
+  replacePortfolioTargets,
   restorePortfolioBackup,
   runPortfolioBackup,
   updateTransaction,
@@ -22,7 +24,9 @@ import {
   type ImportTransactionsPayload,
   type CreateTransactionPayload,
   type PortfolioBackupRecord,
+  type PortfolioTarget,
   type PreviewPortfolioStateImportResult,
+  type ReplacePortfolioTargetsPayload,
   type PortfolioStateSnapshot,
   type RestorePortfolioBackupPayload,
   type RestorePortfolioBackupResult,
@@ -130,6 +134,27 @@ export function usePortfolioBackups() {
   })
 }
 
+export function usePortfolioTargets() {
+  return useQuery({
+    queryKey: ['portfolio-targets'],
+    queryFn: listPortfolioTargets,
+  })
+}
+
+export function useReplacePortfolioTargets() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: ReplacePortfolioTargetsPayload): Promise<PortfolioTarget[]> =>
+      replacePortfolioTargets(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-targets'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+      ])
+    },
+  })
+}
+
 export function useRunPortfolioBackup() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -187,6 +212,7 @@ async function invalidateTransactionRelatedQueries(queryClient: ReturnType<typeo
     queryClient.invalidateQueries({ queryKey: ['transactions'] }),
     queryClient.invalidateQueries({ queryKey: ['accounts'] }),
     queryClient.invalidateQueries({ queryKey: ['instruments'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),

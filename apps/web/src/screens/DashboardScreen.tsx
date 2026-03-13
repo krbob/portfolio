@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { AllocationBar } from '../components/AllocationBar'
+import { PortfolioAllocationSection } from '../components/PortfolioAllocationSection'
 import { PortfolioHistorySection } from '../components/PortfolioHistorySection'
 import { PortfolioOverviewSection } from '../components/PortfolioOverviewSection'
 import { PortfolioReturnsSection } from '../components/PortfolioReturnsSection'
@@ -114,6 +115,8 @@ export function DashboardScreen() {
         cashWeightPct={cashWeightPct}
         equityWeightPct={equityWeightPct}
       />
+
+      <PortfolioAllocationSection />
 
       <section className="detail-grid">
         <article className="panel stack-card">
