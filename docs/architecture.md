@@ -40,7 +40,8 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 ### Persistence
 
 - PostgreSQL planned for production data
-- Flyway and relational schema to be added in the next phase
+- relational schema already drafted in SQL migrations
+- current write-model implementation uses in-memory repositories until PostgreSQL wiring is added
 
 ## First delivery slices
 

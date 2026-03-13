@@ -41,5 +41,6 @@ The product is optimized for:
 1. Bootstrap project structure and toolchain.
 2. Add app shell, health endpoints, and configuration surfaces.
 3. Define core domain model and persistence schema.
-4. Implement accounts, instruments, and transactions.
-5. Add portfolio overview, holdings, and timeline reconstruction.
+4. Implement the first write-model API for accounts, instruments, and transactions.
+5. Replace in-memory repositories with PostgreSQL-backed persistence.
+6. Add portfolio overview, holdings, and timeline reconstruction.

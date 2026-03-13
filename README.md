@@ -36,4 +36,11 @@ portfolio/
 - ETF pricing via `stock-analyst`
 - EDO valuation and inflation via `edo-calculator`
 
+## Current implementation status
+
+- backend write-model API exists for accounts, instruments, and transactions
+- domain model and initial PostgreSQL schema are defined
+- repository storage is currently in-memory
+- PostgreSQL wiring is the next backend milestone
+
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.

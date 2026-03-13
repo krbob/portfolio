@@ -21,6 +21,7 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:3.4.1")
     implementation("io.ktor:ktor-server-content-negotiation:3.4.1")
     implementation("io.ktor:ktor-server-config-yaml:3.4.1")
+    implementation("io.ktor:ktor-server-status-pages:3.4.1")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.1")
     implementation("io.insert-koin:koin-ktor:4.1.1")
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
