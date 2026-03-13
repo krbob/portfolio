@@ -593,10 +593,36 @@ p {
   background: rgba(19, 32, 24, 0.04);
 }
 
-.history-unit-switch {
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.history-pill-group {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chart-inline-legend {
+  display: flex;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -617,31 +643,8 @@ p {
   color: #f8f4ea;
 }
 
-.history-chart {
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.chart-grid line {
-  stroke: rgba(19, 32, 24, 0.1);
-  stroke-width: 1;
-}
-
-.chart-line {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.chart-line-primary {
-  stroke: #132018;
-}
-
-.chart-line-secondary {
-  stroke: #9b6b34;
-  stroke-dasharray: 8 8;
+.lightweight-chart {
+  min-height: 280px;
 }
 
 .chart-legend {
@@ -673,6 +676,18 @@ p {
 
 .legend-swatch-secondary {
   background: #9b6b34;
+}
+
+.legend-swatch-equity {
+  background: #1d6a39;
+}
+
+.legend-swatch-bond {
+  background: #c07b1d;
+}
+
+.legend-swatch-cash {
+  background: #8a6b3f;
 }
 
 .legend-range {
@@ -1046,7 +1061,8 @@ p {
     grid-template-columns: 1fr;
   }
 
-  .hero-header {
+  .hero-header,
+  .chart-header {
     flex-direction: column;
   }
 

@@ -1,11 +1,22 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SectionCard } from './SectionCard'
+import { PortfolioAllocationChart } from './PortfolioAllocationChart'
+import { PortfolioValueChart } from './PortfolioValueChart'
 import { usePortfolioDailyHistory } from '../hooks/use-read-model'
+import type { PortfolioDailyHistoryPoint } from '../api/read-model'
 
-const CHART_WIDTH = 860
-const CHART_HEIGHT = 280
-const CHART_PADDING_X = 24
-const CHART_PADDING_Y = 18
+type HistoryUnit = 'PLN' | 'USD' | 'AU'
+type HistoryPeriod = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
+type ValueSeriesKey =
+  | 'totalCurrentValuePln'
+  | 'totalCurrentValueUsd'
+  | 'totalCurrentValueAu'
+type ContributionSeriesKey =
+  | 'netContributionsPln'
+  | 'netContributionsUsd'
+  | 'netContributionsAu'
+
+const HISTORY_PERIODS: HistoryPeriod[] = ['YTD', '1Y', '3Y', '5Y', 'MAX']
 
 function formatCurrency(value: string | null | undefined) {
   if (value == null) {
@@ -32,11 +43,13 @@ function formatSignedCurrency(value: string) {
 }
 
 export function PortfolioHistorySection() {
-  const [unit, setUnit] = useState<'PLN' | 'USD' | 'AU'>('PLN')
+  const [unit, setUnit] = useState<HistoryUnit>('PLN')
+  const [period, setPeriod] = useState<HistoryPeriod>('MAX')
   const historyQuery = usePortfolioDailyHistory()
   const data = historyQuery.data
   const points = data?.points ?? []
-  const latest = points.at(-1)
+  const filteredPoints = useMemo(() => filterPointsByPeriod(points, period), [period, points])
+  const latest = filteredPoints.at(-1) ?? points.at(-1)
   const series = seriesForUnit(unit)
   const gain =
     latest && latest[series.valueKey] != null && latest[series.contributionsKey] != null
@@ -47,13 +60,13 @@ export function PortfolioHistorySection() {
     <SectionCard
       eyebrow="History"
       title="Daily portfolio history"
-      description="A rebuildable time series derived from transactions plus historical market data, with views for PLN, USD and gold ounces."
+      description="A rebuildable time series derived from transactions plus historical market data, with filtered views for PLN, USD and gold ounces."
     >
       {historyQuery.isLoading && <p className="muted-copy">Loading daily history...</p>}
       {historyQuery.isError && <p className="form-error">{historyQuery.error.message}</p>}
       {data && points.length === 0 && <p className="muted-copy">No daily history yet.</p>}
 
-      {data && latest && points.length > 0 && (
+      {data && latest && filteredPoints.length > 0 && (
         <>
           <div className="history-summary-grid">
             <article className="overview-stat">
@@ -78,8 +91,8 @@ export function PortfolioHistorySection() {
             </article>
           </div>
 
-          <div className="history-chart-card">
-            <div className="history-unit-switch" role="tablist" aria-label="History unit">
+          <div className="history-toolbar">
+            <div className="history-pill-group" role="tablist" aria-label="History unit">
               {(['PLN', 'USD', 'AU'] as const).map((value) => (
                 <button
                   key={value}
@@ -92,29 +105,46 @@ export function PortfolioHistorySection() {
               ))}
             </div>
 
-            <svg
-              className="history-chart"
-              viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-              role="img"
-              aria-label={`${series.label} portfolio value and contributions history`}
-            >
-              <HistoryGrid />
-              <path d={buildSeriesPath(points, series.contributionsKey)} className="chart-line chart-line-secondary" />
-              <path d={buildSeriesPath(points, series.valueKey)} className="chart-line chart-line-primary" />
-            </svg>
+            <div className="history-pill-group" role="tablist" aria-label="History period">
+              {HISTORY_PERIODS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={value === period ? 'unit-pill unit-pill-active' : 'unit-pill'}
+                  onClick={() => setPeriod(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            <div className="chart-legend">
-              <span className="legend-item">
-                <i className="legend-swatch legend-swatch-primary" />
-                Portfolio value {series.label}
-              </span>
-              <span className="legend-item">
-                <i className="legend-swatch legend-swatch-secondary" />
-                Net contributions {series.label}
-              </span>
-              <span className="legend-range">
-                {data.from} to {data.until}
-              </span>
+          <div className="chart-stack">
+            <div className="history-chart-card">
+              <PortfolioValueChart
+                contributionsKey={series.contributionsKey}
+                points={filteredPoints}
+                unit={unit}
+                valueKey={series.valueKey}
+              />
+
+              <div className="chart-legend">
+                <span className="legend-item">
+                  <i className="legend-swatch legend-swatch-primary" />
+                  Portfolio value {series.label}
+                </span>
+                <span className="legend-item">
+                  <i className="legend-swatch legend-swatch-secondary" />
+                  Net contributions {series.label}
+                </span>
+                <span className="legend-range">
+                  {filteredPoints[0]?.date} to {filteredPoints.at(-1)?.date}
+                </span>
+              </div>
+            </div>
+
+            <div className="history-chart-card">
+              <PortfolioAllocationChart points={filteredPoints} />
             </div>
           </div>
 
@@ -136,60 +166,23 @@ export function PortfolioHistorySection() {
   )
 }
 
-function buildSeriesPath(
-  points: Array<Record<SeriesValueKey, string | null>>,
-  key: SeriesValueKey,
-) {
-  const definedPoints = points.filter((point) => point[key] != null)
-  if (definedPoints.length === 0) {
-    return ''
+function filterPointsByPeriod(points: PortfolioDailyHistoryPoint[], period: HistoryPeriod) {
+  if (period === 'MAX' || points.length === 0) {
+    return points
   }
 
-  const values = definedPoints
-    .map((point) => Number(point[key]))
-    .filter((value) => !Number.isNaN(value))
-  const minValue = Math.min(...values)
-  const maxValue = Math.max(...values)
-  const range = maxValue - minValue || 1
-  const innerWidth = CHART_WIDTH - CHART_PADDING_X * 2
-  const innerHeight = CHART_HEIGHT - CHART_PADDING_Y * 2
+  const latestDate = new Date(points.at(-1)?.date ?? points[0].date)
+  const cutoff = new Date(latestDate)
 
-  return definedPoints
-    .map((point, index) => {
-      const x =
-        CHART_PADDING_X +
-        (definedPoints.length === 1 ? 0 : (index / (definedPoints.length - 1)) * innerWidth)
-      const y =
-        CHART_HEIGHT -
-        CHART_PADDING_Y -
-        ((Number(point[key]) - minValue) / range) * innerHeight
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
-    })
-    .join(' ')
-}
+  if (period === 'YTD') {
+    const cutoffString = `${latestDate.getUTCFullYear()}-01-01`
+    return points.filter((point) => point.date >= cutoffString)
+  }
 
-function HistoryGrid() {
-  const lines = 4
-
-  return (
-    <g className="chart-grid">
-      {Array.from({ length: lines + 1 }).map((_, index) => {
-        const y =
-          CHART_PADDING_Y +
-          (index / lines) * (CHART_HEIGHT - CHART_PADDING_Y * 2)
-
-        return (
-          <line
-            key={index}
-            x1={CHART_PADDING_X}
-            x2={CHART_WIDTH - CHART_PADDING_X}
-            y1={y}
-            y2={y}
-          />
-        )
-      })}
-    </g>
-  )
+  const months = period === '1Y' ? 12 : period === '3Y' ? 36 : 60
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - months)
+  const cutoffString = cutoff.toISOString().slice(0, 10)
+  return points.filter((point) => point.date >= cutoffString)
 }
 
 function gainClassName(value: string | null) {
@@ -206,17 +199,9 @@ function gainClassName(value: string | null) {
   return undefined
 }
 
-type SeriesValueKey =
-  | 'totalCurrentValuePln'
-  | 'netContributionsPln'
-  | 'totalCurrentValueUsd'
-  | 'netContributionsUsd'
-  | 'totalCurrentValueAu'
-  | 'netContributionsAu'
-
-function seriesForUnit(unit: 'PLN' | 'USD' | 'AU'): {
-  valueKey: SeriesValueKey
-  contributionsKey: SeriesValueKey
+function seriesForUnit(unit: HistoryUnit): {
+  valueKey: ValueSeriesKey
+  contributionsKey: ContributionSeriesKey
   label: string
 } {
   switch (unit) {
@@ -241,7 +226,7 @@ function seriesForUnit(unit: 'PLN' | 'USD' | 'AU'): {
   }
 }
 
-function formatSeriesValue(value: string | null | undefined, unit: 'PLN' | 'USD' | 'AU') {
+function formatSeriesValue(value: string | null | undefined, unit: HistoryUnit) {
   if (unit === 'PLN') {
     return formatCurrency(value)
   }
@@ -253,7 +238,7 @@ function formatSeriesValue(value: string | null | undefined, unit: 'PLN' | 'USD'
   return `${Number(value).toFixed(digits)} ${suffix}`
 }
 
-function formatSeriesDelta(value: string, unit: 'PLN' | 'USD' | 'AU') {
+function formatSeriesDelta(value: string, unit: HistoryUnit) {
   if (unit === 'PLN') {
     return formatSignedCurrency(value)
   }
@@ -261,8 +246,5 @@ function formatSeriesDelta(value: string, unit: 'PLN' | 'USD' | 'AU') {
   const digits = unit === 'USD' ? 2 : 6
   const suffix = unit === 'USD' ? 'USD' : 'AU'
   const formatted = `${amount.toFixed(digits)} ${suffix}`
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  return formatted
+  return amount > 0 ? `+${formatted}` : formatted
 }
