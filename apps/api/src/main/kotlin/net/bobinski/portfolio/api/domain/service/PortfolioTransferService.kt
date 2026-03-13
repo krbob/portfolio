@@ -39,9 +39,140 @@ class PortfolioTransferService(
         )
     }
 
+    suspend fun previewImport(request: PortfolioImportRequest): PortfolioImportPreview {
+        val existingAccounts = accountRepository.list()
+        val existingInstruments = instrumentRepository.list()
+        val existingTransactions = transactionRepository.list()
+        val issues = mutableListOf<PortfolioImportIssue>()
+
+        if (request.snapshot.schemaVersion != SCHEMA_VERSION) {
+            issues += PortfolioImportIssue(
+                severity = ImportIssueSeverity.ERROR,
+                code = "UNSUPPORTED_SCHEMA_VERSION",
+                message = "Unsupported snapshot schema version ${request.snapshot.schemaVersion}. Expected $SCHEMA_VERSION."
+            )
+        }
+
+        issues += duplicateIdIssues(
+            entityName = "account",
+            ids = request.snapshot.accounts.map(AccountSnapshot::id)
+        )
+        issues += duplicateIdIssues(
+            entityName = "instrument",
+            ids = request.snapshot.instruments.map(InstrumentSnapshot::id)
+        )
+        issues += duplicateIdIssues(
+            entityName = "transaction",
+            ids = request.snapshot.transactions.map(TransactionSnapshot::id)
+        )
+
+        val snapshotAccountIds = mutableSetOf<UUID>()
+        request.snapshot.accounts.forEach { snapshot ->
+            runCatching { snapshot.toDomain() }
+                .onSuccess { account ->
+                    snapshotAccountIds += account.id
+                }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "account",
+                        entityId = snapshot.id,
+                        message = exception.message ?: "Invalid account snapshot."
+                    )
+                }
+        }
+
+        val snapshotInstrumentIds = mutableSetOf<UUID>()
+        request.snapshot.instruments.forEach { snapshot ->
+            runCatching { snapshot.toDomain() }
+                .onSuccess { instrument ->
+                    snapshotInstrumentIds += instrument.id
+                }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "instrument",
+                        entityId = snapshot.id,
+                        message = exception.message ?: "Invalid instrument snapshot."
+                    )
+                }
+        }
+
+        val accountIdsAvailable = when (request.mode) {
+            ImportMode.MERGE -> existingAccounts.mapTo(mutableSetOf(), Account::id)
+            ImportMode.REPLACE -> mutableSetOf()
+        }.apply {
+            addAll(snapshotAccountIds)
+        }
+
+        val instrumentIdsAvailable = when (request.mode) {
+            ImportMode.MERGE -> existingInstruments.mapTo(mutableSetOf(), Instrument::id)
+            ImportMode.REPLACE -> mutableSetOf()
+        }.apply {
+            addAll(snapshotInstrumentIds)
+        }
+
+        request.snapshot.transactions.forEach { snapshot ->
+            runCatching { snapshot.toDomain() }
+                .onSuccess { transaction ->
+                    if (transaction.accountId !in accountIdsAvailable) {
+                        issues += missingReferenceIssue(
+                            transactionId = snapshot.id,
+                            referenceName = "account",
+                            referenceId = snapshot.accountId
+                        )
+                    }
+                    if (transaction.instrumentId != null && transaction.instrumentId !in instrumentIdsAvailable) {
+                        issues += missingReferenceIssue(
+                            transactionId = snapshot.id,
+                            referenceName = "instrument",
+                            referenceId = snapshot.instrumentId ?: "null"
+                        )
+                    }
+                }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "transaction",
+                        entityId = snapshot.id,
+                        message = exception.message ?: "Invalid transaction snapshot."
+                    )
+                }
+        }
+
+        val snapshotAccountIdsRaw = request.snapshot.accounts.map(AccountSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
+        val snapshotInstrumentIdsRaw = request.snapshot.instruments.map(InstrumentSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
+        val snapshotTransactionIdsRaw = request.snapshot.transactions.map(TransactionSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
+
+        return PortfolioImportPreview(
+            mode = request.mode,
+            schemaVersion = request.snapshot.schemaVersion,
+            isValid = issues.none { issue -> issue.severity == ImportIssueSeverity.ERROR },
+            snapshotAccountCount = request.snapshot.accounts.size,
+            snapshotInstrumentCount = request.snapshot.instruments.size,
+            snapshotTransactionCount = request.snapshot.transactions.size,
+            existingAccountCount = existingAccounts.size,
+            existingInstrumentCount = existingInstruments.size,
+            existingTransactionCount = existingTransactions.size,
+            matchingAccountCount = existingAccounts.count { account -> account.id in snapshotAccountIdsRaw },
+            matchingInstrumentCount = existingInstruments.count { instrument -> instrument.id in snapshotInstrumentIdsRaw },
+            matchingTransactionCount = existingTransactions.count { transaction -> transaction.id in snapshotTransactionIdsRaw },
+            blockingIssueCount = issues.count { issue -> issue.severity == ImportIssueSeverity.ERROR },
+            warningCount = issues.count { issue -> issue.severity == ImportIssueSeverity.WARNING },
+            issues = issues.sortedByDescending { issue -> issue.severity == ImportIssueSeverity.ERROR }
+        )
+    }
+
     suspend fun importState(request: PortfolioImportRequest): PortfolioImportResult {
-        require(request.snapshot.schemaVersion == SCHEMA_VERSION) {
-            "Unsupported snapshot schema version ${request.snapshot.schemaVersion}."
+        val preview = previewImport(request)
+        require(preview.isValid) {
+            buildString {
+                append("Snapshot import validation failed.")
+                preview.issues
+                    .filter { issue -> issue.severity == ImportIssueSeverity.ERROR }
+                    .take(3)
+                    .forEach { issue ->
+                        append(' ')
+                        append(issue.message)
+                    }
+            }
         }
 
         if (request.mode == ImportMode.REPLACE) {
@@ -73,6 +204,40 @@ class PortfolioTransferService(
             transactionCount = transactions.size
         )
     }
+
+    private fun duplicateIdIssues(entityName: String, ids: List<String>): List<PortfolioImportIssue> = ids
+        .groupingBy { it }
+        .eachCount()
+        .filterValues { count -> count > 1 }
+        .keys
+        .sorted()
+        .map { duplicateId ->
+            PortfolioImportIssue(
+                severity = ImportIssueSeverity.ERROR,
+                code = "${entityName.uppercase()}_ID_DUPLICATE",
+                message = "Snapshot contains duplicate $entityName id $duplicateId."
+            )
+        }
+
+    private fun invalidSnapshotIssue(
+        entityName: String,
+        entityId: String,
+        message: String
+    ): PortfolioImportIssue = PortfolioImportIssue(
+        severity = ImportIssueSeverity.ERROR,
+        code = "${entityName.uppercase()}_INVALID",
+        message = "Invalid $entityName snapshot $entityId: $message"
+    )
+
+    private fun missingReferenceIssue(
+        transactionId: String,
+        referenceName: String,
+        referenceId: String
+    ): PortfolioImportIssue = PortfolioImportIssue(
+        severity = ImportIssueSeverity.ERROR,
+        code = "TRANSACTION_${referenceName.uppercase()}_MISSING",
+        message = "Transaction $transactionId references missing $referenceName $referenceId."
+    )
 
     private fun Account.toSnapshot(): AccountSnapshot = AccountSnapshot(
         id = id.toString(),
@@ -259,3 +424,34 @@ enum class ImportMode {
     MERGE,
     REPLACE
 }
+
+data class PortfolioImportPreview(
+    val mode: ImportMode,
+    val schemaVersion: Int,
+    val isValid: Boolean,
+    val snapshotAccountCount: Int,
+    val snapshotInstrumentCount: Int,
+    val snapshotTransactionCount: Int,
+    val existingAccountCount: Int,
+    val existingInstrumentCount: Int,
+    val existingTransactionCount: Int,
+    val matchingAccountCount: Int,
+    val matchingInstrumentCount: Int,
+    val matchingTransactionCount: Int,
+    val blockingIssueCount: Int,
+    val warningCount: Int,
+    val issues: List<PortfolioImportIssue>
+)
+
+data class PortfolioImportIssue(
+    val severity: ImportIssueSeverity,
+    val code: String,
+    val message: String
+)
+
+enum class ImportIssueSeverity {
+    ERROR,
+    WARNING
+}
+
+private fun String.toUuidOrNull(): UUID? = runCatching(UUID::fromString).getOrNull()

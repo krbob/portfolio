@@ -11,11 +11,13 @@ import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
+import net.bobinski.portfolio.api.domain.service.PortfolioImportIssue
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioImportPreview
 import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
@@ -48,6 +50,12 @@ fun Route.portfolioRoute() {
 
         get("/state/export") {
             call.respond(portfolioTransferService.exportState().toResponse())
+        }
+
+        post("/state/preview") {
+            val request = call.receive<ImportPortfolioStateRequest>()
+            val result = portfolioTransferService.previewImport(request.toDomain())
+            call.respond(result.toResponse())
         }
 
         post("/state/import") {
@@ -250,6 +258,32 @@ data class PortfolioImportResultResponse(
     val transactionCount: Int
 )
 
+@Serializable
+data class PortfolioImportPreviewResponse(
+    val mode: String,
+    val schemaVersion: Int,
+    val isValid: Boolean,
+    val snapshotAccountCount: Int,
+    val snapshotInstrumentCount: Int,
+    val snapshotTransactionCount: Int,
+    val existingAccountCount: Int,
+    val existingInstrumentCount: Int,
+    val existingTransactionCount: Int,
+    val matchingAccountCount: Int,
+    val matchingInstrumentCount: Int,
+    val matchingTransactionCount: Int,
+    val blockingIssueCount: Int,
+    val warningCount: Int,
+    val issues: List<PortfolioImportIssueResponse>
+)
+
+@Serializable
+data class PortfolioImportIssueResponse(
+    val severity: String,
+    val code: String,
+    val message: String
+)
+
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
     asOf = asOf.toString(),
     valuationState = valuationState.name,
@@ -424,7 +458,7 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
     },
     snapshot = PortfolioSnapshot(
         schemaVersion = snapshot.schemaVersion,
-        exportedAt = java.time.Instant.parse(snapshot.exportedAt),
+        exportedAt = snapshot.exportedAt.toInstantOrThrow("snapshot.exportedAt"),
         accounts = snapshot.accounts.map { account ->
             net.bobinski.portfolio.api.domain.service.AccountSnapshot(
                 id = account.id,
@@ -490,3 +524,34 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toRe
         instrumentCount = instrumentCount,
         transactionCount = transactionCount
     )
+
+private fun PortfolioImportPreview.toResponse(): PortfolioImportPreviewResponse =
+    PortfolioImportPreviewResponse(
+        mode = mode.name,
+        schemaVersion = schemaVersion,
+        isValid = isValid,
+        snapshotAccountCount = snapshotAccountCount,
+        snapshotInstrumentCount = snapshotInstrumentCount,
+        snapshotTransactionCount = snapshotTransactionCount,
+        existingAccountCount = existingAccountCount,
+        existingInstrumentCount = existingInstrumentCount,
+        existingTransactionCount = existingTransactionCount,
+        matchingAccountCount = matchingAccountCount,
+        matchingInstrumentCount = matchingInstrumentCount,
+        matchingTransactionCount = matchingTransactionCount,
+        blockingIssueCount = blockingIssueCount,
+        warningCount = warningCount,
+        issues = issues.map(PortfolioImportIssue::toResponse)
+    )
+
+private fun PortfolioImportIssue.toResponse(): PortfolioImportIssueResponse = PortfolioImportIssueResponse(
+    severity = severity.name,
+    code = code,
+    message = message
+)
+
+private fun String.toInstantOrThrow(field: String): java.time.Instant = try {
+    java.time.Instant.parse(this)
+} catch (_: java.time.format.DateTimeParseException) {
+    throw IllegalArgumentException("$field must use ISO-8601 instant format.")
+}
