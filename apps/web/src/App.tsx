@@ -1,104 +1,26 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
-import { AccountsSection } from './components/AccountsSection'
-import { InstrumentsSection } from './components/InstrumentsSection'
-import { HoldingsSection } from './components/HoldingsSection'
-import { PortfolioBackupsSection } from './components/PortfolioBackupsSection'
-import { PortfolioHistorySection } from './components/PortfolioHistorySection'
-import { PortfolioOverviewSection } from './components/PortfolioOverviewSection'
-import { PortfolioReturnsSection } from './components/PortfolioReturnsSection'
-import { PortfolioStateSection } from './components/PortfolioStateSection'
-import { TransactionsSection } from './components/TransactionsSection'
-import { useAppMeta } from './hooks/use-app-meta'
-
-function formatStage(stage: string) {
-  return stage.toUpperCase()
-}
+import { BackupsScreen } from './screens/BackupsScreen'
+import { ChartsScreen } from './screens/ChartsScreen'
+import { DashboardScreen } from './screens/DashboardScreen'
+import { DataScreen } from './screens/DataScreen'
+import { HoldingsScreen } from './screens/HoldingsScreen'
+import { ReturnsScreen } from './screens/ReturnsScreen'
+import { TransactionsScreen } from './screens/TransactionsScreen'
 
 export function App() {
-  const { data, isLoading, isError } = useAppMeta()
-
   return (
     <AppShell>
-      <section className="hero-card">
-        <div className="hero-header">
-          <div>
-            <p className="eyebrow">Dashboard shell</p>
-            <h2 className="hero-title">A calm control panel for a long-term portfolio.</h2>
-          </div>
-
-          <div className="status-pill">
-            {isLoading && 'Connecting API'}
-            {isError && 'API unavailable'}
-            {data && `${data.name} ${formatStage(data.stage)}`}
-          </div>
-        </div>
-
-        <p className="hero-copy">
-          This first slice wires the web app to the API and defines the shape of the product: web-first,
-          transaction-based, and rebuildable from raw portfolio events plus market data.
-        </p>
-      </section>
-
-      <section className="summary-grid">
-        <article className="panel metric-card">
-          <span className="metric-label">API stage</span>
-          <strong>{data ? formatStage(data.stage) : '...'}</strong>
-        </article>
-
-        <article className="panel metric-card">
-          <span className="metric-label">Version</span>
-          <strong>{data?.version ?? '...'}</strong>
-        </article>
-
-        <article className="panel metric-card">
-          <span className="metric-label">System state</span>
-          <strong>{isError ? 'Degraded' : isLoading ? 'Loading' : 'Healthy'}</strong>
-        </article>
-      </section>
-
-      <section className="detail-grid">
-        <article className="panel stack-card">
-          <h3>Chosen stack</h3>
-          <dl className="stack-list">
-            <div>
-              <dt>Web</dt>
-              <dd>{data?.stack.web ?? 'Loading...'}</dd>
-            </div>
-            <div>
-              <dt>API</dt>
-              <dd>{data?.stack.api ?? 'Loading...'}</dd>
-            </div>
-            <div>
-              <dt>Data</dt>
-              <dd>{data?.stack.database ?? 'Loading...'}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="panel capabilities-card">
-          <h3>Planned capabilities</h3>
-          <ul>
-            {(data?.capabilities ?? []).map((capability) => (
-              <li key={capability}>{capability}</li>
-            ))}
-            {!data && <li>Loading capabilities...</li>}
-          </ul>
-        </article>
-      </section>
-
-      <PortfolioOverviewSection />
-      <PortfolioHistorySection />
-      <PortfolioReturnsSection />
-      <HoldingsSection />
-
-      <section className="workspace-grid">
-        <AccountsSection />
-        <InstrumentsSection />
-      </section>
-
-      <PortfolioStateSection />
-      <PortfolioBackupsSection />
-      <TransactionsSection />
+      <Routes>
+        <Route path="/" element={<DashboardScreen />} />
+        <Route path="/holdings" element={<HoldingsScreen />} />
+        <Route path="/returns" element={<ReturnsScreen />} />
+        <Route path="/charts" element={<ChartsScreen />} />
+        <Route path="/transactions" element={<TransactionsScreen />} />
+        <Route path="/data" element={<DataScreen />} />
+        <Route path="/backups" element={<BackupsScreen />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </AppShell>
   )
 }

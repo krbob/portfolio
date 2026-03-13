@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
@@ -246,26 +247,25 @@ describe('App', () => {
     })
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>,
+      <MemoryRouter initialEntries={['/']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
     )
 
-    expect(screen.getByText(/dashboard shell/i)).toBeInTheDocument()
-    expect(await screen.findByText(/portfolio dev/i)).toBeInTheDocument()
-    expect(screen.getByText(/transaction-based portfolio accounting/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
+    expect((await screen.findAllByText(/portfolio dev/i)).length).toBeGreaterThan(0)
+    expect(screen.getByText(/transactions remain the source of truth/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /money-weighted returns/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /holdings/i })).toBeInTheDocument()
-    expect(screen.getByText(/valuation state/i)).toBeInTheDocument()
-    expect(screen.getByText(/pln mwrr/i)).toBeInTheDocument()
-    expect(screen.getByText(/vwce/i)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /accounts/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /instruments/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /backup and restore/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /server snapshots/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /transactions/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /transaction journal/i })).toBeInTheDocument()
+    expect(await screen.findByText(/valuation state/i)).toBeInTheDocument()
+    expect(await screen.findByText(/pln mwrr/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^backups$/i })).toBeInTheDocument()
   })
 })

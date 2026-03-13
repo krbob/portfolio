@@ -1,10 +1,24 @@
 import type { ReactNode } from 'react'
+import { NavLink } from 'react-router-dom'
+import { useAppMeta } from '../hooks/use-app-meta'
 
 interface AppShellProps {
   children: ReactNode
 }
 
+const navItems = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/holdings', label: 'Holdings' },
+  { to: '/returns', label: 'Returns' },
+  { to: '/charts', label: 'Charts' },
+  { to: '/transactions', label: 'Transactions' },
+  { to: '/data', label: 'Data' },
+  { to: '/backups', label: 'Backups' },
+]
+
 export function AppShell({ children }: AppShellProps) {
+  const metaQuery = useAppMeta()
+
   return (
     <div className="layout">
       <aside className="sidebar">
@@ -14,14 +28,28 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         <nav className="sidebar-nav" aria-label="Primary">
-          <span className="nav-item nav-item-active">Dashboard</span>
-          <span className="nav-item">Holdings</span>
-          <span className="nav-item">Transactions</span>
-          <span className="nav-item">Performance</span>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => (isActive ? 'nav-item nav-item-active' : 'nav-item')}
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
+
+        <div className="sidebar-status">
+          <span className="sidebar-status-label">System</span>
+          <strong>{metaQuery.isError ? 'Degraded' : metaQuery.isLoading ? 'Loading' : 'Healthy'}</strong>
+          <p>{metaQuery.data ? `${metaQuery.data.name} ${metaQuery.data.stage.toUpperCase()}` : 'Connecting API'}</p>
+        </div>
       </aside>
 
-      <main className="content">{children}</main>
+      <main className="content-shell">
+        <div className="content">{children}</div>
+      </main>
     </div>
   )
 }
