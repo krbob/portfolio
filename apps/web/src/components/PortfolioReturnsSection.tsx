@@ -89,7 +89,7 @@ function ReturnStat({
   valueKey,
 }: {
   label: string
-  metric: ReturnMetric | null
+  metric: ReturnMetric | null | undefined
   valueKey: keyof ReturnMetric
 }) {
   const value = metric?.[valueKey]

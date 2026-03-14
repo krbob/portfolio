@@ -13,7 +13,7 @@ The ordering below is intentional:
 
 ## Phase 1: Product Surface
 
-### 1. Routed web application
+### 1. Routed web application (done)
 
 - split the current single-page workspace into product screens:
   - `Dashboard`
@@ -26,7 +26,7 @@ The ordering below is intentional:
 - keep the current API contracts and reuse existing sections
 - preserve mobile usability
 
-### 2. Professional charting
+### 2. Professional charting (done)
 
 - replace the handcrafted SVG portfolio history chart with `lightweight-charts`
 - add:
@@ -35,7 +35,7 @@ The ordering below is intentional:
   - period switchers: `YTD`, `1Y`, `3Y`, `5Y`, `MAX`
 - keep PLN / USD / AU views
 
-### 3. Better dashboard
+### 3. Better dashboard (done)
 
 - redesign dashboard around:
   - top stat cards
@@ -45,7 +45,7 @@ The ordering below is intentional:
   - shortcuts to holdings, transactions and backups
 - compute daily change from available history until a dedicated API exists
 
-### 4. Generated frontend contracts
+### 4. Generated frontend contracts (done)
 
 - publish formal API schemas from the backend
 - generate TypeScript contracts/client for the web app from backend definitions
@@ -53,7 +53,7 @@ The ordering below is intentional:
 
 ## Phase 2: Portfolio Intelligence
 
-### 5. Target allocation, drift and rebalancing
+### 5. Target allocation, drift and rebalancing (done)
 
 - persist target weights
 - expose current vs target allocation

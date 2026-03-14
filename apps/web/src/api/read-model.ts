@@ -1,130 +1,31 @@
-export interface PortfolioOverview {
-  asOf: string
-  valuationState: string
-  totalBookValuePln: string
-  totalCurrentValuePln: string
-  investedBookValuePln: string
-  investedCurrentValuePln: string
-  cashBalancePln: string
-  netContributionsPln: string
-  equityBookValuePln: string
-  equityCurrentValuePln: string
-  bondBookValuePln: string
-  bondCurrentValuePln: string
-  cashBookValuePln: string
-  cashCurrentValuePln: string
-  totalUnrealizedGainPln: string
-  accountCount: number
-  instrumentCount: number
-  activeHoldingCount: number
-  valuedHoldingCount: number
-  unvaluedHoldingCount: number
-  valuationIssueCount: number
-  missingFxTransactions: number
-  unsupportedCorrectionTransactions: number
-}
+import type { components, paths } from './generated/portfolio-api'
 
-export interface PortfolioHolding {
-  accountId: string
-  accountName: string
-  instrumentId: string
-  instrumentName: string
-  kind: string
-  assetClass: string
-  currency: string
-  quantity: string
-  averageCostPerUnitPln: string
-  costBasisPln: string
-  bookValuePln: string
-  currentPricePln: string | null
-  currentValuePln: string | null
-  unrealizedGainPln: string | null
-  valuedAt: string | null
-  valuationStatus: string
-  valuationIssue: string | null
-  transactionCount: number
-}
+export type PortfolioOverview =
+  paths['/v1/portfolio/overview']['get']['responses'][200]['content']['application/json']
 
-export interface PortfolioDailyHistory {
-  from: string
-  until: string
-  valuationState: string
-  instrumentHistoryIssueCount: number
-  referenceSeriesIssueCount: number
-  missingFxTransactions: number
-  unsupportedCorrectionTransactions: number
-  points: PortfolioDailyHistoryPoint[]
-}
+export type PortfolioHolding =
+  paths['/v1/portfolio/holdings']['get']['responses'][200]['content']['application/json'][number]
 
-export interface PortfolioDailyHistoryPoint {
-  date: string
-  totalBookValuePln: string
-  totalCurrentValuePln: string
-  netContributionsPln: string
-  cashBalancePln: string
-  totalCurrentValueUsd: string | null
-  netContributionsUsd: string | null
-  cashBalanceUsd: string | null
-  totalCurrentValueAu: string | null
-  netContributionsAu: string | null
-  cashBalanceAu: string | null
-  equityCurrentValuePln: string
-  bondCurrentValuePln: string
-  cashCurrentValuePln: string
-  equityAllocationPct: string
-  bondAllocationPct: string
-  cashAllocationPct: string
-  activeHoldingCount: number
-  valuedHoldingCount: number
-}
+export type PortfolioDailyHistory =
+  paths['/v1/portfolio/history/daily']['get']['responses'][200]['content']['application/json']
 
-export interface PortfolioReturns {
-  asOf: string
-  periods: PortfolioReturnPeriod[]
-}
+export type PortfolioDailyHistoryPoint =
+  components['schemas']['PortfolioDailyHistoryPointResponse']
 
-export interface PortfolioAllocationSummary {
-  asOf: string
-  valuationState: string
-  configured: boolean
-  targetWeightSumPct: string
-  totalCurrentValuePln: string
-  availableCashPln: string
-  buckets: PortfolioAllocationBucket[]
-}
+export type PortfolioReturns =
+  paths['/v1/portfolio/returns']['get']['responses'][200]['content']['application/json']
 
-export interface PortfolioAllocationBucket {
-  assetClass: string
-  currentValuePln: string
-  currentWeightPct: string
-  targetWeightPct: string | null
-  targetValuePln: string | null
-  driftPctPoints: string | null
-  gapValuePln: string | null
-  suggestedContributionPln: string
-  status: 'UNDERWEIGHT' | 'OVERWEIGHT' | 'ON_TARGET' | 'UNCONFIGURED'
-}
+export type PortfolioAllocationSummary =
+  paths['/v1/portfolio/allocation']['get']['responses'][200]['content']['application/json']
 
-export interface PortfolioReturnPeriod {
-  key: string
-  label: string
-  requestedFrom: string
-  from: string
-  until: string
-  clippedToInception: boolean
-  dayCount: number
-  nominalPln: ReturnMetric | null
-  nominalUsd: ReturnMetric | null
-  realPln: ReturnMetric | null
-  inflationFrom: string | null
-  inflationUntil: string | null
-  inflationMultiplier: string | null
-}
+export type PortfolioAllocationBucket =
+  components['schemas']['PortfolioAllocationBucketResponse']
 
-export interface ReturnMetric {
-  moneyWeightedReturn: string
-  annualizedMoneyWeightedReturn: string | null
-}
+export type PortfolioReturnPeriod =
+  components['schemas']['PortfolioReturnPeriodResponse']
+
+export type ReturnMetric =
+  components['schemas']['ReturnMetricResponse']
 
 async function requestJson<T>(path: string): Promise<T> {
   const response = await fetch(path)

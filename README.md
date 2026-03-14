@@ -99,6 +99,25 @@ docker compose --profile app up -d --build
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current implementation roadmap.
 
+## API contracts
+
+The API now publishes an OpenAPI spec at `GET /v1/openapi.json` and serves a generated docs UI at `GET /openapi`.
+
+Frontend contracts are generated from the backend spec instead of being maintained purely by hand:
+
+```bash
+cd apps/web
+npm run generate:api
+```
+
+That script:
+
+- runs `apps/api` task `exportOpenApiSpec`
+- writes the spec to `apps/api/build/openapi/portfolio-api.json`
+- regenerates TypeScript types in [apps/web/src/api/generated/portfolio-api.d.ts](/Users/bob/stock/portfolio/apps/web/src/api/generated/portfolio-api.d.ts)
+
+The current web app already uses generated OpenAPI types in the read-model layer and the target-allocation/write-model contract layer.
+
 ## Server backups
 
 The API can maintain server-side JSON backups of the canonical write model.

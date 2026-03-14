@@ -675,7 +675,7 @@ function parseImportRows({
 }: {
   csv: string
   accountOptions: Array<{ id: string; name: string }>
-  instrumentOptions: Array<{ id: string; name: string; symbol: string | null }>
+  instrumentOptions: Array<{ id: string; name: string; symbol?: string | null }>
 }): CreateTransactionPayload[] {
   const rows = parseCsv(csv)
   if (rows.length < 2) {

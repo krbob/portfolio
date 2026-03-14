@@ -1,246 +1,65 @@
-export interface Account {
-  id: string
-  name: string
-  institution: string
-  type: string
-  baseCurrency: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
+import type { components } from './generated/portfolio-api'
 
-export interface Instrument {
-  id: string
-  name: string
-  kind: string
-  assetClass: string
-  symbol: string | null
-  currency: string
-  valuationSource: string
-  edoTerms: {
-    purchaseDate: string
-    firstPeriodRateBps: number
-    marginBps: number
-    principalUnits: number
-    maturityDate: string
-  } | null
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
+export type Account =
+  components['schemas']['AccountResponse']
 
-export interface Transaction {
-  id: string
-  accountId: string
-  instrumentId: string | null
-  type: string
-  tradeDate: string
-  settlementDate: string | null
-  quantity: string | null
-  unitPrice: string | null
-  grossAmount: string
-  feeAmount: string
-  taxAmount: string
-  currency: string
-  fxRateToPln: string | null
-  notes: string
-  createdAt: string
-  updatedAt: string
-}
+export type Instrument =
+  components['schemas']['InstrumentResponse']
 
-export interface CreateAccountPayload {
-  name: string
-  institution: string
-  type: string
-  baseCurrency: string
-}
+export type Transaction =
+  components['schemas']['TransactionResponse']
 
-export interface CreateInstrumentPayload {
-  name: string
-  kind: string
-  assetClass: string
-  symbol?: string | null
-  currency: string
-  valuationSource: string
-  edoTerms?: {
-    purchaseDate: string
-    firstPeriodRateBps: number
-    marginBps: number
-    principalUnits: number
-    maturityDate: string
-  } | null
-}
+export type CreateAccountPayload =
+  components['schemas']['CreateAccountRequest']
 
-export interface CreateTransactionPayload {
-  accountId: string
-  instrumentId?: string | null
-  type: string
-  tradeDate: string
-  settlementDate?: string | null
-  quantity?: string | null
-  unitPrice?: string | null
-  grossAmount: string
-  feeAmount?: string
-  taxAmount?: string
-  currency: string
-  fxRateToPln?: string | null
-  notes?: string
-}
+export type CreateInstrumentPayload =
+  components['schemas']['CreateInstrumentRequest']
+
+export type CreateTransactionPayload =
+  components['schemas']['CreateTransactionRequest']
 
 export interface UpdateTransactionPayload extends CreateTransactionPayload {
   id: string
 }
 
-export interface ImportTransactionsPayload {
-  rows: CreateTransactionPayload[]
-}
+export type ImportTransactionsPayload =
+  components['schemas']['ImportTransactionsRequest']
 
-export interface ImportTransactionsResult {
-  createdCount: number
-  transactions: Transaction[]
-}
+export type ImportTransactionsResult =
+  components['schemas']['ImportTransactionsResponse']
 
-export interface PortfolioStateSnapshot {
-  schemaVersion: number
-  exportedAt: string
-  accounts: Array<{
-    id: string
-    name: string
-    institution: string
-    type: string
-    baseCurrency: string
-    isActive: boolean
-    createdAt: string
-    updatedAt: string
-  }>
-  instruments: Array<{
-    id: string
-    name: string
-    kind: string
-    assetClass: string
-    symbol: string | null
-    currency: string
-    valuationSource: string
-    edoTerms: {
-      purchaseDate: string
-      firstPeriodRateBps: number
-      marginBps: number
-      principalUnits: number
-      maturityDate: string
-    } | null
-    isActive: boolean
-    createdAt: string
-    updatedAt: string
-  }>
-  transactions: Array<{
-    id: string
-    accountId: string
-    instrumentId: string | null
-    type: string
-    tradeDate: string
-    settlementDate: string | null
-    quantity: string | null
-    unitPrice: string | null
-    grossAmount: string
-    feeAmount: string
-    taxAmount: string
-    currency: string
-    fxRateToPln: string | null
-    notes: string
-    createdAt: string
-    updatedAt: string
-  }>
-}
+export type PortfolioStateSnapshot =
+  components['schemas']['PortfolioSnapshotResponse']
 
-export interface ImportPortfolioStatePayload {
-  mode: 'MERGE' | 'REPLACE'
-  snapshot: PortfolioStateSnapshot
-}
+export type ImportPortfolioStatePayload =
+  components['schemas']['ImportPortfolioStateRequest']
 
-export interface PortfolioImportIssue {
-  severity: 'ERROR' | 'WARNING'
-  code: string
-  message: string
-}
+export type PortfolioImportIssue =
+  components['schemas']['PortfolioImportIssueResponse']
 
-export interface PreviewPortfolioStateImportResult {
-  mode: 'MERGE' | 'REPLACE'
-  schemaVersion: number
-  isValid: boolean
-  snapshotAccountCount: number
-  snapshotInstrumentCount: number
-  snapshotTransactionCount: number
-  existingAccountCount: number
-  existingInstrumentCount: number
-  existingTransactionCount: number
-  matchingAccountCount: number
-  matchingInstrumentCount: number
-  matchingTransactionCount: number
-  blockingIssueCount: number
-  warningCount: number
-  issues: PortfolioImportIssue[]
-}
+export type PreviewPortfolioStateImportResult =
+  components['schemas']['PortfolioImportPreviewResponse']
 
-export interface ImportPortfolioStateResult {
-  mode: 'MERGE' | 'REPLACE'
-  accountCount: number
-  instrumentCount: number
-  transactionCount: number
-}
+export type ImportPortfolioStateResult =
+  components['schemas']['PortfolioImportResultResponse']
 
-export interface PortfolioBackupRecord {
-  fileName: string
-  createdAt: string
-  exportedAt: string | null
-  sizeBytes: number
-  schemaVersion: number | null
-  accountCount: number | null
-  instrumentCount: number | null
-  transactionCount: number | null
-  isReadable: boolean
-  errorMessage: string | null
-}
+export type PortfolioBackupRecord =
+  components['schemas']['PortfolioBackupRecordResponse']
 
-export interface PortfolioBackupStatus {
-  schedulerEnabled: boolean
-  directory: string
-  intervalMinutes: number
-  retentionCount: number
-  running: boolean
-  lastRunAt: string | null
-  lastSuccessAt: string | null
-  lastFailureAt: string | null
-  lastFailureMessage: string | null
-  backups: PortfolioBackupRecord[]
-}
+export type PortfolioBackupStatus =
+  components['schemas']['PortfolioBackupStatusResponse']
 
-export interface RestorePortfolioBackupPayload {
-  fileName: string
-  mode: 'MERGE' | 'REPLACE'
-}
+export type RestorePortfolioBackupPayload =
+  components['schemas']['RestorePortfolioBackupRequest']
 
-export interface RestorePortfolioBackupResult {
-  fileName: string
-  mode: 'MERGE' | 'REPLACE'
-  accountCount: number
-  instrumentCount: number
-  transactionCount: number
-}
+export type RestorePortfolioBackupResult =
+  components['schemas']['PortfolioBackupRestoreResultResponse']
 
-export interface PortfolioTarget {
-  id: string
-  assetClass: 'EQUITIES' | 'BONDS' | 'CASH'
-  targetWeight: string
-  createdAt: string
-  updatedAt: string
-}
+export type PortfolioTarget =
+  components['schemas']['PortfolioTargetResponse']
 
-export interface ReplacePortfolioTargetsPayload {
-  items: Array<{
-    assetClass: 'EQUITIES' | 'BONDS' | 'CASH'
-    targetWeight: string
-  }>
-}
+export type ReplacePortfolioTargetsPayload =
+  components['schemas']['ReplacePortfolioTargetsRequest']
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
