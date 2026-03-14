@@ -30,6 +30,7 @@ The product is optimized for:
 - Prefer explicit domain names over spreadsheet-shaped naming.
 - Avoid binding new code to the legacy Google Sheets model unless it clearly improves the product.
 - Treat `REPLACE` import/restore as destructive operations: require explicit confirmation and preserve a safety backup first.
+- Keep password auth optional and single-user oriented; if it is enabled, `health`, `meta`, and `auth/session` stay public while the rest of the API remains protected.
 
 ## Initial architecture
 
@@ -37,6 +38,7 @@ The product is optimized for:
 - `apps/api`: Ktor API for routing, persistence, integrations, and operational services
 - `apps/api/portfolio-domain`: extracted domain module for portfolio models, repository/provider interfaces, and calculation services
 - `docs`: architecture notes, roadmap, product decisions
+- optional signed-cookie auth spans the SPA and API, but should stay thin and operational rather than becoming a full identity system
 
 ## Current milestones
 

@@ -5,6 +5,7 @@
 ```text
 React SPA
   -> Portfolio API
+       -> password/session auth (optional)
        -> portfolio-domain
        -> PostgreSQL
        -> stock-analyst
@@ -40,6 +41,7 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - multi-project Gradle build with:
   - API module for HTTP, persistence, integrations, and operational services
   - `portfolio-domain` for domain models, repository/provider interfaces, and portfolio calculations
+- optional single-user password auth with signed session cookies
 
 ### Persistence
 
@@ -61,3 +63,4 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - keep transactions as the canonical source of truth
 - persist rebuildable read-model cache snapshots for heavy analytical endpoints
 - isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`
+- keep `health`, `meta`, and auth session bootstrap routes public while protecting the rest of the API surface when auth is enabled

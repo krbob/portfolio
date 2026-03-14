@@ -54,6 +54,7 @@ portfolio/
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
+- optional single-user password auth is available through signed session cookies and a login gate in the web UI
 
 ## Local database
 
@@ -107,6 +108,43 @@ docker compose --profile app up -d --build
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current implementation roadmap.
+
+## Authentication
+
+The API and SPA can optionally be protected with a single shared password.
+
+Configuration keys:
+
+- `portfolio.auth.enabled`
+- `portfolio.auth.password`
+- `portfolio.auth.sessionSecret`
+- `portfolio.auth.sessionCookieName`
+- `portfolio.auth.secureCookie`
+- `portfolio.auth.sessionMaxAgeDays`
+
+Environment overrides:
+
+- `PORTFOLIO_AUTH_ENABLED`
+- `PORTFOLIO_AUTH_PASSWORD`
+- `PORTFOLIO_AUTH_SESSION_SECRET`
+- `PORTFOLIO_AUTH_SESSION_COOKIE_NAME`
+- `PORTFOLIO_AUTH_SECURE_COOKIE`
+- `PORTFOLIO_AUTH_SESSION_MAX_AGE_DAYS`
+
+Behavior:
+
+- `GET /v1/health`, `GET /v1/meta`, and `GET/POST/DELETE /v1/auth/session` stay public
+- accounts, instruments, transactions, portfolio read models, imports, and backups are protected when auth is enabled
+- the web app shows a login gate and uses signed cookie sessions instead of storing the shared password client-side
+
+Minimal local example:
+
+```bash
+PORTFOLIO_AUTH_ENABLED=true \
+PORTFOLIO_AUTH_PASSWORD='change-me' \
+PORTFOLIO_AUTH_SESSION_SECRET='replace-with-a-long-random-secret' \
+./gradlew run
+```
 
 ## API contracts
 

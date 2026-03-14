@@ -128,3 +128,4 @@ The ordering below is intentional:
 
 - SQLite-style deployment simplification is deliberately excluded from this backlog for now.
 - The current recommendation is to keep the existing `portfolio` domain model and only borrow selected UX ideas from `folio`.
+- The backlog above is complete; the next post-backlog hardening item already started is optional single-user password auth for self-hosted instances.
