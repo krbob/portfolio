@@ -7,7 +7,7 @@ React SPA
   -> Portfolio API
        -> password/session auth (optional)
        -> portfolio-domain
-       -> PostgreSQL
+       -> SQLite
        -> stock-analyst
        -> edo-calculator
 ```
@@ -45,10 +45,16 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 
 ### Persistence
 
-- PostgreSQL planned for production data
-- relational schema already drafted in SQL migrations
-- current write-model implementation can run in `memory` or `postgres` mode
-- PostgreSQL mode uses Flyway migrations on startup
+- SQLite is the target runtime for the self-hosted product
+- current implementation still carries `memory` and `postgres` while migration is in progress
+- the migration treats SQLite as a first-class storage engine, not as a compatibility shim
+- Flyway remains responsible for schema creation on startup
+- canonical storage conventions during the migration:
+  - IDs as `TEXT`
+  - exact decimals as canonical decimal `TEXT`
+  - dates and timestamps as ISO-8601 `TEXT`
+  - JSON payloads as `TEXT`
+  - explicit PRAGMA configuration at startup
 
 ## First delivery slices
 
@@ -64,3 +70,4 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - persist rebuildable read-model cache snapshots for heavy analytical endpoints
 - isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`
 - keep `health`, `meta`, and auth session bootstrap routes public while protecting the rest of the API surface when auth is enabled
+- migrate runtime persistence to `SQLite-only` and remove PostgreSQL after parity is proven

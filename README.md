@@ -6,14 +6,14 @@ Portfolio is a self-hosted portfolio tracker for long-term investors.
 
 - Frontend: React 19, TypeScript, Vite, Vitest
 - Backend: Kotlin 2.3, Ktor 3, Koin, JUnit
-- Database target: PostgreSQL
+- Database target: SQLite
 - Deployment target: Docker Compose
 
 ## Why this stack
 
 - React is the pragmatic choice for a web-first product with dense tables and charts.
 - Kotlin/Ktor fits the existing ecosystem around `stock-analyst` and `edo-calculator`.
-- PostgreSQL is a good fit for transaction history, snapshots, and analytical queries.
+- SQLite is the best fit for a single-user self-hosted deployment with transactional source data and rebuildable read models.
 
 ## Project structure
 
@@ -41,8 +41,8 @@ portfolio/
 ## Current implementation status
 
 - backend write-model API exists for accounts, instruments, and transactions
-- domain model and initial PostgreSQL schema are defined
-- repository storage can run in `memory` or `postgres` mode
+- domain model and initial relational schema are defined
+- repository storage currently runs in `memory` or `postgres` mode while the project migrates toward `sqlite-only`
 - default local mode remains `memory` for fast startup and tests
 - PostgreSQL wiring is available for the write model
 - server-side JSON backups can be created, listed, retained, and restored
@@ -56,28 +56,34 @@ portfolio/
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 - optional single-user password auth is available through signed session cookies and a login gate in the web UI
 
-## Local database
+## Storage direction
 
-For local PostgreSQL:
+`portfolio` is moving to a `SQLite-only` runtime.
+
+Migration invariants:
+
+- one API process per database file
+- database file stored on a local filesystem or Docker volume
+- transactions remain the canonical source of truth
+- read-model cache snapshots remain rebuildable
+- JSON backup/export remains first-class even after SQLite becomes the only database
+
+SQLite encoding conventions for the migration:
+
+- `UUID` as `TEXT`
+- `LocalDate` as `TEXT` `YYYY-MM-DD`
+- `Instant` as UTC ISO-8601 `TEXT`
+- enums as `TEXT`
+- booleans as `INTEGER`
+- JSON payloads as `TEXT`
+- exact financial values as canonical decimal `TEXT`
+
+Until the migration is complete, the current backend config still supports `memory` and `postgres`.
+
+For local PostgreSQL during the transition:
 
 ```bash
 docker compose up -d
-```
-
-The default backend config expects PostgreSQL at `127.0.0.1:15432` with:
-
-- database: `portfolio`
-- user: `portfolio`
-- password: `portfolio`
-
-To run the API in PostgreSQL mode without editing YAML, use:
-
-```bash
-PORTFOLIO_PERSISTENCE_MODE=postgres \
-PORTFOLIO_DB_JDBC_URL=jdbc:postgresql://127.0.0.1:15432/portfolio \
-PORTFOLIO_DB_USERNAME=portfolio \
-PORTFOLIO_DB_PASSWORD=portfolio \
-./gradlew run
 ```
 
 To run the API in Docker Compose with a persistent backup volume:
@@ -107,7 +113,7 @@ docker compose --profile app up -d --build
 ```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
-See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current implementation roadmap.
+See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current SQLite migration roadmap.
 
 ## Authentication
 

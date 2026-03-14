@@ -1,131 +1,141 @@
 # Product Backlog
 
-## Goal
+## Current status
 
-Bring `portfolio` from a solid domain-heavy prototype to a more complete self-hosted product for long-term portfolio tracking.
+The investor-facing backlog is complete.
+
+`portfolio` already has:
+
+- routed web UI
+- professional charting
+- dashboard, holdings, returns, charts, transactions, data and backups screens
+- generated frontend contracts
+- target allocation, drift and rebalance suggestions
+- benchmarks and TWR
+- import preview and deduplication
+- audit log
+- operational safeguards
+- backup retention visibility
+- read-model cache snapshots
+- extracted `portfolio-domain`
+- optional single-user password auth
+
+## Current goal
+
+Migrate `portfolio` from `memory/postgres` persistence to a `SQLite-only` runtime that is safer and simpler for a single-user self-hosted deployment.
 
 The ordering below is intentional:
 
-1. improve the product surface first
-2. add investor-facing intelligence next
-3. harden data operations and safety
-4. only then spend time on deeper internal architecture
+1. codify the migration target first
+2. add native SQLite infrastructure
+3. move schema and repositories to SQLite-native implementations
+4. prove behavioral parity
+5. only then remove PostgreSQL
 
-## Phase 1: Product Surface
+## Phase 1: Migration groundwork
 
-### 1. Routed web application (done)
+### 1. SQLite-only target and invariants (in progress)
 
-- split the current single-page workspace into product screens:
-  - `Dashboard`
-  - `Holdings`
-  - `Returns`
-  - `Charts`
-  - `Transactions`
-  - `Data`
-  - `Backups`
-- keep the current API contracts and reuse existing sections
-- preserve mobile usability
+- update `README`, architecture notes and agent guidance to make SQLite the target runtime
+- document storage invariants:
+  - one app instance per database file
+  - local filesystem / Docker volume
+  - JSON backups remain first-class
+  - transaction data remains canonical
+- document SQLite encoding rules:
+  - `UUID` as `TEXT`
+  - `LocalDate` as `TEXT` `YYYY-MM-DD`
+  - `Instant` as UTC ISO-8601 `TEXT`
+  - enums as `TEXT`
+  - booleans as `INTEGER`
+  - JSON as `TEXT`
+  - financial values as canonical decimal `TEXT`
 
-### 2. Professional charting (done)
+### 2. SQLite runtime infrastructure
 
-- replace the handcrafted SVG portfolio history chart with `lightweight-charts`
-- add:
-  - value vs contributions series
-  - allocation history chart
-  - period switchers: `YTD`, `1Y`, `3Y`, `5Y`, `MAX`
-- keep PLN / USD / AU views
+- add `PersistenceMode.SQLITE`
+- add `sqlite-jdbc`
+- support SQLite datasource creation and startup PRAGMAs
+- add startup validation for DB file paths and SQLite-specific settings
+- keep current defaults unchanged until parity is proven
 
-### 3. Better dashboard (done)
+## Phase 2: Native SQLite persistence
 
-- redesign dashboard around:
-  - top stat cards
-  - allocation bar
-  - valuation health summary
-  - recent operational events
-  - shortcuts to holdings, transactions and backups
-- compute daily change from available history until a dedicated API exists
+### 3. SQLite schema and migrations
 
-### 4. Generated frontend contracts (done)
+- add SQLite-specific Flyway migration directory
+- translate PostgreSQL schema to SQLite-native SQL
+- remove PostgreSQL-only constructs:
+  - `pgcrypto`
+  - `gen_random_uuid()`
+  - `timestamptz`
+  - `jsonb`
+- preserve:
+  - foreign keys
+  - unique constraints
+  - indexes
+  - data integrity checks
 
-- publish formal API schemas from the backend
-- generate TypeScript contracts/client for the web app from backend definitions
-- reduce manual duplication between Kotlin and TypeScript
+### 4. SQLite repositories for the canonical write model
 
-## Phase 2: Portfolio Intelligence
+- implement dedicated repositories for:
+  - accounts
+  - instruments
+  - transactions
+  - portfolio targets
+- avoid pretending one SQL dialect can cleanly serve both engines
+- generate IDs and serialize value objects in application code
 
-### 5. Target allocation, drift and rebalancing (done)
+### 5. SQLite repositories for operational data
 
-- persist target weights
-- expose current vs target allocation
-- compute drift by asset class
-- provide contribution-first rebalance suggestions
-- later optionally provide sell-assisted rebalance suggestions
+- implement dedicated repositories for:
+  - audit events
+  - read-model cache snapshots
+- make JSON handling explicit in application code
+- make multi-step writes transactional
 
-### 6. Benchmarks and TWR (done)
+## Phase 3: Confidence and switch-over
 
-- support benchmark series such as:
-  - custom `80/20`
-  - pure `VWRA`
-  - inflation-adjusted benchmark
-- add time-weighted return alongside the current money-weighted return
-- show portfolio vs benchmark over matching periods
+### 6. Persistence parity tests
 
-## Phase 3: Data Operations and Safety
+- run the same fixtures through both persistence engines during migration
+- assert parity for:
+  - overview
+  - holdings
+  - history
+  - returns
+  - target allocation and rebalance
+  - imports and exports
+  - audit events
+  - read-model cache metadata
 
-### 7. Better real-world import (done)
+### 7. Switch runtime defaults to SQLite
 
-- add import preview and validation beyond the current raw CSV flow
-- support conflict reporting and deduplication
-- support account/instrument mapping assistance
-- prepare the import pipeline for future broker-specific adapters
+- make SQLite the default in config, docs, and Docker setup
+- store the database file on a named Docker volume
+- keep backup volume separate from the DB volume
+- expose persistence mode clearly through `meta` and `health`
 
-### 8. Audit log (done)
+## Phase 4: PostgreSQL removal
 
-- store append-only records for important changes:
-  - account/instrument/transaction mutations
-  - imports
-  - snapshot restores
-  - backup runs
-- surface recent events in the UI
+### 8. Remove PostgreSQL runtime support
 
-### 9. Operational safeguards (done)
+- remove PostgreSQL datasource wiring
+- remove PostgreSQL migrations
+- remove PostgreSQL repositories
+- remove PostgreSQL driver and Flyway Postgres support
+- simplify local and CI workflows around SQLite
 
-- require stronger confirmation for destructive actions
-- create a server backup before destructive restore/replace operations
-- validate critical configuration at startup
-- add idempotency or duplicate detection where practical
-- improve failure reporting for market data and backup jobs
+### 9. Final hardening and smoke tests
 
-### 10. Backup retention and backup audit in UI (done)
-
-- surface retention behaviour in the UI
-- show:
-  - last successful backup
-  - last failed backup
-  - restore history
-  - retention deletions
-- allow filtering and inspecting backup-related events
-
-## Phase 4: Architecture Hardening
-
-### 11. Formal read-model cache / snapshot store (done)
-
-- persist rebuildable read models with metadata:
-  - version
-  - inputs window
-  - generation timestamp
-  - invalidation reason
-- use this for faster history and return queries
-- keep transactions as the canonical source of truth
-
-### 12. Extract `portfolio-domain` module (done)
-
-- move domain calculations into a separate module
-- keep HTTP, persistence and provider integration outside the domain module
-- use the module from API, background jobs and future tooling
+- test fresh bootstrap on empty SQLite DB
+- test import of demo portfolio
+- test CRUD, history rebuild, returns, targets and backups
+- test container restart durability
+- document backup and restore expectations for SQLite deployments
 
 ## Notes
 
-- SQLite-style deployment simplification is deliberately excluded from this backlog for now.
-- The current recommendation is to keep the existing `portfolio` domain model and only borrow selected UX ideas from `folio`.
-- The backlog above is complete; the next post-backlog hardening item already started is optional single-user password auth for self-hosted instances.
+- This migration is intentionally `SQLite-native`, not a shallow compatibility layer over PostgreSQL assumptions.
+- Logical JSON snapshot export/import remains the supported migration path between engines.
+- WAL is assumed available for planning purposes, but the implementation should still keep the rest of the SQLite setup production-grade.

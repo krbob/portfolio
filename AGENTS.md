@@ -21,6 +21,7 @@ The product is optimized for:
 - Daily snapshots are rebuildable cache, not canonical data.
 - Historical FX comes from `stock-analyst`.
 - EDO is modeled as a separate instrument per purchase.
+- The target runtime database is SQLite, not PostgreSQL.
 
 ## Engineering rules
 
@@ -31,6 +32,7 @@ The product is optimized for:
 - Avoid binding new code to the legacy Google Sheets model unless it clearly improves the product.
 - Treat `REPLACE` import/restore as destructive operations: require explicit confirmation and preserve a safety backup first.
 - Keep password auth optional and single-user oriented; if it is enabled, `health`, `meta`, and `auth/session` stay public while the rest of the API remains protected.
+- Treat SQLite as a first-class storage engine: explicit encoding, explicit transactions, explicit startup pragmas.
 
 ## Initial architecture
 
@@ -39,6 +41,7 @@ The product is optimized for:
 - `apps/api/portfolio-domain`: extracted domain module for portfolio models, repository/provider interfaces, and calculation services
 - `docs`: architecture notes, roadmap, product decisions
 - optional signed-cookie auth spans the SPA and API, but should stay thin and operational rather than becoming a full identity system
+- target self-hosted persistence is a single local SQLite database plus JSON backups
 
 ## Current milestones
 
@@ -46,8 +49,9 @@ The product is optimized for:
 2. Add app shell, health endpoints, and configuration surfaces.
 3. Define core domain model and persistence schema.
 4. Implement the first write-model API for accounts, instruments, and transactions.
-5. Support PostgreSQL-backed persistence for the write model.
+5. Support relational persistence for the write model.
 6. Add portfolio overview, holdings, and timeline reconstruction.
 7. Rebuild historical daily snapshots from transactions and external market data.
+8. Replace PostgreSQL with a SQLite-native runtime and remove transitional persistence code.
 
 See `docs/backlog.md` for the current phased execution order beyond the initial bootstrap milestones.
