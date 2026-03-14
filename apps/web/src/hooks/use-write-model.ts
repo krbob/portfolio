@@ -3,36 +3,46 @@ import {
   createAccount,
   createInstrument,
   createTransaction,
+  createTransactionImportProfile,
   deleteTransaction,
+  deleteTransactionImportProfile,
   downloadPortfolioBackup,
   exportPortfolioState,
+  importTransactionsCsv,
   importTransactions,
   importPortfolioState,
   listAccounts,
   listInstruments,
   listPortfolioBackups,
   listPortfolioTargets,
+  listTransactionImportProfiles,
   listTransactions,
+  previewTransactionsCsvImport,
   previewTransactionsImport,
   previewPortfolioStateImport,
   replacePortfolioTargets,
   restorePortfolioBackup,
   runPortfolioBackup,
+  updateTransactionImportProfile,
   updateTransaction,
   type CreateAccountPayload,
   type CreateInstrumentPayload,
+  type CsvTransactionsImportPayload,
+  type CreateTransactionPayload,
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type ImportTransactionsPreviewResult,
-  type CreateTransactionPayload,
   type PortfolioBackupRecord,
   type PortfolioTarget,
+  type SaveTransactionImportProfilePayload,
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
   type PortfolioStateSnapshot,
   type RestorePortfolioBackupPayload,
   type RestorePortfolioBackupResult,
+  type TransactionImportProfile,
   type UpdateTransactionPayload,
+  type UpdateTransactionImportProfilePayload,
 } from '../api/write-model'
 
 export function useAccounts() {
@@ -129,6 +139,63 @@ export function usePreviewTransactionsImport() {
   return useMutation({
     mutationFn: (payload: ImportTransactionsPayload): Promise<ImportTransactionsPreviewResult> =>
       previewTransactionsImport(payload),
+  })
+}
+
+export function useTransactionImportProfiles() {
+  return useQuery({
+    queryKey: ['transaction-import-profiles'],
+    queryFn: listTransactionImportProfiles,
+  })
+}
+
+export function useCreateTransactionImportProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: SaveTransactionImportProfilePayload): Promise<TransactionImportProfile> =>
+      createTransactionImportProfile(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+    },
+  })
+}
+
+export function useUpdateTransactionImportProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      payload: UpdateTransactionImportProfilePayload,
+    ): Promise<TransactionImportProfile> => updateTransactionImportProfile(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+    },
+  })
+}
+
+export function useDeleteTransactionImportProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteTransactionImportProfile(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+    },
+  })
+}
+
+export function usePreviewTransactionsCsvImport() {
+  return useMutation({
+    mutationFn: (payload: CsvTransactionsImportPayload): Promise<ImportTransactionsPreviewResult> =>
+      previewTransactionsCsvImport(payload),
+  })
+}
+
+export function useImportTransactionsCsv() {
+  const queryClient = useTransactionInvalidateQueryClient()
+  return useMutation({
+    mutationFn: (payload: CsvTransactionsImportPayload) => importTransactionsCsv(payload),
+    onSuccess: async () => {
+      await invalidateTransactionRelatedQueries(queryClient)
+    },
   })
 }
 

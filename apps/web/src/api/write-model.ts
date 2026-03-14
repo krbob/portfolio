@@ -35,6 +35,25 @@ export type ImportTransactionsPreviewResult =
 export type ImportTransactionsPreviewRow =
   components['schemas']['ImportTransactionsPreviewRowResponse']
 
+export type TransactionImportProfile =
+  components['schemas']['TransactionImportProfileResponse']
+
+export type TransactionImportHeaderMappings =
+  components['schemas']['TransactionImportHeaderMappingsRequest']
+
+export type TransactionImportDefaults =
+  components['schemas']['TransactionImportDefaultsRequest']
+
+export type SaveTransactionImportProfilePayload =
+  components['schemas']['SaveTransactionImportProfileRequest']
+
+export interface UpdateTransactionImportProfilePayload extends SaveTransactionImportProfilePayload {
+  id: string
+}
+
+export type CsvTransactionsImportPayload =
+  components['schemas']['CsvTransactionsImportRequest']
+
 export type PortfolioStateSnapshot =
   components['schemas']['PortfolioSnapshotResponse']
 
@@ -124,6 +143,45 @@ export function importTransactions(payload: ImportTransactionsPayload) {
 
 export function previewTransactionsImport(payload: ImportTransactionsPayload) {
   return requestJson<ImportTransactionsPreviewResult>('/api/v1/transactions/import/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listTransactionImportProfiles() {
+  return requestJson<TransactionImportProfile[]>('/api/v1/transactions/import/profiles')
+}
+
+export function createTransactionImportProfile(payload: SaveTransactionImportProfilePayload) {
+  return requestJson<TransactionImportProfile>('/api/v1/transactions/import/profiles', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateTransactionImportProfile(payload: UpdateTransactionImportProfilePayload) {
+  const { id, ...body } = payload
+  return requestJson<TransactionImportProfile>(`/api/v1/transactions/import/profiles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteTransactionImportProfile(id: string) {
+  await requestEmpty(`/api/v1/transactions/import/profiles/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function previewTransactionsCsvImport(payload: CsvTransactionsImportPayload) {
+  return requestJson<ImportTransactionsPreviewResult>('/api/v1/transactions/import/csv/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function importTransactionsCsv(payload: CsvTransactionsImportPayload) {
+  return requestJson<ImportTransactionsResult>('/api/v1/transactions/import/csv', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
