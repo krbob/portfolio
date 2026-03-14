@@ -25,14 +25,36 @@ class TransactionService(
         return saveNew(command, Instant.now(clock))
     }
 
-    suspend fun importAll(commands: List<CreateTransactionCommand>): List<Transaction> {
-        require(commands.isNotEmpty()) { "Import requires at least one transaction row." }
-        commands.forEach { validateReferences(it) }
+    suspend fun previewImport(commands: List<CreateTransactionCommand>): TransactionImportPreview =
+        analyzeImport(commands)
+
+    suspend fun importAll(
+        commands: List<CreateTransactionCommand>,
+        skipDuplicates: Boolean
+    ): TransactionImportResult {
+        val preview = analyzeImport(commands)
+        require(preview.invalidRowCount == 0) {
+            preview.rows.firstOrNull { it.status == TransactionImportRowStatus.INVALID }?.message
+                ?: "Import contains invalid rows."
+        }
+        require(skipDuplicates || preview.duplicateRowCount == 0) {
+            "Import contains duplicate rows. Preview the batch or enable skipDuplicates."
+        }
 
         val baseTimestamp = Instant.now(clock)
-        return commands.mapIndexed { index, command ->
-            saveNew(command, baseTimestamp.plusMillis(index.toLong()))
+        val transactions = preview.rows.mapIndexedNotNull { index, row ->
+            if (row.status != TransactionImportRowStatus.IMPORTABLE) {
+                return@mapIndexedNotNull null
+            }
+
+            saveNew(commands[index], baseTimestamp.plusMillis(index.toLong()))
         }
+
+        return TransactionImportResult(
+            createdCount = transactions.size,
+            skippedDuplicateCount = preview.duplicateRowCount,
+            transactions = transactions
+        )
     }
 
     suspend fun update(id: UUID, command: CreateTransactionCommand): Transaction {
@@ -103,9 +125,134 @@ class TransactionService(
                 updatedAt = timestamp
             )
         )
+
+    private suspend fun analyzeImport(commands: List<CreateTransactionCommand>): TransactionImportPreview {
+        require(commands.isNotEmpty()) { "Import requires at least one transaction row." }
+
+        val existingKeys = transactionRepository.list()
+            .map { transaction -> transaction.toFingerprint() }
+            .toSet()
+        val seenBatchKeys = linkedSetOf<TransactionFingerprint>()
+        val rows = commands.mapIndexed { index, command ->
+            val validationError = validateImportRow(command)
+            val statusAndMessage = when {
+                validationError != null -> TransactionImportRowStatus.INVALID to validationError
+                command.toFingerprint() in existingKeys ->
+                    TransactionImportRowStatus.DUPLICATE_EXISTING to "Already present in the transaction journal."
+
+                !seenBatchKeys.add(command.toFingerprint()) ->
+                    TransactionImportRowStatus.DUPLICATE_BATCH to "Duplicate of an earlier row in the same batch."
+
+                else -> TransactionImportRowStatus.IMPORTABLE to "Ready to import."
+            }
+
+            TransactionImportPreviewRow(
+                rowNumber = index + 1,
+                status = statusAndMessage.first,
+                message = statusAndMessage.second
+            )
+        }
+
+        return TransactionImportPreview(
+            totalRowCount = rows.size,
+            importableRowCount = rows.count { it.status == TransactionImportRowStatus.IMPORTABLE },
+            duplicateRowCount = rows.count {
+                it.status == TransactionImportRowStatus.DUPLICATE_EXISTING ||
+                    it.status == TransactionImportRowStatus.DUPLICATE_BATCH
+            },
+            invalidRowCount = rows.count { it.status == TransactionImportRowStatus.INVALID },
+            rows = rows
+        )
+    }
+
+    private suspend fun validateImportRow(command: CreateTransactionCommand): String? = try {
+        validateReferences(command)
+        null
+    } catch (exception: IllegalArgumentException) {
+        exception.message ?: "Row validation failed."
+    } catch (exception: ResourceNotFoundException) {
+        exception.message ?: "Referenced resource was not found."
+    }
+
+    private fun Transaction.toFingerprint(): TransactionFingerprint = TransactionFingerprint(
+        accountId = accountId,
+        instrumentId = instrumentId,
+        type = type,
+        tradeDate = tradeDate,
+        settlementDate = settlementDate,
+        quantity = quantity?.normalized(),
+        unitPrice = unitPrice?.normalized(),
+        grossAmount = grossAmount.normalized(),
+        feeAmount = feeAmount.normalized(),
+        taxAmount = taxAmount.normalized(),
+        currency = currency.uppercase(),
+        fxRateToPln = fxRateToPln?.normalized(),
+        notes = notes.trim()
+    )
+
+    private fun CreateTransactionCommand.toFingerprint(): TransactionFingerprint = TransactionFingerprint(
+        accountId = accountId,
+        instrumentId = instrumentId,
+        type = type,
+        tradeDate = tradeDate,
+        settlementDate = settlementDate,
+        quantity = quantity?.normalized(),
+        unitPrice = unitPrice?.normalized(),
+        grossAmount = grossAmount.normalized(),
+        feeAmount = feeAmount.normalized(),
+        taxAmount = taxAmount.normalized(),
+        currency = currency.uppercase(),
+        fxRateToPln = fxRateToPln?.normalized(),
+        notes = notes.trim()
+    )
+
+    private fun BigDecimal.normalized(): BigDecimal = stripTrailingZeros()
 }
 
 data class CreateTransactionCommand(
+    val accountId: UUID,
+    val instrumentId: UUID?,
+    val type: TransactionType,
+    val tradeDate: LocalDate,
+    val settlementDate: LocalDate?,
+    val quantity: BigDecimal?,
+    val unitPrice: BigDecimal?,
+    val grossAmount: BigDecimal,
+    val feeAmount: BigDecimal,
+    val taxAmount: BigDecimal,
+    val currency: String,
+    val fxRateToPln: BigDecimal?,
+    val notes: String
+)
+
+data class TransactionImportResult(
+    val createdCount: Int,
+    val skippedDuplicateCount: Int,
+    val transactions: List<Transaction>
+)
+
+data class TransactionImportPreview(
+    val totalRowCount: Int,
+    val importableRowCount: Int,
+    val duplicateRowCount: Int,
+    val invalidRowCount: Int,
+    val rows: List<TransactionImportPreviewRow>
+)
+
+data class TransactionImportPreviewRow(
+    val rowNumber: Int,
+    val status: TransactionImportRowStatus,
+    val message: String
+)
+
+enum class TransactionImportRowStatus {
+    IMPORTABLE,
+    DUPLICATE_EXISTING,
+    DUPLICATE_BATCH,
+    INVALID
+}
+
+private data class TransactionFingerprint(
     val accountId: UUID,
     val instrumentId: UUID?,
     val type: TransactionType,

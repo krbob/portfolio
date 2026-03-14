@@ -220,6 +220,134 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.Created, response.status)
         assertTrue(response.bodyAsText().contains("\"createdCount\": 2"))
+        assertTrue(response.bodyAsText().contains("\"skippedDuplicateCount\": 0"))
         assertTrue(listResponse.bodyAsText().contains("\"notes\": \"second row\""))
+    }
+
+    @Test
+    fun `transaction import preview flags duplicates and import skips them by default`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountResponse = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Primary",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        val accountId = Regex("\"id\":\\s*\"([^\"]+)\"").find(accountResponse.bodyAsText())!!.groupValues[1]
+
+        client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-03-01",
+                  "settlementDate": "2026-03-01",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN",
+                  "notes": "existing"
+                }
+                """.trimIndent()
+            )
+        }
+
+        val previewResponse = client.post("/v1/transactions/import/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "rows": [
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-01",
+                      "settlementDate": "2026-03-01",
+                      "grossAmount": "1000.00",
+                      "currency": "PLN",
+                      "notes": "existing"
+                    },
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-02",
+                      "settlementDate": "2026-03-02",
+                      "grossAmount": "250.00",
+                      "currency": "PLN",
+                      "notes": "batch duplicate"
+                    },
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-02",
+                      "settlementDate": "2026-03-02",
+                      "grossAmount": "250.00",
+                      "currency": "PLN",
+                      "notes": "batch duplicate"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+
+        val importResponse = client.post("/v1/transactions/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "rows": [
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-01",
+                      "settlementDate": "2026-03-01",
+                      "grossAmount": "1000.00",
+                      "currency": "PLN",
+                      "notes": "existing"
+                    },
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-02",
+                      "settlementDate": "2026-03-02",
+                      "grossAmount": "250.00",
+                      "currency": "PLN",
+                      "notes": "batch duplicate"
+                    },
+                    {
+                      "accountId": "$accountId",
+                      "type": "DEPOSIT",
+                      "tradeDate": "2026-03-02",
+                      "settlementDate": "2026-03-02",
+                      "grossAmount": "250.00",
+                      "currency": "PLN",
+                      "notes": "batch duplicate"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        val listResponse = client.get("/v1/transactions")
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status)
+        assertTrue(previewResponse.bodyAsText().contains("\"duplicateRowCount\": 2"))
+        assertTrue(previewResponse.bodyAsText().contains("\"status\": \"DUPLICATE_EXISTING\""))
+        assertTrue(previewResponse.bodyAsText().contains("\"status\": \"DUPLICATE_BATCH\""))
+        assertEquals(HttpStatusCode.Created, importResponse.status)
+        assertTrue(importResponse.bodyAsText().contains("\"createdCount\": 1"))
+        assertTrue(importResponse.bodyAsText().contains("\"skippedDuplicateCount\": 2"))
+        assertTrue(listResponse.bodyAsText().contains("\"notes\": \"batch duplicate\""))
     }
 }

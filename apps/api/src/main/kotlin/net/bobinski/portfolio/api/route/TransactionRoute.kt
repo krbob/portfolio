@@ -13,6 +13,9 @@ import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.service.CreateTransactionCommand
+import net.bobinski.portfolio.api.domain.service.TransactionImportPreview
+import net.bobinski.portfolio.api.domain.service.TransactionImportPreviewRow
+import net.bobinski.portfolio.api.domain.service.TransactionImportResult
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import org.koin.ktor.ext.inject
 import java.math.BigDecimal
@@ -35,13 +38,20 @@ fun Route.transactionRoute() {
 
         post("/import") {
             val request = call.receive<ImportTransactionsRequest>()
-            val transactions = transactionService.importAll(request.rows.map { it.toCommand() })
+            val result = transactionService.importAll(
+                commands = request.rows.map { it.toCommand() },
+                skipDuplicates = request.skipDuplicates
+            )
             call.respond(
                 HttpStatusCode.Created,
-                ImportTransactionsResponse(
-                    createdCount = transactions.size,
-                    transactions = transactions.map { it.toResponse() }
-                )
+                result.toResponse()
+            )
+        }
+
+        post("/import/preview") {
+            val request = call.receive<ImportTransactionsRequest>()
+            call.respond(
+                transactionService.previewImport(request.rows.map { it.toCommand() }).toResponse()
             )
         }
 
@@ -82,6 +92,7 @@ data class CreateTransactionRequest(
 
 @Serializable
 data class ImportTransactionsRequest(
+    val skipDuplicates: Boolean = true,
     val rows: List<CreateTransactionRequest>
 )
 
@@ -108,7 +119,24 @@ data class TransactionResponse(
 @Serializable
 data class ImportTransactionsResponse(
     val createdCount: Int,
+    val skippedDuplicateCount: Int,
     val transactions: List<TransactionResponse>
+)
+
+@Serializable
+data class ImportTransactionsPreviewResponse(
+    val totalRowCount: Int,
+    val importableRowCount: Int,
+    val duplicateRowCount: Int,
+    val invalidRowCount: Int,
+    val rows: List<ImportTransactionsPreviewRowResponse>
+)
+
+@Serializable
+data class ImportTransactionsPreviewRowResponse(
+    val rowNumber: Int,
+    val status: String,
+    val message: String
 )
 
 private fun CreateTransactionRequest.toCommand(): CreateTransactionCommand = CreateTransactionCommand(
@@ -144,6 +172,26 @@ private fun Transaction.toResponse(): TransactionResponse = TransactionResponse(
     notes = notes,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString()
+)
+
+private fun TransactionImportResult.toResponse(): ImportTransactionsResponse = ImportTransactionsResponse(
+    createdCount = createdCount,
+    skippedDuplicateCount = skippedDuplicateCount,
+    transactions = transactions.map { it.toResponse() }
+)
+
+private fun TransactionImportPreview.toResponse(): ImportTransactionsPreviewResponse = ImportTransactionsPreviewResponse(
+    totalRowCount = totalRowCount,
+    importableRowCount = importableRowCount,
+    duplicateRowCount = duplicateRowCount,
+    invalidRowCount = invalidRowCount,
+    rows = rows.map { it.toResponse() }
+)
+
+private fun TransactionImportPreviewRow.toResponse(): ImportTransactionsPreviewRowResponse = ImportTransactionsPreviewRowResponse(
+    rowNumber = rowNumber,
+    status = status.name,
+    message = message
 )
 
 private fun parseUuid(value: String, field: String): UUID =
