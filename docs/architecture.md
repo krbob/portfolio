@@ -45,13 +45,12 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 
 ### Persistence
 
-- SQLite is the target runtime for the self-hosted product
-- SQLite is already the default runtime in application config and Docker Compose
-- tests keep an explicit in-memory default to stay isolated and deterministic
-- current implementation still carries `memory` and `postgres` only as transitional compatibility modes
-- the migration treats SQLite as a first-class storage engine, not as a compatibility shim
+- SQLite is the runtime for the self-hosted product
+- SQLite is the default runtime in application config and Docker Compose
+- tests default to explicit in-memory storage through Gradle task environment overrides, with opt-in SQLite tests where needed
+- the implementation treats SQLite as a first-class storage engine, not as a compatibility shim
 - Flyway remains responsible for schema creation on startup
-- canonical storage conventions during the migration:
+- canonical storage conventions:
   - IDs as `TEXT`
   - exact decimals as canonical decimal `TEXT`
   - dates and timestamps as ISO-8601 `TEXT`
@@ -72,4 +71,4 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - persist rebuildable read-model cache snapshots for heavy analytical endpoints
 - isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`
 - keep `health`, `meta`, and auth session bootstrap routes public while protecting the rest of the API surface when auth is enabled
-- finish the last PostgreSQL removal pass now that SQLite is the default runtime
+- keep the SQLite deployment path simple: one app stack, one DB volume, one backup volume

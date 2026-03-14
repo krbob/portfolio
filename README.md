@@ -42,9 +42,9 @@ portfolio/
 
 - backend write-model API exists for accounts, instruments, and transactions
 - domain model and initial relational schema are defined
-- repository storage currently runs in `memory`, `postgres`, or `sqlite` mode during the final migration stretch
-- default runtime is now `sqlite`
-- tests keep their own `memory` default through `apps/api/src/test/resources/application.yaml`
+- repository runtime is `sqlite`, with `memory` still available for isolated tests and quick local runs
+- default runtime is `sqlite`
+- Gradle test tasks force `memory` by default, with explicit SQLite opt-in only where end-to-end coverage needs it
 - server-side JSON backups can be created, listed, retained, and restored
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
@@ -56,9 +56,9 @@ portfolio/
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 - optional single-user password auth is available through signed session cookies and a login gate in the web UI
 
-## Storage direction
+## Storage model
 
-`portfolio` is moving to a `SQLite-only` runtime.
+`portfolio` is now a `SQLite-first` and `SQLite-only` runtime.
 
 Migration invariants:
 
@@ -77,8 +77,6 @@ SQLite encoding conventions for the migration:
 - booleans as `INTEGER`
 - JSON payloads as `TEXT`
 - exact financial values as canonical decimal `TEXT`
-
-The current backend still carries transitional `memory` and `postgres` modes, but the default application runtime is already SQLite.
 
 For local default runtime:
 
@@ -127,10 +125,6 @@ docker compose --profile app up -d --build
 ```
 
 Legacy PostgreSQL profile is still available temporarily for migration/debug work:
-
-```bash
-docker compose --profile postgres-legacy up -d
-```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current SQLite migration roadmap.
@@ -247,10 +241,8 @@ For a ready-made demo portfolio with multiple `VWRA.L` purchases and several `ED
 
 The script posts [demo/demo-portfolio-import.json](/Users/bob/stock/portfolio/demo/demo-portfolio-import.json) to the local API in `REPLACE` mode.
 
-If you are running the Docker profile and want to seed the PostgreSQL container directly:
+If you are running the Docker profile and want to seed the containerized API through its published port:
 
 ```bash
 ./scripts/seed-demo-portfolio-docker.sh
 ```
-
-The SQL fixture lives in [demo/demo-portfolio-seed.sql](/Users/bob/stock/portfolio/demo/demo-portfolio-seed.sql).

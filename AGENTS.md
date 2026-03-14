@@ -53,5 +53,6 @@ The product is optimized for:
 6. Add portfolio overview, holdings, and timeline reconstruction.
 7. Rebuild historical daily snapshots from transactions and external market data.
 8. Replace PostgreSQL with a SQLite-native runtime and remove transitional persistence code.
+9. Keep the SQLite deployment path and smoke coverage production-grade.
 
 See `docs/backlog.md` for the current phased execution order beyond the initial bootstrap milestones.

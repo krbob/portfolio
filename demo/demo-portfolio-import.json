@@ -1,5 +1,6 @@
 {
   "mode": "REPLACE",
+  "confirmation": "REPLACE",
   "snapshot": {
     "schemaVersion": 1,
     "exportedAt": "2026-03-13T19:00:00Z",

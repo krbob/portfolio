@@ -22,7 +22,7 @@ The investor-facing backlog is complete.
 
 ## Current goal
 
-Migrate `portfolio` from `memory/postgres` persistence to a `SQLite-only` runtime that is safer and simpler for a single-user self-hosted deployment.
+Finish hardening and smoke coverage for the `SQLite-only` runtime that now powers the self-hosted deployment.
 
 The ordering below is intentional:
 
@@ -31,10 +31,11 @@ The ordering below is intentional:
 3. move schema and repositories to SQLite-native implementations
 4. prove behavioral parity
 5. only then remove PostgreSQL
+6. finish smoke coverage and operational docs
 
 ## Phase 1: Migration groundwork
 
-### 1. SQLite-only target and invariants (in progress)
+### 1. SQLite-only target and invariants (done)
 
 - update `README`, architecture notes and agent guidance to make SQLite the target runtime
 - document storage invariants:
@@ -51,7 +52,7 @@ The ordering below is intentional:
   - JSON as `TEXT`
   - financial values as canonical decimal `TEXT`
 
-### 2. SQLite runtime infrastructure
+### 2. SQLite runtime infrastructure (done)
 
 - add `PersistenceMode.SQLITE`
 - add `sqlite-jdbc`
@@ -61,7 +62,7 @@ The ordering below is intentional:
 
 ## Phase 2: Native SQLite persistence
 
-### 3. SQLite schema and migrations
+### 3. SQLite schema and migrations (done)
 
 - add SQLite-specific Flyway migration directory
 - translate PostgreSQL schema to SQLite-native SQL
@@ -76,7 +77,7 @@ The ordering below is intentional:
   - indexes
   - data integrity checks
 
-### 4. SQLite repositories for the canonical write model
+### 4. SQLite repositories for the canonical write model (done)
 
 - implement dedicated repositories for:
   - accounts
@@ -86,7 +87,7 @@ The ordering below is intentional:
 - avoid pretending one SQL dialect can cleanly serve both engines
 - generate IDs and serialize value objects in application code
 
-### 5. SQLite repositories for operational data
+### 5. SQLite repositories for operational data (done)
 
 - implement dedicated repositories for:
   - audit events
@@ -118,7 +119,7 @@ The ordering below is intentional:
 
 ## Phase 4: PostgreSQL removal
 
-### 8. Remove PostgreSQL runtime support
+### 8. Remove PostgreSQL runtime support (done)
 
 - remove PostgreSQL datasource wiring
 - remove PostgreSQL migrations

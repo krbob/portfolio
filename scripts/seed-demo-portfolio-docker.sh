@@ -4,7 +4,13 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-SEED_FILE="$PROJECT_ROOT/demo/demo-portfolio-seed.sql"
+API_BASE_URL=${PORTFOLIO_API_BASE_URL:-http://127.0.0.1:18082}
+PAYLOAD_FILE="$PROJECT_ROOT/demo/demo-portfolio-import.json"
 
-docker compose --profile app exec -T portfolio-postgres \
-  psql -U portfolio -d portfolio -v ON_ERROR_STOP=1 -f - < "$SEED_FILE"
+curl -sSf \
+  -X POST \
+  -H 'Content-Type: application/json' \
+  --data-binary "@$PAYLOAD_FILE" \
+  "$API_BASE_URL/v1/portfolio/state/import"
+
+printf '\n'
