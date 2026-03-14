@@ -8,7 +8,7 @@ class PersistenceResources(
     config: PersistenceConfig
 ) : AutoCloseable {
     val dataSource: DataSource = DataSourceFactory.create(config).also { dataSource ->
-        DatabaseMigrator.migrate(config, dataSource)
+        DatabaseMigrator.migrate(dataSource)
     }
 
     override fun close() {

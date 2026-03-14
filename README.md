@@ -42,9 +42,8 @@ portfolio/
 
 - backend write-model API exists for accounts, instruments, and transactions
 - domain model and initial relational schema are defined
-- repository runtime is `sqlite`, with `memory` still available for isolated tests and quick local runs
-- default runtime is `sqlite`
-- Gradle test tasks force `memory` by default, with explicit SQLite opt-in only where end-to-end coverage needs it
+- runtime storage is SQLite
+- tests still use lightweight in-memory repositories where isolation matters, but that path is no longer a runtime mode
 - server-side JSON backups can be created, listed, retained, and restored
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
@@ -91,12 +90,6 @@ That starts the API on SQLite with:
 - WAL journaling
 - synchronous mode `FULL`
 - busy timeout `5000ms`
-
-For an explicit ephemeral in-memory run:
-
-```bash
-PORTFOLIO_PERSISTENCE_MODE=memory ./gradlew run
-```
 
 To run the API in Docker Compose with a persistent backup volume:
 

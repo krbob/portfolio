@@ -9,7 +9,6 @@ portfolio:
   name: "Portfolio"
   stage: "dev"
   persistence:
-    mode: "sqlite"
     sqlite:
       databasePath: "./data/portfolio.db"
       journalMode: "WAL"

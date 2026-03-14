@@ -20,7 +20,6 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 import net.bobinski.portfolio.api.persistence.config.SqliteConfig
 import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
 import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
@@ -103,7 +102,6 @@ class SqliteWriteRepositoriesTest {
     }
 
     private fun sqlitePersistenceConfig(databasePath: String) = PersistenceConfig(
-        mode = PersistenceMode.SQLITE,
         sqlite = SqliteConfig(
             databasePath = databasePath,
             journalMode = SqliteJournalMode.WAL,

@@ -34,7 +34,7 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"status\": \"ok\""))
         assertTrue(body.contains("\"name\": \"Portfolio\""))
-        assertTrue(body.contains("\"persistenceMode\": \"MEMORY\""))
+        assertTrue(body.contains("\"persistenceMode\": \"SQLITE\""))
         assertTrue(body.contains("\"authEnabled\": false"))
     }
 
@@ -49,8 +49,8 @@ class ApplicationTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"web\": \"React 19 + TypeScript + Vite\""))
-        assertTrue(body.contains("\"database\": \"SQLite target; in-memory dev mode\""))
-        assertTrue(body.contains("\"persistenceMode\": \"MEMORY\""))
+        assertTrue(body.contains("\"database\": \"SQLite\""))
+        assertTrue(body.contains("\"persistenceMode\": \"SQLITE\""))
         assertTrue(body.contains("\"mode\": \"DISABLED\""))
         assertTrue(body.contains("Server-side backup snapshots"))
     }

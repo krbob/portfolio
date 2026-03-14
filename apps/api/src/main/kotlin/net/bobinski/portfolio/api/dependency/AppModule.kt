@@ -63,7 +63,8 @@ import kotlinx.serialization.json.Json
 fun appModule(
     config: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
-    backupConfig: BackupConfig
+    backupConfig: BackupConfig,
+    repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
 ) = module {
     single<Clock> { Clock.systemUTC() }
     single { config }
@@ -111,7 +112,7 @@ fun appModule(
         )
     }
 
-    if (config.isSqliteEnabled) {
+    if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
         single<AuditEventRepository> { SqliteAuditEventRepository(dataSource = get(), json = get()) }

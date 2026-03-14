@@ -8,8 +8,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.auth.config.AuthConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 
 fun Route.systemRoute(application: Application) {
     val authConfig = AuthConfig.from(application.environment.config)
@@ -65,12 +63,9 @@ private fun Application.appStage(): String =
 
 private fun Application.appVersion(): String = this::class.java.`package`.implementationVersion ?: "0.1.0-dev"
 
-private fun Application.persistenceMode(): String = PersistenceConfig.from(environment.config).mode.name
+private fun Application.persistenceMode(): String = "SQLITE"
 
-private fun Application.databaseSummary(): String = when (PersistenceConfig.from(environment.config).mode) {
-    PersistenceMode.SQLITE -> "SQLite"
-    PersistenceMode.MEMORY -> "SQLite target; in-memory dev mode"
-}
+private fun Application.databaseSummary(): String = "SQLite"
 
 @Serializable
 data class HealthResponse(

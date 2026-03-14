@@ -4,16 +4,10 @@ import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.propertyOrNull
 
 data class PersistenceConfig(
-    val mode: PersistenceMode,
     val sqlite: SqliteConfig
 ) {
-    val isSqliteEnabled: Boolean get() = mode == PersistenceMode.SQLITE
-
     companion object {
         fun from(config: ApplicationConfig): PersistenceConfig = PersistenceConfig(
-            mode = readSetting("PORTFOLIO_PERSISTENCE_MODE", config, "portfolio.persistence.mode")
-                ?.let(PersistenceMode::from)
-                ?: PersistenceMode.SQLITE,
             sqlite = SqliteConfig(
                 databasePath = readSetting(
                     "PORTFOLIO_SQLITE_DATABASE_PATH",
@@ -66,19 +60,6 @@ data class SqliteConfig(
     val synchronousMode: SqliteSynchronousMode,
     val busyTimeoutMs: Int
 )
-
-enum class PersistenceMode {
-    MEMORY,
-    SQLITE;
-
-    companion object {
-        fun from(value: String): PersistenceMode = try {
-            valueOf(value.trim().uppercase())
-        } catch (_: IllegalArgumentException) {
-            throw IllegalArgumentException("Unsupported persistence mode: $value")
-        }
-    }
-}
 
 enum class SqliteJournalMode {
     DELETE,

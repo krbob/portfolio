@@ -10,11 +10,7 @@ import org.sqlite.SQLiteConfig
 
 object DataSourceFactory {
     fun create(config: PersistenceConfig): DataSource {
-        val hikariConfig = when {
-            config.isSqliteEnabled -> createSqliteConfig(config)
-            else -> error("Memory persistence does not create a JDBC datasource.")
-        }
-        return HikariDataSource(hikariConfig)
+        return HikariDataSource(createSqliteConfig(config))
     }
 
     private fun createSqliteConfig(config: PersistenceConfig): HikariConfig {

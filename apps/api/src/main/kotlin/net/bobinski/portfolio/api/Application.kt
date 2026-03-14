@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api
 
 import io.ktor.server.application.Application
+import net.bobinski.portfolio.api.dependency.RepositoryBindingMode
 import net.bobinski.portfolio.api.plugins.configureBackupLifecycle
 import net.bobinski.portfolio.api.plugins.configureAuthentication
 import net.bobinski.portfolio.api.plugins.configureDependencyInjection
@@ -15,8 +16,16 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    configureDependencyInjection()
-    configurePersistenceLifecycle()
+    runtimeModule()
+}
+
+internal fun Application.runtimeModule(
+    repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
+) {
+    configureDependencyInjection(repositoryBindingMode)
+    if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
+        configurePersistenceLifecycle()
+    }
     configureBackupLifecycle()
     configureAuthentication()
     configureMonitoring()

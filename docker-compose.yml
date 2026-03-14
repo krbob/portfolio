@@ -5,7 +5,6 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     environment:
-      PORTFOLIO_PERSISTENCE_MODE: sqlite
       PORTFOLIO_SQLITE_DATABASE_PATH: "${PORTFOLIO_SQLITE_DATABASE_PATH:-/srv/portfolio/data/portfolio.db}"
       PORTFOLIO_SQLITE_JOURNAL_MODE: "${PORTFOLIO_SQLITE_JOURNAL_MODE:-WAL}"
       PORTFOLIO_SQLITE_SYNCHRONOUS_MODE: "${PORTFOLIO_SQLITE_SYNCHRONOUS_MODE:-FULL}"

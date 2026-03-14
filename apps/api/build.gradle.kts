@@ -43,7 +43,6 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-    environment("PORTFOLIO_PERSISTENCE_MODE", "memory")
 }
 
 tasks.register<Test>("exportOpenApiSpec") {

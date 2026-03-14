@@ -4,7 +4,6 @@ import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 import net.bobinski.portfolio.api.persistence.config.SqliteConfig
 import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
 import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
@@ -76,15 +75,9 @@ class StartupValidationTest {
         }
     }
 
-    private fun validPersistenceConfig() = PersistenceConfig(
-        mode = PersistenceMode.SQLITE,
-        sqlite = defaultSqliteConfig()
-    )
+    private fun validPersistenceConfig() = PersistenceConfig(sqlite = defaultSqliteConfig())
 
-    private fun validSqlitePersistenceConfig() = PersistenceConfig(
-        mode = PersistenceMode.SQLITE,
-        sqlite = defaultSqliteConfig()
-    )
+    private fun validSqlitePersistenceConfig() = PersistenceConfig(sqlite = defaultSqliteConfig())
 
     private fun validMarketDataConfig() = MarketDataConfig(
         enabled = true,

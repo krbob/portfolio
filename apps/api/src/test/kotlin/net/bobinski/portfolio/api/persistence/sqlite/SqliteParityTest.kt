@@ -40,7 +40,6 @@ import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 import net.bobinski.portfolio.api.persistence.config.SqliteConfig
 import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
 import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
@@ -83,7 +82,6 @@ class SqliteParityTest {
         val databasePath = directory.resolve("portfolio.db")
         val resources = PersistenceResources(
             PersistenceConfig(
-                mode = PersistenceMode.SQLITE,
                 sqlite = SqliteConfig(
                     databasePath = databasePath.toString(),
                     journalMode = SqliteJournalMode.WAL,

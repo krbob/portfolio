@@ -11,13 +11,11 @@ internal fun validateStartupConfiguration(
     backupConfig: BackupConfig,
     authConfig: AuthConfig
 ) {
-    if (persistenceConfig.isSqliteEnabled) {
-        require(persistenceConfig.sqlite.databasePath.isNotBlank()) {
-            "SQLite persistence requires a non-blank database path."
-        }
-        require(persistenceConfig.sqlite.busyTimeoutMs > 0) {
-            "SQLite persistence requires a positive busy timeout."
-        }
+    require(persistenceConfig.sqlite.databasePath.isNotBlank()) {
+        "SQLite persistence requires a non-blank database path."
+    }
+    require(persistenceConfig.sqlite.busyTimeoutMs > 0) {
+        "SQLite persistence requires a positive busy timeout."
     }
 
     if (marketDataConfig.enabled) {

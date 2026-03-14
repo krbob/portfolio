@@ -47,7 +47,7 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 
 - SQLite is the runtime for the self-hosted product
 - SQLite is the default runtime in application config and Docker Compose
-- tests default to explicit in-memory storage through Gradle task environment overrides, with opt-in SQLite tests where needed
+- route-level tests use dedicated in-memory repository bindings, while runtime and integration coverage stay on SQLite
 - the implementation treats SQLite as a first-class storage engine, not as a compatibility shim
 - Flyway remains responsible for schema creation on startup
 - canonical storage conventions:

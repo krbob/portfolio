@@ -1,9 +1,8 @@
 package net.bobinski.portfolio.api
 
 import io.ktor.server.application.Application
+import net.bobinski.portfolio.api.dependency.RepositoryBindingMode
 
 fun Application.module() {
-    val method = Class.forName("net.bobinski.portfolio.api.ApplicationKt")
-        .getDeclaredMethod("module", Application::class.java)
-    method.invoke(null, this)
+    runtimeModule(RepositoryBindingMode.IN_MEMORY_TEST)
 }

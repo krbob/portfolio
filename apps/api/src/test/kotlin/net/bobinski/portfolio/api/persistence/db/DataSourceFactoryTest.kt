@@ -5,7 +5,6 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 import net.bobinski.portfolio.api.persistence.config.SqliteConfig
 import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
 import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
@@ -51,7 +50,6 @@ class DataSourceFactoryTest {
     }
 
     private fun sqlitePersistenceConfig(databasePath: Path) = PersistenceConfig(
-        mode = PersistenceMode.SQLITE,
         sqlite = SqliteConfig(
             databasePath = databasePath.toString(),
             journalMode = SqliteJournalMode.WAL,

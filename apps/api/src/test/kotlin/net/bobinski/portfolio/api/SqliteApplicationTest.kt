@@ -10,6 +10,7 @@ import io.ktor.http.contentType
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import java.nio.file.Files
+import net.bobinski.portfolio.api.dependency.RepositoryBindingMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -17,10 +18,7 @@ import org.junit.jupiter.api.Test
 class SqliteApplicationTest {
 
     @Test
-    fun `application can handle write-model and audit routes in sqlite mode`() = withSystemProperty(
-        key = "PORTFOLIO_PERSISTENCE_MODE",
-        value = "sqlite"
-    ) {
+    fun `application can handle write-model and audit routes in sqlite runtime mode`() {
         testApplication {
             val tempDirectory = Files.createTempDirectory("portfolio-sqlite-application-test")
             val databasePath = tempDirectory.resolve("portfolio.db")
@@ -28,7 +26,6 @@ class SqliteApplicationTest {
 
             environment {
                 config = MapApplicationConfig(
-                    "portfolio.persistence.mode" to "sqlite",
                     "portfolio.persistence.sqlite.databasePath" to databasePath.toString(),
                     "portfolio.persistence.sqlite.journalMode" to "WAL",
                     "portfolio.persistence.sqlite.synchronousMode" to "FULL",
@@ -40,7 +37,7 @@ class SqliteApplicationTest {
             }
 
             application {
-                module()
+                runtimeModule(RepositoryBindingMode.SQLITE_RUNTIME)
             }
 
             try {
@@ -74,20 +71,6 @@ class SqliteApplicationTest {
                 assertTrue(metaResponse.bodyAsText().contains("\"database\": \"SQLite\""))
             } finally {
                 tempDirectory.toFile().deleteRecursively()
-            }
-        }
-    }
-
-    private fun <T> withSystemProperty(key: String, value: String, block: () -> T): T {
-        val previous = System.getProperty(key)
-        System.setProperty(key, value)
-        return try {
-            block()
-        } finally {
-            if (previous == null) {
-                System.clearProperty(key)
-            } else {
-                System.setProperty(key, previous)
             }
         }
     }
