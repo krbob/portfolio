@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":portfolio-domain"))
     implementation("io.ktor:ktor-server-core:3.4.1")
     implementation("io.ktor:ktor-server-netty:3.4.1")
     implementation("io.ktor:ktor-server-call-logging:3.4.1")

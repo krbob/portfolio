@@ -20,6 +20,7 @@ class JdbcAuditEventRepository(
 
     override suspend fun list(query: AuditEventQuery): List<AuditEvent> =
         dataSource.connection.use { connection ->
+            val category = query.category
             val sql = buildString {
                 append(
                     """
@@ -28,7 +29,7 @@ class JdbcAuditEventRepository(
                     from audit_events
                     """.trimIndent()
                 )
-                if (query.category != null) {
+                if (category != null) {
                     append(" where category = ?")
                 }
                 append(" order by occurred_at desc limit ?")
@@ -36,8 +37,8 @@ class JdbcAuditEventRepository(
 
             connection.prepareStatement(sql).use { statement ->
                 var parameterIndex = 1
-                if (query.category != null) {
-                    statement.setString(parameterIndex++, query.category.name)
+                if (category != null) {
+                    statement.setString(parameterIndex++, category.name)
                 }
                 statement.setInt(parameterIndex, query.limit)
 
