@@ -49,6 +49,12 @@ import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteAuditEventRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteAccountRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteInstrumentRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqlitePortfolioTargetRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteReadModelCacheRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteTransactionRepository
 import java.net.http.HttpClient
 import org.koin.dsl.module
 import java.time.Clock
@@ -116,7 +122,14 @@ fun appModule(
         single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
     } else if (config.isSqliteEnabled) {
-        error("SQLite persistence mode is defined, but SQLite repositories are not wired yet.")
+        single(createdAtStart = true) { PersistenceResources(config) }
+        single<DataSource> { get<PersistenceResources>().dataSource }
+        single<AuditEventRepository> { SqliteAuditEventRepository(dataSource = get(), json = get()) }
+        single<AccountRepository> { SqliteAccountRepository(dataSource = get()) }
+        single<InstrumentRepository> { SqliteInstrumentRepository(dataSource = get()) }
+        single<PortfolioTargetRepository> { SqlitePortfolioTargetRepository(dataSource = get()) }
+        single<ReadModelCacheRepository> { SqliteReadModelCacheRepository(dataSource = get()) }
+        single<TransactionRepository> { SqliteTransactionRepository(dataSource = get()) }
     } else {
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
