@@ -33,6 +33,10 @@ The product is optimized for:
 - Treat `REPLACE` import/restore as destructive operations: require explicit confirmation and preserve a safety backup first.
 - Keep password auth optional and single-user oriented; if it is enabled, `health`, `meta`, and `auth/session` stay public while the rest of the API remains protected.
 - Treat SQLite as a first-class storage engine: explicit encoding, explicit transactions, explicit startup pragmas.
+- Favor investor-product clarity over technical exposition in the UI.
+- Keep technical diagnostics and operational tooling out of the main dashboard unless they are actionable for day-to-day portfolio review.
+- Prefer a small set of shared UI primitives over ad-hoc section-specific styling.
+- Use localized formatting consistently; avoid hard-coded `en-US` and `en-GB` formatting in the web app.
 
 ## Initial architecture
 
@@ -54,5 +58,6 @@ The product is optimized for:
 7. Rebuild historical daily snapshots from transactions and external market data.
 8. Replace PostgreSQL with a SQLite-native runtime and remove transitional persistence code.
 9. Keep the SQLite deployment path and smoke coverage production-grade.
+10. Rebuild the web UI into a calmer, more mature investor product.
 
-See `docs/backlog.md` for the current phased execution order beyond the initial bootstrap milestones.
+See `docs/backlog.md` and `docs/ui-revamp-plan.md` for the current phased execution order beyond the initial bootstrap milestones.

@@ -22,9 +22,49 @@ The original foundation backlog is effectively done.
 
 ## Current goal
 
-Keep the SQLite self-hosted path production-grade, then finish the remaining product-facing gaps around real-world import and operational trust.
+Keep the SQLite self-hosted path production-grade while rebuilding the frontend into a calmer, more mature investor product.
 
 The remaining backlog is ordered by practical value for day-to-day use.
+
+See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for the dedicated execution plan for the frontend redesign.
+
+## Phase 0: UI revamp foundation
+
+### 0.1 Product-grade shell and design system (next)
+
+- replace the current mixed "marketing + dashboard + admin" shell with a calmer investor product frame
+- define shared visual primitives instead of expanding the monolithic stylesheet
+- centralize locale-aware formatting for money, percentages, and dates
+- reduce top-level navigation to product-facing destinations
+
+### 0.2 Dashboard rewrite (next)
+
+- rebuild the dashboard around current value, daily move, allocation, one primary chart, and portfolio health
+- remove technical cards and duplicate summary sections from the main screen
+- shorten copy and make empty/error/loading states more product-like
+
+### 0.3 Performance rewrite (next)
+
+- merge returns and charts into a single coherent performance experience
+- standardize period switchers, legends, benchmark presentation, and chart cards
+- keep performance screens optimized for read-heavy usage
+
+### 0.4 Holdings rewrite (later)
+
+- replace the current mixed section/card view with a dense, deliberate holdings table
+- improve grouping, sorting, filters, and position drilldown
+- make valuation quality and asset-allocation context easy to read at a glance
+
+### 0.5 Transactions rewrite (later)
+
+- split journal, import, profiles, and import history into clearer flows
+- keep preview and conflict handling visible before destructive or bulk actions
+- make transaction management feel operationally safe and quick to use
+
+### 0.6 Settings and operations consolidation (later)
+
+- move accounts, instruments, backups, audit, and cache diagnostics into one coherent settings area
+- keep operational tooling discoverable without polluting primary investor screens
 
 ## Phase 1: Deployment hardening
 
@@ -69,10 +109,7 @@ The remaining backlog is ordered by practical value for day-to-day use.
 
 ### 6. Dashboard and chart refinement (next)
 
-- tighten the information density and hierarchy on the dashboard
-- make the most important portfolio changes visible immediately after opening the app
-- keep charts fast and legible on both desktop and mobile
-- continue refining copy and section structure so the app reads like an investor product, not an internal tool
+- superseded by the dedicated UI revamp phases above
 
 ### 7. Operational trust layer (next)
 
