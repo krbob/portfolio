@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import javax.sql.DataSource
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -6,7 +6,7 @@ import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import java.util.UUID
 
-class SqlitePortfolioTargetRepository(
+class JdbcPortfolioTargetRepository(
     private val dataSource: DataSource
 ) : PortfolioTargetRepository {
 

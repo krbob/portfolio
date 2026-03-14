@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.sql.Connection
 import javax.sql.DataSource
@@ -7,7 +7,7 @@ import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import java.util.UUID
 
-class SqliteAccountRepository(
+class JdbcAccountRepository(
     private val dataSource: DataSource
 ) : AccountRepository {
 

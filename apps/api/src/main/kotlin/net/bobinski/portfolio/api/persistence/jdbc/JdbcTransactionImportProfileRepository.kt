@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.sql.Connection
 import javax.sql.DataSource
@@ -13,7 +13,7 @@ import net.bobinski.portfolio.api.domain.model.TransactionImportProfile
 import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepository
 import java.util.UUID
 
-class SqliteTransactionImportProfileRepository(
+class JdbcTransactionImportProfileRepository(
     private val dataSource: DataSource,
     private val json: Json
 ) : TransactionImportProfileRepository {

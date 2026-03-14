@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.math.BigDecimal
 import java.time.Instant
@@ -29,15 +29,15 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-class SqliteWriteRepositoriesTest {
+class JdbcWriteRepositoriesTest {
 
     @Test
     fun `sqlite write repositories persist accounts instruments transactions and targets`() = runBlocking {
         sqliteDatabase { dataSource ->
-            val accountRepository = SqliteAccountRepository(dataSource)
-            val instrumentRepository = SqliteInstrumentRepository(dataSource)
-            val transactionRepository = SqliteTransactionRepository(dataSource)
-            val portfolioTargetRepository = SqlitePortfolioTargetRepository(dataSource)
+            val accountRepository = JdbcAccountRepository(dataSource)
+            val instrumentRepository = JdbcInstrumentRepository(dataSource)
+            val transactionRepository = JdbcTransactionRepository(dataSource)
+            val portfolioTargetRepository = JdbcPortfolioTargetRepository(dataSource)
 
             val account = account()
             val instrument = edoInstrument()
@@ -63,7 +63,7 @@ class SqliteWriteRepositoriesTest {
     @Test
     fun `sqlite instrument repository updates edo terms atomically`() = runBlocking {
         sqliteDatabase { dataSource ->
-            val instrumentRepository = SqliteInstrumentRepository(dataSource)
+            val instrumentRepository = JdbcInstrumentRepository(dataSource)
             val initial = edoInstrument()
             val initialEdoTerms = requireNotNull(initial.edoTerms)
             val updated = initial.copy(

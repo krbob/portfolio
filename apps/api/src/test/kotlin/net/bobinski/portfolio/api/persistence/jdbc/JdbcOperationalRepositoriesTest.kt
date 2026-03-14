@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.time.Instant
 import java.time.LocalDate
@@ -27,14 +27,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 
-class SqliteOperationalRepositoriesTest {
+class JdbcOperationalRepositoriesTest {
 
     @Test
     fun `sqlite operational repositories persist audit events read model snapshots and import profiles`() = runBlocking {
         sqliteDatabase { dataSource ->
-            val auditRepository = SqliteAuditEventRepository(dataSource, Json.Default)
-            val cacheRepository = SqliteReadModelCacheRepository(dataSource)
-            val profileRepository = SqliteTransactionImportProfileRepository(dataSource, Json.Default)
+            val auditRepository = JdbcAuditEventRepository(dataSource, Json.Default)
+            val cacheRepository = JdbcReadModelCacheRepository(dataSource)
+            val profileRepository = JdbcTransactionImportProfileRepository(dataSource, Json.Default)
 
             val auditEvent = AuditEvent(
                 id = UUID.fromString("60000000-0000-0000-0000-000000000001"),

@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.sql.Connection
 import java.sql.ResultSet
@@ -12,7 +12,7 @@ import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import java.util.UUID
 
-class SqliteInstrumentRepository(
+class JdbcInstrumentRepository(
     private val dataSource: DataSource
 ) : InstrumentRepository {
 

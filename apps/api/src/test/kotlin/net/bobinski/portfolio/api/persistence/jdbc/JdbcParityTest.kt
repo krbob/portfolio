@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.math.BigDecimal
 import java.time.Clock
@@ -51,7 +51,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionReposi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class SqliteParityTest {
+class JdbcParityTest {
 
     @Test
     fun `sqlite matches in-memory behavior for core portfolio read paths`() = runBlocking {
@@ -89,11 +89,11 @@ class SqliteParityTest {
         )
 
         return Harness(
-            accountRepository = SqliteAccountRepository(resources.dataSource),
-            instrumentRepository = SqliteInstrumentRepository(resources.dataSource),
-            transactionRepository = SqliteTransactionRepository(resources.dataSource),
-            portfolioTargetRepository = SqlitePortfolioTargetRepository(resources.dataSource),
-            auditEventRepository = SqliteAuditEventRepository(resources.dataSource, kotlinx.serialization.json.Json.Default),
+            accountRepository = JdbcAccountRepository(resources.dataSource),
+            instrumentRepository = JdbcInstrumentRepository(resources.dataSource),
+            transactionRepository = JdbcTransactionRepository(resources.dataSource),
+            portfolioTargetRepository = JdbcPortfolioTargetRepository(resources.dataSource),
+            auditEventRepository = JdbcAuditEventRepository(resources.dataSource, kotlinx.serialization.json.Json.Default),
             closeAction = {
                 resources.close()
                 (directory / "portfolio.db").deleteIfExists()

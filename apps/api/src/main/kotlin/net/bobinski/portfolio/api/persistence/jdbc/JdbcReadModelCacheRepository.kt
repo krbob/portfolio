@@ -1,11 +1,11 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import javax.sql.DataSource
 import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheInvalidationReason
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
 
-class SqliteReadModelCacheRepository(
+class JdbcReadModelCacheRepository(
     private val dataSource: DataSource
 ) : ReadModelCacheRepository {
 

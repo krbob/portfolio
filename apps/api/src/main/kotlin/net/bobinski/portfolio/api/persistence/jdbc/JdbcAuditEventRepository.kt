@@ -1,4 +1,4 @@
-package net.bobinski.portfolio.api.persistence.sqlite
+package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.sql.Connection
 import java.sql.Types
@@ -11,7 +11,7 @@ import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
 import net.bobinski.portfolio.api.domain.model.AuditEventQuery
 import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 
-class SqliteAuditEventRepository(
+class JdbcAuditEventRepository(
     private val dataSource: DataSource,
     private val json: Json
 ) : AuditEventRepository {

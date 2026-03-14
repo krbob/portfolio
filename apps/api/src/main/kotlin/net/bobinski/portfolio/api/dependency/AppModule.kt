@@ -47,13 +47,13 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRe
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionImportProfileRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteAuditEventRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteAccountRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteInstrumentRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqlitePortfolioTargetRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteReadModelCacheRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteTransactionRepository
-import net.bobinski.portfolio.api.persistence.sqlite.SqliteTransactionImportProfileRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionImportProfileRepository
 import java.net.http.HttpClient
 import org.koin.dsl.module
 import java.time.Clock
@@ -115,13 +115,13 @@ fun appModule(
     if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
-        single<AuditEventRepository> { SqliteAuditEventRepository(dataSource = get(), json = get()) }
-        single<AccountRepository> { SqliteAccountRepository(dataSource = get()) }
-        single<InstrumentRepository> { SqliteInstrumentRepository(dataSource = get()) }
-        single<PortfolioTargetRepository> { SqlitePortfolioTargetRepository(dataSource = get()) }
-        single<ReadModelCacheRepository> { SqliteReadModelCacheRepository(dataSource = get()) }
-        single<TransactionRepository> { SqliteTransactionRepository(dataSource = get()) }
-        single<TransactionImportProfileRepository> { SqliteTransactionImportProfileRepository(dataSource = get(), json = get()) }
+        single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
+        single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
+        single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
+        single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
+        single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
+        single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
+        single<TransactionImportProfileRepository> { JdbcTransactionImportProfileRepository(dataSource = get(), json = get()) }
     } else {
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
