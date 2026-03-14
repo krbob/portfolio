@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.3.10"
-    kotlin("plugin.serialization") version "2.3.10"
-    id("io.ktor.plugin") version "3.4.1"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktor)
 }
 
 group = "net.bobinski.portfolio"
@@ -17,28 +17,28 @@ repositories {
 
 dependencies {
     implementation(project(":portfolio-domain"))
-    implementation("io.ktor:ktor-server-core:3.4.1")
-    implementation("io.ktor:ktor-server-netty:3.4.1")
-    implementation("io.ktor:ktor-server-call-logging:3.4.1")
-    implementation("io.ktor:ktor-server-content-negotiation:3.4.1")
-    implementation("io.ktor:ktor-server-auth:3.4.1")
-    implementation("io.ktor:ktor-server-config-yaml:3.4.1")
-    implementation("io.ktor:ktor-server-openapi:3.4.1")
-    implementation("io.ktor:ktor-server-routing-openapi:3.4.1")
-    implementation("io.ktor:ktor-server-sessions:3.4.1")
-    implementation("io.ktor:ktor-server-status-pages:3.4.1")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.1")
-    implementation("io.insert-koin:koin-ktor:4.1.1")
-    implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
-    implementation("ch.qos.logback:logback-classic:1.5.32")
-    implementation("com.zaxxer:HikariCP:6.3.0")
-    implementation("org.flywaydb:flyway-core:11.13.2")
-    implementation("org.xerial:sqlite-jdbc:3.51.1.0")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.call.logging)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.config.yaml)
+    implementation(libs.ktor.server.openapi)
+    implementation(libs.ktor.server.routing.openapi)
+    implementation(libs.ktor.server.sessions)
+    implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.koin.ktor)
+    implementation(libs.koin.logger.slf4j)
+    implementation(libs.logback.classic)
+    implementation(libs.hikaricp)
+    implementation(libs.flyway.core)
+    implementation(libs.sqlite.jdbc)
 
-    testImplementation(platform("org.junit:junit-bom:6.0.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("io.ktor:ktor-server-test-host:3.4.1")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.ktor.server.test.host)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test>().configureEach {
