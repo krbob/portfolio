@@ -22,6 +22,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
+import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
 import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
@@ -140,6 +141,14 @@ fun appModule(
             accountRepository = get(),
             auditLogService = get(),
             clock = get()
+        )
+    }
+    single {
+        TransactionCsvImportService(
+            profileRepository = get(),
+            accountRepository = get(),
+            instrumentRepository = get(),
+            transactionService = get()
         )
     }
     single {

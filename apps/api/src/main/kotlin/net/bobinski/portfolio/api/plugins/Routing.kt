@@ -15,6 +15,7 @@ import net.bobinski.portfolio.api.route.accountRoute
 import net.bobinski.portfolio.api.route.instrumentRoute
 import net.bobinski.portfolio.api.route.portfolioRoute
 import net.bobinski.portfolio.api.route.systemRoute
+import net.bobinski.portfolio.api.route.transactionImportRoute
 import net.bobinski.portfolio.api.route.transactionRoute
 
 fun Application.configureRouting() {
@@ -56,6 +57,7 @@ fun Application.configureRouting() {
             accountRoute()
             instrumentRoute()
             portfolioRoute()
+            transactionImportRoute()
             transactionRoute()
         }
     }

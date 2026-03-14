@@ -207,6 +207,24 @@ class TransactionService(
 
     private suspend fun validateImportRow(command: CreateTransactionCommand): String? = try {
         validateReferences(command)
+        Transaction(
+            id = UUID.randomUUID(),
+            accountId = command.accountId,
+            instrumentId = command.instrumentId,
+            type = command.type,
+            tradeDate = command.tradeDate,
+            settlementDate = command.settlementDate,
+            quantity = command.quantity,
+            unitPrice = command.unitPrice,
+            grossAmount = command.grossAmount,
+            feeAmount = command.feeAmount,
+            taxAmount = command.taxAmount,
+            currency = command.currency.uppercase(),
+            fxRateToPln = command.fxRateToPln,
+            notes = command.notes.trim(),
+            createdAt = Instant.EPOCH,
+            updatedAt = Instant.EPOCH
+        )
         null
     } catch (exception: IllegalArgumentException) {
         exception.message ?: "Row validation failed."
