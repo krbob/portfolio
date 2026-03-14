@@ -26,7 +26,7 @@ class OpenApiExportTest {
 
         val outputPath = Path.of(
             System.getProperty("portfolio.openapi.outputPath")
-                ?: error("portfolio.openapi.outputPath system property is required.")
+                ?: "build/openapi/portfolio-api.json"
         )
         Files.createDirectories(outputPath.parent)
         Files.writeString(outputPath, body)

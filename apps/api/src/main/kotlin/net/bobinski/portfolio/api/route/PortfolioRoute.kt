@@ -279,7 +279,9 @@ data class PortfolioReturnPeriodResponse(
 @Serializable
 data class ReturnMetricResponse(
     val moneyWeightedReturn: String,
-    val annualizedMoneyWeightedReturn: String?
+    val annualizedMoneyWeightedReturn: String?,
+    val timeWeightedReturn: String?,
+    val annualizedTimeWeightedReturn: String?
 )
 
 @Serializable
@@ -573,7 +575,9 @@ private fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = 
 
 private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricResponse(
     moneyWeightedReturn = moneyWeightedReturn.toPlainString(),
-    annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString()
+    annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString(),
+    timeWeightedReturn = timeWeightedReturn?.toPlainString(),
+    annualizedTimeWeightedReturn = annualizedTimeWeightedReturn?.toPlainString()
 )
 
 private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(

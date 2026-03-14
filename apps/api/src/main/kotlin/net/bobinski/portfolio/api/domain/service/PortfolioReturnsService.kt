@@ -183,10 +183,74 @@ class PortfolioReturnsService(
         } else {
             (1.0 + annualizedReturn).pow(dayCount.toDouble() / 365.0) - 1.0
         }
+        val timeWeighted = calculateTimeWeightedMetric(
+            start = start,
+            end = end,
+            values = values,
+            cashFlows = cashFlows
+        )
 
         return ReturnMetric(
             moneyWeightedReturn = moneyWeightedReturn.toRate(),
-            annualizedMoneyWeightedReturn = annualizedReturn.toRate()
+            annualizedMoneyWeightedReturn = annualizedReturn.toRate(),
+            timeWeightedReturn = timeWeighted?.totalReturn,
+            annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
+        )
+    }
+
+    private fun calculateTimeWeightedMetric(
+        start: LocalDate,
+        end: LocalDate,
+        values: List<ValuationPoint>,
+        cashFlows: List<MoneyWeightedCashFlow>
+    ): TimeWeightedMetric? {
+        val orderedValues = values.sortedBy(ValuationPoint::date)
+        val startValue = orderedValues.valueOnOrBefore(start) ?: return null
+        val periodValuations = orderedValues.filter { valuation ->
+            valuation.date.isAfter(start) && !valuation.date.isAfter(end)
+        }
+        val dayCount = ChronoUnit.DAYS.between(start, end)
+        if (periodValuations.isEmpty()) {
+            return TimeWeightedMetric(
+                totalReturn = 0.0.toRate(),
+                annualizedReturn = 0.0.toRate()
+            )
+        }
+
+        val cashFlowsByDate = cashFlows.groupBy(MoneyWeightedCashFlow::date)
+            .mapValues { (_, items) ->
+                items.fold(BigDecimal.ZERO) { total, item -> total.add(item.amount) }
+            }
+        var previousValue = startValue
+        var totalFactor = 1.0
+
+        for (valuation in periodValuations) {
+            val externalFlowIntoPortfolio = cashFlowsByDate[valuation.date]?.negate() ?: BigDecimal.ZERO
+            val netGrowthValue = valuation.value.subtract(externalFlowIntoPortfolio)
+            val dailyFactor = when {
+                previousValue.signum() == 0 && netGrowthValue.signum() == 0 -> 1.0
+                previousValue.signum() == 0 -> return null
+                else -> netGrowthValue.divide(previousValue, 12, RoundingMode.HALF_UP).toDouble()
+            }
+
+            if (!dailyFactor.isFinite() || dailyFactor < 0.0) {
+                return null
+            }
+
+            totalFactor *= dailyFactor
+            previousValue = valuation.value
+        }
+
+        val totalReturn = totalFactor - 1.0
+        val annualizedReturn = when {
+            dayCount <= 0 -> totalReturn
+            totalFactor <= 0.0 -> -1.0
+            else -> totalFactor.pow(365.0 / dayCount.toDouble()) - 1.0
+        }
+
+        return TimeWeightedMetric(
+            totalReturn = totalReturn.toRate(),
+            annualizedReturn = annualizedReturn.toRate()
         )
     }
 
@@ -293,10 +357,24 @@ class PortfolioReturnsService(
                 (1.0 + realTotal).pow(365.0 / periodDayCount.toDouble()) - 1.0
             }
         }
+        val realTimeWeighted = timeWeightedReturn?.let { value ->
+            (1.0 + value.toDouble()) / inflation.multiplier.toDouble() - 1.0
+        }
+        val realAnnualizedTimeWeighted = annualizedTimeWeightedReturn?.let {
+            if (periodDayCount <= 0) {
+                realTimeWeighted
+            } else {
+                realTimeWeighted?.let { value ->
+                    (1.0 + value).pow(365.0 / periodDayCount.toDouble()) - 1.0
+                }
+            }
+        }
 
         return ReturnMetric(
             moneyWeightedReturn = realTotal.toRate(),
-            annualizedMoneyWeightedReturn = realAnnualized?.toRate()
+            annualizedMoneyWeightedReturn = realAnnualized?.toRate(),
+            timeWeightedReturn = realTimeWeighted?.toRate(),
+            annualizedTimeWeightedReturn = realAnnualizedTimeWeighted?.toRate()
         )
     }
 
@@ -364,6 +442,11 @@ class PortfolioReturnsService(
         val value: BigDecimal
     )
 
+    private data class TimeWeightedMetric(
+        val totalReturn: BigDecimal,
+        val annualizedReturn: BigDecimal?
+    )
+
     private enum class ReturnPeriodDefinition(
         val key: ReturnPeriodKey,
         val label: String
@@ -405,7 +488,9 @@ data class PortfolioReturnPeriod(
 
 data class ReturnMetric(
     val moneyWeightedReturn: BigDecimal,
-    val annualizedMoneyWeightedReturn: BigDecimal?
+    val annualizedMoneyWeightedReturn: BigDecimal?,
+    val timeWeightedReturn: BigDecimal?,
+    val annualizedTimeWeightedReturn: BigDecimal?
 )
 
 data class InflationWindow(

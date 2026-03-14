@@ -57,9 +57,13 @@ class PortfolioReturnsServiceTest {
         assertEquals(LocalDate.parse("2025-03-01"), oneYear.from)
         assertEquals(BigDecimal("0.1"), oneYear.nominalPln!!.moneyWeightedReturn)
         assertEquals(BigDecimal("0.1"), oneYear.nominalPln.annualizedMoneyWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYear.nominalPln.timeWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYear.nominalPln.annualizedTimeWeightedReturn)
         assertEquals(BigDecimal("0.1"), oneYear.nominalUsd!!.moneyWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYear.nominalUsd.timeWeightedReturn)
         assertNotNull(oneYear.realPln)
         assertEquals(BigDecimal("0.0476190476"), oneYear.realPln!!.moneyWeightedReturn)
+        assertEquals(BigDecimal("0.0476190476"), oneYear.realPln.timeWeightedReturn)
         assertEquals(BigDecimal("1.05"), oneYear.inflation!!.multiplier)
         assertEquals(BigDecimal("0.1"), max.nominalPln!!.moneyWeightedReturn)
     }
