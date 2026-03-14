@@ -35,9 +35,9 @@ The remaining backlog is ordered by practical value for day-to-day use.
 - make the smoke checks assert the real API contract, not stale assumptions
 - keep the demo fixture representative for multi-account `VWRA.L` plus multiple `EDO` lots
 
-### 2. SQLite deployment polish (next)
+### 2. SQLite deployment polish (in progress)
 
-- add Docker smoke coverage to CI
+- add Docker smoke coverage to CI (done)
 - document expected volumes, backup paths, and restart behavior more explicitly
 - keep startup validation strict around SQLite pathing and journaling assumptions
 - keep the default Docker profile zero-surprise for single-user self-hosting
