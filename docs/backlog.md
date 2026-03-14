@@ -2,141 +2,90 @@
 
 ## Current status
 
-The investor-facing backlog is complete.
+The original foundation backlog is effectively done.
 
 `portfolio` already has:
 
-- routed web UI
-- professional charting
-- dashboard, holdings, returns, charts, transactions, data and backups screens
-- generated frontend contracts
-- target allocation, drift and rebalance suggestions
-- benchmarks and TWR
-- import preview and deduplication
-- audit log
-- operational safeguards
-- backup retention visibility
-- read-model cache snapshots
+- routed web UI with dedicated screens for dashboard, holdings, returns, charts, transactions, data, and backups
+- `lightweight-charts` based financial visualizations
+- a more product-oriented dashboard instead of a single admin-style page
+- OpenAPI-generated frontend contracts instead of hand-maintained cross-stack types
+- target allocation, drift tracking, and contribution-first rebalance suggestions
+- benchmark comparisons and `TWR` next to `MWRR`
+- append-only audit events
+- operational safeguards around destructive imports and restores
+- backup retention and restore history visible in the UI
+- rebuildable read-model cache snapshots with diagnostics
 - extracted `portfolio-domain`
 - optional single-user password auth
+- SQLite-only runtime and Dockerized self-hosted deployment
 
 ## Current goal
 
-Finish hardening and smoke coverage for the `SQLite-only` runtime that now powers the self-hosted deployment.
+Keep the SQLite self-hosted path production-grade, then move to the first genuinely product-facing gap: convenient real-world data import.
 
-The ordering below is intentional:
+The remaining backlog is ordered by practical value for day-to-day use.
 
-1. codify the migration target first
-2. add native SQLite infrastructure
-3. move schema and repositories to SQLite-native implementations
-4. prove behavioral parity
-5. only then remove PostgreSQL
-6. finish smoke coverage and operational docs
+## Phase 1: Deployment hardening
 
-## Phase 1: Migration groundwork
+### 1. Docker smoke coverage and fixture hardening (done)
 
-### 1. SQLite-only target and invariants (done)
+- keep a dedicated end-to-end smoke script for the SQLite Docker stack
+- verify bootstrap, demo import, backups, restart durability, and cleanup
+- make the smoke checks assert the real API contract, not stale assumptions
+- keep the demo fixture representative for multi-account `VWRA.L` plus multiple `EDO` lots
 
-- update `README`, architecture notes and agent guidance to make SQLite the target runtime
-- document storage invariants:
-  - one app instance per database file
-  - local filesystem / Docker volume
-  - JSON backups remain first-class
-  - transaction data remains canonical
-- document SQLite encoding rules:
-  - `UUID` as `TEXT`
-  - `LocalDate` as `TEXT` `YYYY-MM-DD`
-  - `Instant` as UTC ISO-8601 `TEXT`
-  - enums as `TEXT`
-  - booleans as `INTEGER`
-  - JSON as `TEXT`
-  - financial values as canonical decimal `TEXT`
+### 2. SQLite deployment polish (next)
 
-### 2. SQLite runtime infrastructure (done)
+- add Docker smoke coverage to CI
+- document expected volumes, backup paths, and restart behavior more explicitly
+- keep startup validation strict around SQLite pathing and journaling assumptions
+- keep the default Docker profile zero-surprise for single-user self-hosting
 
-- add `PersistenceMode.SQLITE`
-- add `sqlite-jdbc`
-- support SQLite datasource creation and startup PRAGMAs
-- add startup validation for DB file paths and SQLite-specific settings
-- keep current defaults unchanged until parity is proven
+## Phase 2: Real-world data import
 
-## Phase 2: Native SQLite persistence
+### 3. Importer framework for real brokerage data (next)
 
-### 3. SQLite schema and migrations (done)
+- define a first-class importer pipeline rather than only generic CSV paste/import
+- separate:
+  - raw file ingestion
+  - broker-specific parsing
+  - normalized transaction preview
+  - duplicate/conflict detection
+  - final commit into the canonical write model
+- keep import idempotency and auditability explicit
 
-- add SQLite-specific Flyway migration directory
-- translate PostgreSQL schema to SQLite-native SQL
-- remove PostgreSQL-only constructs:
-  - `pgcrypto`
-  - `gen_random_uuid()`
-  - `timestamptz`
-  - `jsonb`
-- preserve:
-  - foreign keys
-  - unique constraints
-  - indexes
-  - data integrity checks
+### 4. Better import UX (next)
 
-### 4. SQLite repositories for the canonical write model (done)
+- add richer preview with per-row warnings and conflict summaries
+- let the user save reusable mapping presets for account/instrument matching
+- expose import audit history in the UI next to backups and other operational events
+- make duplicate handling and conflict resolution understandable before the import is applied
 
-- implement dedicated repositories for:
-  - accounts
-  - instruments
-  - transactions
-  - portfolio targets
-- avoid pretending one SQL dialect can cleanly serve both engines
-- generate IDs and serialize value objects in application code
+### 5. First broker-specific importers (later)
 
-### 5. SQLite repositories for operational data (done)
+- implement parsers for the real sources the portfolio is fed from
+- keep broker-specific code isolated from the canonical domain model
+- prefer deterministic CSV/statement imports over brittle scraping
 
-- implement dedicated repositories for:
-  - audit events
-  - read-model cache snapshots
-- make JSON handling explicit in application code
-- make multi-step writes transactional
+## Phase 3: Product polish
 
-## Phase 3: Confidence and switch-over
+### 6. Dashboard and chart refinement (next)
 
-### 6. Persistence parity tests (done)
+- tighten the information density and hierarchy on the dashboard
+- make the most important portfolio changes visible immediately after opening the app
+- keep charts fast and legible on both desktop and mobile
+- continue refining copy and section structure so the app reads like an investor product, not an internal tool
 
-- run the same fixtures through both persistence engines during migration
-- assert parity for:
-  - overview
-  - holdings
-  - history
-  - returns
-  - target allocation and rebalance
-  - imports and exports
-  - audit events
-  - read-model cache metadata
+### 7. Operational trust layer (next)
 
-### 7. Switch runtime defaults to SQLite (done)
-
-- make SQLite the default in config, docs, and Docker setup
-- store the database file on a named Docker volume
-- keep backup volume separate from the DB volume
-- expose persistence mode clearly through `meta` and `health`
-
-## Phase 4: PostgreSQL removal
-
-### 8. Remove PostgreSQL runtime support (done)
-
-- remove PostgreSQL datasource wiring
-- remove PostgreSQL migrations
-- remove PostgreSQL repositories
-- remove PostgreSQL driver and Flyway Postgres support
-- simplify local and CI workflows around SQLite
-
-### 9. Final hardening and smoke tests
-
-- test fresh bootstrap on empty SQLite DB
-- test import of demo portfolio
-- test CRUD, history rebuild, returns, targets and backups
-- test container restart durability
-- document backup and restore expectations for SQLite deployments
+- expand audit visibility for imports, restores, and destructive actions
+- keep backup and restore flows easy to inspect after the fact
+- add readiness-level checks where they materially improve self-hosted operation
+- keep destructive flows safe-by-default
 
 ## Notes
 
-- This migration is intentionally `SQLite-native`, not a shallow compatibility layer over PostgreSQL assumptions.
-- Logical JSON snapshot export/import remains the supported migration path between engines.
-- WAL is assumed available for planning purposes, but the implementation should still keep the rest of the SQLite setup production-grade.
+- `portfolio` intentionally kept the stronger domain model and data reconstruction approach instead of adopting `folio`'s simpler holding-centric accounting model.
+- The valuable ideas borrowed from `folio` were the web information architecture, product-oriented presentation, and better financial charting, not the storage or return-calculation shortcuts.
+- Deployment simplification beyond the current SQLite Docker path is intentionally out of scope for this backlog.
