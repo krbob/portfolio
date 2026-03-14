@@ -4,10 +4,9 @@ import java.nio.file.Path
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
+import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
-import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
+import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -50,11 +49,9 @@ class DataSourceFactoryTest {
     }
 
     private fun sqlitePersistenceConfig(databasePath: Path) = PersistenceConfig(
-        sqlite = SqliteConfig(
-            databasePath = databasePath.toString(),
-            journalMode = SqliteJournalMode.WAL,
-            synchronousMode = SqliteSynchronousMode.FULL,
-            busyTimeoutMs = 5_000
-        )
+        databasePath = databasePath.toString(),
+        journalMode = JournalMode.WAL,
+        synchronousMode = SynchronousMode.FULL,
+        busyTimeoutMs = 5_000
     )
 }

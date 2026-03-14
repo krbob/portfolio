@@ -9,11 +9,10 @@ portfolio:
   name: "Portfolio"
   stage: "test"
   persistence:
-    sqlite:
-      databasePath: "./build/test-data/portfolio.db"
-      journalMode: "WAL"
-      synchronousMode: "FULL"
-      busyTimeoutMs: 5000
+    databasePath: "./build/test-data/portfolio.db"
+    journalMode: "WAL"
+    synchronousMode: "FULL"
+    busyTimeoutMs: 5000
   backups:
     enabled: false
     directory: "./build/test-backups"

@@ -4,32 +4,33 @@ import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.propertyOrNull
 
 data class PersistenceConfig(
-    val sqlite: SqliteConfig
+    val databasePath: String,
+    val journalMode: JournalMode,
+    val synchronousMode: SynchronousMode,
+    val busyTimeoutMs: Int
 ) {
     companion object {
         fun from(config: ApplicationConfig): PersistenceConfig = PersistenceConfig(
-            sqlite = SqliteConfig(
-                databasePath = readSetting(
-                    "PORTFOLIO_SQLITE_DATABASE_PATH",
-                    config,
-                    "portfolio.persistence.sqlite.databasePath"
-                ) ?: "./data/portfolio.db",
-                journalMode = readSetting(
-                    "PORTFOLIO_SQLITE_JOURNAL_MODE",
-                    config,
-                    "portfolio.persistence.sqlite.journalMode"
-                )?.let(SqliteJournalMode::from) ?: SqliteJournalMode.WAL,
-                synchronousMode = readSetting(
-                    "PORTFOLIO_SQLITE_SYNCHRONOUS_MODE",
-                    config,
-                    "portfolio.persistence.sqlite.synchronousMode"
-                )?.let(SqliteSynchronousMode::from) ?: SqliteSynchronousMode.FULL,
-                busyTimeoutMs = readIntSetting(
-                    "PORTFOLIO_SQLITE_BUSY_TIMEOUT_MS",
-                    config,
-                    "portfolio.persistence.sqlite.busyTimeoutMs"
-                ) ?: 5_000
-            )
+            databasePath = readSetting(
+                "PORTFOLIO_DATABASE_PATH",
+                config,
+                "portfolio.persistence.databasePath"
+            ) ?: "./data/portfolio.db",
+            journalMode = readSetting(
+                "PORTFOLIO_JOURNAL_MODE",
+                config,
+                "portfolio.persistence.journalMode"
+            )?.let(JournalMode::from) ?: JournalMode.WAL,
+            synchronousMode = readSetting(
+                "PORTFOLIO_SYNCHRONOUS_MODE",
+                config,
+                "portfolio.persistence.synchronousMode"
+            )?.let(SynchronousMode::from) ?: SynchronousMode.FULL,
+            busyTimeoutMs = readIntSetting(
+                "PORTFOLIO_BUSY_TIMEOUT_MS",
+                config,
+                "portfolio.persistence.busyTimeoutMs"
+            ) ?: 5_000
         )
 
         private fun readSetting(
@@ -54,14 +55,7 @@ data class PersistenceConfig(
     }
 }
 
-data class SqliteConfig(
-    val databasePath: String,
-    val journalMode: SqliteJournalMode,
-    val synchronousMode: SqliteSynchronousMode,
-    val busyTimeoutMs: Int
-)
-
-enum class SqliteJournalMode {
+enum class JournalMode {
     DELETE,
     TRUNCATE,
     PERSIST,
@@ -70,7 +64,7 @@ enum class SqliteJournalMode {
     OFF;
 
     companion object {
-        fun from(value: String): SqliteJournalMode = try {
+        fun from(value: String): JournalMode = try {
             valueOf(value.trim().uppercase())
         } catch (_: IllegalArgumentException) {
             throw IllegalArgumentException("Unsupported SQLite journal mode: $value")
@@ -78,13 +72,13 @@ enum class SqliteJournalMode {
     }
 }
 
-enum class SqliteSynchronousMode {
+enum class SynchronousMode {
     OFF,
     NORMAL,
     FULL;
 
     companion object {
-        fun from(value: String): SqliteSynchronousMode = try {
+        fun from(value: String): SynchronousMode = try {
             valueOf(value.trim().uppercase())
         } catch (_: IllegalArgumentException) {
             throw IllegalArgumentException("Unsupported SQLite synchronous mode: $value")

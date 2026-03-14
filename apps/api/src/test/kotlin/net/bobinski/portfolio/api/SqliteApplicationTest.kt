@@ -26,10 +26,10 @@ class SqliteApplicationTest {
 
             environment {
                 config = MapApplicationConfig(
-                    "portfolio.persistence.sqlite.databasePath" to databasePath.toString(),
-                    "portfolio.persistence.sqlite.journalMode" to "WAL",
-                    "portfolio.persistence.sqlite.synchronousMode" to "FULL",
-                    "portfolio.persistence.sqlite.busyTimeoutMs" to "5000",
+                    "portfolio.persistence.databasePath" to databasePath.toString(),
+                    "portfolio.persistence.journalMode" to "WAL",
+                    "portfolio.persistence.synchronousMode" to "FULL",
+                    "portfolio.persistence.busyTimeoutMs" to "5000",
                     "portfolio.marketData.enabled" to "false",
                     "portfolio.backups.enabled" to "false",
                     "portfolio.backups.directory" to backupDirectory.toString()

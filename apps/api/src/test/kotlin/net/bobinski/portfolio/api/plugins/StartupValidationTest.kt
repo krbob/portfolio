@@ -3,10 +3,9 @@ package net.bobinski.portfolio.api.plugins
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
-import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
+import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ class StartupValidationTest {
         assertThrows(IllegalArgumentException::class.java) {
             validateStartupConfiguration(
                 persistenceConfig = validSqlitePersistenceConfig().copy(
-                    sqlite = validSqlitePersistenceConfig().sqlite.copy(databasePath = "")
+                    databasePath = ""
                 ),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
@@ -75,9 +74,9 @@ class StartupValidationTest {
         }
     }
 
-    private fun validPersistenceConfig() = PersistenceConfig(sqlite = defaultSqliteConfig())
+    private fun validPersistenceConfig() = defaultPersistenceConfig()
 
-    private fun validSqlitePersistenceConfig() = PersistenceConfig(sqlite = defaultSqliteConfig())
+    private fun validSqlitePersistenceConfig() = defaultPersistenceConfig()
 
     private fun validMarketDataConfig() = MarketDataConfig(
         enabled = true,
@@ -104,10 +103,10 @@ class StartupValidationTest {
         sessionMaxAgeDays = 30
     )
 
-    private fun defaultSqliteConfig() = SqliteConfig(
+    private fun defaultPersistenceConfig() = PersistenceConfig(
         databasePath = "./data/portfolio.db",
-        journalMode = SqliteJournalMode.WAL,
-        synchronousMode = SqliteSynchronousMode.FULL,
+        journalMode = JournalMode.WAL,
+        synchronousMode = SynchronousMode.FULL,
         busyTimeoutMs = 5_000
     )
 }

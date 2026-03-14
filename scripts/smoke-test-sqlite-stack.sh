@@ -8,7 +8,7 @@ PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 export COMPOSE_PROJECT_NAME=${PORTFOLIO_SMOKE_PROJECT_NAME:-portfolio-smoke}
 export PORTFOLIO_API_PORT=${PORTFOLIO_SMOKE_API_PORT:-28082}
 export PORTFOLIO_WEB_PORT=${PORTFOLIO_SMOKE_WEB_PORT:-24174}
-export PORTFOLIO_SQLITE_DATABASE_PATH=/srv/portfolio/data/smoke-test.db
+export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/smoke-test.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/smoke-test
 
 API_BASE_URL=${PORTFOLIO_API_BASE_URL:-http://127.0.0.1:${PORTFOLIO_API_PORT}}

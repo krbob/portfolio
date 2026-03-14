@@ -7,7 +7,7 @@ object DatabaseMigrator {
     fun migrate(dataSource: DataSource) {
         Flyway.configure()
             .dataSource(dataSource)
-            .locations("classpath:db/migration-sqlite")
+            .locations("classpath:db/migration")
             .load()
             .migrate()
     }

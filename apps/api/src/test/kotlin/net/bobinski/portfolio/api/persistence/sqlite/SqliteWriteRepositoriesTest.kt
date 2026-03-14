@@ -19,10 +19,9 @@ import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
+import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
-import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
+import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -102,12 +101,10 @@ class SqliteWriteRepositoriesTest {
     }
 
     private fun sqlitePersistenceConfig(databasePath: String) = PersistenceConfig(
-        sqlite = SqliteConfig(
-            databasePath = databasePath,
-            journalMode = SqliteJournalMode.WAL,
-            synchronousMode = SqliteSynchronousMode.FULL,
-            busyTimeoutMs = 5_000
-        )
+        databasePath = databasePath,
+        journalMode = JournalMode.WAL,
+        synchronousMode = SynchronousMode.FULL,
+        busyTimeoutMs = 5_000
     )
 
     private fun account() = Account(

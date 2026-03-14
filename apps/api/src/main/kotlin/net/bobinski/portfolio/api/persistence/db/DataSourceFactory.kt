@@ -10,18 +10,18 @@ import org.sqlite.SQLiteConfig
 
 object DataSourceFactory {
     fun create(config: PersistenceConfig): DataSource {
-        return HikariDataSource(createSqliteConfig(config))
+        return HikariDataSource(createDataSourceConfig(config))
     }
 
-    private fun createSqliteConfig(config: PersistenceConfig): HikariConfig {
-        val databasePath = Path.of(config.sqlite.databasePath).toAbsolutePath().normalize()
+    private fun createDataSourceConfig(config: PersistenceConfig): HikariConfig {
+        val databasePath = Path.of(config.databasePath).toAbsolutePath().normalize()
         databasePath.parent?.let(Files::createDirectories)
 
         val sqliteConfig = SQLiteConfig().apply {
             enforceForeignKeys(true)
-            setJournalMode(SQLiteConfig.JournalMode.valueOf(config.sqlite.journalMode.name))
-            setSynchronous(SQLiteConfig.SynchronousMode.valueOf(config.sqlite.synchronousMode.name))
-            setBusyTimeout(config.sqlite.busyTimeoutMs)
+            setJournalMode(SQLiteConfig.JournalMode.valueOf(config.journalMode.name))
+            setSynchronous(SQLiteConfig.SynchronousMode.valueOf(config.synchronousMode.name))
+            setBusyTimeout(config.busyTimeoutMs)
         }
 
         return HikariConfig().apply {

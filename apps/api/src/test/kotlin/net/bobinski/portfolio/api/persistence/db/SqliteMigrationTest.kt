@@ -3,10 +3,9 @@ package net.bobinski.portfolio.api.persistence.db
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
+import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteConfig
-import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
-import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
+import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -61,11 +60,9 @@ class SqliteMigrationTest {
         }
 
     private fun sqlitePersistenceConfig(databasePath: String) = PersistenceConfig(
-        sqlite = SqliteConfig(
-            databasePath = databasePath,
-            journalMode = SqliteJournalMode.WAL,
-            synchronousMode = SqliteSynchronousMode.FULL,
-            busyTimeoutMs = 5_000
-        )
+        databasePath = databasePath,
+        journalMode = JournalMode.WAL,
+        synchronousMode = SynchronousMode.FULL,
+        busyTimeoutMs = 5_000
     )
 }

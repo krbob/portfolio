@@ -9,11 +9,10 @@ portfolio:
   name: "Portfolio"
   stage: "dev"
   persistence:
-    sqlite:
-      databasePath: "./data/portfolio.db"
-      journalMode: "WAL"
-      synchronousMode: "FULL"
-      busyTimeoutMs: 5000
+    databasePath: "./data/portfolio.db"
+    journalMode: "WAL"
+    synchronousMode: "FULL"
+    busyTimeoutMs: 5000
   backups:
     enabled: false
     directory: "./data/backups"

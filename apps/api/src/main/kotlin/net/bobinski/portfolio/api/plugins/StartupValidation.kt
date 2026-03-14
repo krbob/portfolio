@@ -11,10 +11,10 @@ internal fun validateStartupConfiguration(
     backupConfig: BackupConfig,
     authConfig: AuthConfig
 ) {
-    require(persistenceConfig.sqlite.databasePath.isNotBlank()) {
+    require(persistenceConfig.databasePath.isNotBlank()) {
         "SQLite persistence requires a non-blank database path."
     }
-    require(persistenceConfig.sqlite.busyTimeoutMs > 0) {
+    require(persistenceConfig.busyTimeoutMs > 0) {
         "SQLite persistence requires a positive busy timeout."
     }
 
