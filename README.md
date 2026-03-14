@@ -47,6 +47,7 @@ portfolio/
 - server-side JSON backups can be created, listed, retained, and restored
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
+- transaction CSV import now supports preview, validation, name-based mapping, and duplicate skipping
 
 ## Local database
 

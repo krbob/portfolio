@@ -617,6 +617,108 @@ p {
   color: inherit;
 }
 
+.import-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #314238;
+  font-size: 0.95rem;
+}
+
+.import-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.import-preview {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.import-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.import-preview-card {
+  display: grid;
+  gap: 6px;
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.import-preview-card span {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58705f;
+}
+
+.import-preview-card strong {
+  font-size: 1.3rem;
+}
+
+.import-preview-list {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.import-preview-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(19, 32, 24, 0.04);
+}
+
+.import-preview-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.import-preview-row p {
+  color: #58705f;
+  font-size: 0.92rem;
+}
+
+.import-preview-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(19, 32, 24, 0.08);
+  color: #314238;
+}
+
+.import-preview-badge-importable {
+  background: rgba(29, 106, 57, 0.12);
+  color: #1d6a39;
+}
+
+.import-preview-badge-duplicate_existing,
+.import-preview-badge-duplicate_batch {
+  background: rgba(192, 123, 29, 0.12);
+  color: #9b6215;
+}
+
+.import-preview-badge-invalid {
+  background: rgba(155, 51, 36, 0.12);
+  color: #9b3324;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1243,6 +1345,7 @@ p {
   .backup-item-meta,
   .transfer-grid,
   .transfer-preview-grid,
+  .import-preview-grid,
   .transfer-layout,
   .journal-toolbar,
   .holding-item,
@@ -1257,6 +1360,10 @@ p {
   }
 
   .backup-item-header {
+    flex-direction: column;
+  }
+
+  .import-preview-row {
     flex-direction: column;
   }
 

@@ -28,6 +28,12 @@ export type ImportTransactionsPayload =
 export type ImportTransactionsResult =
   components['schemas']['ImportTransactionsResponse']
 
+export type ImportTransactionsPreviewResult =
+  components['schemas']['ImportTransactionsPreviewResponse']
+
+export type ImportTransactionsPreviewRow =
+  components['schemas']['ImportTransactionsPreviewRowResponse']
+
 export type PortfolioStateSnapshot =
   components['schemas']['PortfolioSnapshotResponse']
 
@@ -148,6 +154,13 @@ export async function deleteTransaction(id: string) {
 
 export function importTransactions(payload: ImportTransactionsPayload) {
   return requestJson<ImportTransactionsResult>('/api/v1/transactions/import', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function previewTransactionsImport(payload: ImportTransactionsPayload) {
+  return requestJson<ImportTransactionsPreviewResult>('/api/v1/transactions/import/preview', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

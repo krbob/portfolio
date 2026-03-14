@@ -72,7 +72,7 @@ The ordering below is intentional:
 
 ## Phase 3: Data Operations and Safety
 
-### 7. Better real-world import
+### 7. Better real-world import (done)
 
 - add import preview and validation beyond the current raw CSV flow
 - support conflict reporting and deduplication

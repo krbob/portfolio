@@ -13,6 +13,7 @@ import {
   listPortfolioBackups,
   listPortfolioTargets,
   listTransactions,
+  previewTransactionsImport,
   previewPortfolioStateImport,
   replacePortfolioTargets,
   restorePortfolioBackup,
@@ -22,6 +23,7 @@ import {
   type CreateInstrumentPayload,
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
+  type ImportTransactionsPreviewResult,
   type CreateTransactionPayload,
   type PortfolioBackupRecord,
   type PortfolioTarget,
@@ -118,6 +120,13 @@ export function useImportTransactions() {
     onSuccess: async () => {
       await invalidateTransactionRelatedQueries(queryClient)
     },
+  })
+}
+
+export function usePreviewTransactionsImport() {
+  return useMutation({
+    mutationFn: (payload: ImportTransactionsPayload): Promise<ImportTransactionsPreviewResult> =>
+      previewTransactionsImport(payload),
   })
 }
 

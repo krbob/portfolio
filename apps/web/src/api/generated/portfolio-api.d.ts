@@ -827,6 +827,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/transactions/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ImportTransactionsRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/transactions/{id}": {
         parameters: {
             query?: never;
@@ -1303,12 +1341,28 @@ export interface components {
         };
         /** net.bobinski.portfolio.api.route.ImportTransactionsRequest */
         ImportTransactionsRequest: {
+            skipDuplicates?: boolean;
             rows: components["schemas"]["CreateTransactionRequest"][];
         };
         /** net.bobinski.portfolio.api.route.ImportTransactionsResponse */
         ImportTransactionsResponse: {
             createdCount: number;
+            skippedDuplicateCount: number;
             transactions: components["schemas"]["TransactionResponse"][];
+        };
+        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewRowResponse */
+        ImportTransactionsPreviewRowResponse: {
+            rowNumber: number;
+            status: string;
+            message: string;
+        };
+        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewResponse */
+        ImportTransactionsPreviewResponse: {
+            totalRowCount: number;
+            importableRowCount: number;
+            duplicateRowCount: number;
+            invalidRowCount: number;
+            rows: components["schemas"]["ImportTransactionsPreviewRowResponse"][];
         };
     };
     responses: never;

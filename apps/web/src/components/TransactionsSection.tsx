@@ -6,10 +6,16 @@ import {
   useDeleteTransaction,
   useImportTransactions,
   useInstruments,
+  usePreviewTransactionsImport,
   useTransactions,
   useUpdateTransaction,
 } from '../hooks/use-write-model'
-import type { CreateTransactionPayload, Transaction } from '../api/write-model'
+import type {
+  CreateTransactionPayload,
+  ImportTransactionsPayload,
+  ImportTransactionsPreviewResult,
+  Transaction,
+} from '../api/write-model'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -47,11 +53,14 @@ export function TransactionsSection() {
   const updateTransactionMutation = useUpdateTransaction()
   const deleteTransactionMutation = useDeleteTransaction()
   const importTransactionsMutation = useImportTransactions()
+  const previewTransactionsImportMutation = usePreviewTransactionsImport()
   const [form, setForm] = useState(initialForm)
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
   const [importCsv, setImportCsv] = useState('')
+  const [importSkipDuplicates, setImportSkipDuplicates] = useState(true)
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [importPreview, setImportPreview] = useState<ImportTransactionsPreviewResult | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -161,6 +170,17 @@ export function TransactionsSection() {
     }
   }, [currentPage, totalPages])
 
+  useEffect(() => {
+    setImportFeedback(null)
+    setImportError(null)
+    setImportPreview(null)
+  }, [importCsv, importSkipDuplicates, accountOptions, instrumentOptions])
+
+  const importBlockedByPreview = Boolean(
+    importPreview &&
+      (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),
+  )
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const payload = {
@@ -239,23 +259,48 @@ export function TransactionsSection() {
     setImportError(null)
 
     try {
-      const rows = parseImportRows({
+      const payload = buildImportPayload({
         csv: importCsv,
+        skipDuplicates: importSkipDuplicates,
         accountOptions,
         instrumentOptions,
       })
 
       importTransactionsMutation.mutate(
-        { rows },
+        payload,
         {
           onSuccess: (result) => {
-            setImportFeedback(`Imported ${result.createdCount} transactions.`)
+            setImportFeedback(buildImportResultMessage(result.createdCount, result.skippedDuplicateCount))
             setImportCsv('')
+            setImportPreview(null)
           },
         },
       )
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Import failed.')
+    }
+  }
+
+  function handleImportPreview() {
+    setImportFeedback(null)
+    setImportError(null)
+
+    try {
+      const payload = buildImportPayload({
+        csv: importCsv,
+        skipDuplicates: importSkipDuplicates,
+        accountOptions,
+        instrumentOptions,
+      })
+
+      previewTransactionsImportMutation.mutate(payload, {
+        onSuccess: (result) => {
+          setImportPreview(result)
+        },
+      })
+    } catch (error) {
+      setImportPreview(null)
+      setImportError(error instanceof Error ? error.message : 'Preview failed.')
     }
   }
 
@@ -451,7 +496,7 @@ export function TransactionsSection() {
           <form className="import-card" onSubmit={handleImportSubmit}>
             <div className="section-header">
               <p className="eyebrow">Batch import</p>
-              <h4>Paste canonical CSV</h4>
+              <h4>Preview and import canonical CSV</h4>
               <p>
                 Headers: <code>account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes</code>.
                 Account matches by name or id. Instrument matches by name, symbol or id.
@@ -465,15 +510,87 @@ export function TransactionsSection() {
               placeholder={`account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes\nPrimary,DEPOSIT,2026-03-01,2026-03-01,,,,1000.00,0,0,PLN,,Initial funding`}
             />
 
+            <label className="import-option">
+              <input
+                type="checkbox"
+                checked={importSkipDuplicates}
+                onChange={(event) => setImportSkipDuplicates(event.target.checked)}
+              />
+              <span>Skip duplicate rows during import</span>
+            </label>
+
             <div className="form-actions">
-              <button type="submit" disabled={importTransactionsMutation.isPending || importCsv.trim() === ''}>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={handleImportPreview}
+                disabled={previewTransactionsImportMutation.isPending || importCsv.trim() === ''}
+              >
+                {previewTransactionsImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+              </button>
+              <button
+                type="submit"
+                disabled={
+                  importTransactionsMutation.isPending ||
+                  previewTransactionsImportMutation.isPending ||
+                  importCsv.trim() === '' ||
+                  importBlockedByPreview
+                }
+              >
                 {importTransactionsMutation.isPending ? 'Importing...' : 'Import CSV'}
               </button>
             </div>
 
+            {importPreview && (
+              <div className="import-preview">
+                <div className="import-preview-grid">
+                  <article className="import-preview-card">
+                    <span>Total rows</span>
+                    <strong>{importPreview.totalRowCount}</strong>
+                  </article>
+                  <article className="import-preview-card">
+                    <span>Importable</span>
+                    <strong>{importPreview.importableRowCount}</strong>
+                  </article>
+                  <article className="import-preview-card">
+                    <span>Duplicates</span>
+                    <strong>{importPreview.duplicateRowCount}</strong>
+                  </article>
+                  <article className="import-preview-card">
+                    <span>Invalid</span>
+                    <strong>{importPreview.invalidRowCount}</strong>
+                  </article>
+                </div>
+
+                <p className="muted-copy">
+                  {importSkipDuplicates
+                    ? 'Duplicate rows will be skipped automatically if you continue with the import.'
+                    : 'Duplicate rows are currently blocking the import. Enable duplicate skipping or fix the batch.'}
+                </p>
+
+                <div className="import-preview-list">
+                  {importPreview.rows.map((row) => (
+                    <article className="import-preview-row" key={`${row.rowNumber}-${row.status}`}>
+                      <div>
+                        <strong>Row {row.rowNumber}</strong>
+                        <p>{row.message}</p>
+                      </div>
+                      <span className={`import-preview-badge import-preview-badge-${row.status.toLowerCase()}`}>
+                        {formatImportRowStatus(row.status)}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {importFeedback && <p className="muted-copy">{importFeedback}</p>}
-            {(importError || importTransactionsMutation.error) && (
-              <p className="form-error">{importError ?? importTransactionsMutation.error?.message}</p>
+            {(importError || previewTransactionsImportMutation.error || importTransactionsMutation.error) && (
+              <p className="form-error">
+                {importError ??
+                  previewTransactionsImportMutation.error?.message ??
+                  importTransactionsMutation.error?.message}
+              </p>
             )}
           </form>
 
@@ -666,6 +783,50 @@ export function TransactionsSection() {
       </div>
     </SectionCard>
   )
+}
+
+function buildImportPayload({
+  csv,
+  skipDuplicates,
+  accountOptions,
+  instrumentOptions,
+}: {
+  csv: string
+  skipDuplicates: boolean
+  accountOptions: Array<{ id: string; name: string }>
+  instrumentOptions: Array<{ id: string; name: string; symbol?: string | null }>
+}): ImportTransactionsPayload {
+  return {
+    skipDuplicates,
+    rows: parseImportRows({
+      csv,
+      accountOptions,
+      instrumentOptions,
+    }),
+  }
+}
+
+function buildImportResultMessage(createdCount: number, skippedDuplicateCount: number) {
+  if (skippedDuplicateCount === 0) {
+    return `Imported ${createdCount} transactions.`
+  }
+
+  return `Imported ${createdCount} transactions and skipped ${skippedDuplicateCount} duplicates.`
+}
+
+function formatImportRowStatus(status: string) {
+  switch (status) {
+    case 'IMPORTABLE':
+      return 'Importable'
+    case 'DUPLICATE_EXISTING':
+      return 'Existing duplicate'
+    case 'DUPLICATE_BATCH':
+      return 'Batch duplicate'
+    case 'INVALID':
+      return 'Invalid'
+    default:
+      return status
+  }
 }
 
 function parseImportRows({
