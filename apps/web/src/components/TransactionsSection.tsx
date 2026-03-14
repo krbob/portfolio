@@ -3,21 +3,27 @@ import { SectionCard } from './SectionCard'
 import {
   useAccounts,
   useCreateTransaction,
+  useCreateTransactionImportProfile,
   useDeleteTransaction,
-  useImportTransactions,
+  useDeleteTransactionImportProfile,
+  useImportTransactionsCsv,
   useInstruments,
-  usePreviewTransactionsImport,
+  usePreviewTransactionsCsvImport,
+  useTransactionImportProfiles,
   useTransactions,
   useUpdateTransaction,
+  useUpdateTransactionImportProfile,
 } from '../hooks/use-write-model'
 import type {
-  CreateTransactionPayload,
-  ImportTransactionsPayload,
   ImportTransactionsPreviewResult,
+  SaveTransactionImportProfilePayload,
   Transaction,
+  TransactionImportProfile,
 } from '../api/write-model'
 
 const today = new Date().toISOString().slice(0, 10)
+const transactionTypes = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'] as const
+const NEW_IMPORT_PROFILE_ID = '__new_import_profile__'
 
 const initialForm = {
   accountId: '',
@@ -45,28 +51,130 @@ const initialJournalFilters = {
   pageSize: '10',
 }
 
+type ImportMappingField =
+  | 'account'
+  | 'type'
+  | 'tradeDate'
+  | 'settlementDate'
+  | 'instrument'
+  | 'quantity'
+  | 'unitPrice'
+  | 'grossAmount'
+  | 'feeAmount'
+  | 'taxAmount'
+  | 'currency'
+  | 'fxRateToPln'
+  | 'notes'
+
+interface ImportProfileFormState {
+  name: string
+  description: string
+  delimiter: string
+  dateFormat: string
+  decimalSeparator: string
+  skipDuplicatesByDefault: boolean
+  headerMappings: Record<ImportMappingField, string>
+  defaults: {
+    accountId: string
+    currency: string
+  }
+}
+
+interface JournalRow {
+  transaction: Transaction
+  accountName: string
+  instrumentName: string | null
+  instrumentSymbol: string | null
+}
+
+const importMappingFields: Array<{
+  key: ImportMappingField
+  label: string
+  placeholder: string
+  required?: boolean
+}> = [
+  { key: 'account', label: 'Account column', placeholder: 'account' },
+  { key: 'type', label: 'Type column', placeholder: 'type', required: true },
+  { key: 'tradeDate', label: 'Trade date column', placeholder: 'tradeDate', required: true },
+  { key: 'settlementDate', label: 'Settlement date column', placeholder: 'settlementDate' },
+  { key: 'instrument', label: 'Instrument column', placeholder: 'instrument' },
+  { key: 'quantity', label: 'Quantity column', placeholder: 'quantity' },
+  { key: 'unitPrice', label: 'Unit price column', placeholder: 'unitPrice' },
+  { key: 'grossAmount', label: 'Gross amount column', placeholder: 'grossAmount', required: true },
+  { key: 'feeAmount', label: 'Fee column', placeholder: 'feeAmount' },
+  { key: 'taxAmount', label: 'Tax column', placeholder: 'taxAmount' },
+  { key: 'currency', label: 'Currency column', placeholder: 'currency' },
+  { key: 'fxRateToPln', label: 'FX to PLN column', placeholder: 'fxRateToPln' },
+  { key: 'notes', label: 'Notes column', placeholder: 'notes' },
+]
+
 export function TransactionsSection() {
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
+  const transactionImportProfilesQuery = useTransactionImportProfiles()
   const createTransactionMutation = useCreateTransaction()
   const updateTransactionMutation = useUpdateTransaction()
   const deleteTransactionMutation = useDeleteTransaction()
-  const importTransactionsMutation = useImportTransactions()
-  const previewTransactionsImportMutation = usePreviewTransactionsImport()
+  const createImportProfileMutation = useCreateTransactionImportProfile()
+  const updateImportProfileMutation = useUpdateTransactionImportProfile()
+  const deleteImportProfileMutation = useDeleteTransactionImportProfile()
+  const previewTransactionsCsvImportMutation = usePreviewTransactionsCsvImport()
+  const importTransactionsCsvMutation = useImportTransactionsCsv()
   const [form, setForm] = useState(initialForm)
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
+  const [selectedImportProfileId, setSelectedImportProfileId] = useState<string | null>(null)
+  const [pendingSavedImportProfile, setPendingSavedImportProfile] = useState<TransactionImportProfile | null>(null)
+  const [importProfileForm, setImportProfileForm] = useState<ImportProfileFormState>(createInitialImportProfileForm)
   const [importCsv, setImportCsv] = useState('')
   const [importSkipDuplicates, setImportSkipDuplicates] = useState(true)
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importPreview, setImportPreview] = useState<ImportTransactionsPreviewResult | null>(null)
+  const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
+  const importProfiles = transactionImportProfilesQuery.data ?? []
+
+  const selectedImportProfile = useMemo(
+    () =>
+      selectedImportProfileId && selectedImportProfileId !== NEW_IMPORT_PROFILE_ID
+        ? importProfiles.find((profile) => profile.id === selectedImportProfileId) ??
+          (pendingSavedImportProfile?.id === selectedImportProfileId ? pendingSavedImportProfile : null)
+        : null,
+    [importProfiles, pendingSavedImportProfile, selectedImportProfileId],
+  )
+  const selectedImportProfileSyncKey = selectedImportProfile
+    ? `${selectedImportProfile.id}:${selectedImportProfile.updatedAt}`
+    : selectedImportProfileId
+  const importProfilePayload = useMemo(
+    () => buildImportProfilePayload(importProfileForm),
+    [importProfileForm],
+  )
+  const selectedImportProfilePayload = useMemo(
+    () =>
+      selectedImportProfile
+        ? buildImportProfilePayload(importProfileToForm(selectedImportProfile))
+        : null,
+    [selectedImportProfile],
+  )
+  const importProfileDirty = useMemo(() => {
+    if (selectedImportProfileId === NEW_IMPORT_PROFILE_ID) {
+      return serializeImportProfilePayload(importProfilePayload) !== serializeImportProfilePayload(buildImportProfilePayload(createInitialImportProfileForm()))
+    }
+    if (selectedImportProfilePayload == null) {
+      return false
+    }
+    return serializeImportProfilePayload(importProfilePayload) !== serializeImportProfilePayload(selectedImportProfilePayload)
+  }, [importProfilePayload, selectedImportProfileId, selectedImportProfilePayload])
+  const importProfileTemplate = useMemo(
+    () => buildImportProfileTemplate(importProfileForm),
+    [importProfileForm],
+  )
 
   const canSubmit = useMemo(() => {
     return form.accountId !== '' && (!requiresInstrument || form.instrumentId !== '')
@@ -81,7 +189,7 @@ export function TransactionsSection() {
     [instrumentOptions],
   )
 
-  const journalRows = useMemo(() => {
+  const journalRows = useMemo<JournalRow[]>(() => {
     return (transactionsQuery.data ?? []).map((transaction) => {
       const instrument = transaction.instrumentId ? instrumentById.get(transaction.instrumentId) ?? null : null
       return {
@@ -152,6 +260,52 @@ export function TransactionsSection() {
     return sortedRows.slice(start, start + pageSize)
   }, [currentPage, pageSize, sortedRows])
 
+  const importProfileBlockingReason =
+    selectedImportProfileId == null
+      ? 'Loading saved import profiles.'
+      : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
+        ? 'Save a CSV import profile before previewing or importing.'
+        : selectedImportProfile == null
+          ? 'Selected CSV import profile is no longer available.'
+          : importProfileDirty
+            ? 'Save profile changes before previewing or importing.'
+            : null
+
+  const importBlockedByPreview = Boolean(
+    importPreview &&
+      (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),
+  )
+
+  useEffect(() => {
+    if (selectedImportProfileId === null) {
+      setSelectedImportProfileId(importProfiles[0]?.id ?? NEW_IMPORT_PROFILE_ID)
+    }
+  }, [importProfiles, selectedImportProfileId])
+
+  useEffect(() => {
+    if (
+      pendingSavedImportProfile &&
+      (selectedImportProfileId !== pendingSavedImportProfile.id ||
+        importProfiles.some((profile) => profile.id === pendingSavedImportProfile.id))
+    ) {
+      setPendingSavedImportProfile(null)
+    }
+  }, [importProfiles, pendingSavedImportProfile, selectedImportProfileId])
+
+  useEffect(() => {
+    if (selectedImportProfileId === NEW_IMPORT_PROFILE_ID) {
+      const nextForm = createInitialImportProfileForm()
+      setImportProfileForm(nextForm)
+      setImportSkipDuplicates(nextForm.skipDuplicatesByDefault)
+      return
+    }
+    if (selectedImportProfile) {
+      const nextForm = importProfileToForm(selectedImportProfile)
+      setImportProfileForm(nextForm)
+      setImportSkipDuplicates(nextForm.skipDuplicatesByDefault)
+    }
+  }, [selectedImportProfileSyncKey])
+
   useEffect(() => {
     setCurrentPage(1)
   }, [
@@ -174,12 +328,7 @@ export function TransactionsSection() {
     setImportFeedback(null)
     setImportError(null)
     setImportPreview(null)
-  }, [importCsv, importSkipDuplicates, accountOptions, instrumentOptions])
-
-  const importBlockedByPreview = Boolean(
-    importPreview &&
-      (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),
-  )
+  }, [importCsv, importSkipDuplicates, selectedImportProfileId, importProfileDirty])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -253,55 +402,152 @@ export function TransactionsSection() {
     }))
   }
 
-  function handleImportSubmit(event: FormEvent<HTMLFormElement>) {
+  function updateImportProfileField(name: keyof Omit<ImportProfileFormState, 'headerMappings' | 'defaults'>, value: string | boolean) {
+    setImportProfileFeedback(null)
+    setImportProfileForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  function updateImportProfileMapping(name: ImportMappingField, value: string) {
+    setImportProfileFeedback(null)
+    setImportProfileForm((current) => ({
+      ...current,
+      headerMappings: {
+        ...current.headerMappings,
+        [name]: value,
+      },
+    }))
+  }
+
+  function updateImportProfileDefault(name: keyof ImportProfileFormState['defaults'], value: string) {
+    setImportProfileFeedback(null)
+    setImportProfileForm((current) => ({
+      ...current,
+      defaults: {
+        ...current.defaults,
+        [name]: value,
+      },
+    }))
+  }
+
+  function handleCreateNewImportProfile() {
+    setImportProfileFeedback(null)
+    setPendingSavedImportProfile(null)
+    setSelectedImportProfileId(NEW_IMPORT_PROFILE_ID)
+  }
+
+  function handleImportProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setImportFeedback(null)
-    setImportError(null)
+    const payload = buildImportProfilePayload(importProfileForm)
+    setImportProfileFeedback(null)
 
-    try {
-      const payload = buildImportPayload({
-        csv: importCsv,
-        skipDuplicates: importSkipDuplicates,
-        accountOptions,
-        instrumentOptions,
-      })
-
-      importTransactionsMutation.mutate(
-        payload,
+    if (selectedImportProfileId && selectedImportProfileId !== NEW_IMPORT_PROFILE_ID) {
+      updateImportProfileMutation.mutate(
         {
-          onSuccess: (result) => {
-            setImportFeedback(buildImportResultMessage(result.createdCount, result.skippedDuplicateCount))
-            setImportCsv('')
-            setImportPreview(null)
+          id: selectedImportProfileId,
+          ...payload,
+        },
+        {
+          onSuccess: (profile) => {
+            setPendingSavedImportProfile(profile)
+            setImportProfileFeedback(`Updated import profile "${profile.name}".`)
+            setSelectedImportProfileId(profile.id)
+            setImportProfileForm(importProfileToForm(profile))
+            setImportSkipDuplicates(profile.skipDuplicatesByDefault)
           },
         },
       )
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Import failed.')
+      return
     }
+
+    createImportProfileMutation.mutate(payload, {
+      onSuccess: (profile) => {
+        setPendingSavedImportProfile(profile)
+        setImportProfileFeedback(`Created import profile "${profile.name}".`)
+        setSelectedImportProfileId(profile.id)
+        setImportProfileForm(importProfileToForm(profile))
+        setImportSkipDuplicates(profile.skipDuplicatesByDefault)
+      },
+    })
+  }
+
+  function handleDeleteImportProfile() {
+    if (!selectedImportProfile) {
+      return
+    }
+    if (!window.confirm(`Delete import profile "${selectedImportProfile.name}"?`)) {
+      return
+    }
+
+    const nextProfileId =
+      importProfiles.find((profile) => profile.id !== selectedImportProfile.id)?.id ?? NEW_IMPORT_PROFILE_ID
+
+    deleteImportProfileMutation.mutate(selectedImportProfile.id, {
+      onSuccess: () => {
+        setPendingSavedImportProfile(null)
+        setImportProfileFeedback(`Deleted import profile "${selectedImportProfile.name}".`)
+        setSelectedImportProfileId(nextProfileId)
+      },
+    })
   }
 
   function handleImportPreview() {
     setImportFeedback(null)
     setImportError(null)
 
-    try {
-      const payload = buildImportPayload({
+    if (selectedImportProfile == null) {
+      setImportPreview(null)
+      setImportError(importProfileBlockingReason ?? 'Save a CSV import profile before previewing.')
+      return
+    }
+
+    previewTransactionsCsvImportMutation.mutate(
+      {
+        profileId: selectedImportProfile.id,
         csv: importCsv,
         skipDuplicates: importSkipDuplicates,
-        accountOptions,
-        instrumentOptions,
-      })
-
-      previewTransactionsImportMutation.mutate(payload, {
+      },
+      {
         onSuccess: (result) => {
           setImportPreview(result)
         },
-      })
-    } catch (error) {
-      setImportPreview(null)
-      setImportError(error instanceof Error ? error.message : 'Preview failed.')
+        onError: (error) => {
+          setImportPreview(null)
+          setImportError(error.message)
+        },
+      },
+    )
+  }
+
+  function handleImportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setImportFeedback(null)
+    setImportError(null)
+
+    if (selectedImportProfile == null) {
+      setImportError(importProfileBlockingReason ?? 'Save a CSV import profile before importing.')
+      return
     }
+
+    importTransactionsCsvMutation.mutate(
+      {
+        profileId: selectedImportProfile.id,
+        csv: importCsv,
+        skipDuplicates: importSkipDuplicates,
+      },
+      {
+        onSuccess: (result) => {
+          setImportFeedback(buildImportResultMessage(result.createdCount, result.skippedDuplicateCount))
+          setImportCsv('')
+          setImportPreview(null)
+        },
+        onError: (error) => {
+          setImportError(error.message)
+        },
+      },
+    )
   }
 
   return (
@@ -334,14 +580,11 @@ export function TransactionsSection() {
               value={form.type}
               onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
             >
-              <option value="DEPOSIT">DEPOSIT</option>
-              <option value="WITHDRAWAL">WITHDRAWAL</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-              <option value="FEE">FEE</option>
-              <option value="TAX">TAX</option>
-              <option value="INTEREST">INTEREST</option>
-              <option value="CORRECTION">CORRECTION</option>
+              {transactionTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -493,21 +736,226 @@ export function TransactionsSection() {
         </form>
 
         <div className="entity-list">
+          <section className="import-card">
+            <div className="section-header">
+              <p className="eyebrow">Import profiles</p>
+              <h4>Saved CSV parsing rules</h4>
+              <p>
+                Keep one profile per broker or export format. Preview and import will always use the last saved version
+                of the selected profile.
+              </p>
+            </div>
+
+            <div className="import-profile-toolbar">
+              <label className="journal-filter import-profile-select">
+                <span>Saved profile</span>
+                <select
+                  value={selectedImportProfileId ?? ''}
+                  onChange={(event) => {
+                    setImportProfileFeedback(null)
+                    setSelectedImportProfileId(event.target.value)
+                  }}
+                >
+                  {selectedImportProfileId === null && <option value="">Loading profiles...</option>}
+                  {importProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.name}
+                    </option>
+                  ))}
+                  <option value={NEW_IMPORT_PROFILE_ID}>New profile</option>
+                </select>
+              </label>
+
+              <div className="form-actions">
+                <button type="button" className="button-secondary" onClick={handleCreateNewImportProfile}>
+                  New profile
+                </button>
+                <button
+                  type="button"
+                  className="button-danger"
+                  onClick={handleDeleteImportProfile}
+                  disabled={selectedImportProfile == null || deleteImportProfileMutation.isPending}
+                >
+                  {deleteImportProfileMutation.isPending ? 'Deleting...' : 'Delete profile'}
+                </button>
+              </div>
+            </div>
+
+            <form className="entity-form import-profile-form" onSubmit={handleImportProfileSubmit}>
+              <label>
+                <span>Name</span>
+                <input
+                  value={importProfileForm.name}
+                  onChange={(event) => updateImportProfileField('name', event.target.value)}
+                  placeholder="IBKR activity export"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Description</span>
+                <input
+                  value={importProfileForm.description}
+                  onChange={(event) => updateImportProfileField('description', event.target.value)}
+                  placeholder="Semicolon export with European decimals"
+                />
+              </label>
+
+              <label>
+                <span>Delimiter</span>
+                <select
+                  value={importProfileForm.delimiter}
+                  onChange={(event) => updateImportProfileField('delimiter', event.target.value)}
+                >
+                  <option value="COMMA">Comma</option>
+                  <option value="SEMICOLON">Semicolon</option>
+                  <option value="TAB">Tab</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Date format</span>
+                <select
+                  value={importProfileForm.dateFormat}
+                  onChange={(event) => updateImportProfileField('dateFormat', event.target.value)}
+                >
+                  <option value="ISO_LOCAL_DATE">YYYY-MM-DD</option>
+                  <option value="DMY_DOTS">DD.MM.YYYY</option>
+                  <option value="DMY_SLASH">DD/MM/YYYY</option>
+                  <option value="MDY_SLASH">MM/DD/YYYY</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Decimal separator</span>
+                <select
+                  value={importProfileForm.decimalSeparator}
+                  onChange={(event) => updateImportProfileField('decimalSeparator', event.target.value)}
+                >
+                  <option value="DOT">Dot</option>
+                  <option value="COMMA">Comma</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Default account</span>
+                <select
+                  value={importProfileForm.defaults.accountId}
+                  onChange={(event) => updateImportProfileDefault('accountId', event.target.value)}
+                >
+                  <option value="">CSV provides account column</option>
+                  {accountOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Default currency</span>
+                <input
+                  value={importProfileForm.defaults.currency}
+                  onChange={(event) => updateImportProfileDefault('currency', event.target.value.toUpperCase())}
+                  placeholder="USD"
+                  maxLength={3}
+                />
+              </label>
+
+              <label className="import-checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={importProfileForm.skipDuplicatesByDefault}
+                  onChange={(event) => updateImportProfileField('skipDuplicatesByDefault', event.target.checked)}
+                />
+                <div>
+                  <span>Skip duplicates by default</span>
+                  <p className="muted-copy">Used to prefill the import checkbox for this profile.</p>
+                </div>
+              </label>
+
+              <div className="form-span-full import-mapping-panel">
+                <div className="section-header">
+                  <p className="eyebrow">Header mappings</p>
+                  <h5>Match CSV columns to canonical transaction fields</h5>
+                </div>
+                <div className="import-mapping-grid">
+                  {importMappingFields.map((field) => (
+                    <label key={field.key}>
+                      <span>{field.label}</span>
+                      <input
+                        value={importProfileForm.headerMappings[field.key]}
+                        onChange={(event) => updateImportProfileMapping(field.key, event.target.value)}
+                        placeholder={field.placeholder}
+                      />
+                      {field.required && <small className="field-note">Required by the backend parser.</small>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-span-full import-template-preview">
+                <div className="section-header">
+                  <p className="eyebrow">Template preview</p>
+                  <p>Sample header and one example row generated from the current profile form.</p>
+                </div>
+                <pre>{importProfileTemplate}</pre>
+              </div>
+
+              <div className="form-actions form-span-full">
+                <button
+                  type="submit"
+                  disabled={
+                    importProfileForm.name.trim() === '' ||
+                    createImportProfileMutation.isPending ||
+                    updateImportProfileMutation.isPending
+                  }
+                >
+                  {createImportProfileMutation.isPending || updateImportProfileMutation.isPending
+                    ? 'Saving...'
+                    : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
+                      ? 'Create profile'
+                      : 'Save profile'}
+                </button>
+              </div>
+
+              {importProfileFeedback && <p className="muted-copy form-span-full">{importProfileFeedback}</p>}
+              {(transactionImportProfilesQuery.error ||
+                createImportProfileMutation.error ||
+                updateImportProfileMutation.error ||
+                deleteImportProfileMutation.error) && (
+                <p className="form-error form-span-full">
+                  {transactionImportProfilesQuery.error?.message ??
+                    createImportProfileMutation.error?.message ??
+                    updateImportProfileMutation.error?.message ??
+                    deleteImportProfileMutation.error?.message}
+                </p>
+              )}
+            </form>
+          </section>
+
           <form className="import-card" onSubmit={handleImportSubmit}>
             <div className="section-header">
               <p className="eyebrow">Batch import</p>
-              <h4>Preview and import canonical CSV</h4>
+              <h4>Preview and import broker CSV</h4>
               <p>
-                Headers: <code>account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes</code>.
-                Account matches by name or id. Instrument matches by name, symbol or id.
+                Paste the raw broker export and let the server parse it with the selected profile. Account names and
+                instruments are resolved on the backend, so the preview matches the final import.
               </p>
+            </div>
+
+            <div className="import-card-summary">
+              <span className="list-badge">
+                {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
+              </span>
+              {importProfileBlockingReason && <p className="muted-copy">{importProfileBlockingReason}</p>}
             </div>
 
             <textarea
               className="import-textarea"
               value={importCsv}
               onChange={(event) => setImportCsv(event.target.value)}
-              placeholder={`account,type,tradeDate,settlementDate,instrument,quantity,unitPrice,grossAmount,feeAmount,taxAmount,currency,fxRateToPln,notes\nPrimary,DEPOSIT,2026-03-01,2026-03-01,,,,1000.00,0,0,PLN,,Initial funding`}
+              placeholder={importProfileTemplate}
             />
 
             <label className="import-option">
@@ -515,6 +963,7 @@ export function TransactionsSection() {
                 type="checkbox"
                 checked={importSkipDuplicates}
                 onChange={(event) => setImportSkipDuplicates(event.target.checked)}
+                disabled={selectedImportProfile == null}
               />
               <span>Skip duplicate rows during import</span>
             </label>
@@ -524,20 +973,25 @@ export function TransactionsSection() {
                 type="button"
                 className="button-secondary"
                 onClick={handleImportPreview}
-                disabled={previewTransactionsImportMutation.isPending || importCsv.trim() === ''}
+                disabled={
+                  previewTransactionsCsvImportMutation.isPending ||
+                  importCsv.trim() === '' ||
+                  importProfileBlockingReason !== null
+                }
               >
-                {previewTransactionsImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
               </button>
               <button
                 type="submit"
                 disabled={
-                  importTransactionsMutation.isPending ||
-                  previewTransactionsImportMutation.isPending ||
+                  importTransactionsCsvMutation.isPending ||
+                  previewTransactionsCsvImportMutation.isPending ||
                   importCsv.trim() === '' ||
-                  importBlockedByPreview
+                  importBlockedByPreview ||
+                  importProfileBlockingReason !== null
                 }
               >
-                {importTransactionsMutation.isPending ? 'Importing...' : 'Import CSV'}
+                {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
               </button>
             </div>
 
@@ -585,11 +1039,11 @@ export function TransactionsSection() {
             )}
 
             {importFeedback && <p className="muted-copy">{importFeedback}</p>}
-            {(importError || previewTransactionsImportMutation.error || importTransactionsMutation.error) && (
+            {(importError || previewTransactionsCsvImportMutation.error || importTransactionsCsvMutation.error) && (
               <p className="form-error">
                 {importError ??
-                  previewTransactionsImportMutation.error?.message ??
-                  importTransactionsMutation.error?.message}
+                  previewTransactionsCsvImportMutation.error?.message ??
+                  importTransactionsCsvMutation.error?.message}
               </p>
             )}
           </form>
@@ -650,7 +1104,7 @@ export function TransactionsSection() {
                   onChange={(event) => updateJournalFilter('type', event.target.value)}
                 >
                   <option value="ALL">All types</option>
-                  {['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'].map((type) => (
+                  {transactionTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
                     </option>
@@ -785,25 +1239,186 @@ export function TransactionsSection() {
   )
 }
 
-function buildImportPayload({
-  csv,
-  skipDuplicates,
-  accountOptions,
-  instrumentOptions,
-}: {
-  csv: string
-  skipDuplicates: boolean
-  accountOptions: Array<{ id: string; name: string }>
-  instrumentOptions: Array<{ id: string; name: string; symbol?: string | null }>
-}): ImportTransactionsPayload {
+function createInitialImportProfileForm(): ImportProfileFormState {
   return {
-    skipDuplicates,
-    rows: parseImportRows({
-      csv,
-      accountOptions,
-      instrumentOptions,
-    }),
+    name: 'Canonical CSV',
+    description: 'Default profile for the canonical transaction CSV format.',
+    delimiter: 'COMMA',
+    dateFormat: 'ISO_LOCAL_DATE',
+    decimalSeparator: 'DOT',
+    skipDuplicatesByDefault: true,
+    headerMappings: {
+      account: 'account',
+      type: 'type',
+      tradeDate: 'tradeDate',
+      settlementDate: 'settlementDate',
+      instrument: 'instrument',
+      quantity: 'quantity',
+      unitPrice: 'unitPrice',
+      grossAmount: 'grossAmount',
+      feeAmount: 'feeAmount',
+      taxAmount: 'taxAmount',
+      currency: 'currency',
+      fxRateToPln: 'fxRateToPln',
+      notes: 'notes',
+    },
+    defaults: {
+      accountId: '',
+      currency: '',
+    },
   }
+}
+
+function importProfileToForm(profile: TransactionImportProfile): ImportProfileFormState {
+  return {
+    name: profile.name,
+    description: profile.description,
+    delimiter: profile.delimiter,
+    dateFormat: profile.dateFormat,
+    decimalSeparator: profile.decimalSeparator,
+    skipDuplicatesByDefault: profile.skipDuplicatesByDefault,
+    headerMappings: {
+      account: profile.headerMappings.account ?? '',
+      type: profile.headerMappings.type ?? '',
+      tradeDate: profile.headerMappings.tradeDate ?? '',
+      settlementDate: profile.headerMappings.settlementDate ?? '',
+      instrument: profile.headerMappings.instrument ?? '',
+      quantity: profile.headerMappings.quantity ?? '',
+      unitPrice: profile.headerMappings.unitPrice ?? '',
+      grossAmount: profile.headerMappings.grossAmount ?? '',
+      feeAmount: profile.headerMappings.feeAmount ?? '',
+      taxAmount: profile.headerMappings.taxAmount ?? '',
+      currency: profile.headerMappings.currency ?? '',
+      fxRateToPln: profile.headerMappings.fxRateToPln ?? '',
+      notes: profile.headerMappings.notes ?? '',
+    },
+    defaults: {
+      accountId: profile.defaults.accountId ?? '',
+      currency: profile.defaults.currency ?? '',
+    },
+  }
+}
+
+function buildImportProfilePayload(form: ImportProfileFormState): SaveTransactionImportProfilePayload {
+  return {
+    name: form.name.trim(),
+    description: form.description.trim(),
+    delimiter: form.delimiter,
+    dateFormat: form.dateFormat,
+    decimalSeparator: form.decimalSeparator,
+    skipDuplicatesByDefault: form.skipDuplicatesByDefault,
+    headerMappings: {
+      account: normalizeOptionalValue(form.headerMappings.account),
+      type: normalizeOptionalValue(form.headerMappings.type),
+      tradeDate: normalizeOptionalValue(form.headerMappings.tradeDate),
+      settlementDate: normalizeOptionalValue(form.headerMappings.settlementDate),
+      instrument: normalizeOptionalValue(form.headerMappings.instrument),
+      quantity: normalizeOptionalValue(form.headerMappings.quantity),
+      unitPrice: normalizeOptionalValue(form.headerMappings.unitPrice),
+      grossAmount: normalizeOptionalValue(form.headerMappings.grossAmount),
+      feeAmount: normalizeOptionalValue(form.headerMappings.feeAmount),
+      taxAmount: normalizeOptionalValue(form.headerMappings.taxAmount),
+      currency: normalizeOptionalValue(form.headerMappings.currency),
+      fxRateToPln: normalizeOptionalValue(form.headerMappings.fxRateToPln),
+      notes: normalizeOptionalValue(form.headerMappings.notes),
+    },
+    defaults: {
+      accountId: normalizeOptionalValue(form.defaults.accountId),
+      currency: normalizeOptionalValue(form.defaults.currency)?.toUpperCase() ?? null,
+    },
+  }
+}
+
+function normalizeOptionalValue(value: string): string | null {
+  const trimmed = value.trim()
+  return trimmed === '' ? null : trimmed
+}
+
+function serializeImportProfilePayload(payload: SaveTransactionImportProfilePayload) {
+  return JSON.stringify(payload)
+}
+
+function buildImportProfileTemplate(form: ImportProfileFormState): string {
+  const delimiter = delimiterCharacter(form.delimiter)
+  const mappedFields = importMappingFields.filter((field) => form.headerMappings[field.key].trim() !== '')
+  if (mappedFields.length === 0) {
+    return 'Map at least one CSV column to generate a sample.'
+  }
+
+  const headers = mappedFields.map((field) => form.headerMappings[field.key].trim())
+  const row = mappedFields.map((field) => escapeCsvCell(delimiter, exampleValueForField(field.key, form)))
+
+  return `${headers.map((header) => escapeCsvCell(delimiter, header)).join(delimiter)}\n${row.join(delimiter)}`
+}
+
+function exampleValueForField(field: ImportMappingField, form: ImportProfileFormState) {
+  switch (field) {
+    case 'account':
+      return 'Primary'
+    case 'type':
+      return 'BUY'
+    case 'tradeDate':
+      return formatExampleDate(form.dateFormat)
+    case 'settlementDate':
+      return formatExampleDate(form.dateFormat)
+    case 'instrument':
+      return 'VWRA.L'
+    case 'quantity':
+      return formatExampleDecimal('2.5', form.decimalSeparator)
+    case 'unitPrice':
+      return formatExampleDecimal('123.45', form.decimalSeparator)
+    case 'grossAmount':
+      return formatExampleDecimal('308.63', form.decimalSeparator)
+    case 'feeAmount':
+      return formatExampleDecimal('1.20', form.decimalSeparator)
+    case 'taxAmount':
+      return formatExampleDecimal('0', form.decimalSeparator)
+    case 'currency':
+      return form.defaults.currency.trim() || 'USD'
+    case 'fxRateToPln':
+      return formatExampleDecimal('4.0123', form.decimalSeparator)
+    case 'notes':
+      return 'Starter lot'
+    default:
+      return ''
+  }
+}
+
+function formatExampleDate(format: string) {
+  switch (format) {
+    case 'DMY_DOTS':
+      return '14.03.2026'
+    case 'DMY_SLASH':
+      return '14/03/2026'
+    case 'MDY_SLASH':
+      return '03/14/2026'
+    case 'ISO_LOCAL_DATE':
+    default:
+      return '2026-03-14'
+  }
+}
+
+function formatExampleDecimal(value: string, decimalSeparator: string) {
+  return decimalSeparator === 'COMMA' ? value.replace('.', ',') : value
+}
+
+function delimiterCharacter(delimiter: string) {
+  switch (delimiter) {
+    case 'SEMICOLON':
+      return ';'
+    case 'TAB':
+      return '\t'
+    case 'COMMA':
+    default:
+      return ','
+  }
+}
+
+function escapeCsvCell(delimiter: string, value: string) {
+  if (value.includes('"') || value.includes('\n') || value.includes('\r') || value.includes(delimiter)) {
+    return `"${value.replaceAll('"', '""')}"`
+  }
+  return value
 }
 
 function buildImportResultMessage(createdCount: number, skippedDuplicateCount: number) {
@@ -829,152 +1444,7 @@ function formatImportRowStatus(status: string) {
   }
 }
 
-function parseImportRows({
-  csv,
-  accountOptions,
-  instrumentOptions,
-}: {
-  csv: string
-  accountOptions: Array<{ id: string; name: string }>
-  instrumentOptions: Array<{ id: string; name: string; symbol?: string | null }>
-}): CreateTransactionPayload[] {
-  const rows = parseCsv(csv)
-  if (rows.length < 2) {
-    throw new Error('CSV import requires a header row and at least one data row.')
-  }
-
-  const headers = rows[0].map((header) => header.trim())
-  const requiredHeaders = ['account', 'type', 'tradeDate', 'grossAmount', 'currency']
-  requiredHeaders.forEach((header) => {
-    if (!headers.includes(header)) {
-      throw new Error(`Missing required CSV header: ${header}.`)
-    }
-  })
-
-  const accountLookup = new Map<string, string>()
-  accountOptions.forEach((account) => {
-    accountLookup.set(account.id.toLowerCase(), account.id)
-    accountLookup.set(account.name.trim().toLowerCase(), account.id)
-  })
-
-  const instrumentLookup = new Map<string, string>()
-  instrumentOptions.forEach((instrument) => {
-    instrumentLookup.set(instrument.id.toLowerCase(), instrument.id)
-    instrumentLookup.set(instrument.name.trim().toLowerCase(), instrument.id)
-    if (instrument.symbol) {
-      instrumentLookup.set(instrument.symbol.trim().toLowerCase(), instrument.id)
-    }
-  })
-
-  return rows.slice(1)
-    .filter((row) => row.some((value) => value.trim() !== ''))
-    .map((row, index) => {
-      const record = Object.fromEntries(headers.map((header, columnIndex) => [header, (row[columnIndex] ?? '').trim()]))
-      const rowNumber = index + 2
-      const accountId = accountLookup.get(record.account.toLowerCase())
-      if (!accountId) {
-        throw new Error(`Row ${rowNumber}: unknown account '${record.account}'.`)
-      }
-
-      const type = record.type.toUpperCase()
-      const requiresInstrument = type === 'BUY' || type === 'SELL'
-      const instrumentId = record.instrument ? instrumentLookup.get(record.instrument.toLowerCase()) ?? null : null
-      if (requiresInstrument && instrumentId == null) {
-        throw new Error(`Row ${rowNumber}: instrument is required for ${type}.`)
-      }
-
-      return {
-        accountId,
-        instrumentId,
-        type,
-        tradeDate: requireValue(record.tradeDate, 'tradeDate', rowNumber),
-        settlementDate: record.settlementDate || record.tradeDate || null,
-        quantity: record.quantity || null,
-        unitPrice: record.unitPrice || null,
-        grossAmount: requireValue(record.grossAmount, 'grossAmount', rowNumber),
-        feeAmount: record.feeAmount || '0',
-        taxAmount: record.taxAmount || '0',
-        currency: requireValue(record.currency, 'currency', rowNumber).toUpperCase(),
-        fxRateToPln: record.fxRateToPln || null,
-        notes: record.notes || '',
-      } satisfies CreateTransactionPayload
-    })
-}
-
-function requireValue(value: string | undefined, field: string, rowNumber: number): string {
-  if (!value || value.trim() === '') {
-    throw new Error(`Row ${rowNumber}: ${field} is required.`)
-  }
-  return value.trim()
-}
-
-function parseCsv(text: string): string[][] {
-  const delimiter = detectDelimiter(text)
-  const rows: string[][] = []
-  let currentField = ''
-  let currentRow: string[] = []
-  let inQuotes = false
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index]
-    const next = text[index + 1]
-
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        currentField += '"'
-        index += 1
-      } else {
-        inQuotes = !inQuotes
-      }
-      continue
-    }
-
-    if (!inQuotes && char === delimiter) {
-      currentRow.push(currentField)
-      currentField = ''
-      continue
-    }
-
-    if (!inQuotes && (char === '\n' || char === '\r')) {
-      if (char === '\r' && next === '\n') {
-        index += 1
-      }
-      currentRow.push(currentField)
-      rows.push(currentRow)
-      currentField = ''
-      currentRow = []
-      continue
-    }
-
-    currentField += char
-  }
-
-  if (currentField !== '' || currentRow.length > 0) {
-    currentRow.push(currentField)
-    rows.push(currentRow)
-  }
-
-  return rows
-}
-
-function detectDelimiter(text: string): ',' | ';' {
-  const firstLine = text.split(/\r?\n/, 1)[0] ?? ''
-  return firstLine.split(';').length > firstLine.split(',').length ? ';' : ','
-}
-
-function compareJournalRows(
-  left: {
-    transaction: Transaction
-    accountName: string
-    instrumentName: string | null
-  },
-  right: {
-    transaction: Transaction
-    accountName: string
-    instrumentName: string | null
-  },
-  sort: string,
-) {
+function compareJournalRows(left: JournalRow, right: JournalRow, sort: string) {
   switch (sort) {
     case 'tradeDate-asc':
       return compareStrings(left.transaction.tradeDate, right.transaction.tradeDate)

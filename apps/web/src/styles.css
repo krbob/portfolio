@@ -561,6 +561,10 @@ p {
   grid-column: span 2;
 }
 
+.form-span-full {
+  grid-column: 1 / -1;
+}
+
 .entity-list {
   display: grid;
   gap: 10px;
@@ -609,6 +613,92 @@ p {
   border-radius: 20px;
   padding: 18px;
   background: rgba(19, 32, 24, 0.04);
+}
+
+.import-card-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.import-profile-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.import-profile-select {
+  min-width: min(100%, 320px);
+}
+
+.import-profile-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.import-checkbox-field {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.import-checkbox-field input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+}
+
+.import-checkbox-field p {
+  color: #58705f;
+  font-size: 0.9rem;
+}
+
+.import-mapping-panel {
+  display: grid;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.import-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-note {
+  color: #58705f;
+  font-size: 0.82rem;
+}
+
+.import-template-preview {
+  display: grid;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.import-template-preview h5 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.import-template-preview pre {
+  margin: 0;
+  overflow: auto;
+  border-radius: 16px;
+  background: rgba(19, 32, 24, 0.06);
+  padding: 14px;
+  color: #314238;
+  font: 0.9rem/1.5 "IBM Plex Mono", "SFMono-Regular", monospace;
 }
 
 .journal-card {
@@ -1460,6 +1550,7 @@ p {
   .section-body,
   .section-body-wide,
   .entity-form-wide,
+  .import-profile-form,
   .allocation-workspace,
   .allocation-summary-grid,
   .overview-grid,
@@ -1473,6 +1564,7 @@ p {
   .transfer-grid,
   .transfer-preview-grid,
   .import-preview-grid,
+  .import-mapping-grid,
   .transfer-layout,
   .journal-toolbar,
   .holding-item,
@@ -1515,6 +1607,10 @@ p {
 
   .journal-filter-wide {
     grid-column: auto;
+  }
+
+  .import-profile-toolbar {
+    align-items: stretch;
   }
 
   .sidebar,

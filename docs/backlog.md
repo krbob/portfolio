@@ -22,7 +22,7 @@ The original foundation backlog is effectively done.
 
 ## Current goal
 
-Keep the SQLite self-hosted path production-grade, then move to the first genuinely product-facing gap: convenient real-world data import.
+Keep the SQLite self-hosted path production-grade, then finish the remaining product-facing gaps around real-world import and operational trust.
 
 The remaining backlog is ordered by practical value for day-to-day use.
 
@@ -44,29 +44,26 @@ The remaining backlog is ordered by practical value for day-to-day use.
 
 ## Phase 2: Real-world data import
 
-### 3. Importer framework for real brokerage data (next)
+### 3. Server-side CSV import profiles (done)
 
-- define a first-class importer pipeline rather than only generic CSV paste/import
-- separate:
-  - raw file ingestion
-  - broker-specific parsing
-  - normalized transaction preview
-  - duplicate/conflict detection
-  - final commit into the canonical write model
-- keep import idempotency and auditability explicit
+- keep reusable import profiles on the server with delimiter/date/decimal settings
+- keep header mappings and account/currency defaults as part of the saved profile
+- run preview/import through the backend so preview semantics match the final commit
+- keep imports idempotent through the canonical duplicate detection flow
 
-### 4. Better import UX (next)
+### 4. Better import UX and import history (next)
 
 - add richer preview with per-row warnings and conflict summaries
-- let the user save reusable mapping presets for account/instrument matching
 - expose import audit history in the UI next to backups and other operational events
 - make duplicate handling and conflict resolution understandable before the import is applied
+- support import sessions with named source files or broker/export metadata
 
 ### 5. First broker-specific importers (later)
 
 - implement parsers for the real sources the portfolio is fed from
 - keep broker-specific code isolated from the canonical domain model
 - prefer deterministic CSV/statement imports over brittle scraping
+- fit them into the saved-profile/import-session pipeline instead of inventing a second import path
 
 ## Phase 3: Product polish
 

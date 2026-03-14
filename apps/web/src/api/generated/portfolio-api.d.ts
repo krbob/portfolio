@@ -886,7 +886,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/transactions": {
+    "/v1/transactions/import/profiles": {
         parameters: {
             query?: never;
             header?: never;
@@ -907,7 +907,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TransactionResponse"][];
+                        "application/json": components["schemas"]["TransactionImportProfileResponse"][];
                     };
                 };
             };
@@ -922,7 +922,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["CreateTransactionRequest"];
+                    "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
                 };
             };
             responses: {
@@ -931,7 +931,141 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TransactionResponse"];
+                        "application/json": components["schemas"]["TransactionImportProfileResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transactions/import/profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransactionImportProfileResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transactions/import/csv/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CsvTransactionsImportRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transactions/import/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CsvTransactionsImportRequest"];
+                };
+            };
+            responses: {
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportTransactionsResponse"];
                     };
                 };
             };
@@ -1008,6 +1142,62 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransactionResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateTransactionRequest"];
+                };
+            };
+            responses: {
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransactionResponse"];
                     };
                 };
             };
@@ -1508,6 +1698,93 @@ export interface components {
             transactionCount: number;
             safetyBackupFileName?: string | null;
         };
+        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsResponse */
+        TransactionImportHeaderMappingsResponse: {
+            account?: string | null;
+            type?: string | null;
+            tradeDate?: string | null;
+            settlementDate?: string | null;
+            instrument?: string | null;
+            quantity?: string | null;
+            unitPrice?: string | null;
+            grossAmount?: string | null;
+            feeAmount?: string | null;
+            taxAmount?: string | null;
+            currency?: string | null;
+            fxRateToPln?: string | null;
+            notes?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsResponse */
+        TransactionImportDefaultsResponse: {
+            accountId?: string | null;
+            currency?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportProfileResponse */
+        TransactionImportProfileResponse: {
+            id: string;
+            name: string;
+            description: string;
+            delimiter: string;
+            dateFormat: string;
+            decimalSeparator: string;
+            skipDuplicatesByDefault: boolean;
+            headerMappings: components["schemas"]["TransactionImportHeaderMappingsResponse"];
+            defaults: components["schemas"]["TransactionImportDefaultsResponse"];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsRequest */
+        TransactionImportHeaderMappingsRequest: {
+            account?: string | null;
+            type?: string | null;
+            tradeDate?: string | null;
+            settlementDate?: string | null;
+            instrument?: string | null;
+            quantity?: string | null;
+            unitPrice?: string | null;
+            grossAmount?: string | null;
+            feeAmount?: string | null;
+            taxAmount?: string | null;
+            currency?: string | null;
+            fxRateToPln?: string | null;
+            notes?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsRequest */
+        TransactionImportDefaultsRequest: {
+            accountId?: string | null;
+            currency?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.SaveTransactionImportProfileRequest */
+        SaveTransactionImportProfileRequest: {
+            name: string;
+            description?: string;
+            delimiter?: string;
+            dateFormat?: string;
+            decimalSeparator?: string;
+            skipDuplicatesByDefault?: boolean;
+            headerMappings?: components["schemas"]["TransactionImportHeaderMappingsRequest"];
+            defaults?: components["schemas"]["TransactionImportDefaultsRequest"];
+        };
+        /** net.bobinski.portfolio.api.route.CsvTransactionsImportRequest */
+        CsvTransactionsImportRequest: {
+            profileId: string;
+            csv: string;
+            skipDuplicates?: boolean | null;
+        };
+        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewRowResponse */
+        ImportTransactionsPreviewRowResponse: {
+            rowNumber: number;
+            status: string;
+            message: string;
+        };
+        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewResponse */
+        ImportTransactionsPreviewResponse: {
+            totalRowCount: number;
+            importableRowCount: number;
+            duplicateRowCount: number;
+            invalidRowCount: number;
+            rows: components["schemas"]["ImportTransactionsPreviewRowResponse"][];
+        };
         /** net.bobinski.portfolio.api.route.TransactionResponse */
         TransactionResponse: {
             id: string;
@@ -1526,6 +1803,12 @@ export interface components {
             notes: string;
             createdAt: string;
             updatedAt: string;
+        };
+        /** net.bobinski.portfolio.api.route.ImportTransactionsResponse */
+        ImportTransactionsResponse: {
+            createdCount: number;
+            skippedDuplicateCount: number;
+            transactions: components["schemas"]["TransactionResponse"][];
         };
         /** net.bobinski.portfolio.api.route.CreateTransactionRequest */
         CreateTransactionRequest: {
@@ -1547,26 +1830,6 @@ export interface components {
         ImportTransactionsRequest: {
             skipDuplicates?: boolean;
             rows: components["schemas"]["CreateTransactionRequest"][];
-        };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsResponse */
-        ImportTransactionsResponse: {
-            createdCount: number;
-            skippedDuplicateCount: number;
-            transactions: components["schemas"]["TransactionResponse"][];
-        };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewRowResponse */
-        ImportTransactionsPreviewRowResponse: {
-            rowNumber: number;
-            status: string;
-            message: string;
-        };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewResponse */
-        ImportTransactionsPreviewResponse: {
-            totalRowCount: number;
-            importableRowCount: number;
-            duplicateRowCount: number;
-            invalidRowCount: number;
-            rows: components["schemas"]["ImportTransactionsPreviewRowResponse"][];
         };
     };
     responses: never;
