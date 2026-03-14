@@ -3,6 +3,7 @@
 
 apps/api/.gradle/
 apps/api/build/
+apps/api/**/build/
 apps/api/out/
 apps/api/data/
 

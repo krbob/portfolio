@@ -5,6 +5,7 @@
 ```text
 React SPA
   -> Portfolio API
+       -> portfolio-domain
        -> PostgreSQL
        -> stock-analyst
        -> edo-calculator
@@ -36,6 +37,9 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - Koin
 - kotlinx.serialization
 - JUnit 6
+- multi-project Gradle build with:
+  - API module for HTTP, persistence, integrations, and operational services
+  - `portfolio-domain` for domain models, repository/provider interfaces, and portfolio calculations
 
 ### Persistence
 
@@ -51,3 +55,9 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 3. Domain model and schema
 4. CRUD for accounts, instruments, and transactions
 5. Portfolio overview and history reconstruction
+
+## Current hardening direction
+
+- keep transactions as the canonical source of truth
+- persist rebuildable read-model cache snapshots for heavy analytical endpoints
+- isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`

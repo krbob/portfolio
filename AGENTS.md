@@ -34,7 +34,8 @@ The product is optimized for:
 ## Initial architecture
 
 - `apps/web`: React SPA for the self-hosted UI
-- `apps/api`: Ktor API for portfolio state, calculations, and integrations
+- `apps/api`: Ktor API for routing, persistence, integrations, and operational services
+- `apps/api/portfolio-domain`: extracted domain module for portfolio models, repository/provider interfaces, and calculation services
 - `docs`: architecture notes, roadmap, product decisions
 
 ## Current milestones

@@ -118,7 +118,7 @@ The ordering below is intentional:
 - use this for faster history and return queries
 - keep transactions as the canonical source of truth
 
-### 12. Extract `portfolio-domain` module
+### 12. Extract `portfolio-domain` module (done)
 
 - move domain calculations into a separate module
 - keep HTTP, persistence and provider integration outside the domain module

@@ -23,6 +23,7 @@ portfolio/
 ├── docs/
 ├── apps/
 │   ├── api/
+│   │   └── portfolio-domain/
 │   └── web/
 └── README.md
 ```
@@ -52,6 +53,7 @@ portfolio/
 - destructive `REPLACE` import and restore flows now require explicit confirmation and create safety backups automatically
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
+- core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 
 ## Local database
 
@@ -109,6 +111,11 @@ See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the curren
 ## API contracts
 
 The API now publishes an OpenAPI spec at `GET /v1/openapi.json` and serves a generated docs UI at `GET /openapi`.
+
+`apps/api` is now a small multi-project Gradle build:
+
+- root project: Ktor API, persistence, routing, integrations and operational services
+- `:portfolio-domain`: domain models, repository/provider interfaces and portfolio calculation services
 
 Frontend contracts are generated from the backend spec instead of being maintained purely by hand:
 
