@@ -115,6 +115,8 @@ fun appModule(
         single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
         single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
+    } else if (config.isSqliteEnabled) {
+        error("SQLite persistence mode is defined, but SQLite repositories are not wired yet.")
     } else {
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }

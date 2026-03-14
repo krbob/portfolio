@@ -59,21 +59,27 @@ class PortfolioReturnsServiceTest {
 
         val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
         val max = returns.periods.first { it.key == ReturnPeriodKey.MAX }
+        val oneYearNominalPln = requireNotNull(oneYear.nominalPln)
+        val oneYearNominalUsd = requireNotNull(oneYear.nominalUsd)
+        val oneYearRealPln = requireNotNull(oneYear.realPln)
+        val oneYearInflation = requireNotNull(oneYear.inflation)
+        val vwraBenchmark = oneYear.benchmarks.first()
+        val vwraBenchmarkNominalPln = requireNotNull(vwraBenchmark.nominalPln)
 
         assertEquals(LocalDate.parse("2026-03-01"), returns.asOf)
         assertEquals(LocalDate.parse("2025-03-01"), oneYear.from)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalPln!!.moneyWeightedReturn)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalPln.annualizedMoneyWeightedReturn)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalPln.timeWeightedReturn)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalPln.annualizedTimeWeightedReturn)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalUsd!!.moneyWeightedReturn)
-        assertEquals(BigDecimal("0.1"), oneYear.nominalUsd.timeWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalPln.moneyWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalPln.annualizedMoneyWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalPln.timeWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalPln.annualizedTimeWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalUsd.moneyWeightedReturn)
+        assertEquals(BigDecimal("0.1"), oneYearNominalUsd.timeWeightedReturn)
         assertNotNull(oneYear.realPln)
-        assertEquals(BigDecimal("0.0476190476"), oneYear.realPln!!.moneyWeightedReturn)
-        assertEquals(BigDecimal("0.0476190476"), oneYear.realPln.timeWeightedReturn)
-        assertEquals(BigDecimal("1.05"), oneYear.inflation!!.multiplier)
-        assertEquals(BenchmarkKey.VWRA, oneYear.benchmarks.first().key)
-        assertEquals(BigDecimal("0.08"), oneYear.benchmarks.first().nominalPln!!.timeWeightedReturn)
+        assertEquals(BigDecimal("0.0476190476"), oneYearRealPln.moneyWeightedReturn)
+        assertEquals(BigDecimal("0.0476190476"), oneYearRealPln.timeWeightedReturn)
+        assertEquals(BigDecimal("1.05"), oneYearInflation.multiplier)
+        assertEquals(BenchmarkKey.VWRA, vwraBenchmark.key)
+        assertEquals(BigDecimal("0.08"), vwraBenchmarkNominalPln.timeWeightedReturn)
         assertEquals(BigDecimal("0.1"), max.nominalPln!!.moneyWeightedReturn)
     }
 

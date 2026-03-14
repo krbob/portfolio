@@ -20,6 +20,15 @@ internal fun validateStartupConfiguration(
         }
     }
 
+    if (persistenceConfig.isSqliteEnabled) {
+        require(persistenceConfig.sqlite.databasePath.isNotBlank()) {
+            "SQLite persistence requires a non-blank database path."
+        }
+        require(persistenceConfig.sqlite.busyTimeoutMs > 0) {
+            "SQLite persistence requires a positive busy timeout."
+        }
+    }
+
     if (marketDataConfig.enabled) {
         require(marketDataConfig.stockAnalystBaseUrl.isHttpUrl()) {
             "Market data requires a valid stock analyst HTTP base URL."

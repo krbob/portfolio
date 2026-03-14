@@ -35,6 +35,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.13.2")
     implementation("org.flywaydb:flyway-database-postgresql:11.13.2")
     implementation("org.postgresql:postgresql:42.7.8")
+    implementation("org.xerial:sqlite-jdbc:3.51.1.0")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")

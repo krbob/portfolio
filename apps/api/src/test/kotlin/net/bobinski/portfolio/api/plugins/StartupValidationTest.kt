@@ -5,6 +5,9 @@ import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceMode
+import net.bobinski.portfolio.api.persistence.config.SqliteConfig
+import net.bobinski.portfolio.api.persistence.config.SqliteJournalMode
+import net.bobinski.portfolio.api.persistence.config.SqliteSynchronousMode
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -19,8 +22,35 @@ class StartupValidationTest {
                     mode = PersistenceMode.POSTGRES,
                     jdbcUrl = "jdbc:sqlite:portfolio.db",
                     username = "portfolio",
-                    password = "portfolio"
+                    password = "portfolio",
+                    sqlite = defaultSqliteConfig()
                 ),
+                marketDataConfig = validMarketDataConfig(),
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation rejects blank SQLite database path when SQLite mode is enabled`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validSqlitePersistenceConfig().copy(
+                    sqlite = validSqlitePersistenceConfig().sqlite.copy(databasePath = "")
+                ),
+                marketDataConfig = validMarketDataConfig(),
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation accepts valid SQLite configuration`() {
+        assertDoesNotThrow {
+            validateStartupConfiguration(
+                persistenceConfig = validSqlitePersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
                 authConfig = validAuthConfig()
@@ -68,7 +98,16 @@ class StartupValidationTest {
         mode = PersistenceMode.POSTGRES,
         jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
         username = "portfolio",
-        password = "portfolio"
+        password = "portfolio",
+        sqlite = defaultSqliteConfig()
+    )
+
+    private fun validSqlitePersistenceConfig() = PersistenceConfig(
+        mode = PersistenceMode.SQLITE,
+        jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
+        username = "portfolio",
+        password = "portfolio",
+        sqlite = defaultSqliteConfig()
     )
 
     private fun validMarketDataConfig() = MarketDataConfig(
@@ -94,5 +133,12 @@ class StartupValidationTest {
         sessionCookieName = "portfolio_session",
         secureCookie = false,
         sessionMaxAgeDays = 30
+    )
+
+    private fun defaultSqliteConfig() = SqliteConfig(
+        databasePath = "./data/portfolio.db",
+        journalMode = SqliteJournalMode.WAL,
+        synchronousMode = SqliteSynchronousMode.FULL,
+        busyTimeoutMs = 5_000
     )
 }
