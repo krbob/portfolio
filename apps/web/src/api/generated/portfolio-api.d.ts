@@ -1036,6 +1036,10 @@ export interface components {
             equityAllocationPct: string;
             bondAllocationPct: string;
             cashAllocationPct: string;
+            portfolioPerformanceIndex?: string | null;
+            equityBenchmarkIndex?: string | null;
+            inflationBenchmarkIndex?: string | null;
+            targetMixBenchmarkIndex?: string | null;
             activeHoldingCount: number;
             valuedHoldingCount: number;
         };
@@ -1046,6 +1050,7 @@ export interface components {
             valuationState: string;
             instrumentHistoryIssueCount: number;
             referenceSeriesIssueCount: number;
+            benchmarkSeriesIssueCount: number;
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
             points: components["schemas"]["PortfolioDailyHistoryPointResponse"][];
@@ -1056,6 +1061,14 @@ export interface components {
             annualizedMoneyWeightedReturn?: string | null;
             timeWeightedReturn?: string | null;
             annualizedTimeWeightedReturn?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.BenchmarkComparisonResponse */
+        BenchmarkComparisonResponse: {
+            key: string;
+            label: string;
+            nominalPln?: components["schemas"]["ReturnMetricResponse"] | null;
+            excessTimeWeightedReturn?: string | null;
+            excessAnnualizedTimeWeightedReturn?: string | null;
         };
         /** net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse */
         PortfolioReturnPeriodResponse: {
@@ -1072,6 +1085,7 @@ export interface components {
             inflationFrom?: string | null;
             inflationUntil?: string | null;
             inflationMultiplier?: string | null;
+            benchmarks: components["schemas"]["BenchmarkComparisonResponse"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioReturnsResponse */
         PortfolioReturnsResponse: {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { SectionCard } from './SectionCard'
 import { PortfolioAllocationChart } from './PortfolioAllocationChart'
+import { PortfolioBenchmarkChart } from './PortfolioBenchmarkChart'
 import { PortfolioValueChart } from './PortfolioValueChart'
 import { usePortfolioDailyHistory } from '../hooks/use-read-model'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
@@ -51,6 +52,7 @@ export function PortfolioHistorySection() {
   const filteredPoints = useMemo(() => filterPointsByPeriod(points, period), [period, points])
   const latest = filteredPoints.at(-1) ?? points.at(-1)
   const series = seriesForUnit(unit)
+  const latestBenchmark = latest?.portfolioPerformanceIndex
   const gain =
     latest && latest[series.valueKey] != null && latest[series.contributionsKey] != null
       ? (Number(latest[series.valueKey]) - Number(latest[series.contributionsKey])).toFixed(unit === 'PLN' ? 2 : 8)
@@ -60,7 +62,7 @@ export function PortfolioHistorySection() {
     <SectionCard
       eyebrow="History"
       title="Daily portfolio history"
-      description="A rebuildable time series derived from transactions plus historical market data, with filtered views for PLN, USD and gold ounces."
+      description="A rebuildable time series derived from transactions plus historical market data, with filtered views for PLN, USD and gold ounces, plus benchmark overlays indexed from the same starting point."
     >
       {historyQuery.isLoading && <p className="muted-copy">Loading daily history...</p>}
       {historyQuery.isError && <p className="form-error">{historyQuery.error.message}</p>}
@@ -88,6 +90,10 @@ export function PortfolioHistorySection() {
               <strong>
                 {latest.valuedHoldingCount}/{latest.activeHoldingCount}
               </strong>
+            </article>
+            <article className="overview-stat">
+              <span>Portfolio index</span>
+              <strong>{formatIndexValue(latestBenchmark)}</strong>
             </article>
           </div>
 
@@ -146,6 +152,10 @@ export function PortfolioHistorySection() {
             <div className="history-chart-card">
               <PortfolioAllocationChart points={filteredPoints} />
             </div>
+
+            <div className="history-chart-card">
+              <PortfolioBenchmarkChart points={filteredPoints} />
+            </div>
           </div>
 
           <div className="history-notes">
@@ -158,6 +168,13 @@ export function PortfolioHistorySection() {
               Reference series issues: {data.referenceSeriesIssueCount}. Missing FX transactions:{' '}
               {data.missingFxTransactions}. Unsupported corrections:{' '}
               {data.unsupportedCorrectionTransactions}.
+            </p>
+            <p>
+              Benchmark series issues: {data.benchmarkSeriesIssueCount}. Latest indexed levels:
+              portfolio {formatIndexValue(latest.portfolioPerformanceIndex)}, VWRA{' '}
+              {formatIndexValue(latest.equityBenchmarkIndex)}, inflation{' '}
+              {formatIndexValue(latest.inflationBenchmarkIndex)}, target mix{' '}
+              {formatIndexValue(latest.targetMixBenchmarkIndex)}.
             </p>
           </div>
         </>
@@ -247,4 +264,12 @@ function formatSeriesDelta(value: string, unit: HistoryUnit) {
   const suffix = unit === 'USD' ? 'USD' : 'AU'
   const formatted = `${amount.toFixed(digits)} ${suffix}`
   return amount > 0 ? `+${formatted}` : formatted
+}
+
+function formatIndexValue(value: string | null | undefined) {
+  if (value == null) {
+    return 'Unavailable'
+  }
+
+  return Number(value).toFixed(2)
 }

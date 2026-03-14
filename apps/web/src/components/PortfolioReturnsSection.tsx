@@ -1,6 +1,6 @@
 import { SectionCard } from './SectionCard'
 import { usePortfolioReturns } from '../hooks/use-read-model'
-import type { ReturnMetric } from '../api/read-model'
+import type { BenchmarkComparison, ReturnMetric } from '../api/read-model'
 
 function formatPercent(value: string | null | undefined) {
   if (value == null) {
@@ -18,7 +18,7 @@ export function PortfolioReturnsSection() {
     <SectionCard
       eyebrow="Returns"
       title="Portfolio returns"
-      description="Each period now exposes both money-weighted return and time-weighted return, so you can separate personal cash-flow timing from strategy performance."
+      description="Each period exposes money-weighted return, time-weighted return, and benchmark comparisons, so cash-flow timing and strategy execution stay clearly separated."
     >
       {returnsQuery.isLoading && <p className="muted-copy">Loading return summary...</p>}
       {returnsQuery.isError && <p className="form-error">{returnsQuery.error.message}</p>}
@@ -72,6 +72,14 @@ export function PortfolioReturnsSection() {
                   />
                 </div>
 
+                {period.benchmarks.length > 0 && (
+                  <div className="benchmark-comparison-grid">
+                    {period.benchmarks.map((benchmark) => (
+                      <BenchmarkCard key={benchmark.key} benchmark={benchmark} />
+                    ))}
+                  </div>
+                )}
+
                 <p className="returns-note">
                   Requested from {period.requestedFrom}. Effective span {period.dayCount} days.
                   {period.nominalPln?.annualizedMoneyWeightedReturn &&
@@ -90,6 +98,11 @@ export function PortfolioReturnsSection() {
               `MWRR` treats only `DEPOSIT` and `WITHDRAWAL` as external cash flows. `TWR` neutralizes
               those flows and focuses on the portfolio path itself. Buys, sells, fees, taxes and interest
               stay inside the portfolio and are reflected in the valuation path.
+            </p>
+            <p>
+              Benchmark comparisons use `TWR`, not `MWRR`, because benchmarks do not know your personal
+              contribution timing. `Excess TWR` shows how far the portfolio out- or underperformed the
+              selected reference.
             </p>
           </div>
         </>
@@ -113,6 +126,46 @@ function ReturnStat({
     <article className="overview-stat">
       <span>{label}</span>
       <strong className={gainClassName(value)}>{formatPercent(value)}</strong>
+    </article>
+  )
+}
+
+function BenchmarkCard({
+  benchmark,
+}: {
+  benchmark: BenchmarkComparison
+}) {
+  return (
+    <article className="benchmark-card">
+      <header className="benchmark-card-header">
+        <p className="returns-card-label">{benchmark.label}</p>
+        <strong className={gainClassName(benchmark.excessTimeWeightedReturn)}>
+          {formatPercent(benchmark.excessTimeWeightedReturn)}
+        </strong>
+      </header>
+
+      <div className="benchmark-card-grid">
+        <ReturnStat
+          label="Benchmark TWR"
+          metric={benchmark.nominalPln}
+          valueKey="timeWeightedReturn"
+        />
+        <ReturnStat
+          label="Excess TWR"
+          metric={{
+            moneyWeightedReturn: benchmark.excessTimeWeightedReturn ?? '0',
+            annualizedMoneyWeightedReturn: benchmark.excessAnnualizedTimeWeightedReturn ?? null,
+            timeWeightedReturn: benchmark.excessTimeWeightedReturn ?? null,
+            annualizedTimeWeightedReturn: benchmark.excessAnnualizedTimeWeightedReturn ?? null,
+          }}
+          valueKey="timeWeightedReturn"
+        />
+      </div>
+
+      <p className="returns-note">
+        Annualized benchmark TWR {formatPercent(benchmark.nominalPln?.annualizedTimeWeightedReturn)}.
+        Annualized excess TWR {formatPercent(benchmark.excessAnnualizedTimeWeightedReturn)}.
+      </p>
     </article>
   )
 }

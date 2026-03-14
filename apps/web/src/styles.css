@@ -880,6 +880,34 @@ p {
   line-height: 1.5;
 }
 
+.benchmark-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.benchmark-card {
+  display: grid;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(19, 32, 24, 0.08);
+}
+
+.benchmark-card-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.benchmark-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .transfer-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1209,6 +1237,8 @@ p {
   .history-summary-grid,
   .returns-grid,
   .returns-stat-grid,
+  .benchmark-comparison-grid,
+  .benchmark-card-grid,
   .backup-summary-grid,
   .backup-item-meta,
   .transfer-grid,

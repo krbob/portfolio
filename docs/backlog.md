@@ -61,7 +61,7 @@ The ordering below is intentional:
 - provide contribution-first rebalance suggestions
 - later optionally provide sell-assisted rebalance suggestions
 
-### 6. Benchmarks and TWR
+### 6. Benchmarks and TWR (done)
 
 - support benchmark series such as:
   - custom `80/20`

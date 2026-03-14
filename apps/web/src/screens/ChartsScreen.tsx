@@ -7,7 +7,7 @@ export function ChartsScreen() {
       <PageIntro
         eyebrow="Performance"
         title="Charts"
-        description="Review rebuildable portfolio history in PLN, USD and gold ounces, together with contributions and allocation changes over time."
+        description="Review rebuildable portfolio history in PLN, USD and gold ounces, together with contributions, allocation changes and indexed benchmark overlays."
       />
       <PortfolioHistorySection />
     </div>

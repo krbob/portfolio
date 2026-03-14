@@ -27,6 +27,9 @@ export type PortfolioReturnPeriod =
 export type ReturnMetric =
   components['schemas']['ReturnMetricResponse']
 
+export type BenchmarkComparison =
+  components['schemas']['BenchmarkComparisonResponse']
+
 async function requestJson<T>(path: string): Promise<T> {
   const response = await fetch(path)
 

@@ -93,6 +93,7 @@ describe('App', () => {
             valuationState: 'MARK_TO_MARKET',
             instrumentHistoryIssueCount: 0,
             referenceSeriesIssueCount: 0,
+            benchmarkSeriesIssueCount: 0,
             missingFxTransactions: 0,
             unsupportedCorrectionTransactions: 0,
             points: [
@@ -114,6 +115,10 @@ describe('App', () => {
                 equityAllocationPct: '0.00',
                 bondAllocationPct: '0.00',
                 cashAllocationPct: '100.00',
+                portfolioPerformanceIndex: '100.00',
+                equityBenchmarkIndex: '100.00',
+                inflationBenchmarkIndex: '100.00',
+                targetMixBenchmarkIndex: '100.00',
                 activeHoldingCount: 0,
                 valuedHoldingCount: 0,
               },
@@ -135,6 +140,10 @@ describe('App', () => {
                 equityAllocationPct: '51.34',
                 bondAllocationPct: '0.00',
                 cashAllocationPct: '48.66',
+                portfolioPerformanceIndex: '102.25',
+                equityBenchmarkIndex: '101.30',
+                inflationBenchmarkIndex: '100.20',
+                targetMixBenchmarkIndex: '101.08',
                 activeHoldingCount: 1,
                 valuedHoldingCount: 1,
               },
@@ -156,6 +165,10 @@ describe('App', () => {
                 equityAllocationPct: '52.51',
                 bondAllocationPct: '0.00',
                 cashAllocationPct: '47.49',
+                portfolioPerformanceIndex: '104.75',
+                equityBenchmarkIndex: '102.40',
+                inflationBenchmarkIndex: '100.40',
+                targetMixBenchmarkIndex: '101.96',
                 activeHoldingCount: 1,
                 valuedHoldingCount: 1,
               },
@@ -199,6 +212,32 @@ describe('App', () => {
                 inflationFrom: '2026-01',
                 inflationUntil: '2026-03',
                 inflationMultiplier: '1.021',
+                benchmarks: [
+                  {
+                    key: 'VWRA',
+                    label: 'VWRA benchmark',
+                    nominalPln: {
+                      moneyWeightedReturn: '0.0320',
+                      annualizedMoneyWeightedReturn: '0.1722',
+                      timeWeightedReturn: '0.0320',
+                      annualizedTimeWeightedReturn: '0.1722',
+                    },
+                    excessTimeWeightedReturn: '0.0069',
+                    excessAnnualizedTimeWeightedReturn: '0.0392',
+                  },
+                  {
+                    key: 'INFLATION',
+                    label: 'Inflation benchmark',
+                    nominalPln: {
+                      moneyWeightedReturn: '0.0100',
+                      annualizedMoneyWeightedReturn: '0.0527',
+                      timeWeightedReturn: '0.0100',
+                      annualizedTimeWeightedReturn: '0.0527',
+                    },
+                    excessTimeWeightedReturn: '0.0289',
+                    excessAnnualizedTimeWeightedReturn: '0.1587',
+                  },
+                ],
               },
             ],
           }),
@@ -344,8 +383,10 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio returns/i })).toBeInTheDocument()
+    expect(screen.getByText(/^Benchmark comparison$/i)).toBeInTheDocument()
     expect(await screen.findByText(/valuation state book_only/i)).toBeInTheDocument()
     expect(await screen.findByText(/^PLN MWRR$/i)).toBeInTheDocument()
+    expect(await screen.findByText(/vwra benchmark/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()

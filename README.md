@@ -32,6 +32,7 @@ portfolio/
 - accounts, instruments, and transactions
 - holdings and allocation views
 - performance metrics including MWRR and real return
+- benchmark-relative performance including TWR, VWRA, inflation and target-mix comparisons
 - daily history rebuilt from transactions and market data
 - ETF pricing via `stock-analyst`
 - EDO valuation and inflation via `edo-calculator`
@@ -45,6 +46,7 @@ portfolio/
 - PostgreSQL wiring is available for the write model
 - server-side JSON backups can be created, listed, retained, and restored
 - optional backup scheduling is available in the API process
+- benchmark overlays and benchmark-relative return comparisons are available in the web UI
 
 ## Local database
 
