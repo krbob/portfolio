@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAppMeta } from '../hooks/use-app-meta'
+import { useAuthSession, useLogout } from '../hooks/use-auth-session'
 
 interface AppShellProps {
   children: ReactNode
@@ -18,6 +19,9 @@ const navItems = [
 
 export function AppShell({ children }: AppShellProps) {
   const metaQuery = useAppMeta()
+  const authSessionQuery = useAuthSession()
+  const logoutMutation = useLogout()
+  const authState = authSessionQuery.data
 
   return (
     <div className="layout">
@@ -44,6 +48,17 @@ export function AppShell({ children }: AppShellProps) {
           <span className="sidebar-status-label">System</span>
           <strong>{metaQuery.isError ? 'Degraded' : metaQuery.isLoading ? 'Loading' : 'Healthy'}</strong>
           <p>{metaQuery.data ? `${metaQuery.data.name} ${metaQuery.data.stage.toUpperCase()}` : 'Connecting API'}</p>
+          <p>{authState?.authEnabled ? `Protected by ${authState.mode.toLowerCase()} auth` : 'Open local mode'}</p>
+          {authState?.authEnabled ? (
+            <button
+              type="button"
+              className="sidebar-action"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? 'Signing out...' : 'Sign out'}
+            </button>
+          ) : null}
         </div>
       </aside>
 

@@ -9,12 +9,27 @@ describe('App', () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/meta')) {
         return new Response(
           JSON.stringify({
             name: 'Portfolio',
             stage: 'dev',
             version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
             stack: {
               web: 'React 19 + TypeScript + Vite',
               api: 'Kotlin 2.3 + Ktor 3',
@@ -413,9 +428,9 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect((await screen.findAllByText(/portfolio dev/i)).length).toBeGreaterThan(0)
-    expect(screen.getByText(/transactions remain the source of truth/i)).toBeInTheDocument()
+    expect(await screen.findByText(/transactions remain the source of truth/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio returns/i })).toBeInTheDocument()
@@ -429,5 +444,64 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^backups$/i })).toBeInTheDocument()
+  })
+
+  it('shows the login gate when password auth is enabled', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: true,
+            authenticated: false,
+            mode: 'PASSWORD',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: true,
+              mode: 'PASSWORD',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'PostgreSQL',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in auth gate test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /portfolio is locked/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
   })
 })

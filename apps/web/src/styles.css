@@ -95,6 +95,16 @@ body {
   font-size: 0.9rem;
 }
 
+.sidebar-action {
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(19, 32, 24, 0.18);
+  background: rgba(19, 32, 24, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .nav-item {
   display: block;
   border-radius: 14px;
@@ -143,6 +153,88 @@ body {
   max-width: 56rem;
   line-height: 1.6;
   color: #314238;
+}
+
+.auth-layout {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  width: min(100% - 32px, 720px);
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.auth-card {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  border: 1px solid rgba(19, 32, 24, 0.12);
+  border-radius: 28px;
+  background: rgba(255, 252, 246, 0.92);
+  box-shadow: 0 24px 60px rgba(19, 32, 24, 0.08);
+  padding: 32px;
+}
+
+.auth-title {
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  line-height: 0.95;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.auth-copy {
+  color: #314238;
+  line-height: 1.65;
+  font-size: 1.02rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+  max-width: 24rem;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58705f;
+}
+
+.field input {
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(19, 32, 24, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0 14px;
+  font: inherit;
+  color: inherit;
+}
+
+.button-primary {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid #132018;
+  background: #132018;
+  color: #f8f4ea;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary:disabled,
+.sidebar-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-error {
+  color: #8b2f1a;
+  line-height: 1.45;
 }
 
 .hero-card {

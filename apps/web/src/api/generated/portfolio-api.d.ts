@@ -140,6 +140,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthSessionResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateAuthSessionRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthSessionResponse"];
+                    };
+                };
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthSessionResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/accounts": {
         parameters: {
             query?: never;
@@ -1005,6 +1087,12 @@ export interface components {
             stage: string;
             version: string;
             persistenceMode: string;
+            authEnabled: boolean;
+        };
+        /** net.bobinski.portfolio.api.route.AuthSummary */
+        AuthSummary: {
+            enabled: boolean;
+            mode: string;
         };
         /** net.bobinski.portfolio.api.route.StackSummary */
         StackSummary: {
@@ -1018,8 +1106,23 @@ export interface components {
             stage: string;
             version: string;
             persistenceMode: string;
+            auth: components["schemas"]["AuthSummary"];
             stack: components["schemas"]["StackSummary"];
             capabilities: string[];
+        };
+        /** net.bobinski.portfolio.api.route.AuthSessionResponse */
+        AuthSessionResponse: {
+            authEnabled: boolean;
+            authenticated: boolean;
+            mode: string;
+        };
+        /** net.bobinski.portfolio.api.route.CreateAuthSessionRequest */
+        CreateAuthSessionRequest: {
+            password: string;
+        };
+        /** net.bobinski.portfolio.api.plugins.ErrorResponse */
+        ErrorResponse: {
+            message: string;
         };
         /** net.bobinski.portfolio.api.route.AccountResponse */
         AccountResponse: {

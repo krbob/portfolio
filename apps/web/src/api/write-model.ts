@@ -1,4 +1,5 @@
 import type { components } from './generated/portfolio-api'
+import { requestEmpty, requestJson, requestResponse } from './http'
 
 export type Account =
   components['schemas']['AccountResponse']
@@ -67,31 +68,6 @@ export type PortfolioTarget =
 export type ReplacePortfolioTargetsPayload =
   components['schemas']['ReplacePortfolioTargetsRequest']
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  })
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`
-    try {
-      const body = (await response.json()) as { message?: string }
-      if (body.message) {
-        message = body.message
-      }
-    } catch {
-      // Keep generic fallback.
-    }
-    throw new Error(message)
-  }
-
-  return response.json() as Promise<T>
-}
-
 export function listAccounts() {
   return requestJson<Account[]>('/api/v1/accounts')
 }
@@ -134,22 +110,9 @@ export function updateTransaction(payload: UpdateTransactionPayload) {
 }
 
 export async function deleteTransaction(id: string) {
-  const response = await fetch(`/api/v1/transactions/${id}`, {
+  await requestEmpty(`/api/v1/transactions/${id}`, {
     method: 'DELETE',
   })
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`
-    try {
-      const body = (await response.json()) as { message?: string }
-      if (body.message) {
-        message = body.message
-      }
-    } catch {
-      // Keep generic fallback.
-    }
-    throw new Error(message)
-  }
 }
 
 export function importTransactions(payload: ImportTransactionsPayload) {
@@ -186,20 +149,10 @@ export function replacePortfolioTargets(payload: ReplacePortfolioTargetsPayload)
 }
 
 export async function downloadPortfolioBackup(fileName: string) {
-  const response = await fetch(`/api/v1/portfolio/backups/download?fileName=${encodeURIComponent(fileName)}`)
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`
-    try {
-      const body = (await response.json()) as { message?: string }
-      if (body.message) {
-        message = body.message
-      }
-    } catch {
-      // Keep generic fallback.
-    }
-    throw new Error(message)
-  }
+  const response = await requestResponse(
+    `/api/v1/portfolio/backups/download?fileName=${encodeURIComponent(fileName)}`,
+    { contentType: null },
+  )
 
   const suggestedFileName = extractFileName(response.headers.get('Content-Disposition')) ?? fileName
   const blob = await response.blob()

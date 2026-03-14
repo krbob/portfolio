@@ -1,21 +1,9 @@
-export interface AppMeta {
-  name: string
-  stage: string
-  version: string
-  stack: {
-    web: string
-    api: string
-    database: string
-  }
-  capabilities: string[]
-}
+import type { paths } from './generated/portfolio-api'
+import { requestJson } from './http'
 
-export async function fetchAppMeta(): Promise<AppMeta> {
-  const response = await fetch('/api/v1/meta')
+export type AppMeta =
+  paths['/v1/meta']['get']['responses'][200]['content']['application/json']
 
-  if (!response.ok) {
-    throw new Error(`Failed to load app meta: ${response.status}`)
-  }
-
-  return response.json() as Promise<AppMeta>
+export function fetchAppMeta(): Promise<AppMeta> {
+  return requestJson<AppMeta>('/api/v1/meta')
 }

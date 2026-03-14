@@ -1,4 +1,5 @@
 import type { components, paths } from './generated/portfolio-api'
+import { requestJson } from './http'
 
 export type PortfolioOverview =
   paths['/v1/portfolio/overview']['get']['responses'][200]['content']['application/json']
@@ -35,25 +36,6 @@ export type ReturnMetric =
 
 export type BenchmarkComparison =
   components['schemas']['BenchmarkComparisonResponse']
-
-async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(path)
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`
-    try {
-      const body = (await response.json()) as { message?: string }
-      if (body.message) {
-        message = body.message
-      }
-    } catch {
-      // Keep fallback.
-    }
-    throw new Error(message)
-  }
-
-  return response.json() as Promise<T>
-}
 
 export function fetchPortfolioOverview() {
   return requestJson<PortfolioOverview>('/api/v1/portfolio/overview')
