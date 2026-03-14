@@ -15,6 +15,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
@@ -149,6 +150,15 @@ fun appModule(
             transactionRepository = get(),
             currentInstrumentValuationProvider = get(),
             transactionFxConversionService = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioReadModelCacheDescriptorService(
+            accountRepository = get(),
+            instrumentRepository = get(),
+            portfolioTargetRepository = get(),
+            transactionRepository = get(),
             clock = get()
         )
     }

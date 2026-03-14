@@ -31,6 +31,9 @@ import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportIssue
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
+import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
+import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
@@ -48,6 +51,8 @@ import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
+    val readModelCacheService: ReadModelCacheService by inject()
+    val portfolioReadModelCacheDescriptorService: PortfolioReadModelCacheDescriptorService by inject()
     val portfolioAllocationService: PortfolioAllocationService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
@@ -66,15 +71,35 @@ fun Route.portfolioRoute() {
         }
 
         get("/history/daily") {
-            call.respond(portfolioHistoryService.dailyHistory().toResponse())
+            val descriptor = portfolioReadModelCacheDescriptorService.dailyHistoryDescriptor()
+            call.respond(
+                readModelCacheService.getOrCompute(
+                    descriptor = descriptor,
+                    serializer = PortfolioDailyHistoryResponse.serializer()
+                ) {
+                    portfolioHistoryService.dailyHistory().toResponse()
+                }
+            )
         }
 
         get("/returns") {
-            call.respond(portfolioReturnsService.returns().toResponse())
+            val descriptor = portfolioReadModelCacheDescriptorService.returnsDescriptor()
+            call.respond(
+                readModelCacheService.getOrCompute(
+                    descriptor = descriptor,
+                    serializer = PortfolioReturnsResponse.serializer()
+                ) {
+                    portfolioReturnsService.returns().toResponse()
+                }
+            )
         }
 
         get("/allocation") {
             call.respond(portfolioAllocationService.summary().toResponse())
+        }
+
+        get("/read-model-cache") {
+            call.respond(readModelCacheService.list().map(ReadModelCacheSnapshot::toResponse))
         }
 
         get("/audit/events") {
@@ -453,6 +478,19 @@ data class AuditEventResponse(
     val message: String,
     val metadata: Map<String, String>,
     val occurredAt: String
+)
+
+@Serializable
+data class ReadModelCacheSnapshotResponse(
+    val cacheKey: String,
+    val modelName: String,
+    val modelVersion: Int,
+    val inputsFrom: String?,
+    val inputsTo: String?,
+    val sourceUpdatedAt: String?,
+    val generatedAt: String,
+    val invalidationReason: String,
+    val payloadSizeBytes: Int
 )
 
 @Serializable
@@ -845,6 +883,18 @@ private fun AuditEvent.toResponse(): AuditEventResponse = AuditEventResponse(
     message = message,
     metadata = metadata,
     occurredAt = occurredAt.toString()
+)
+
+private fun ReadModelCacheSnapshot.toResponse(): ReadModelCacheSnapshotResponse = ReadModelCacheSnapshotResponse(
+    cacheKey = cacheKey,
+    modelName = modelName,
+    modelVersion = modelVersion,
+    inputsFrom = inputsFrom?.toString(),
+    inputsTo = inputsTo?.toString(),
+    sourceUpdatedAt = sourceUpdatedAt?.toString(),
+    generatedAt = generatedAt.toString(),
+    invalidationReason = invalidationReason.name,
+    payloadSizeBytes = payloadSizeBytes
 )
 
 private fun RestorePortfolioBackupRequest.toDomain(): PortfolioBackupRestoreRequest = PortfolioBackupRestoreRequest(
