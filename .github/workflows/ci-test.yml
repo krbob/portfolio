@@ -1,15 +1,20 @@
-name: CI
+name: CI Test
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   api:
     name: API tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -20,7 +25,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Run API tests
         working-directory: apps/api
@@ -29,6 +36,8 @@ jobs:
   web:
     name: Web tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -59,6 +68,8 @@ jobs:
     needs:
       - api
       - web
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
