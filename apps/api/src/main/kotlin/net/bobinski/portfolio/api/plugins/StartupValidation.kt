@@ -11,15 +11,6 @@ internal fun validateStartupConfiguration(
     backupConfig: BackupConfig,
     authConfig: AuthConfig
 ) {
-    if (persistenceConfig.isPostgresEnabled) {
-        require(persistenceConfig.jdbcUrl.startsWith("jdbc:postgresql://")) {
-            "PostgreSQL persistence requires jdbc:postgresql:// JDBC URL."
-        }
-        require(persistenceConfig.username.isNotBlank()) {
-            "PostgreSQL persistence requires a non-blank username."
-        }
-    }
-
     if (persistenceConfig.isSqliteEnabled) {
         require(persistenceConfig.sqlite.databasePath.isNotBlank()) {
             "SQLite persistence requires a non-blank database path."

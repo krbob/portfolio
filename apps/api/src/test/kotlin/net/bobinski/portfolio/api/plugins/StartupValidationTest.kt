@@ -15,24 +15,6 @@ import org.junit.jupiter.api.Test
 class StartupValidationTest {
 
     @Test
-    fun `startup validation rejects non-postgres jdbc url when postgres mode is enabled`() {
-        assertThrows(IllegalArgumentException::class.java) {
-            validateStartupConfiguration(
-                persistenceConfig = PersistenceConfig(
-                    mode = PersistenceMode.POSTGRES,
-                    jdbcUrl = "jdbc:sqlite:portfolio.db",
-                    username = "portfolio",
-                    password = "portfolio",
-                    sqlite = defaultSqliteConfig()
-                ),
-                marketDataConfig = validMarketDataConfig(),
-                backupConfig = validBackupConfig(),
-                authConfig = validAuthConfig()
-            )
-        }
-    }
-
-    @Test
     fun `startup validation rejects blank SQLite database path when SQLite mode is enabled`() {
         assertThrows(IllegalArgumentException::class.java) {
             validateStartupConfiguration(
@@ -95,18 +77,12 @@ class StartupValidationTest {
     }
 
     private fun validPersistenceConfig() = PersistenceConfig(
-        mode = PersistenceMode.POSTGRES,
-        jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
-        username = "portfolio",
-        password = "portfolio",
+        mode = PersistenceMode.SQLITE,
         sqlite = defaultSqliteConfig()
     )
 
     private fun validSqlitePersistenceConfig() = PersistenceConfig(
         mode = PersistenceMode.SQLITE,
-        jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
-        username = "portfolio",
-        password = "portfolio",
         sqlite = defaultSqliteConfig()
     )
 

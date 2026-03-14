@@ -3,7 +3,6 @@ package net.bobinski.portfolio.api.persistence.db
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
-import net.bobinski.portfolio.api.persistence.config.PersistenceMode
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
@@ -11,23 +10,11 @@ import org.sqlite.SQLiteConfig
 
 object DataSourceFactory {
     fun create(config: PersistenceConfig): DataSource {
-        val hikariConfig = when (config.mode) {
-            PersistenceMode.POSTGRES -> createPostgresConfig(config)
-            PersistenceMode.SQLITE -> createSqliteConfig(config)
-            PersistenceMode.MEMORY -> error("Memory persistence does not create a JDBC datasource.")
+        val hikariConfig = when {
+            config.isSqliteEnabled -> createSqliteConfig(config)
+            else -> error("Memory persistence does not create a JDBC datasource.")
         }
         return HikariDataSource(hikariConfig)
-    }
-
-    private fun createPostgresConfig(config: PersistenceConfig): HikariConfig = HikariConfig().apply {
-        jdbcUrl = config.jdbcUrl
-        username = config.username
-        password = config.password
-        driverClassName = "org.postgresql.Driver"
-        maximumPoolSize = 8
-        minimumIdle = 1
-        isAutoCommit = true
-        validate()
     }
 
     private fun createSqliteConfig(config: PersistenceConfig): HikariConfig {

@@ -10,9 +10,6 @@ portfolio:
   stage: "test"
   persistence:
     mode: "memory"
-    jdbcUrl: "jdbc:postgresql://127.0.0.1:15432/portfolio"
-    username: "portfolio"
-    password: "portfolio"
     sqlite:
       databasePath: "./build/test-data/portfolio.db"
       journalMode: "WAL"

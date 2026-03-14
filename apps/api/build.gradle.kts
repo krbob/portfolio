@@ -33,8 +33,6 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.32")
     implementation("com.zaxxer:HikariCP:6.3.0")
     implementation("org.flywaydb:flyway-core:11.13.2")
-    implementation("org.flywaydb:flyway-database-postgresql:11.13.2")
-    implementation("org.postgresql:postgresql:42.7.8")
     implementation("org.xerial:sqlite-jdbc:3.51.1.0")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
@@ -43,15 +41,15 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.test {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    environment("PORTFOLIO_PERSISTENCE_MODE", "memory")
 }
 
 tasks.register<Test>("exportOpenApiSpec") {
     val testSourceSet = sourceSets.named("test").get()
     testClassesDirs = testSourceSet.output.classesDirs
     classpath = testSourceSet.runtimeClasspath
-    useJUnitPlatform()
     systemProperty(
         "portfolio.openapi.outputPath",
         layout.buildDirectory.file("openapi/portfolio-api.json").get().asFile.absolutePath

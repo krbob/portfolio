@@ -43,12 +43,6 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
-import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteAuditEventRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteAccountRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteInstrumentRepository
@@ -112,16 +106,7 @@ fun appModule(
         )
     }
 
-    if (config.isPostgresEnabled) {
-        single(createdAtStart = true) { PersistenceResources(config) }
-        single<DataSource> { get<PersistenceResources>().dataSource }
-        single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
-        single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
-        single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
-        single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
-        single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
-        single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
-    } else if (config.isSqliteEnabled) {
+    if (config.isSqliteEnabled) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
         single<AuditEventRepository> { SqliteAuditEventRepository(dataSource = get(), json = get()) }

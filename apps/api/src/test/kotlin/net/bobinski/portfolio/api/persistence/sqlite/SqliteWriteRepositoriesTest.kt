@@ -104,9 +104,6 @@ class SqliteWriteRepositoriesTest {
 
     private fun sqlitePersistenceConfig(databasePath: String) = PersistenceConfig(
         mode = PersistenceMode.SQLITE,
-        jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
-        username = "portfolio",
-        password = "portfolio",
         sqlite = SqliteConfig(
             databasePath = databasePath,
             journalMode = SqliteJournalMode.WAL,

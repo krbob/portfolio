@@ -5,12 +5,8 @@ import io.ktor.server.config.propertyOrNull
 
 data class PersistenceConfig(
     val mode: PersistenceMode,
-    val jdbcUrl: String,
-    val username: String,
-    val password: String,
     val sqlite: SqliteConfig
 ) {
-    val isPostgresEnabled: Boolean get() = mode == PersistenceMode.POSTGRES
     val isSqliteEnabled: Boolean get() = mode == PersistenceMode.SQLITE
 
     companion object {
@@ -18,12 +14,6 @@ data class PersistenceConfig(
             mode = readSetting("PORTFOLIO_PERSISTENCE_MODE", config, "portfolio.persistence.mode")
                 ?.let(PersistenceMode::from)
                 ?: PersistenceMode.SQLITE,
-            jdbcUrl = readSetting("PORTFOLIO_DB_JDBC_URL", config, "portfolio.persistence.jdbcUrl")
-                ?: "jdbc:postgresql://127.0.0.1:15432/portfolio",
-            username = readSetting("PORTFOLIO_DB_USERNAME", config, "portfolio.persistence.username")
-                ?: "portfolio",
-            password = readSetting("PORTFOLIO_DB_PASSWORD", config, "portfolio.persistence.password")
-                ?: "portfolio",
             sqlite = SqliteConfig(
                 databasePath = readSetting(
                     "PORTFOLIO_SQLITE_DATABASE_PATH",
@@ -52,7 +42,9 @@ data class PersistenceConfig(
             envKey: String,
             config: ApplicationConfig,
             configKey: String
-        ): String? = System.getenv(envKey)
+        ): String? = System.getProperty(envKey)
+            ?.takeIf { it.isNotBlank() }
+            ?: System.getenv(envKey)
             ?.takeIf { it.isNotBlank() }
             ?: config.propertyOrNull(configKey)?.getString()
 
@@ -77,7 +69,6 @@ data class SqliteConfig(
 
 enum class PersistenceMode {
     MEMORY,
-    POSTGRES,
     SQLITE;
 
     companion object {

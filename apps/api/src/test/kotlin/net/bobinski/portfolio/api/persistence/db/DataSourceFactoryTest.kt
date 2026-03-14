@@ -52,9 +52,6 @@ class DataSourceFactoryTest {
 
     private fun sqlitePersistenceConfig(databasePath: Path) = PersistenceConfig(
         mode = PersistenceMode.SQLITE,
-        jdbcUrl = "jdbc:postgresql://127.0.0.1:15432/portfolio",
-        username = "portfolio",
-        password = "portfolio",
         sqlite = SqliteConfig(
             databasePath = databasePath.toString(),
             journalMode = SqliteJournalMode.WAL,

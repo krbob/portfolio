@@ -68,7 +68,6 @@ private fun Application.appVersion(): String = this::class.java.`package`.implem
 private fun Application.persistenceMode(): String = PersistenceConfig.from(environment.config).mode.name
 
 private fun Application.databaseSummary(): String = when (PersistenceConfig.from(environment.config).mode) {
-    PersistenceMode.POSTGRES -> "PostgreSQL (transition)"
     PersistenceMode.SQLITE -> "SQLite"
     PersistenceMode.MEMORY -> "SQLite target; in-memory dev mode"
 }

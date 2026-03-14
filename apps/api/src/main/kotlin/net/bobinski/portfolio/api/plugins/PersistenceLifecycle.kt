@@ -12,7 +12,7 @@ fun Application.configurePersistenceLifecycle() {
     val persistenceConfig = PersistenceConfig.from(environment.config)
 
     monitor.subscribe(ApplicationStopped) {
-        if (!persistenceConfig.isPostgresEnabled) {
+        if (!persistenceConfig.isSqliteEnabled) {
             return@subscribe
         }
 
