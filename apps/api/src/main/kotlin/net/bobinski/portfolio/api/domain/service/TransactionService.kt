@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.domain.service
 
 import net.bobinski.portfolio.api.domain.error.ResourceNotFoundException
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
@@ -16,13 +17,23 @@ class TransactionService(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
+    private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
     suspend fun list(): List<Transaction> = transactionRepository.list()
 
     suspend fun create(command: CreateTransactionCommand): Transaction {
         validateReferences(command)
-        return saveNew(command, Instant.now(clock))
+        val transaction = saveNew(command, Instant.now(clock))
+        auditLogService.record(
+            category = AuditEventCategory.TRANSACTIONS,
+            action = "TRANSACTION_CREATED",
+            entityType = "TRANSACTION",
+            entityId = transaction.id.toString(),
+            message = "Created ${transaction.type.name} transaction.",
+            metadata = transaction.auditMetadata()
+        )
+        return transaction
     }
 
     suspend fun previewImport(commands: List<CreateTransactionCommand>): TransactionImportPreview =
@@ -50,11 +61,24 @@ class TransactionService(
             saveNew(commands[index], baseTimestamp.plusMillis(index.toLong()))
         }
 
-        return TransactionImportResult(
+        val result = TransactionImportResult(
             createdCount = transactions.size,
             skippedDuplicateCount = preview.duplicateRowCount,
             transactions = transactions
         )
+        auditLogService.record(
+            category = AuditEventCategory.IMPORTS,
+            action = "TRANSACTION_BATCH_IMPORTED",
+            entityType = "TRANSACTION_BATCH",
+            message = "Imported ${result.createdCount} transaction rows.",
+            metadata = mapOf(
+                "rowCount" to preview.totalRowCount.toString(),
+                "createdCount" to result.createdCount.toString(),
+                "skippedDuplicateCount" to result.skippedDuplicateCount.toString(),
+                "invalidRowCount" to preview.invalidRowCount.toString()
+            )
+        )
+        return result
     }
 
     suspend fun update(id: UUID, command: CreateTransactionCommand): Transaction {
@@ -62,7 +86,7 @@ class TransactionService(
             ?: throw ResourceNotFoundException("Transaction $id was not found.")
         validateReferences(command)
 
-        return transactionRepository.save(
+        val transaction = transactionRepository.save(
             Transaction(
                 id = existing.id,
                 accountId = command.accountId,
@@ -82,12 +106,28 @@ class TransactionService(
                 updatedAt = Instant.now(clock)
             )
         )
+        auditLogService.record(
+            category = AuditEventCategory.TRANSACTIONS,
+            action = "TRANSACTION_UPDATED",
+            entityType = "TRANSACTION",
+            entityId = transaction.id.toString(),
+            message = "Updated ${transaction.type.name} transaction.",
+            metadata = transaction.auditMetadata()
+        )
+        return transaction
     }
 
     suspend fun delete(id: UUID) {
         if (!transactionRepository.delete(id)) {
             throw ResourceNotFoundException("Transaction $id was not found.")
         }
+        auditLogService.record(
+            category = AuditEventCategory.TRANSACTIONS,
+            action = "TRANSACTION_DELETED",
+            entityType = "TRANSACTION",
+            entityId = id.toString(),
+            message = "Deleted transaction $id."
+        )
     }
 
     private suspend fun validateReferences(command: CreateTransactionCommand) {
@@ -205,6 +245,16 @@ class TransactionService(
         fxRateToPln = fxRateToPln?.normalized(),
         notes = notes.trim()
     )
+
+    private fun Transaction.auditMetadata(): Map<String, String> = buildMap {
+        put("accountId", accountId.toString())
+        put("type", type.name)
+        put("tradeDate", tradeDate.toString())
+        put("grossAmount", grossAmount.toPlainString())
+        put("currency", currency)
+        instrumentId?.let { put("instrumentId", it.toString()) }
+        settlementDate?.let { put("settlementDate", it.toString()) }
+    }
 
     private fun BigDecimal.normalized(): BigDecimal = stripTrailingZeros()
 }

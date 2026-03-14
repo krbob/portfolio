@@ -14,10 +14,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.domain.error.ResourceNotFoundException
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
+import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
 
 class PortfolioBackupService(
     private val config: BackupConfig,
     private val transferService: PortfolioTransferService,
+    private val auditLogService: AuditLogService,
     private val json: Json,
     private val clock: Clock
 ) {
@@ -60,7 +63,7 @@ class PortfolioBackupService(
             lastRunAt = startedAt
 
             try {
-                runCatching {
+                try {
                     val snapshot = transferService.exportState().toStored()
                     val file = backupDirectory().resolve(fileNameFor(snapshot.exportedAt))
 
@@ -72,15 +75,39 @@ class PortfolioBackupService(
                     )
 
                     pruneOldBackups()
-                    inspectBackupFile(file)
-                }.onSuccess {
+                    val backup = inspectBackupFile(file)
                     lastSuccessAt = startedAt
                     lastFailureAt = null
                     lastFailureMessage = null
-                }.onFailure { exception ->
+                    auditLogService.record(
+                        category = AuditEventCategory.BACKUPS,
+                        action = "BACKUP_CREATED",
+                        entityType = "BACKUP",
+                        entityId = backup.fileName,
+                        message = "Created ${trigger.name.lowercase()} backup ${backup.fileName}.",
+                        metadata = mapOf(
+                            "trigger" to trigger.name,
+                            "transactionCount" to (backup.transactionCount?.toString() ?: "n/a"),
+                            "sizeBytes" to backup.sizeBytes.toString()
+                        )
+                    )
+                    backup
+                } catch (exception: Exception) {
                     lastFailureAt = startedAt
                     lastFailureMessage = exception.message ?: "${trigger.name} backup failed."
-                }.getOrThrow()
+                    auditLogService.record(
+                        category = AuditEventCategory.BACKUPS,
+                        action = "BACKUP_CREATE_FAILED",
+                        outcome = AuditEventOutcome.FAILURE,
+                        entityType = "BACKUP",
+                        message = "Failed to create ${trigger.name.lowercase()} backup.",
+                        metadata = mapOf(
+                            "trigger" to trigger.name,
+                            "error" to (exception.message ?: "unknown")
+                        )
+                    )
+                    throw exception
+                }
             } finally {
                 running = false
             }
@@ -101,13 +128,27 @@ class PortfolioBackupService(
                 )
             )
 
-            PortfolioBackupRestoreResult(
+            val restoreResult = PortfolioBackupRestoreResult(
                 fileName = request.fileName,
                 mode = result.mode,
                 accountCount = result.accountCount,
                 instrumentCount = result.instrumentCount,
                 transactionCount = result.transactionCount
             )
+            auditLogService.record(
+                category = AuditEventCategory.BACKUPS,
+                action = "BACKUP_RESTORED",
+                entityType = "BACKUP",
+                entityId = request.fileName,
+                message = "Restored backup ${request.fileName} in ${request.mode.name} mode.",
+                metadata = mapOf(
+                    "mode" to restoreResult.mode.name,
+                    "accountCount" to restoreResult.accountCount.toString(),
+                    "instrumentCount" to restoreResult.instrumentCount.toString(),
+                    "transactionCount" to restoreResult.transactionCount.toString()
+                )
+            )
+            restoreResult
         }
 
     suspend fun downloadBackup(fileName: String): PortfolioBackupDownload = operationMutex.withLock {

@@ -14,9 +14,12 @@ import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
 import net.bobinski.portfolio.api.domain.model.AssetClass
+import net.bobinski.portfolio.api.domain.model.AuditEvent
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
+import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupRecord
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreRequest
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
@@ -50,6 +53,7 @@ fun Route.portfolioRoute() {
     val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
+    val auditLogService: AuditLogService by inject()
 
     route("/v1/portfolio") {
         get("/overview") {
@@ -70,6 +74,12 @@ fun Route.portfolioRoute() {
 
         get("/allocation") {
             call.respond(portfolioAllocationService.summary().toResponse())
+        }
+
+        get("/audit/events") {
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 12
+            val category = call.request.queryParameters["category"]?.let(::parseAuditEventCategory)
+            call.respond(auditLogService.list(limit = limit, category = category).map(AuditEvent::toResponse))
         }
 
         get("/targets") {
@@ -417,6 +427,19 @@ data class PortfolioBackupStatusResponse(
     val lastFailureAt: String?,
     val lastFailureMessage: String?,
     val backups: List<PortfolioBackupRecordResponse>
+)
+
+@Serializable
+data class AuditEventResponse(
+    val id: String,
+    val category: String,
+    val action: String,
+    val outcome: String,
+    val entityType: String?,
+    val entityId: String?,
+    val message: String,
+    val metadata: Map<String, String>,
+    val occurredAt: String
 )
 
 @Serializable
@@ -796,6 +819,18 @@ private fun PortfolioBackupRecord.toResponse(): PortfolioBackupRecordResponse = 
     errorMessage = errorMessage
 )
 
+private fun AuditEvent.toResponse(): AuditEventResponse = AuditEventResponse(
+    id = id.toString(),
+    category = category.name,
+    action = action,
+    outcome = outcome.name,
+    entityType = entityType,
+    entityId = entityId,
+    message = message,
+    metadata = metadata,
+    occurredAt = occurredAt.toString()
+)
+
 private fun RestorePortfolioBackupRequest.toDomain(): PortfolioBackupRestoreRequest = PortfolioBackupRestoreRequest(
     fileName = fileName,
     mode = try {
@@ -818,4 +853,12 @@ private fun String.toInstantOrThrow(field: String): java.time.Instant = try {
     java.time.Instant.parse(this)
 } catch (_: java.time.format.DateTimeParseException) {
     throw IllegalArgumentException("$field must use ISO-8601 instant format.")
+}
+
+private fun parseAuditEventCategory(value: String): AuditEventCategory = try {
+    AuditEventCategory.valueOf(value.uppercase())
+} catch (_: IllegalArgumentException) {
+    throw IllegalArgumentException(
+        "category must be one of ${AuditEventCategory.entries.joinToString()}."
+    )
 }

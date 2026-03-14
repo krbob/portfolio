@@ -18,11 +18,13 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 
 class PortfolioTransferService(
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
     private val transactionRepository: TransactionRepository,
+    private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
     suspend fun exportState(): PortfolioSnapshot {
@@ -198,12 +200,25 @@ class PortfolioTransferService(
                 transactionRepository.save(snapshot.toDomain())
             }
 
-        return PortfolioImportResult(
+        val result = PortfolioImportResult(
             mode = request.mode,
             accountCount = accounts.size,
             instrumentCount = instruments.size,
             transactionCount = transactions.size
         )
+        auditLogService.record(
+            category = AuditEventCategory.IMPORTS,
+            action = "PORTFOLIO_STATE_IMPORTED",
+            entityType = "PORTFOLIO_SNAPSHOT",
+            message = "Imported portfolio snapshot in ${request.mode.name} mode.",
+            metadata = mapOf(
+                "mode" to request.mode.name,
+                "accountCount" to result.accountCount.toString(),
+                "instrumentCount" to result.instrumentCount.toString(),
+                "transactionCount" to result.transactionCount.toString()
+            )
+        )
+        return result
     }
 
     private fun duplicateIdIssues(entityName: String, ids: List<String>): List<PortfolioImportIssue> = ids

@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.domain.service
 
 import net.bobinski.portfolio.api.domain.model.AssetClass
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
@@ -12,13 +13,14 @@ import java.util.UUID
 
 class InstrumentService(
     private val instrumentRepository: InstrumentRepository,
+    private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
     suspend fun list(): List<Instrument> = instrumentRepository.list()
 
     suspend fun create(command: CreateInstrumentCommand): Instrument {
         val now = Instant.now(clock)
-        return instrumentRepository.save(
+        val instrument = instrumentRepository.save(
             Instrument(
                 id = UUID.randomUUID(),
                 name = command.name.trim(),
@@ -33,6 +35,20 @@ class InstrumentService(
                 updatedAt = now
             )
         )
+        auditLogService.record(
+            category = AuditEventCategory.INSTRUMENTS,
+            action = "INSTRUMENT_CREATED",
+            entityType = "INSTRUMENT",
+            entityId = instrument.id.toString(),
+            message = "Created instrument ${instrument.name}.",
+            metadata = buildMap {
+                put("kind", instrument.kind.name)
+                put("assetClass", instrument.assetClass.name)
+                put("currency", instrument.currency)
+                instrument.symbol?.let { put("symbol", it) }
+            }
+        )
+        return instrument
     }
 }
 

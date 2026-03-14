@@ -3,10 +3,12 @@ package net.bobinski.portfolio.api.dependency
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
+import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
+import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
@@ -32,10 +34,12 @@ import net.bobinski.portfolio.api.marketdata.service.RemoteInflationAdjustmentPr
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
@@ -100,24 +104,28 @@ fun appModule(
     if (config.isPostgresEnabled) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
+        single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
         single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
         single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
         single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
     } else {
+        single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
         single<InstrumentRepository> { InMemoryInstrumentRepository() }
         single<PortfolioTargetRepository> { InMemoryPortfolioTargetRepository() }
         single<TransactionRepository> { InMemoryTransactionRepository() }
     }
 
-    single { AccountService(accountRepository = get(), clock = get()) }
-    single { InstrumentService(instrumentRepository = get(), clock = get()) }
+    single { AuditLogService(auditEventRepository = get(), clock = get()) }
+    single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
+    single { InstrumentService(instrumentRepository = get(), auditLogService = get(), clock = get()) }
     single {
         TransactionService(
             transactionRepository = get(),
             accountRepository = get(),
             instrumentRepository = get(),
+            auditLogService = get(),
             clock = get()
         )
     }
@@ -171,6 +179,7 @@ fun appModule(
             accountRepository = get(),
             instrumentRepository = get(),
             transactionRepository = get(),
+            auditLogService = get(),
             clock = get()
         )
     }
@@ -178,6 +187,7 @@ fun appModule(
         PortfolioBackupService(
             config = get(),
             transferService = get(),
+            auditLogService = get(),
             json = get(),
             clock = get()
         )
