@@ -27,5 +27,9 @@ fun Application.configureStatusPages() {
     }
 }
 
+internal suspend fun io.ktor.server.application.ApplicationCall.respondUnauthorized(message: String) {
+    respond(HttpStatusCode.Unauthorized, ErrorResponse(message))
+}
+
 @Serializable
 data class ErrorResponse(val message: String)

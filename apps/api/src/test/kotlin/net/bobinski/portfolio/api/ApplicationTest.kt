@@ -35,6 +35,7 @@ class ApplicationTest {
         assertTrue(body.contains("\"status\": \"ok\""))
         assertTrue(body.contains("\"name\": \"Portfolio\""))
         assertTrue(body.contains("\"persistenceMode\": \"MEMORY\""))
+        assertTrue(body.contains("\"authEnabled\": false"))
     }
 
     @Test
@@ -50,6 +51,7 @@ class ApplicationTest {
         assertTrue(body.contains("\"web\": \"React 19 + TypeScript + Vite\""))
         assertTrue(body.contains("\"database\": \"PostgreSQL\""))
         assertTrue(body.contains("\"persistenceMode\": \"MEMORY\""))
+        assertTrue(body.contains("\"mode\": \"DISABLED\""))
         assertTrue(body.contains("Server-side backup snapshots"))
     }
 

@@ -7,9 +7,12 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
+import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 
 fun Route.systemRoute(application: Application) {
+    val authConfig = AuthConfig.from(application.environment.config)
+
     route("/v1") {
         get("/health") {
             call.respond(
@@ -18,7 +21,8 @@ fun Route.systemRoute(application: Application) {
                     name = application.appName(),
                     stage = application.appStage(),
                     version = application.appVersion(),
-                    persistenceMode = application.persistenceMode()
+                    persistenceMode = application.persistenceMode(),
+                    authEnabled = authConfig.enabled
                 )
             )
         }
@@ -30,6 +34,10 @@ fun Route.systemRoute(application: Application) {
                     stage = application.appStage(),
                     version = application.appVersion(),
                     persistenceMode = application.persistenceMode(),
+                    auth = AuthSummary(
+                        enabled = authConfig.enabled,
+                        mode = if (authConfig.enabled) "PASSWORD" else "DISABLED"
+                    ),
                     stack = StackSummary(
                         web = "React 19 + TypeScript + Vite",
                         api = "Kotlin 2.3 + Ktor 3",
@@ -64,7 +72,8 @@ data class HealthResponse(
     val name: String,
     val stage: String,
     val version: String,
-    val persistenceMode: String
+    val persistenceMode: String,
+    val authEnabled: Boolean
 )
 
 @Serializable
@@ -73,8 +82,15 @@ data class AppMetaResponse(
     val stage: String,
     val version: String,
     val persistenceMode: String,
+    val auth: AuthSummary,
     val stack: StackSummary,
     val capabilities: List<String>
+)
+
+@Serializable
+data class AuthSummary(
+    val enabled: Boolean,
+    val mode: String
 )
 
 @Serializable

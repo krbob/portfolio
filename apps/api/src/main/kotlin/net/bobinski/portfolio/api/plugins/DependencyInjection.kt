@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.plugins
 
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -12,10 +13,12 @@ fun Application.configureDependencyInjection() {
     val persistenceConfig = PersistenceConfig.from(environment.config)
     val marketDataConfig = MarketDataConfig.from(environment.config)
     val backupConfig = BackupConfig.from(environment.config)
+    val authConfig = AuthConfig.from(environment.config)
     validateStartupConfiguration(
         persistenceConfig = persistenceConfig,
         marketDataConfig = marketDataConfig,
-        backupConfig = backupConfig
+        backupConfig = backupConfig,
+        authConfig = authConfig
     )
 
     install(Koin) {

@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.plugins
 
+import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -7,7 +8,8 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 internal fun validateStartupConfiguration(
     persistenceConfig: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
-    backupConfig: BackupConfig
+    backupConfig: BackupConfig,
+    authConfig: AuthConfig
 ) {
     if (persistenceConfig.isPostgresEnabled) {
         require(persistenceConfig.jdbcUrl.startsWith("jdbc:postgresql://")) {
@@ -39,6 +41,21 @@ internal fun validateStartupConfiguration(
     if (backupConfig.enabled) {
         require(backupConfig.directory.isNotBlank()) {
             "Backups require a non-blank directory."
+        }
+    }
+
+    if (authConfig.enabled) {
+        require(authConfig.password.isNotBlank()) {
+            "Password authentication requires a non-blank password."
+        }
+        require(authConfig.sessionSecret.length >= 16) {
+            "Password authentication requires a session secret of at least 16 characters."
+        }
+        require(authConfig.sessionCookieName.isNotBlank()) {
+            "Password authentication requires a non-blank session cookie name."
+        }
+        require(authConfig.sessionMaxAgeDays > 0) {
+            "Password authentication requires a positive session max age."
         }
     }
 }

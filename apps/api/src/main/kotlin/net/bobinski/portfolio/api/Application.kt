@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api
 
 import io.ktor.server.application.Application
 import net.bobinski.portfolio.api.plugins.configureBackupLifecycle
+import net.bobinski.portfolio.api.plugins.configureAuthentication
 import net.bobinski.portfolio.api.plugins.configureDependencyInjection
 import net.bobinski.portfolio.api.plugins.configureMonitoring
 import net.bobinski.portfolio.api.plugins.configurePersistenceLifecycle
@@ -17,6 +18,7 @@ fun Application.module() {
     configureDependencyInjection()
     configurePersistenceLifecycle()
     configureBackupLifecycle()
+    configureAuthentication()
     configureMonitoring()
     configureStatusPages()
     configureSerialization()

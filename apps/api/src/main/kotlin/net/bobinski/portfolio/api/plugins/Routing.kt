@@ -10,6 +10,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.openapi.OpenApiDocSource
+import net.bobinski.portfolio.api.route.authRoute
 import net.bobinski.portfolio.api.route.accountRoute
 import net.bobinski.portfolio.api.route.instrumentRoute
 import net.bobinski.portfolio.api.route.portfolioRoute
@@ -50,9 +51,12 @@ fun Application.configureRouting() {
         }
 
         systemRoute(this@configureRouting)
-        accountRoute()
-        instrumentRoute()
-        portfolioRoute()
-        transactionRoute()
+        authRoute(this@configureRouting)
+        protectedRoute(this@configureRouting) {
+            accountRoute()
+            instrumentRoute()
+            portfolioRoute()
+            transactionRoute()
+        }
     }
 }

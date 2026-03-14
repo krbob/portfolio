@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.plugins
 
+import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -21,7 +22,8 @@ class StartupValidationTest {
                     password = "portfolio"
                 ),
                 marketDataConfig = validMarketDataConfig(),
-                backupConfig = validBackupConfig()
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
             )
         }
     }
@@ -32,7 +34,8 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig().copy(stockAnalystBaseUrl = "stock.local"),
-                backupConfig = validBackupConfig()
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
             )
         }
     }
@@ -43,7 +46,8 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
-                backupConfig = validBackupConfig().copy(enabled = true, directory = "")
+                backupConfig = validBackupConfig().copy(enabled = true, directory = ""),
+                authConfig = validAuthConfig()
             )
         }
     }
@@ -54,7 +58,8 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
-                backupConfig = validBackupConfig()
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
             )
         }
     }
@@ -80,5 +85,14 @@ class StartupValidationTest {
         directory = "./data/backups",
         intervalMinutes = 1440,
         retentionCount = 30
+    )
+
+    private fun validAuthConfig() = AuthConfig(
+        enabled = false,
+        password = "",
+        sessionSecret = "",
+        sessionCookieName = "portfolio_session",
+        secureCookie = false,
+        sessionMaxAgeDays = 30
     )
 }
