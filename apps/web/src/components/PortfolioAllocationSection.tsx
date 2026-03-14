@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SectionCard } from './SectionCard'
 import { usePortfolioAllocation } from '../hooks/use-read-model'
 import { usePortfolioTargets, useReplacePortfolioTargets } from '../hooks/use-write-model'
+import { formatCurrencyPln, formatPercent as formatPercentValue, formatSignedCurrencyPln } from '../lib/format'
 
 type AllocationFieldKey = 'EQUITIES' | 'BONDS' | 'CASH'
 
@@ -88,7 +89,7 @@ export function PortfolioAllocationSection() {
 
             <article className="overview-stat">
               <span>Available cash</span>
-              <strong>{allocationQuery.data ? formatCurrency(allocationQuery.data.availableCashPln) : '...'}</strong>
+              <strong>{allocationQuery.data ? formatCurrencyPln(allocationQuery.data.availableCashPln) : '...'}</strong>
             </article>
 
             <article className="overview-stat">
@@ -199,11 +200,11 @@ export function PortfolioAllocationSection() {
               <dl className="allocation-bucket-stats">
                 <div>
                   <dt>Current value</dt>
-                  <dd>{formatCurrency(bucket.currentValuePln)}</dd>
+                  <dd>{formatCurrencyPln(bucket.currentValuePln)}</dd>
                 </div>
                 <div>
                   <dt>Target value</dt>
-                  <dd>{formatCurrency(bucket.targetValuePln)}</dd>
+                  <dd>{formatCurrencyPln(bucket.targetValuePln)}</dd>
                 </div>
                 <div>
                   <dt>Drift</dt>
@@ -214,12 +215,12 @@ export function PortfolioAllocationSection() {
                 <div>
                   <dt>Value gap</dt>
                   <dd className={gainClassName(bucket.gapValuePln)}>
-                    {formatSignedCurrency(bucket.gapValuePln)}
+                    {formatSignedCurrencyPln(bucket.gapValuePln)}
                   </dd>
                 </div>
                 <div>
                   <dt>Suggested contribution</dt>
-                  <dd>{formatCurrency(bucket.suggestedContributionPln)}</dd>
+                  <dd>{formatCurrencyPln(bucket.suggestedContributionPln)}</dd>
                 </div>
               </dl>
             </article>
@@ -254,49 +255,18 @@ function assetClassLabel(assetClass: string) {
   }
 }
 
-function formatCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(Number(value))
-}
-
-function formatSignedCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  const amount = Number(value)
-  const formatted = formatCurrency(value)
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  return formatted
-}
-
 function formatPercent(value: string | null | undefined) {
   if (value == null) {
     return 'Unavailable'
   }
-  return `${Number(value).toFixed(2)}%`
+  return formatPercentValue(value)
 }
 
 function formatSignedPercent(value: string | null | undefined) {
   if (value == null) {
     return 'Unavailable'
   }
-  const amount = Number(value)
-  const absolute = `${Math.abs(amount).toFixed(2)} pp`
-  if (amount > 0) {
-    return `+${absolute}`
-  }
-  if (amount < 0) {
-    return `-${absolute}`
-  }
-  return absolute
+  return formatPercentValue(value, { signed: true, suffix: ' pp' })
 }
 
 function gainClassName(value: string | null | undefined) {

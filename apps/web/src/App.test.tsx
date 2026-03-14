@@ -33,7 +33,7 @@ describe('App', () => {
             stack: {
               web: 'React 19 + TypeScript + Vite',
               api: 'Kotlin 2.3 + Ktor 3',
-              database: 'PostgreSQL (planned)',
+              database: 'SQLite',
             },
             capabilities: ['Transaction-based portfolio accounting'],
           }),
@@ -430,14 +430,11 @@ describe('App', () => {
 
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect((await screen.findAllByText(/portfolio dev/i)).length).toBeGreaterThan(0)
-    expect(await screen.findByText(/transactions remain the source of truth/i)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /portfolio returns/i })).toBeInTheDocument()
-    expect(screen.getByText(/^Benchmark comparison$/i)).toBeInTheDocument()
-    expect(await screen.findByText(/valuation state book_only/i)).toBeInTheDocument()
-    expect(await screen.findByText(/^PLN MWRR$/i)).toBeInTheDocument()
-    expect(await screen.findByText(/vwra benchmark/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /portfolio dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /allocation snapshot/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /capital and gain/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /target allocation and rebalancing/i })).toBeInTheDocument()
+    expect(await screen.findByText(/book_only · 1 open issues/i)).toBeInTheDocument()
     expect(await screen.findByText(/imported 2 transaction rows\./i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
@@ -474,7 +471,7 @@ describe('App', () => {
             stack: {
               web: 'React 19 + TypeScript + Vite',
               api: 'Kotlin 2.3 + Ktor 3',
-              database: 'PostgreSQL',
+              database: 'SQLite',
             },
             capabilities: ['Transaction-based portfolio accounting'],
           }),

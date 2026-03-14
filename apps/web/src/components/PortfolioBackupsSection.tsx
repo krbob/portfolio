@@ -7,6 +7,7 @@ import {
   useRestorePortfolioBackup,
   useRunPortfolioBackup,
 } from '../hooks/use-write-model'
+import { formatBytes, formatDateTime } from '../lib/format'
 
 export function PortfolioBackupsSection() {
   const backupsQuery = usePortfolioBackups()
@@ -132,11 +133,11 @@ export function PortfolioBackupsSection() {
         <p className="muted-copy">Directory: {backupsQuery.data?.directory ?? 'Loading...'}</p>
         <p className="muted-copy">`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.</p>
         <p className="muted-copy">
-          Last success: {backupsQuery.data?.lastSuccessAt ? formatTimestamp(backupsQuery.data.lastSuccessAt) : 'No successful backup yet.'}
+          Last success: {backupsQuery.data?.lastSuccessAt ? formatDateTime(backupsQuery.data.lastSuccessAt) : 'No successful backup yet.'}
         </p>
         {backupsQuery.data?.lastFailureMessage && (
           <p className="form-error">
-            Last failure: {backupsQuery.data.lastFailureAt ? `${formatTimestamp(backupsQuery.data.lastFailureAt)}: ` : ''}
+            Last failure: {backupsQuery.data.lastFailureAt ? `${formatDateTime(backupsQuery.data.lastFailureAt)}: ` : ''}
             {backupsQuery.data.lastFailureMessage}
           </p>
         )}
@@ -155,7 +156,7 @@ export function PortfolioBackupsSection() {
                 <div>
                   <h4>{backup.fileName}</h4>
                   <p className="muted-copy">
-                    Exported {backup.exportedAt ? formatTimestamp(backup.exportedAt) : 'unknown'} · {formatBytes(backup.sizeBytes)}
+                    Exported {backup.exportedAt ? formatDateTime(backup.exportedAt) : 'unknown'} · {formatBytes(backup.sizeBytes)}
                   </p>
                 </div>
 
@@ -183,7 +184,7 @@ export function PortfolioBackupsSection() {
                 </div>
                 <div>
                   <dt>Created</dt>
-                  <dd>{formatTimestamp(backup.createdAt)}</dd>
+                  <dd>{formatDateTime(backup.createdAt)}</dd>
                 </div>
               </dl>
 
@@ -242,15 +243,15 @@ export function PortfolioBackupsSection() {
           {visibleBackupEvents.map((event) => (
             <article className="audit-event" key={event.id}>
               <div className="audit-event-header">
-                <div>
-                  <strong>{event.message}</strong>
-                  <p>
-                    {event.action} · {formatTimestamp(event.occurredAt)}
-                  </p>
-                </div>
-                <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
-                  {event.outcome}
-                </span>
+                    <div>
+                      <strong>{event.message}</strong>
+                      <p>
+                        {event.action} · {formatDateTime(event.occurredAt)}
+                      </p>
+                    </div>
+                    <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
+                      {event.outcome}
+                    </span>
               </div>
               {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
             </article>
@@ -273,24 +274,4 @@ export function PortfolioBackupsSection() {
       )}
     </SectionCard>
   )
-}
-
-function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function formatBytes(sizeBytes: number) {
-  if (sizeBytes < 1024) {
-    return `${sizeBytes} B`
-  }
-  if (sizeBytes < 1024 * 1024) {
-    return `${(sizeBytes / 1024).toFixed(1)} KB`
-  }
-  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
 }

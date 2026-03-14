@@ -1,28 +1,6 @@
 import { SectionCard } from './SectionCard'
 import { usePortfolioOverview } from '../hooks/use-read-model'
-
-function formatCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(Number(value))
-}
-
-function formatSignedCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  const amount = Number(value)
-  const formatted = formatCurrency(value)
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  return formatted
-}
+import { formatCurrencyPln, formatSignedCurrencyPln } from '../lib/format'
 
 export function PortfolioOverviewSection() {
   const overviewQuery = usePortfolioOverview()
@@ -37,24 +15,24 @@ export function PortfolioOverviewSection() {
       <div className="overview-grid">
         <article className="overview-stat">
           <span>Total current value</span>
-          <strong>{data ? formatCurrency(data.totalCurrentValuePln) : '...'}</strong>
+          <strong>{data ? formatCurrencyPln(data.totalCurrentValuePln) : '...'}</strong>
         </article>
 
         <article className="overview-stat">
           <span>Total unrealized P/L</span>
           <strong className={data ? gainClassName(data.totalUnrealizedGainPln) : undefined}>
-            {data ? formatSignedCurrency(data.totalUnrealizedGainPln) : '...'}
+            {data ? formatSignedCurrencyPln(data.totalUnrealizedGainPln) : '...'}
           </strong>
         </article>
 
         <article className="overview-stat">
           <span>Invested current value</span>
-          <strong>{data ? formatCurrency(data.investedCurrentValuePln) : '...'}</strong>
+          <strong>{data ? formatCurrencyPln(data.investedCurrentValuePln) : '...'}</strong>
         </article>
 
         <article className="overview-stat">
           <span>Cash balance</span>
-          <strong>{data ? formatCurrency(data.cashBalancePln) : '...'}</strong>
+          <strong>{data ? formatCurrencyPln(data.cashBalancePln) : '...'}</strong>
         </article>
 
         <article className="overview-stat">
@@ -81,13 +59,13 @@ export function PortfolioOverviewSection() {
       {data && (
         <div className="overview-notes">
           <p>
-            Current allocation: equities {formatCurrency(data.equityCurrentValuePln)}, bonds{' '}
-            {formatCurrency(data.bondCurrentValuePln)}, cash {formatCurrency(data.cashCurrentValuePln)}.
+            Current allocation: equities {formatCurrencyPln(data.equityCurrentValuePln)}, bonds{' '}
+            {formatCurrencyPln(data.bondCurrentValuePln)}, cash {formatCurrencyPln(data.cashCurrentValuePln)}.
           </p>
           <p>
-            Book basis: total {formatCurrency(data.totalBookValuePln)}, invested{' '}
-            {formatCurrency(data.investedBookValuePln)}, net contributions{' '}
-            {formatCurrency(data.netContributionsPln)}.
+            Book basis: total {formatCurrencyPln(data.totalBookValuePln)}, invested{' '}
+            {formatCurrencyPln(data.investedBookValuePln)}, net contributions{' '}
+            {formatCurrencyPln(data.netContributionsPln)}.
           </p>
           <p>
             Valuation state {data.valuationState}. Unvalued holdings: {data.unvaluedHoldingCount}.

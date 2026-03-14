@@ -5,6 +5,7 @@ import { PortfolioBenchmarkChart } from './PortfolioBenchmarkChart'
 import { PortfolioValueChart } from './PortfolioValueChart'
 import { usePortfolioDailyHistory } from '../hooks/use-read-model'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import { formatCurrencyPln, formatPercent as formatPercentValue, formatSignedCurrencyPln } from '../lib/format'
 
 type HistoryUnit = 'PLN' | 'USD' | 'AU'
 type HistoryPeriod = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
@@ -19,28 +20,8 @@ type ContributionSeriesKey =
 
 const HISTORY_PERIODS: HistoryPeriod[] = ['YTD', '1Y', '3Y', '5Y', 'MAX']
 
-function formatCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(Number(value))
-}
-
 function formatPercent(value: string) {
-  return `${Number(value).toFixed(2)}%`
-}
-
-function formatSignedCurrency(value: string) {
-  const amount = Number(value)
-  const formatted = formatCurrency(value)
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  return formatted
+  return formatPercentValue(value)
 }
 
 export function PortfolioHistorySection() {
@@ -245,7 +226,7 @@ function seriesForUnit(unit: HistoryUnit): {
 
 function formatSeriesValue(value: string | null | undefined, unit: HistoryUnit) {
   if (unit === 'PLN') {
-    return formatCurrency(value)
+    return formatCurrencyPln(value)
   }
   if (value == null) {
     return 'Unavailable'
@@ -257,7 +238,7 @@ function formatSeriesValue(value: string | null | undefined, unit: HistoryUnit) 
 
 function formatSeriesDelta(value: string, unit: HistoryUnit) {
   if (unit === 'PLN') {
-    return formatSignedCurrency(value)
+    return formatSignedCurrencyPln(value)
   }
   const amount = Number(value)
   const digits = unit === 'USD' ? 2 : 6

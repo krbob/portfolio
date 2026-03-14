@@ -1,16 +1,9 @@
 import { Link } from 'react-router-dom'
 import { AllocationBar } from '../components/AllocationBar'
 import { PortfolioAllocationSection } from '../components/PortfolioAllocationSection'
-import { PortfolioHistorySection } from '../components/PortfolioHistorySection'
-import { PortfolioOverviewSection } from '../components/PortfolioOverviewSection'
-import { PortfolioReturnsSection } from '../components/PortfolioReturnsSection'
-import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioAuditEvents, usePortfolioDailyHistory, usePortfolioOverview } from '../hooks/use-read-model'
 import { usePortfolioBackups } from '../hooks/use-write-model'
-
-function formatStage(stage: string) {
-  return stage.toUpperCase()
-}
+import { formatCurrencyPln, formatDateTime, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 
 const shortcuts = [
   {
@@ -31,7 +24,6 @@ const shortcuts = [
 ]
 
 export function DashboardScreen() {
-  const { data, isLoading, isError } = useAppMeta()
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const auditEventsQuery = usePortfolioAuditEvents({ limit: 6 })
@@ -39,76 +31,62 @@ export function DashboardScreen() {
   const overview = overviewQuery.data
   const latestHistoryPoint = historyQuery.data?.points.at(-1)
   const previousHistoryPoint = historyQuery.data?.points.at(-2)
-  const dailyChange = latestHistoryPoint && previousHistoryPoint
-    ? Number(latestHistoryPoint.totalCurrentValuePln) - Number(previousHistoryPoint.totalCurrentValuePln)
-    : null
-  const dailyChangePct = dailyChange != null && previousHistoryPoint && Number(previousHistoryPoint.totalCurrentValuePln) !== 0
-    ? (dailyChange / Number(previousHistoryPoint.totalCurrentValuePln)) * 100
-    : null
+  const dailyChange =
+    latestHistoryPoint && previousHistoryPoint
+      ? Number(latestHistoryPoint.totalCurrentValuePln) - Number(previousHistoryPoint.totalCurrentValuePln)
+      : null
+  const dailyChangePct =
+    dailyChange != null && previousHistoryPoint && Number(previousHistoryPoint.totalCurrentValuePln) !== 0
+      ? (dailyChange / Number(previousHistoryPoint.totalCurrentValuePln)) * 100
+      : null
   const totalCurrentValue = overview ? Number(overview.totalCurrentValuePln) : 0
-  const equityWeightPct = overview && totalCurrentValue > 0
-    ? (Number(overview.equityCurrentValuePln) / totalCurrentValue) * 100
-    : 0
-  const bondWeightPct = overview && totalCurrentValue > 0
-    ? (Number(overview.bondCurrentValuePln) / totalCurrentValue) * 100
-    : 0
-  const cashWeightPct = overview && totalCurrentValue > 0
-    ? (Number(overview.cashCurrentValuePln) / totalCurrentValue) * 100
-    : 0
+  const equityWeightPct =
+    overview && totalCurrentValue > 0 ? (Number(overview.equityCurrentValuePln) / totalCurrentValue) * 100 : 0
+  const bondWeightPct =
+    overview && totalCurrentValue > 0 ? (Number(overview.bondCurrentValuePln) / totalCurrentValue) * 100 : 0
+  const cashWeightPct =
+    overview && totalCurrentValue > 0 ? (Number(overview.cashCurrentValuePln) / totalCurrentValue) * 100 : 0
   const lastBackup = backupsQuery.data?.backups[0] ?? null
   const auditEvents = auditEventsQuery.data ?? []
+  const openIssues = overview
+    ? overview.valuationIssueCount + overview.missingFxTransactions + overview.unsupportedCorrectionTransactions
+    : 0
 
   return (
     <div className="page-stack">
-      <section className="hero-card">
-        <div className="hero-header">
-          <div>
-            <p className="eyebrow">Dashboard</p>
-            <h2 className="hero-title">A calm control panel for a long-term portfolio.</h2>
-          </div>
-
-          <div className="status-pill">
-            {isLoading && 'Connecting API'}
-            {isError && 'API unavailable'}
-            {data && `${data.name} ${formatStage(data.stage)}`}
-          </div>
-        </div>
-
-        <p className="hero-copy">
-          Transactions remain the source of truth. Current value, returns, history and backup workflows
-          are derived from rebuildable portfolio state plus market data integrations.
-        </p>
-      </section>
-
       <section className="dashboard-stat-grid">
         <article className="panel metric-card">
           <span className="metric-label">Total value</span>
-          <strong>{overview ? formatCurrency(overview.totalCurrentValuePln) : '...'}</strong>
-          <p>{overview ? `${overview.accountCount} accounts · ${overview.activeHoldingCount} active holdings` : 'Loading portfolio summary...'}</p>
+          <strong>{overview ? formatCurrencyPln(overview.totalCurrentValuePln) : '...'}</strong>
+          <p>
+            {overview
+              ? `${overview.accountCount} accounts · ${overview.activeHoldingCount} active holdings`
+              : 'Loading portfolio summary...'}
+          </p>
         </article>
 
         <article className="panel metric-card">
           <span className="metric-label">Daily change</span>
-          <strong className={gainClassName(dailyChange)}>{dailyChange != null ? formatSignedCurrency(dailyChange) : '...'}</strong>
-          <p>{dailyChangePct != null ? `${formatSignedPercent(dailyChangePct)} vs previous valuation day` : 'Waiting for enough history points...'}</p>
+          <strong className={gainClassName(dailyChange)}>
+            {dailyChange != null ? formatSignedCurrencyPln(dailyChange) : '...'}
+          </strong>
+          <p>
+            {dailyChangePct != null
+              ? `${formatPercent(dailyChangePct, { signed: true })} vs previous valuation day`
+              : 'Waiting for enough history points...'}
+          </p>
         </article>
 
         <article className="panel metric-card">
           <span className="metric-label">Valuation health</span>
-          <strong>
-            {overview ? `${overview.valuedHoldingCount}/${overview.activeHoldingCount}` : '...'}
-          </strong>
-          <p>
-            {overview
-              ? `${overview.valuationIssueCount + overview.missingFxTransactions + overview.unsupportedCorrectionTransactions} open issues`
-              : 'Loading valuation state...'}
-          </p>
+          <strong>{overview ? `${overview.valuedHoldingCount}/${overview.activeHoldingCount}` : '...'}</strong>
+          <p>{overview ? `${openIssues} open issues` : 'Loading valuation state...'}</p>
         </article>
 
         <article className="panel metric-card">
           <span className="metric-label">Backups</span>
           <strong>{backupsQuery.data ? `${backupsQuery.data.backups.length}` : '...'}</strong>
-          <p>{lastBackup ? `Latest ${formatTimestamp(lastBackup.createdAt)}` : 'No server snapshot yet'}</p>
+          <p>{lastBackup ? `Latest ${formatDateTime(lastBackup.createdAt)}` : 'No server snapshot yet'}</p>
         </article>
       </section>
 
@@ -118,31 +96,53 @@ export function DashboardScreen() {
         equityWeightPct={equityWeightPct}
       />
 
-      <PortfolioAllocationSection />
-
       <section className="detail-grid">
         <article className="panel stack-card">
-          <h3>Valuation and operations</h3>
+          <div className="section-header">
+            <p className="eyebrow">Positioning</p>
+            <h3>Allocation snapshot</h3>
+            <p>Current mix, capital at work and unresolved valuation gaps.</p>
+          </div>
+
           <dl className="stack-list">
             <div>
-              <dt>Unrealized P/L</dt>
-              <dd className={overview ? gainClassName(Number(overview.totalUnrealizedGainPln)) : undefined}>
-                {overview ? formatSignedCurrency(Number(overview.totalUnrealizedGainPln)) : 'Loading...'}
+              <dt>Equities</dt>
+              <dd>
+                {overview
+                  ? `${formatCurrencyPln(overview.equityCurrentValuePln)} · ${formatPercent(equityWeightPct)}`
+                  : 'Loading...'}
               </dd>
             </div>
             <div>
-              <dt>Net contributions</dt>
-              <dd>{overview ? formatCurrency(overview.netContributionsPln) : 'Loading...'}</dd>
+              <dt>Bonds</dt>
+              <dd>
+                {overview
+                  ? `${formatCurrencyPln(overview.bondCurrentValuePln)} · ${formatPercent(bondWeightPct)}`
+                  : 'Loading...'}
+              </dd>
             </div>
             <div>
-              <dt>System</dt>
-              <dd>{isError ? 'Degraded' : isLoading ? 'Loading' : 'Healthy'} · {data ? formatStage(data.stage) : '...'}</dd>
+              <dt>Cash</dt>
+              <dd>
+                {overview
+                  ? `${formatCurrencyPln(overview.cashCurrentValuePln)} · ${formatPercent(cashWeightPct)}`
+                  : 'Loading...'}
+              </dd>
+            </div>
+            <div>
+              <dt>Valuation state</dt>
+              <dd>{overview ? `${overview.valuationState} · ${openIssues} open issues` : 'Loading...'}</dd>
             </div>
           </dl>
         </article>
 
         <article className="panel capabilities-card">
-          <h3>Workflow shortcuts</h3>
+          <div className="section-header">
+            <p className="eyebrow">Actions</p>
+            <h3>Workflow shortcuts</h3>
+            <p>Jump directly into the parts of the product you are most likely to use next.</p>
+          </div>
+
           <div className="shortcut-grid">
             {shortcuts.map((shortcut) => (
               <Link key={shortcut.to} className="shortcut-card" to={shortcut.to}>
@@ -156,25 +156,43 @@ export function DashboardScreen() {
 
       <section className="detail-grid">
         <article className="panel stack-card">
-          <h3>Chosen stack</h3>
+          <div className="section-header">
+            <p className="eyebrow">Portfolio state</p>
+            <h3>Capital and gain</h3>
+            <p>Book basis, net contributions and the latest valuation move.</p>
+          </div>
+
           <dl className="stack-list">
             <div>
-              <dt>Web</dt>
-              <dd>{data?.stack.web ?? 'Loading...'}</dd>
+              <dt>Unrealized P/L</dt>
+              <dd className={overview ? gainClassName(Number(overview.totalUnrealizedGainPln)) : undefined}>
+                {overview ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : 'Loading...'}
+              </dd>
             </div>
             <div>
-              <dt>API</dt>
-              <dd>{data?.stack.api ?? 'Loading...'}</dd>
+              <dt>Net contributions</dt>
+              <dd>{overview ? formatCurrencyPln(overview.netContributionsPln) : 'Loading...'}</dd>
             </div>
             <div>
-              <dt>Data</dt>
-              <dd>{data?.stack.database ?? 'Loading...'}</dd>
+              <dt>Invested current value</dt>
+              <dd>{overview ? formatCurrencyPln(overview.investedCurrentValuePln) : 'Loading...'}</dd>
+            </div>
+            <div>
+              <dt>Daily change</dt>
+              <dd className={gainClassName(dailyChange)}>
+                {dailyChange != null ? formatSignedCurrencyPln(dailyChange) : 'Waiting for enough history...'}
+              </dd>
             </div>
           </dl>
         </article>
 
         <article className="panel stack-card">
-          <h3>Recent operational events</h3>
+          <div className="section-header">
+            <p className="eyebrow">Operations</p>
+            <h3>Recent activity</h3>
+            <p>Latest backup, import and restore events from the append-only audit log.</p>
+          </div>
+
           {auditEventsQuery.isLoading && <p className="muted-copy">Loading recent activity...</p>}
           {auditEventsQuery.isError && <p className="form-error">{auditEventsQuery.error.message}</p>}
           {!auditEventsQuery.isLoading && !auditEventsQuery.isError && auditEvents.length === 0 && (
@@ -188,7 +206,7 @@ export function DashboardScreen() {
                     <div>
                       <strong>{event.message}</strong>
                       <p>
-                        {event.category} · {formatTimestamp(event.occurredAt)}
+                        {event.category} · {formatDateTime(event.occurredAt)}
                       </p>
                     </div>
                     <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
@@ -203,33 +221,9 @@ export function DashboardScreen() {
         </article>
       </section>
 
-      <PortfolioOverviewSection />
-      <PortfolioReturnsSection />
-      <PortfolioHistorySection />
+      <PortfolioAllocationSection />
     </div>
   )
-}
-
-function formatCurrency(value: string) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(Number(value))
-}
-
-function formatSignedCurrency(value: number) {
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(value)
-  return value > 0 ? `+${formatted}` : formatted
-}
-
-function formatSignedPercent(value: number) {
-  const formatted = `${Math.abs(value).toFixed(2)}%`
-  return value > 0 ? `+${formatted}` : value < 0 ? `-${formatted}` : formatted
 }
 
 function gainClassName(value: number | null) {
@@ -243,14 +237,4 @@ function gainClassName(value: number | null) {
     return 'value-negative'
   }
   return undefined
-}
-
-function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }

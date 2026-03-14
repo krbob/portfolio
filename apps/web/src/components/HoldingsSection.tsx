@@ -1,28 +1,6 @@
 import { SectionCard } from './SectionCard'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
-
-function formatCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'PLN',
-    maximumFractionDigits: 2,
-  }).format(Number(value))
-}
-
-function formatSignedCurrency(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-  const amount = Number(value)
-  const formatted = formatCurrency(value)
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  return formatted
-}
+import { formatCurrencyPln, formatSignedCurrencyPln } from '../lib/format'
 
 export function HoldingsSection() {
   const holdingsQuery = usePortfolioHoldings()
@@ -64,24 +42,24 @@ export function HoldingsSection() {
                 </div>
                 <div>
                   <dt>Avg cost</dt>
-                  <dd>{formatCurrency(holding.averageCostPerUnitPln)}</dd>
+                  <dd>{formatCurrencyPln(holding.averageCostPerUnitPln)}</dd>
                 </div>
                 <div>
                   <dt>Current price</dt>
-                  <dd>{formatCurrency(holding.currentPricePln)}</dd>
+                  <dd>{formatCurrencyPln(holding.currentPricePln)}</dd>
                 </div>
                 <div>
                   <dt>Book value</dt>
-                  <dd>{formatCurrency(holding.bookValuePln)}</dd>
+                  <dd>{formatCurrencyPln(holding.bookValuePln)}</dd>
                 </div>
                 <div>
                   <dt>Current value</dt>
-                  <dd>{formatCurrency(holding.currentValuePln)}</dd>
+                  <dd>{formatCurrencyPln(holding.currentValuePln)}</dd>
                 </div>
                 <div>
                   <dt>Unrealized P/L</dt>
                   <dd className={gainClassName(holding.unrealizedGainPln)}>
-                    {formatSignedCurrency(holding.unrealizedGainPln)}
+                    {formatSignedCurrencyPln(holding.unrealizedGainPln)}
                   </dd>
                 </div>
               </dl>

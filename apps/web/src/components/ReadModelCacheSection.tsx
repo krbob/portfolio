@@ -1,5 +1,6 @@
 import { SectionCard } from './SectionCard'
 import { useReadModelCacheSnapshots } from '../hooks/use-read-model'
+import { formatBytes, formatDateTime } from '../lib/format'
 
 export function ReadModelCacheSection() {
   const cacheQuery = useReadModelCacheSnapshots()
@@ -21,10 +22,10 @@ export function ReadModelCacheSection() {
           <span>Total payload</span>
           <strong>{cacheQuery.data ? formatBytes(totalPayloadBytes) : '...'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Latest generation</span>
-          <strong>{snapshots[0]?.generatedAt ? formatTimestamp(snapshots[0].generatedAt) : 'n/a'}</strong>
-        </article>
+            <article className="transfer-box">
+              <span>Latest generation</span>
+              <strong>{snapshots[0]?.generatedAt ? formatDateTime(snapshots[0].generatedAt) : 'n/a'}</strong>
+            </article>
       </div>
 
       {cacheQuery.isLoading && <p className="muted-copy">Loading read-model cache snapshots...</p>}
@@ -41,7 +42,7 @@ export function ReadModelCacheSection() {
                 <div>
                   <h4>{snapshot.modelName}</h4>
                   <p className="muted-copy">
-                    {snapshot.cacheKey} · generated {formatTimestamp(snapshot.generatedAt)}
+                    {snapshot.cacheKey} · generated {formatDateTime(snapshot.generatedAt)}
                   </p>
                 </div>
 
@@ -59,7 +60,7 @@ export function ReadModelCacheSection() {
                 </div>
                 <div>
                   <dt>Source updated</dt>
-                  <dd>{snapshot.sourceUpdatedAt ? formatTimestamp(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
+                  <dd>{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
                 </div>
                 <div>
                   <dt>Payload</dt>
@@ -74,29 +75,9 @@ export function ReadModelCacheSection() {
   )
 }
 
-function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 function formatWindow(from?: string | null, to?: string | null) {
   if (!from && !to) {
     return 'n/a'
   }
   return `${from ?? '...'} -> ${to ?? '...'}`
-}
-
-function formatBytes(sizeBytes: number) {
-  if (sizeBytes < 1024) {
-    return `${sizeBytes} B`
-  }
-  if (sizeBytes < 1024 * 1024) {
-    return `${(sizeBytes / 1024).toFixed(1)} KB`
-  }
-  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
 }
