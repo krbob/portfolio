@@ -5,6 +5,7 @@ import {
   fetchPortfolioDailyHistory,
   fetchPortfolioHoldings,
   fetchPortfolioOverview,
+  fetchReadModelCacheSnapshots,
   fetchPortfolioReturns,
 } from '../api/read-model'
 
@@ -47,5 +48,12 @@ export function usePortfolioAuditEvents({ limit = 12, category }: { limit?: numb
   return useQuery({
     queryKey: ['portfolio-audit-events', limit, category ?? 'ALL'],
     queryFn: () => fetchPortfolioAuditEvents({ limit, category }),
+  })
+}
+
+export function useReadModelCacheSnapshots() {
+  return useQuery({
+    queryKey: ['portfolio-read-model-cache'],
+    queryFn: fetchReadModelCacheSnapshots,
   })
 }

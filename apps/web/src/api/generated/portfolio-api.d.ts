@@ -422,6 +422,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/read-model-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReadModelCacheSnapshotResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/audit/events": {
         parameters: {
             query?: never;
@@ -1188,6 +1222,18 @@ export interface components {
             totalCurrentValuePln: string;
             availableCashPln: string;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelCacheSnapshotResponse */
+        ReadModelCacheSnapshotResponse: {
+            cacheKey: string;
+            modelName: string;
+            modelVersion: number;
+            inputsFrom?: string | null;
+            inputsTo?: string | null;
+            sourceUpdatedAt?: string | null;
+            generatedAt: string;
+            invalidationReason: string;
+            payloadSizeBytes: number;
         };
         /** net.bobinski.portfolio.api.route.AuditEventResponse */
         AuditEventResponse: {

@@ -21,6 +21,9 @@ export type PortfolioAllocationSummary =
 export type PortfolioAuditEvent =
   paths['/v1/portfolio/audit/events']['get']['responses'][200]['content']['application/json'][number]
 
+export type ReadModelCacheSnapshot =
+  paths['/v1/portfolio/read-model-cache']['get']['responses'][200]['content']['application/json'][number]
+
 export type PortfolioAllocationBucket =
   components['schemas']['PortfolioAllocationBucketResponse']
 
@@ -86,4 +89,8 @@ export function fetchPortfolioAuditEvents({
   }
 
   return requestJson<PortfolioAuditEvent[]>(`/api/v1/portfolio/audit/events?${params.toString()}`)
+}
+
+export function fetchReadModelCacheSnapshots() {
+  return requestJson<ReadModelCacheSnapshot[]>('/api/v1/portfolio/read-model-cache')
 }

@@ -51,6 +51,7 @@ portfolio/
 - append-only audit events are available for recent write-model, import, and backup activity
 - destructive `REPLACE` import and restore flows now require explicit confirmation and create safety backups automatically
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
+- history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
 
 ## Local database
 

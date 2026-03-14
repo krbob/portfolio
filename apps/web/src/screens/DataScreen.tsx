@@ -2,6 +2,7 @@ import { AccountsSection } from '../components/AccountsSection'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { PageIntro } from '../components/PageIntro'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
+import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 
 export function DataScreen() {
   return (
@@ -18,6 +19,7 @@ export function DataScreen() {
       </section>
 
       <PortfolioStateSection />
+      <ReadModelCacheSection />
     </div>
   )
 }

@@ -108,7 +108,7 @@ The ordering below is intentional:
 
 ## Phase 4: Architecture Hardening
 
-### 11. Formal read-model cache / snapshot store
+### 11. Formal read-model cache / snapshot store (done)
 
 - persist rebuildable read models with metadata:
   - version
