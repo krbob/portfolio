@@ -52,4 +52,19 @@ class ApplicationTest {
         assertTrue(body.contains("\"persistenceMode\": \"MEMORY\""))
         assertTrue(body.contains("Server-side backup snapshots"))
     }
+
+    @Test
+    fun `openapi endpoint returns api specification`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.get("/v1/openapi.json")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"openapi\""))
+        assertTrue(body.contains("/v1/portfolio/overview"))
+        assertTrue(body.contains("/v1/portfolio/returns"))
+    }
 }

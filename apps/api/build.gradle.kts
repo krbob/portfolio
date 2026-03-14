@@ -21,6 +21,8 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:3.4.1")
     implementation("io.ktor:ktor-server-content-negotiation:3.4.1")
     implementation("io.ktor:ktor-server-config-yaml:3.4.1")
+    implementation("io.ktor:ktor-server-openapi:3.4.1")
+    implementation("io.ktor:ktor-server-routing-openapi:3.4.1")
     implementation("io.ktor:ktor-server-status-pages:3.4.1")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.1")
     implementation("io.insert-koin:koin-ktor:4.1.1")
@@ -39,6 +41,28 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<Test>("exportOpenApiSpec") {
+    val testSourceSet = sourceSets.named("test").get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty(
+        "portfolio.openapi.outputPath",
+        layout.buildDirectory.file("openapi/portfolio-api.json").get().asFile.absolutePath
+    )
+    filter {
+        includeTestsMatching("net.bobinski.portfolio.api.OpenApiExportTest")
+    }
+}
+
+ktor {
+    openApi {
+        enabled = true
+        codeInferenceEnabled = true
+        onlyCommented = false
+    }
 }
 
 kotlin {
