@@ -57,6 +57,7 @@ class PortfolioStateRouteTest {
                 """
                 {
                   "mode": "REPLACE",
+                  "confirmation": "REPLACE",
                   "snapshot": ${exportResponse.bodyAsText()}
                 }
                 """.trimIndent()
@@ -112,6 +113,7 @@ class PortfolioStateRouteTest {
                 """
                 {
                   "mode": "REPLACE",
+                  "confirmation": "REPLACE",
                   "snapshot": ${exportResponse.bodyAsText()}
                 }
                 """.trimIndent()
@@ -125,7 +127,31 @@ class PortfolioStateRouteTest {
         assertEquals(HttpStatusCode.OK, importResponse.status)
         assertTrue(importResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
         assertTrue(importResponse.bodyAsText().contains("\"transactionCount\": 2"))
+        assertTrue(importResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
         assertTrue(transactionsResponse.bodyAsText().contains("\"type\": \"BUY\""))
+    }
+
+    @Test
+    fun `replace import requires explicit confirmation`() = testApplication {
+        application {
+            module()
+        }
+
+        val exportResponse = client.get("/v1/portfolio/state/export")
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "mode": "REPLACE",
+                  "snapshot": ${exportResponse.bodyAsText()}
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, importResponse.status)
+        assertTrue(importResponse.bodyAsText().contains("REPLACE operations require confirmation"))
     }
 
     @Test

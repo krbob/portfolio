@@ -437,7 +437,8 @@ data class PortfolioImportResult(
     val mode: ImportMode,
     val accountCount: Int,
     val instrumentCount: Int,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val safetyBackupFileName: String? = null
 )
 
 enum class ImportMode {

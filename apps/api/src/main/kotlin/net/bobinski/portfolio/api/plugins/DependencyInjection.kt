@@ -12,6 +12,11 @@ fun Application.configureDependencyInjection() {
     val persistenceConfig = PersistenceConfig.from(environment.config)
     val marketDataConfig = MarketDataConfig.from(environment.config)
     val backupConfig = BackupConfig.from(environment.config)
+    validateStartupConfiguration(
+        persistenceConfig = persistenceConfig,
+        marketDataConfig = marketDataConfig,
+        backupConfig = backupConfig
+    )
 
     install(Koin) {
         modules(appModule(persistenceConfig, marketDataConfig, backupConfig))

@@ -58,63 +58,83 @@ class PortfolioBackupService(
 
     suspend fun createBackup(trigger: BackupTrigger = BackupTrigger.MANUAL): PortfolioBackupRecord =
         operationMutex.withLock {
-            running = true
-            val startedAt = Instant.now(clock)
-            lastRunAt = startedAt
-
-            try {
-                try {
-                    val snapshot = transferService.exportState().toStored()
-                    val file = backupDirectory().resolve(fileNameFor(snapshot.exportedAt))
-
-                    Files.writeString(
-                        file,
-                        json.encodeToString(StoredPortfolioSnapshot.serializer(), snapshot),
-                        CREATE_NEW,
-                        WRITE
-                    )
-
-                    pruneOldBackups()
-                    val backup = inspectBackupFile(file)
-                    lastSuccessAt = startedAt
-                    lastFailureAt = null
-                    lastFailureMessage = null
-                    auditLogService.record(
-                        category = AuditEventCategory.BACKUPS,
-                        action = "BACKUP_CREATED",
-                        entityType = "BACKUP",
-                        entityId = backup.fileName,
-                        message = "Created ${trigger.name.lowercase()} backup ${backup.fileName}.",
-                        metadata = mapOf(
-                            "trigger" to trigger.name,
-                            "transactionCount" to (backup.transactionCount?.toString() ?: "n/a"),
-                            "sizeBytes" to backup.sizeBytes.toString()
-                        )
-                    )
-                    backup
-                } catch (exception: Exception) {
-                    lastFailureAt = startedAt
-                    lastFailureMessage = exception.message ?: "${trigger.name} backup failed."
-                    auditLogService.record(
-                        category = AuditEventCategory.BACKUPS,
-                        action = "BACKUP_CREATE_FAILED",
-                        outcome = AuditEventOutcome.FAILURE,
-                        entityType = "BACKUP",
-                        message = "Failed to create ${trigger.name.lowercase()} backup.",
-                        metadata = mapOf(
-                            "trigger" to trigger.name,
-                            "error" to (exception.message ?: "unknown")
-                        )
-                    )
-                    throw exception
-                }
-            } finally {
-                running = false
-            }
+            createBackupUnlocked(trigger)
         }
+
+    private suspend fun createBackupUnlocked(trigger: BackupTrigger): PortfolioBackupRecord {
+        running = true
+        val startedAt = Instant.now(clock)
+        lastRunAt = startedAt
+
+        try {
+            val snapshot = transferService.exportState().toStored()
+            val file = backupDirectory().resolve(fileNameFor(snapshot.exportedAt))
+
+            Files.writeString(
+                file,
+                json.encodeToString(StoredPortfolioSnapshot.serializer(), snapshot),
+                CREATE_NEW,
+                WRITE
+            )
+
+            val prunedBackups = pruneOldBackups()
+            val backup = inspectBackupFile(file)
+            lastSuccessAt = startedAt
+            lastFailureAt = null
+            lastFailureMessage = null
+            auditLogService.record(
+                category = AuditEventCategory.BACKUPS,
+                action = "BACKUP_CREATED",
+                entityType = "BACKUP",
+                entityId = backup.fileName,
+                message = "Created ${trigger.name.lowercase()} backup ${backup.fileName}.",
+                metadata = mapOf(
+                    "trigger" to trigger.name,
+                    "transactionCount" to (backup.transactionCount?.toString() ?: "n/a"),
+                    "sizeBytes" to backup.sizeBytes.toString()
+                )
+            )
+            prunedBackups.forEach { prunedFileName ->
+                auditLogService.record(
+                    category = AuditEventCategory.BACKUPS,
+                    action = "BACKUP_PRUNED",
+                    entityType = "BACKUP",
+                    entityId = prunedFileName,
+                    message = "Pruned backup $prunedFileName due to retention policy.",
+                    metadata = mapOf(
+                        "trigger" to trigger.name,
+                        "retentionCount" to config.retentionCount.toString()
+                    )
+                )
+            }
+            return backup
+        } catch (exception: Exception) {
+            lastFailureAt = startedAt
+            lastFailureMessage = exception.message ?: "${trigger.name} backup failed."
+            auditLogService.record(
+                category = AuditEventCategory.BACKUPS,
+                action = "BACKUP_CREATE_FAILED",
+                outcome = AuditEventOutcome.FAILURE,
+                entityType = "BACKUP",
+                message = "Failed to create ${trigger.name.lowercase()} backup.",
+                metadata = mapOf(
+                    "trigger" to trigger.name,
+                    "error" to (exception.message ?: "unknown")
+                )
+            )
+            throw exception
+        } finally {
+            running = false
+        }
+    }
 
     suspend fun restoreBackup(request: PortfolioBackupRestoreRequest): PortfolioBackupRestoreResult =
         operationMutex.withLock {
+            val safetyBackup = if (request.mode == ImportMode.REPLACE) {
+                createBackupUnlocked(BackupTrigger.PRE_RESTORE_REPLACE)
+            } else {
+                null
+            }
             val record = inspectBackupFile(resolveBackupFile(request.fileName))
             require(record.isReadable) {
                 "Backup ${request.fileName} is not readable and cannot be restored."
@@ -133,7 +153,8 @@ class PortfolioBackupService(
                 mode = result.mode,
                 accountCount = result.accountCount,
                 instrumentCount = result.instrumentCount,
-                transactionCount = result.transactionCount
+                transactionCount = result.transactionCount,
+                safetyBackupFileName = safetyBackup?.fileName
             )
             auditLogService.record(
                 category = AuditEventCategory.BACKUPS,
@@ -145,7 +166,8 @@ class PortfolioBackupService(
                     "mode" to restoreResult.mode.name,
                     "accountCount" to restoreResult.accountCount.toString(),
                     "instrumentCount" to restoreResult.instrumentCount.toString(),
-                    "transactionCount" to restoreResult.transactionCount.toString()
+                    "transactionCount" to restoreResult.transactionCount.toString(),
+                    "safetyBackupFileName" to (restoreResult.safetyBackupFileName ?: "none")
                 )
             )
             restoreResult
@@ -178,20 +200,23 @@ class PortfolioBackupService(
         }
     }
 
-    private fun pruneOldBackups() {
+    private fun pruneOldBackups(): List<String> {
         val directory = backupDirectory()
         if (!Files.exists(directory)) {
-            return
+            return emptyList()
         }
 
-        Files.list(directory).use { stream ->
+        return Files.list(directory).use { stream ->
             stream
                 .filter { path -> Files.isRegularFile(path) && path.fileName.toString().endsWith(".json") }
                 .sorted { left, right ->
                     Files.getLastModifiedTime(right).compareTo(Files.getLastModifiedTime(left))
                 }
                 .skip(config.retentionCount.toLong())
-                .forEach(Files::deleteIfExists)
+                .map { path ->
+                    path.fileName.toString().also { Files.deleteIfExists(path) }
+                }
+                .toList()
         }
     }
 
@@ -304,7 +329,8 @@ data class PortfolioBackupRestoreResult(
     val mode: ImportMode,
     val accountCount: Int,
     val instrumentCount: Int,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val safetyBackupFileName: String? = null
 )
 
 data class PortfolioBackupDownload(
@@ -314,7 +340,9 @@ data class PortfolioBackupDownload(
 
 enum class BackupTrigger {
     MANUAL,
-    SCHEDULED
+    SCHEDULED,
+    PRE_RESTORE_REPLACE,
+    PRE_IMPORT_REPLACE
 }
 
 @Serializable

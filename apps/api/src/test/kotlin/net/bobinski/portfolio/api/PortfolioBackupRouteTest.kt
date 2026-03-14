@@ -63,7 +63,8 @@ class PortfolioBackupRouteTest {
                     """
                     {
                       "fileName": "$backupFileName",
-                      "mode": "REPLACE"
+                      "mode": "REPLACE",
+                      "confirmation": "REPLACE"
                     }
                     """.trimIndent()
                 )
@@ -80,8 +81,63 @@ class PortfolioBackupRouteTest {
             assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)
             assertEquals(HttpStatusCode.OK, restoreResponse.status)
             assertTrue(restoreResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
+            assertTrue(restoreResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
             assertTrue(accountsResponse.bodyAsText().contains("\"name\": \"Primary\""))
             assertFalse(accountsResponse.bodyAsText().contains("\"name\": \"Secondary\""))
+        } finally {
+            backupDirectory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `replace restore requires explicit confirmation`() = testApplication {
+        val backupDirectory = Files.createTempDirectory("portfolio-backups-confirmation-test")
+
+        environment {
+            config = MapApplicationConfig(
+                "portfolio.backups.enabled" to "false",
+                "portfolio.backups.directory" to backupDirectory.toString(),
+                "portfolio.backups.intervalMinutes" to "1440",
+                "portfolio.backups.retentionCount" to "5"
+            )
+        }
+
+        application {
+            module()
+        }
+
+        try {
+            val accountId = createAccount(name = "Primary")
+            createTransaction(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-03-01",
+                  "settlementDate": "2026-03-01",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+
+            val runResponse = client.post("/v1/portfolio/backups/run")
+            val backupFileName = Regex("\"fileName\":\\s*\"([^\"]+)\"").find(runResponse.bodyAsText())!!.groupValues[1]
+
+            val restoreResponse = client.post("/v1/portfolio/backups/restore") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    """
+                    {
+                      "fileName": "$backupFileName",
+                      "mode": "REPLACE"
+                    }
+                    """.trimIndent()
+                )
+            }
+
+            assertEquals(HttpStatusCode.BadRequest, restoreResponse.status)
+            assertTrue(restoreResponse.bodyAsText().contains("REPLACE operations require confirmation"))
         } finally {
             backupDirectory.toFile().deleteRecursively()
         }

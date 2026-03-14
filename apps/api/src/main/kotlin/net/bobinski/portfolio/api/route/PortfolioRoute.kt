@@ -24,6 +24,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioBackupRecord
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreRequest
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupStatus
+import net.bobinski.portfolio.api.domain.service.BackupTrigger
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
@@ -115,6 +116,7 @@ fun Route.portfolioRoute() {
 
         post("/backups/restore") {
             val request = call.receive<RestorePortfolioBackupRequest>()
+            requireReplaceConfirmation(mode = request.mode, confirmation = request.confirmation)
             call.respond(portfolioBackupService.restoreBackup(request.toDomain()).toResponse())
         }
 
@@ -130,7 +132,16 @@ fun Route.portfolioRoute() {
 
         post("/state/import") {
             val request = call.receive<ImportPortfolioStateRequest>()
-            val result = portfolioTransferService.importState(request.toDomain())
+            requireReplaceConfirmation(mode = request.mode, confirmation = request.confirmation)
+            val domainRequest = request.toDomain()
+            val safetyBackup = if (domainRequest.mode == ImportMode.REPLACE) {
+                portfolioBackupService.createBackup(trigger = BackupTrigger.PRE_IMPORT_REPLACE)
+            } else {
+                null
+            }
+            val result = portfolioTransferService.importState(domainRequest).copy(
+                safetyBackupFileName = safetyBackup?.fileName
+            )
             call.respond(result.toResponse())
         }
     }
@@ -378,6 +389,7 @@ data class TransactionSnapshotResponse(
 @Serializable
 data class ImportPortfolioStateRequest(
     val mode: String = "MERGE",
+    val confirmation: String? = null,
     val snapshot: PortfolioSnapshotResponse
 )
 
@@ -386,7 +398,8 @@ data class PortfolioImportResultResponse(
     val mode: String,
     val accountCount: Int,
     val instrumentCount: Int,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val safetyBackupFileName: String? = null
 )
 
 @Serializable
@@ -459,7 +472,8 @@ data class PortfolioBackupRecordResponse(
 @Serializable
 data class RestorePortfolioBackupRequest(
     val fileName: String,
-    val mode: String = "MERGE"
+    val mode: String = "MERGE",
+    val confirmation: String? = null
 )
 
 @Serializable
@@ -468,7 +482,8 @@ data class PortfolioBackupRestoreResultResponse(
     val mode: String,
     val accountCount: Int,
     val instrumentCount: Int,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val safetyBackupFileName: String? = null
 )
 
 private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
@@ -765,7 +780,8 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toRe
         mode = mode.name,
         accountCount = accountCount,
         instrumentCount = instrumentCount,
-        transactionCount = transactionCount
+        transactionCount = transactionCount,
+        safetyBackupFileName = safetyBackupFileName
     )
 
 private fun PortfolioImportPreview.toResponse(): PortfolioImportPreviewResponse =
@@ -846,8 +862,18 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreResu
         mode = mode.name,
         accountCount = accountCount,
         instrumentCount = instrumentCount,
-        transactionCount = transactionCount
+        transactionCount = transactionCount,
+        safetyBackupFileName = safetyBackupFileName
     )
+
+private fun requireReplaceConfirmation(mode: String, confirmation: String?) {
+    if (mode.trim().uppercase() != ImportMode.REPLACE.name) {
+        return
+    }
+    require(confirmation?.trim()?.uppercase() == ImportMode.REPLACE.name) {
+        "REPLACE operations require confirmation set to REPLACE."
+    }
+}
 
 private fun String.toInstantOrThrow(field: String): java.time.Instant = try {
     java.time.Instant.parse(this)
