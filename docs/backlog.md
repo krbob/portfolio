@@ -79,7 +79,7 @@ The ordering below is intentional:
 - support account/instrument mapping assistance
 - prepare the import pipeline for future broker-specific adapters
 
-### 8. Audit log
+### 8. Audit log (done)
 
 - store append-only records for important changes:
   - account/instrument/transaction mutations

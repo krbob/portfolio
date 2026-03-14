@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchPortfolioAllocation,
+  fetchPortfolioAuditEvents,
   fetchPortfolioDailyHistory,
   fetchPortfolioHoldings,
   fetchPortfolioOverview,
@@ -39,5 +40,12 @@ export function usePortfolioAllocation() {
   return useQuery({
     queryKey: ['portfolio-allocation'],
     queryFn: fetchPortfolioAllocation,
+  })
+}
+
+export function usePortfolioAuditEvents({ limit = 12, category }: { limit?: number; category?: string } = {}) {
+  return useQuery({
+    queryKey: ['portfolio-audit-events', limit, category ?? 'ALL'],
+    queryFn: () => fetchPortfolioAuditEvents({ limit, category }),
   })
 }

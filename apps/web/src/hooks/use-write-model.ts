@@ -50,6 +50,7 @@ export function useCreateAccount() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })
@@ -71,6 +72,7 @@ export function useCreateInstrument() {
         queryClient.invalidateQueries({ queryKey: ['instruments'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })
@@ -169,7 +171,10 @@ export function useRunPortfolioBackup() {
   return useMutation({
     mutationFn: (): Promise<PortfolioBackupRecord> => runPortfolioBackup(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
     },
   })
 }
@@ -189,6 +194,7 @@ export function useRestorePortfolioBackup() {
       await Promise.all([
         invalidateTransactionRelatedQueries(queryClient),
         queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })
@@ -221,6 +227,7 @@ async function invalidateTransactionRelatedQueries(queryClient: ReturnType<typeo
     queryClient.invalidateQueries({ queryKey: ['transactions'] }),
     queryClient.invalidateQueries({ queryKey: ['accounts'] }),
     queryClient.invalidateQueries({ queryKey: ['instruments'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),

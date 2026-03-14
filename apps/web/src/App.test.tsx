@@ -294,6 +294,42 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'audit-1',
+              category: 'IMPORTS',
+              action: 'TRANSACTION_BATCH_IMPORTED',
+              outcome: 'SUCCESS',
+              entityType: 'TRANSACTION_BATCH',
+              entityId: null,
+              message: 'Imported 2 transaction rows.',
+              metadata: {
+                rowCount: '2',
+                createdCount: '2',
+                skippedDuplicateCount: '0',
+              },
+              occurredAt: '2026-03-13T18:05:00Z',
+            },
+            {
+              id: 'audit-2',
+              category: 'BACKUPS',
+              action: 'BACKUP_CREATED',
+              outcome: 'SUCCESS',
+              entityType: 'BACKUP',
+              entityId: 'portfolio-backup-20260313T180000000Z.json',
+              message: 'Created manual backup portfolio-backup-20260313T180000000Z.json.',
+              metadata: {
+                trigger: 'MANUAL',
+              },
+              occurredAt: '2026-03-13T18:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/targets')) {
         return new Response(
           JSON.stringify([
@@ -387,6 +423,7 @@ describe('App', () => {
     expect(await screen.findByText(/valuation state book_only/i)).toBeInTheDocument()
     expect(await screen.findByText(/^PLN MWRR$/i)).toBeInTheDocument()
     expect(await screen.findByText(/vwra benchmark/i)).toBeInTheDocument()
+    expect(await screen.findByText(/imported 2 transaction rows\./i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()

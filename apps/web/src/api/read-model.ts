@@ -18,6 +18,9 @@ export type PortfolioReturns =
 export type PortfolioAllocationSummary =
   paths['/v1/portfolio/allocation']['get']['responses'][200]['content']['application/json']
 
+export type PortfolioAuditEvent =
+  paths['/v1/portfolio/audit/events']['get']['responses'][200]['content']['application/json'][number]
+
 export type PortfolioAllocationBucket =
   components['schemas']['PortfolioAllocationBucketResponse']
 
@@ -67,4 +70,20 @@ export function fetchPortfolioReturns() {
 
 export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
+}
+
+export function fetchPortfolioAuditEvents({
+  limit = 12,
+  category,
+}: {
+  limit?: number
+  category?: string
+} = {}) {
+  const params = new URLSearchParams()
+  params.set('limit', String(limit))
+  if (category) {
+    params.set('category', category)
+  }
+
+  return requestJson<PortfolioAuditEvent[]>(`/api/v1/portfolio/audit/events?${params.toString()}`)
 }

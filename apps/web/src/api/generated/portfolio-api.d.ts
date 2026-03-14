@@ -422,6 +422,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/audit/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: string;
+                    category?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuditEventResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/targets": {
         parameters: {
             query?: never;
@@ -1151,6 +1188,20 @@ export interface components {
             totalCurrentValuePln: string;
             availableCashPln: string;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
+        };
+        /** net.bobinski.portfolio.api.route.AuditEventResponse */
+        AuditEventResponse: {
+            id: string;
+            category: string;
+            action: string;
+            outcome: string;
+            entityType?: string | null;
+            entityId?: string | null;
+            message: string;
+            metadata: {
+                [key: string]: string;
+            };
+            occurredAt: string;
         };
         /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
         PortfolioTargetResponse: {

@@ -5,7 +5,7 @@ import { PortfolioHistorySection } from '../components/PortfolioHistorySection'
 import { PortfolioOverviewSection } from '../components/PortfolioOverviewSection'
 import { PortfolioReturnsSection } from '../components/PortfolioReturnsSection'
 import { useAppMeta } from '../hooks/use-app-meta'
-import { usePortfolioDailyHistory, usePortfolioOverview } from '../hooks/use-read-model'
+import { usePortfolioAuditEvents, usePortfolioDailyHistory, usePortfolioOverview } from '../hooks/use-read-model'
 import { usePortfolioBackups } from '../hooks/use-write-model'
 
 function formatStage(stage: string) {
@@ -34,6 +34,7 @@ export function DashboardScreen() {
   const { data, isLoading, isError } = useAppMeta()
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
+  const auditEventsQuery = usePortfolioAuditEvents({ limit: 6 })
   const backupsQuery = usePortfolioBackups()
   const overview = overviewQuery.data
   const latestHistoryPoint = historyQuery.data?.points.at(-1)
@@ -55,6 +56,7 @@ export function DashboardScreen() {
     ? (Number(overview.cashCurrentValuePln) / totalCurrentValue) * 100
     : 0
   const lastBackup = backupsQuery.data?.backups[0] ?? null
+  const auditEvents = auditEventsQuery.data ?? []
 
   return (
     <div className="page-stack">
@@ -173,20 +175,31 @@ export function DashboardScreen() {
 
         <article className="panel stack-card">
           <h3>Recent operational events</h3>
-          <dl className="stack-list">
-            <div>
-              <dt>Last valuation day</dt>
-              <dd>{latestHistoryPoint?.date ?? 'No history yet'}</dd>
+          {auditEventsQuery.isLoading && <p className="muted-copy">Loading recent activity...</p>}
+          {auditEventsQuery.isError && <p className="form-error">{auditEventsQuery.error.message}</p>}
+          {!auditEventsQuery.isLoading && !auditEventsQuery.isError && auditEvents.length === 0 && (
+            <p className="muted-copy">No operational events recorded yet.</p>
+          )}
+          {!auditEventsQuery.isLoading && !auditEventsQuery.isError && auditEvents.length > 0 && (
+            <div className="audit-feed">
+              {auditEvents.map((event) => (
+                <article className="audit-event" key={event.id}>
+                  <div className="audit-event-header">
+                    <div>
+                      <strong>{event.message}</strong>
+                      <p>
+                        {event.category} · {formatTimestamp(event.occurredAt)}
+                      </p>
+                    </div>
+                    <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
+                      {event.outcome}
+                    </span>
+                  </div>
+                  {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
+                </article>
+              ))}
             </div>
-            <div>
-              <dt>Last backup success</dt>
-              <dd>{backupsQuery.data?.lastSuccessAt ? formatTimestamp(backupsQuery.data.lastSuccessAt) : 'No successful backup yet'}</dd>
-            </div>
-            <div>
-              <dt>Backup scheduler</dt>
-              <dd>{backupsQuery.data?.schedulerEnabled ? 'Enabled' : 'Manual only'}</dd>
-            </div>
-          </dl>
+          )}
         </article>
       </section>
 

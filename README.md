@@ -48,6 +48,7 @@ portfolio/
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
 - transaction CSV import now supports preview, validation, name-based mapping, and duplicate skipping
+- append-only audit events are available for recent write-model, import, and backup activity
 
 ## Local database
 
