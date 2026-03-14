@@ -17,8 +17,8 @@ export function PortfolioReturnsSection() {
   return (
     <SectionCard
       eyebrow="Returns"
-      title="Money-weighted returns"
-      description="Period returns are derived from external cash flows plus rebuildable daily valuations, with nominal PLN, real PLN and USD views."
+      title="Portfolio returns"
+      description="Each period now exposes both money-weighted return and time-weighted return, so you can separate personal cash-flow timing from strategy performance."
     >
       {returnsQuery.isLoading && <p className="muted-copy">Loading return summary...</p>}
       {returnsQuery.isError && <p className="form-error">{returnsQuery.error.message}</p>}
@@ -46,12 +46,12 @@ export function PortfolioReturnsSection() {
                     valueKey="moneyWeightedReturn"
                   />
                   <ReturnStat
-                    label="PLN annualized"
+                    label="PLN TWR"
                     metric={period.nominalPln}
-                    valueKey="annualizedMoneyWeightedReturn"
+                    valueKey="timeWeightedReturn"
                   />
                   <ReturnStat
-                    label="Real PLN"
+                    label="Real PLN MWRR"
                     metric={period.realPln}
                     valueKey="moneyWeightedReturn"
                   />
@@ -60,10 +60,24 @@ export function PortfolioReturnsSection() {
                     metric={period.nominalUsd}
                     valueKey="moneyWeightedReturn"
                   />
+                  <ReturnStat
+                    label="Real PLN TWR"
+                    metric={period.realPln}
+                    valueKey="timeWeightedReturn"
+                  />
+                  <ReturnStat
+                    label="USD TWR"
+                    metric={period.nominalUsd}
+                    valueKey="timeWeightedReturn"
+                  />
                 </div>
 
                 <p className="returns-note">
                   Requested from {period.requestedFrom}. Effective span {period.dayCount} days.
+                  {period.nominalPln?.annualizedMoneyWeightedReturn &&
+                    ` Annualized PLN MWRR ${formatPercent(period.nominalPln.annualizedMoneyWeightedReturn)}.`}
+                  {period.nominalPln?.annualizedTimeWeightedReturn &&
+                    ` Annualized PLN TWR ${formatPercent(period.nominalPln.annualizedTimeWeightedReturn)}.`}
                   {period.inflationMultiplier &&
                     ` Inflation window ${period.inflationFrom} to ${period.inflationUntil}, multiplier ${period.inflationMultiplier}.`}
                 </p>
@@ -73,8 +87,9 @@ export function PortfolioReturnsSection() {
 
           <div className="overview-notes">
             <p>
-              `MWRR` treats only `DEPOSIT` and `WITHDRAWAL` as external cash flows. Buys, sells, fees,
-              taxes and interest stay inside the portfolio and are reflected in the valuation path.
+              `MWRR` treats only `DEPOSIT` and `WITHDRAWAL` as external cash flows. `TWR` neutralizes
+              those flows and focuses on the portfolio path itself. Buys, sells, fees, taxes and interest
+              stay inside the portfolio and are reflected in the valuation path.
             </p>
           </div>
         </>

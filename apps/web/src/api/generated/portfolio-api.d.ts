@@ -1054,6 +1054,8 @@ export interface components {
         ReturnMetricResponse: {
             moneyWeightedReturn: string;
             annualizedMoneyWeightedReturn?: string | null;
+            timeWeightedReturn?: string | null;
+            annualizedTimeWeightedReturn?: string | null;
         };
         /** net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse */
         PortfolioReturnPeriodResponse: {

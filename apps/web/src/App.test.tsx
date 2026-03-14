@@ -181,14 +181,20 @@ describe('App', () => {
                 nominalPln: {
                   moneyWeightedReturn: '0.0412',
                   annualizedMoneyWeightedReturn: '0.2263',
+                  timeWeightedReturn: '0.0389',
+                  annualizedTimeWeightedReturn: '0.2114',
                 },
                 nominalUsd: {
                   moneyWeightedReturn: '0.0381',
                   annualizedMoneyWeightedReturn: '0.2070',
+                  timeWeightedReturn: '0.0350',
+                  annualizedTimeWeightedReturn: '0.1902',
                 },
                 realPln: {
                   moneyWeightedReturn: '0.0198',
                   annualizedMoneyWeightedReturn: '0.1048',
+                  timeWeightedReturn: '0.0176',
+                  annualizedTimeWeightedReturn: '0.0935',
                 },
                 inflationFrom: '2026-01',
                 inflationUntil: '2026-03',
@@ -337,9 +343,9 @@ describe('App', () => {
     expect(screen.getByText(/transactions remain the source of truth/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /portfolio overview/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /daily portfolio history/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /money-weighted returns/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /portfolio returns/i })).toBeInTheDocument()
     expect(await screen.findByText(/valuation state book_only/i)).toBeInTheDocument()
-    expect(await screen.findByText(/pln mwrr/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^PLN MWRR$/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()
