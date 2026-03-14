@@ -6,6 +6,7 @@ import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
+import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
@@ -17,6 +18,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
+import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
@@ -38,11 +40,13 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
 import java.net.http.HttpClient
 import org.koin.dsl.module
@@ -108,15 +112,18 @@ fun appModule(
         single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
         single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
         single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
+        single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
     } else {
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
         single<InstrumentRepository> { InMemoryInstrumentRepository() }
         single<PortfolioTargetRepository> { InMemoryPortfolioTargetRepository() }
+        single<ReadModelCacheRepository> { InMemoryReadModelCacheRepository() }
         single<TransactionRepository> { InMemoryTransactionRepository() }
     }
 
+    single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
     single { InstrumentService(instrumentRepository = get(), auditLogService = get(), clock = get()) }
