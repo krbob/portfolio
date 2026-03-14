@@ -42,6 +42,7 @@ class PortfolioReturnsRouteTest {
         assertTrue(body.contains("\"key\": \"MAX\""))
         assertTrue(body.contains("\"label\": \"MAX\""))
         assertTrue(body.contains("\"timeWeightedReturn\":"))
+        assertTrue(body.contains("\"benchmarks\":"))
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(): String {

@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.domain.service
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlin.math.pow
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
@@ -10,10 +11,13 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
+import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
+import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
+import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import java.math.BigDecimal
@@ -21,15 +25,18 @@ import java.math.MathContext
 import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.TreeMap
 import java.util.UUID
 
 class PortfolioHistoryService(
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
+    private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val historicalInstrumentValuationProvider: HistoricalInstrumentValuationProvider,
     private val referenceSeriesProvider: ReferenceSeriesProvider,
+    private val inflationAdjustmentProvider: InflationAdjustmentProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock
 ) {
@@ -47,6 +54,7 @@ class PortfolioHistoryService(
                 valuationState = ValuationState.MARK_TO_MARKET,
                 instrumentHistoryIssueCount = 0,
                 referenceSeriesIssueCount = 0,
+                benchmarkSeriesIssueCount = 0,
                 missingFxTransactions = 0,
                 unsupportedCorrectionTransactions = 0,
                 points = emptyList()
@@ -62,6 +70,7 @@ class PortfolioHistoryService(
             until = until
         )
         val referenceLoads = loadReferenceSeries(from = from, until = until)
+        val benchmarkLoads = loadBenchmarkSeries(from = from, until = until)
         val accountsById = accounts.associateBy(Account::id)
         val instrumentsById = instruments.associateBy(Instrument::id)
         val transactionsByDate = transactions.groupBy(Transaction::tradeDate)
@@ -194,6 +203,10 @@ class PortfolioHistoryService(
                 equityAllocationPct = totalCurrentValuePln.ratioOf(equityCurrentValuePln),
                 bondAllocationPct = totalCurrentValuePln.ratioOf(bondCurrentValuePln),
                 cashAllocationPct = totalCurrentValuePln.ratioOf(cashCurrentValuePln),
+                portfolioPerformanceIndex = null,
+                equityBenchmarkIndex = null,
+                inflationBenchmarkIndex = null,
+                targetMixBenchmarkIndex = null,
                 activeHoldingCount = activeHoldings.size,
                 valuedHoldingCount = valuedHoldingCount
             )
@@ -201,15 +214,21 @@ class PortfolioHistoryService(
             date = date.plusDays(1)
         }
 
+        val enrichedPoints = attachBenchmarkIndices(
+            points = points,
+            benchmarkLoads = benchmarkLoads
+        )
+
         return PortfolioDailyHistory(
             from = from,
             until = until,
             valuationState = historyLoads.valuationState,
             instrumentHistoryIssueCount = historyLoads.issueCount,
             referenceSeriesIssueCount = referenceLoads.issueCount,
+            benchmarkSeriesIssueCount = benchmarkLoads.issueCount,
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
-            points = points
+            points = enrichedPoints
         )
     }
 
@@ -274,11 +293,320 @@ class PortfolioHistoryService(
         )
     }
 
+    private suspend fun loadBenchmarkSeries(
+        from: LocalDate,
+        until: LocalDate
+    ): BenchmarkLoads = coroutineScope {
+        val equityDeferred = async { referenceSeriesProvider.equityBenchmarkPln(from = from, to = until) }
+        val targetsDeferred = async { portfolioTargetRepository.list() }
+        val inflationDeferred = async { loadInflationBenchmark(from = from, until = until) }
+
+        val equity = equityDeferred.await()
+        val targets = targetsDeferred.await()
+        val inflation = inflationDeferred.await()
+        val equityLookup = when (equity) {
+            is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
+                from = from,
+                until = until,
+                prices = equity.prices.toLookup()
+            )
+
+            is ReferenceSeriesResult.Failure -> TreeMap()
+        }
+        val targetMixLookup = buildTargetMixIndexLookup(
+            from = from,
+            until = until,
+            targets = targets,
+            equityBenchmark = equityLookup,
+            inflationBenchmark = inflation.lookup
+        )
+
+        BenchmarkLoads(
+            equityBenchmark = equityLookup,
+            inflationBenchmark = inflation.lookup,
+            targetMixBenchmark = targetMixLookup.lookup,
+            issueCount = listOf(
+                if (equity is ReferenceSeriesResult.Failure) 1 else 0,
+                inflation.issueCount,
+                targetMixLookup.issueCount
+            ).sum()
+        )
+    }
+
+    private suspend fun loadInflationBenchmark(
+        from: LocalDate,
+        until: LocalDate
+    ): InflationBenchmarkLoad {
+        val months = generateSequence(YearMonth.from(from)) { current -> current.plusMonths(1) }
+            .takeWhile { month -> !month.isAfter(YearMonth.from(until)) }
+            .toList()
+        if (months.isEmpty()) {
+            return InflationBenchmarkLoad(lookup = TreeMap(), issueCount = 0)
+        }
+
+        val cumulativeByMonth = linkedMapOf<YearMonth, BigDecimal>()
+        val untils = linkedSetOf<YearMonth>()
+        for (month in months) {
+            when (val result = inflationAdjustmentProvider.cumulativeSince(month)) {
+                is InflationAdjustmentResult.Success -> {
+                    cumulativeByMonth[month] = result.multiplier
+                    untils += result.until
+                }
+
+                is InflationAdjustmentResult.Failure -> {
+                    return InflationBenchmarkLoad(
+                        lookup = TreeMap(),
+                        issueCount = 1
+                    )
+                }
+            }
+        }
+
+        if (untils.size != 1) {
+            return InflationBenchmarkLoad(
+                lookup = TreeMap(),
+                issueCount = 1
+            )
+        }
+
+        val availableUntil = untils.single()
+        val availableMonths = months.filter { month -> !month.isAfter(availableUntil) }
+        if (availableMonths.isEmpty()) {
+            return InflationBenchmarkLoad(
+                lookup = buildFlatIndexLookup(from = from, until = until),
+                issueCount = 0
+            )
+        }
+
+        val monthlyMultipliers = linkedMapOf<YearMonth, BigDecimal>()
+        availableMonths.forEachIndexed { index, month ->
+            val currentMultiplier = cumulativeByMonth[month] ?: return InflationBenchmarkLoad(TreeMap(), 1)
+            val monthMultiplier = if (index == availableMonths.lastIndex) {
+                currentMultiplier
+            } else {
+                val nextMultiplier = cumulativeByMonth[availableMonths[index + 1]] ?: return InflationBenchmarkLoad(TreeMap(), 1)
+                currentMultiplier.divide(nextMultiplier, 12, RoundingMode.HALF_UP)
+            }
+            monthlyMultipliers[month] = monthMultiplier
+        }
+
+        return InflationBenchmarkLoad(
+            lookup = buildInflationIndexLookup(
+                from = from,
+                until = until,
+                monthlyMultipliers = monthlyMultipliers,
+                availableUntil = availableUntil
+            ),
+            issueCount = 0
+        )
+    }
+
+    private fun attachBenchmarkIndices(
+        points: List<PortfolioDailyHistoryPoint>,
+        benchmarkLoads: BenchmarkLoads
+    ): List<PortfolioDailyHistoryPoint> {
+        val portfolioPerformanceLookup = buildPortfolioPerformanceIndex(points)
+
+        return points.map { point ->
+            point.copy(
+                portfolioPerformanceIndex = portfolioPerformanceLookup.lookupOn(point.date),
+                equityBenchmarkIndex = benchmarkLoads.equityBenchmark.lookupOn(point.date),
+                inflationBenchmarkIndex = benchmarkLoads.inflationBenchmark.lookupOn(point.date),
+                targetMixBenchmarkIndex = benchmarkLoads.targetMixBenchmark.lookupOn(point.date)
+            )
+        }
+    }
+
+    private fun buildPortfolioPerformanceIndex(
+        points: List<PortfolioDailyHistoryPoint>
+    ): TreeMap<LocalDate, BigDecimal> {
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        if (points.isEmpty()) {
+            return lookup
+        }
+
+        var currentIndex: BigDecimal? = null
+        var previousPoint: PortfolioDailyHistoryPoint? = null
+
+        points.forEach { point ->
+            when {
+                currentIndex == null && point.totalCurrentValuePln.signum() > 0 -> {
+                    currentIndex = BASE_INDEX
+                    lookup[point.date] = BASE_INDEX
+                }
+
+                currentIndex != null && previousPoint != null -> {
+                    val previous = previousPoint
+                    val index = currentIndex
+                    val previousValue = previous.totalCurrentValuePln
+                    val externalFlow = point.netContributionsPln.subtract(previous.netContributionsPln)
+                    if (previousValue.signum() > 0) {
+                        val dailyFactor = point.totalCurrentValuePln
+                            .subtract(externalFlow)
+                            .divide(previousValue, 12, RoundingMode.HALF_UP)
+
+                        if (dailyFactor.signum() >= 0) {
+                            currentIndex = index
+                                .multiply(dailyFactor, MONEY_CONTEXT)
+                                .index()
+                            lookup[point.date] = currentIndex
+                        }
+                    }
+                }
+            }
+
+            previousPoint = point
+        }
+
+        return lookup
+    }
+
+    private fun buildNormalizedIndexLookup(
+        from: LocalDate,
+        until: LocalDate,
+        prices: TreeMap<LocalDate, BigDecimal>
+    ): TreeMap<LocalDate, BigDecimal> {
+        val basePrice = prices.floorEntry(from)?.value ?: prices.ceilingEntry(from)?.value ?: return TreeMap()
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+
+        var date = from
+        while (!date.isAfter(until)) {
+            prices.floorEntry(date)?.value?.let { price ->
+                lookup[date] = price
+                    .divide(basePrice, 12, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal(100), MONEY_CONTEXT)
+                    .index()
+            }
+            date = date.plusDays(1)
+        }
+
+        return lookup
+    }
+
+    private fun buildInflationIndexLookup(
+        from: LocalDate,
+        until: LocalDate,
+        monthlyMultipliers: Map<YearMonth, BigDecimal>,
+        availableUntil: YearMonth
+    ): TreeMap<LocalDate, BigDecimal> {
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        var index = BASE_INDEX
+        lookup[from] = index
+
+        var date = from.plusDays(1)
+        while (!date.isAfter(until)) {
+            val month = YearMonth.from(date)
+            if (!month.isAfter(availableUntil)) {
+                val monthlyMultiplier = monthlyMultipliers[month]
+                if (monthlyMultiplier != null && monthlyMultiplier.signum() > 0) {
+                    val dailyFactor = monthlyMultiplier.toDouble().pow(1.0 / month.lengthOfMonth().toDouble())
+                    index = BigDecimal.valueOf(index.toDouble() * dailyFactor).index()
+                }
+            }
+            lookup[date] = index
+            date = date.plusDays(1)
+        }
+
+        return lookup
+    }
+
+    private fun buildTargetMixIndexLookup(
+        from: LocalDate,
+        until: LocalDate,
+        targets: List<net.bobinski.portfolio.api.domain.model.PortfolioTarget>,
+        equityBenchmark: TreeMap<LocalDate, BigDecimal>,
+        inflationBenchmark: TreeMap<LocalDate, BigDecimal>
+    ): TargetMixBenchmarkLoad {
+        if (targets.isEmpty()) {
+            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 0)
+        }
+
+        val weightsByAssetClass = targets.associate { target -> target.assetClass to target.targetWeight.toDouble() }
+        val equityWeight = weightsByAssetClass[AssetClass.EQUITIES] ?: 0.0
+        val bondWeight = weightsByAssetClass[AssetClass.BONDS] ?: 0.0
+        val cashWeight = weightsByAssetClass[AssetClass.CASH] ?: 0.0
+
+        if (equityWeight > 0.0 && equityBenchmark.lookupOn(from) == null) {
+            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+        }
+        if (bondWeight > 0.0 && inflationBenchmark.lookupOn(from) == null) {
+            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+        }
+
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        var index = BASE_INDEX
+        lookup[from] = index
+        var previousDate = from
+        var date = from.plusDays(1)
+
+        while (!date.isAfter(until)) {
+            val equityFactor = dailyIndexFactor(
+                lookup = equityBenchmark,
+                previousDate = previousDate,
+                currentDate = date,
+                weight = equityWeight
+            ) ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            val inflationFactor = dailyIndexFactor(
+                lookup = inflationBenchmark,
+                previousDate = previousDate,
+                currentDate = date,
+                weight = bondWeight
+            ) ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+
+            val mixFactor = 1.0 +
+                equityWeight * (equityFactor - 1.0) +
+                bondWeight * (inflationFactor - 1.0) +
+                cashWeight * 0.0
+            index = BigDecimal.valueOf(index.toDouble() * mixFactor).index()
+            lookup[date] = index
+
+            previousDate = date
+            date = date.plusDays(1)
+        }
+
+        return TargetMixBenchmarkLoad(lookup = lookup, issueCount = 0)
+    }
+
+    private fun dailyIndexFactor(
+        lookup: TreeMap<LocalDate, BigDecimal>,
+        previousDate: LocalDate,
+        currentDate: LocalDate,
+        weight: Double
+    ): Double? {
+        if (weight == 0.0) {
+            return 1.0
+        }
+
+        val previousValue = lookup.lookupOn(previousDate) ?: return null
+        val currentValue = lookup.lookupOn(currentDate) ?: return null
+        if (previousValue.signum() == 0) {
+            return null
+        }
+
+        return currentValue.divide(previousValue, 12, RoundingMode.HALF_UP).toDouble()
+    }
+
+    private fun buildFlatIndexLookup(
+        from: LocalDate,
+        until: LocalDate
+    ): TreeMap<LocalDate, BigDecimal> {
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        var date = from
+        while (!date.isAfter(until)) {
+            lookup[date] = BASE_INDEX
+            date = date.plusDays(1)
+        }
+        return lookup
+    }
+
     private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
         associateTo(TreeMap()) { it.date to it.closePricePln.money() }
 
     private fun HistoricalLoads.priceLookup(instrumentId: UUID): TreeMap<LocalDate, BigDecimal> =
         lookups[instrumentId] ?: TreeMap()
+
+    private fun TreeMap<LocalDate, BigDecimal>.lookupOn(date: LocalDate): BigDecimal? =
+        floorEntry(date)?.value
 
     private fun MutableHolding.currentValueOn(date: LocalDate, historyLoads: HistoricalLoads): BigDecimal {
         val price = historyLoads.priceLookup(instrument.id).floorEntry(date)?.value
@@ -290,6 +618,8 @@ class PortfolioHistoryService(
     }
 
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
+
+    private fun BigDecimal.index(): BigDecimal = setScale(4, RoundingMode.HALF_UP).stripTrailingZeros()
 
     private fun BigDecimal.divideBy(
         lookup: TreeMap<LocalDate, BigDecimal>,
@@ -336,8 +666,26 @@ class PortfolioHistoryService(
         val issueCount: Int
     )
 
+    private data class BenchmarkLoads(
+        val equityBenchmark: TreeMap<LocalDate, BigDecimal>,
+        val inflationBenchmark: TreeMap<LocalDate, BigDecimal>,
+        val targetMixBenchmark: TreeMap<LocalDate, BigDecimal>,
+        val issueCount: Int
+    )
+
+    private data class InflationBenchmarkLoad(
+        val lookup: TreeMap<LocalDate, BigDecimal>,
+        val issueCount: Int
+    )
+
+    private data class TargetMixBenchmarkLoad(
+        val lookup: TreeMap<LocalDate, BigDecimal>,
+        val issueCount: Int
+    )
+
     private companion object {
         val MONEY_CONTEXT: MathContext = MathContext.DECIMAL64
+        val BASE_INDEX: BigDecimal = BigDecimal("100.0000")
     }
 }
 
@@ -347,6 +695,7 @@ data class PortfolioDailyHistory(
     val valuationState: ValuationState,
     val instrumentHistoryIssueCount: Int,
     val referenceSeriesIssueCount: Int,
+    val benchmarkSeriesIssueCount: Int,
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
     val points: List<PortfolioDailyHistoryPoint>
@@ -370,6 +719,10 @@ data class PortfolioDailyHistoryPoint(
     val equityAllocationPct: BigDecimal,
     val bondAllocationPct: BigDecimal,
     val cashAllocationPct: BigDecimal,
+    val portfolioPerformanceIndex: BigDecimal?,
+    val equityBenchmarkIndex: BigDecimal?,
+    val inflationBenchmarkIndex: BigDecimal?,
+    val targetMixBenchmarkIndex: BigDecimal?,
     val activeHoldingCount: Int,
     val valuedHoldingCount: Int
 )

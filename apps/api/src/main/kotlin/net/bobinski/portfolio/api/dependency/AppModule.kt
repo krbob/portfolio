@@ -147,9 +147,11 @@ fun appModule(
         PortfolioHistoryService(
             accountRepository = get(),
             instrumentRepository = get(),
+            portfolioTargetRepository = get(),
             transactionRepository = get(),
             historicalInstrumentValuationProvider = get(),
             referenceSeriesProvider = get(),
+            inflationAdjustmentProvider = get(),
             transactionFxConversionService = get(),
             clock = get()
         )

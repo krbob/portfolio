@@ -6,6 +6,7 @@ import java.time.LocalDate
 interface ReferenceSeriesProvider {
     suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult
     suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult
+    suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult
 }
 
 sealed interface ReferenceSeriesResult {

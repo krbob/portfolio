@@ -114,6 +114,44 @@ class PortfolioReturnsService(
 
             is InflationAdjustmentResult.Failure -> null
         }
+        val benchmarkComparisons = listOfNotNull(
+            buildBenchmarkComparison(
+                key = BenchmarkKey.VWRA,
+                label = "VWRA benchmark",
+                start = effectiveFrom,
+                end = history.until,
+                portfolioMetric = nominalPln,
+                values = history.points.mapNotNull { point ->
+                    point.equityBenchmarkIndex?.let { value ->
+                        ValuationPoint(date = point.date, value = value)
+                    }
+                }
+            ),
+            buildBenchmarkComparison(
+                key = BenchmarkKey.INFLATION,
+                label = "Inflation benchmark",
+                start = effectiveFrom,
+                end = history.until,
+                portfolioMetric = nominalPln,
+                values = history.points.mapNotNull { point ->
+                    point.inflationBenchmarkIndex?.let { value ->
+                        ValuationPoint(date = point.date, value = value)
+                    }
+                }
+            ),
+            buildBenchmarkComparison(
+                key = BenchmarkKey.TARGET_MIX,
+                label = "Configured target mix",
+                start = effectiveFrom,
+                end = history.until,
+                portfolioMetric = nominalPln,
+                values = history.points.mapNotNull { point ->
+                    point.targetMixBenchmarkIndex?.let { value ->
+                        ValuationPoint(date = point.date, value = value)
+                    }
+                }
+            )
+        )
 
         return PortfolioReturnPeriod(
             key = definition.key,
@@ -129,7 +167,70 @@ class PortfolioReturnsService(
                 inflation = inflationWindow,
                 periodDayCount = ChronoUnit.DAYS.between(effectiveFrom, history.until)
             ),
-            inflation = inflationWindow
+            inflation = inflationWindow,
+            benchmarks = benchmarkComparisons
+        )
+    }
+
+    private fun buildBenchmarkComparison(
+        key: BenchmarkKey,
+        label: String,
+        start: LocalDate,
+        end: LocalDate,
+        portfolioMetric: ReturnMetric?,
+        values: List<ValuationPoint>
+    ): BenchmarkComparison? {
+        val metric = calculateBenchmarkMetric(start = start, end = end, values = values) ?: return null
+
+        return BenchmarkComparison(
+            key = key,
+            label = label,
+            nominalPln = metric,
+            excessTimeWeightedReturn = subtractRates(
+                portfolioMetric?.timeWeightedReturn,
+                metric.timeWeightedReturn
+            ),
+            excessAnnualizedTimeWeightedReturn = subtractRates(
+                portfolioMetric?.annualizedTimeWeightedReturn,
+                metric.annualizedTimeWeightedReturn
+            )
+        )
+    }
+
+    private fun calculateBenchmarkMetric(
+        start: LocalDate,
+        end: LocalDate,
+        values: List<ValuationPoint>
+    ): ReturnMetric? {
+        if (values.isEmpty()) {
+            return null
+        }
+
+        val startValue = values.valueOnOrBefore(start) ?: return null
+        val endValue = values.valueOnOrBefore(end) ?: return null
+        val benchmarkCashFlows = listOf(
+            MoneyWeightedCashFlow(date = start, amount = startValue.negate()),
+            MoneyWeightedCashFlow(date = end, amount = endValue)
+        )
+        val annualizedReturn = calculateXirr(benchmarkCashFlows) ?: return null
+        val dayCount = ChronoUnit.DAYS.between(start, end)
+        val moneyWeightedReturn = if (dayCount <= 0) {
+            annualizedReturn
+        } else {
+            (1.0 + annualizedReturn).pow(dayCount.toDouble() / 365.0) - 1.0
+        }
+        val timeWeighted = calculateTimeWeightedMetric(
+            start = start,
+            end = end,
+            values = values,
+            cashFlows = emptyList()
+        )
+
+        return ReturnMetric(
+            moneyWeightedReturn = moneyWeightedReturn.toRate(),
+            annualizedMoneyWeightedReturn = annualizedReturn.toRate(),
+            timeWeightedReturn = timeWeighted?.totalReturn,
+            annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
         )
     }
 
@@ -426,6 +527,14 @@ class PortfolioReturnsService(
     private fun Double.toRate(): BigDecimal =
         BigDecimal.valueOf(this).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
 
+    private fun subtractRates(
+        portfolioValue: BigDecimal?,
+        benchmarkValue: BigDecimal?
+    ): BigDecimal? = when {
+        portfolioValue == null || benchmarkValue == null -> null
+        else -> portfolioValue.subtract(benchmarkValue).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
+    }
+
     private data class ExternalCashFlow(
         val date: LocalDate,
         val plnAmount: BigDecimal?,
@@ -483,7 +592,8 @@ data class PortfolioReturnPeriod(
     val nominalPln: ReturnMetric?,
     val nominalUsd: ReturnMetric?,
     val realPln: ReturnMetric?,
-    val inflation: InflationWindow?
+    val inflation: InflationWindow?,
+    val benchmarks: List<BenchmarkComparison>
 )
 
 data class ReturnMetric(
@@ -499,10 +609,24 @@ data class InflationWindow(
     val multiplier: BigDecimal
 )
 
+data class BenchmarkComparison(
+    val key: BenchmarkKey,
+    val label: String,
+    val nominalPln: ReturnMetric?,
+    val excessTimeWeightedReturn: BigDecimal?,
+    val excessAnnualizedTimeWeightedReturn: BigDecimal?
+)
+
 enum class ReturnPeriodKey {
     YTD,
     ONE_YEAR,
     THREE_YEARS,
     FIVE_YEARS,
     MAX
+}
+
+enum class BenchmarkKey {
+    VWRA,
+    INFLATION,
+    TARGET_MIX
 }

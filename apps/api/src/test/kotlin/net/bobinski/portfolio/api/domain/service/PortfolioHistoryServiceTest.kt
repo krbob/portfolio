@@ -6,6 +6,7 @@ import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
+import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
@@ -14,18 +15,24 @@ import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
+import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
+import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -123,19 +130,83 @@ class PortfolioHistoryServiceTest {
         assertEquals(BigDecimal("400.00"), history.points[2].netContributionsPln)
     }
 
+    @Test
+    fun `daily history exposes portfolio and benchmark indices`() = runBlocking {
+        val fixture = historyFixture()
+        val instrument = etfInstrument()
+        fixture.accountRepository.save(account())
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(buyTransaction(instrument.id))
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.00")
+            )
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "101.00"),
+                pricePoint("2026-03-03", "102.00")
+            )
+        )
+        fixture.inflationProvider.resultByMonth = mapOf(
+            YearMonth.parse("2026-03") to InflationAdjustmentResult.Success(
+                from = YearMonth.parse("2026-03"),
+                until = YearMonth.parse("2026-03"),
+                multiplier = BigDecimal("1.02")
+            )
+        )
+        fixture.portfolioTargetRepository.replaceAll(
+            listOf(
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("equities-target".toByteArray()),
+                    assetClass = AssetClass.EQUITIES,
+                    targetWeight = BigDecimal("0.80"),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                ),
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("bonds-target".toByteArray()),
+                    assetClass = AssetClass.BONDS,
+                    targetWeight = BigDecimal("0.20"),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                )
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+        val lastPoint = history.points.last()
+
+        assertEquals(0, history.benchmarkSeriesIssueCount)
+        assertTrue(history.points.first().portfolioPerformanceIndex!!.compareTo(BigDecimal("100")) == 0)
+        assertNotNull(lastPoint.equityBenchmarkIndex)
+        assertNotNull(lastPoint.inflationBenchmarkIndex)
+        assertNotNull(lastPoint.targetMixBenchmarkIndex)
+        assertTrue(lastPoint.equityBenchmarkIndex!!.compareTo(BigDecimal("102")) == 0)
+    }
+
     private fun historyFixture(): HistoryFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
+        val portfolioTargetRepository = InMemoryPortfolioTargetRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
         val referenceProvider = FakeReferenceSeriesProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
+        val inflationProvider = FakeInflationAdjustmentProvider()
         val service = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
+            portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = historyProvider,
             referenceSeriesProvider = referenceProvider,
+            inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
             clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC)
         )
@@ -143,10 +214,12 @@ class PortfolioHistoryServiceTest {
             service = service,
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
+            portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historyProvider = historyProvider,
             referenceProvider = referenceProvider,
-            fxRateProvider = fxRateProvider
+            fxRateProvider = fxRateProvider,
+            inflationProvider = inflationProvider
         )
     }
 
@@ -227,10 +300,12 @@ class PortfolioHistoryServiceTest {
         val service: PortfolioHistoryService,
         val accountRepository: InMemoryAccountRepository,
         val instrumentRepository: InMemoryInstrumentRepository,
+        val portfolioTargetRepository: InMemoryPortfolioTargetRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val historyProvider: FakeHistoricalInstrumentValuationProvider,
         val referenceProvider: FakeReferenceSeriesProvider,
-        val fxRateProvider: FakeFxRateHistoryProvider
+        val fxRateProvider: FakeFxRateHistoryProvider,
+        val inflationProvider: FakeInflationAdjustmentProvider
     )
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {
@@ -250,10 +325,13 @@ class PortfolioHistoryServiceTest {
     private class FakeReferenceSeriesProvider : ReferenceSeriesProvider {
         var usd: ReferenceSeriesResult = ReferenceSeriesResult.Failure("USD not set.")
         var gold: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Gold not set.")
+        var equity: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Equity benchmark not set.")
 
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
         override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
+
+        override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = equity
     }
 
     private class FakeFxRateHistoryProvider : FxRateHistoryProvider {
@@ -265,6 +343,13 @@ class PortfolioHistoryServiceTest {
             to: LocalDate
         ): FxRateHistoryResult = values[currency]
             ?: FxRateHistoryResult.Failure("No fake FX history for $currency.")
+    }
+
+    private class FakeInflationAdjustmentProvider : InflationAdjustmentProvider {
+        var resultByMonth: Map<YearMonth, InflationAdjustmentResult> = emptyMap()
+
+        override suspend fun cumulativeSince(from: YearMonth): InflationAdjustmentResult =
+            resultByMonth[from] ?: InflationAdjustmentResult.Failure("No fake inflation window for $from.")
     }
 
     private companion object {

@@ -25,6 +25,14 @@ class RemoteReferenceSeriesProvider(
             to = to
         )
 
+    override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
+        loadSeries(
+            symbol = config.equityBenchmarkSymbol,
+            currency = "PLN",
+            from = from,
+            to = to
+        )
+
     private suspend fun loadSeries(
         symbol: String,
         currency: String?,

@@ -27,6 +27,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportIssue
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
@@ -181,6 +182,7 @@ data class PortfolioDailyHistoryResponse(
     val valuationState: String,
     val instrumentHistoryIssueCount: Int,
     val referenceSeriesIssueCount: Int,
+    val benchmarkSeriesIssueCount: Int,
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
     val points: List<PortfolioDailyHistoryPointResponse>
@@ -205,6 +207,10 @@ data class PortfolioDailyHistoryPointResponse(
     val equityAllocationPct: String,
     val bondAllocationPct: String,
     val cashAllocationPct: String,
+    val portfolioPerformanceIndex: String?,
+    val equityBenchmarkIndex: String?,
+    val inflationBenchmarkIndex: String?,
+    val targetMixBenchmarkIndex: String?,
     val activeHoldingCount: Int,
     val valuedHoldingCount: Int
 )
@@ -273,7 +279,8 @@ data class PortfolioReturnPeriodResponse(
     val realPln: ReturnMetricResponse?,
     val inflationFrom: String?,
     val inflationUntil: String?,
-    val inflationMultiplier: String?
+    val inflationMultiplier: String?,
+    val benchmarks: Array<BenchmarkComparisonResponse>
 )
 
 @Serializable
@@ -282,6 +289,15 @@ data class ReturnMetricResponse(
     val annualizedMoneyWeightedReturn: String?,
     val timeWeightedReturn: String?,
     val annualizedTimeWeightedReturn: String?
+)
+
+@Serializable
+data class BenchmarkComparisonResponse(
+    val key: String,
+    val label: String,
+    val nominalPln: ReturnMetricResponse?,
+    val excessTimeWeightedReturn: String?,
+    val excessAnnualizedTimeWeightedReturn: String?
 )
 
 @Serializable
@@ -485,6 +501,7 @@ private fun PortfolioDailyHistory.toResponse(): PortfolioDailyHistoryResponse = 
     valuationState = valuationState.name,
     instrumentHistoryIssueCount = instrumentHistoryIssueCount,
     referenceSeriesIssueCount = referenceSeriesIssueCount,
+    benchmarkSeriesIssueCount = benchmarkSeriesIssueCount,
     missingFxTransactions = missingFxTransactions,
     unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
     points = points.map { it.toResponse() }
@@ -508,6 +525,10 @@ private fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPointR
     equityAllocationPct = equityAllocationPct.toPlainString(),
     bondAllocationPct = bondAllocationPct.toPlainString(),
     cashAllocationPct = cashAllocationPct.toPlainString(),
+    portfolioPerformanceIndex = portfolioPerformanceIndex?.toPlainString(),
+    equityBenchmarkIndex = equityBenchmarkIndex?.toPlainString(),
+    inflationBenchmarkIndex = inflationBenchmarkIndex?.toPlainString(),
+    targetMixBenchmarkIndex = targetMixBenchmarkIndex?.toPlainString(),
     activeHoldingCount = activeHoldingCount,
     valuedHoldingCount = valuedHoldingCount
 )
@@ -570,7 +591,8 @@ private fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = 
     realPln = realPln?.toResponse(),
     inflationFrom = inflation?.from?.toString(),
     inflationUntil = inflation?.until?.toString(),
-    inflationMultiplier = inflation?.multiplier?.toPlainString()
+    inflationMultiplier = inflation?.multiplier?.toPlainString(),
+    benchmarks = benchmarks.map { it.toResponse() }.toTypedArray()
 )
 
 private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricResponse(
@@ -578,6 +600,14 @@ private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricRespon
     annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString(),
     timeWeightedReturn = timeWeightedReturn?.toPlainString(),
     annualizedTimeWeightedReturn = annualizedTimeWeightedReturn?.toPlainString()
+)
+
+private fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(
+    key = key.name,
+    label = label,
+    nominalPln = nominalPln?.toResponse(),
+    excessTimeWeightedReturn = excessTimeWeightedReturn?.toPlainString(),
+    excessAnnualizedTimeWeightedReturn = excessAnnualizedTimeWeightedReturn?.toPlainString()
 )
 
 private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(
