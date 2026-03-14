@@ -4,6 +4,7 @@
 apps/api/.gradle/
 apps/api/build/
 apps/api/out/
+apps/api/data/
 
 apps/web/node_modules/
 apps/web/dist/

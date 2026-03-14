@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SectionCard } from './SectionCard'
+import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   useDownloadPortfolioBackup,
   usePortfolioBackups,
@@ -9,11 +10,14 @@ import {
 
 export function PortfolioBackupsSection() {
   const backupsQuery = usePortfolioBackups()
+  const backupEventsQuery = usePortfolioAuditEvents({ limit: 10, category: 'BACKUPS' })
   const downloadBackupMutation = useDownloadPortfolioBackup()
   const runBackupMutation = useRunPortfolioBackup()
   const restoreBackupMutation = useRestorePortfolioBackup()
 
   const [restoreMode, setRestoreMode] = useState<'MERGE' | 'REPLACE'>('MERGE')
+  const [restoreConfirmation, setRestoreConfirmation] = useState('')
+  const [backupOutcomeFilter, setBackupOutcomeFilter] = useState<'ALL' | 'SUCCESS' | 'FAILURE'>('ALL')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -33,18 +37,16 @@ export function PortfolioBackupsSection() {
     setFeedback(null)
     setActionError(null)
 
-    if (restoreMode === 'REPLACE' && !window.confirm(`Replace the current portfolio state with backup ${fileName}?`)) {
-      return
-    }
-
     try {
       const result = await restoreBackupMutation.mutateAsync({
         fileName,
         mode: restoreMode,
+        confirmation: restoreMode === 'REPLACE' ? restoreConfirmation : undefined,
       })
       setFeedback(
-        `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.transactionCount} transactions.`,
+        `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.transactionCount} transactions.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
+      setRestoreConfirmation('')
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Restore failed.')
     }
@@ -63,6 +65,9 @@ export function PortfolioBackupsSection() {
   }
 
   const backups = backupsQuery.data?.backups ?? []
+  const backupEvents = backupEventsQuery.data ?? []
+  const visibleBackupEvents =
+    backupOutcomeFilter === 'ALL' ? backupEvents : backupEvents.filter((event) => event.outcome === backupOutcomeFilter)
 
   return (
     <SectionCard
@@ -92,11 +97,29 @@ export function PortfolioBackupsSection() {
       <div className="backup-toolbar">
         <label className="journal-filter">
           <span>Restore mode</span>
-          <select value={restoreMode} onChange={(event) => setRestoreMode(event.target.value as 'MERGE' | 'REPLACE')}>
+          <select
+            value={restoreMode}
+            onChange={(event) => {
+              setRestoreMode(event.target.value as 'MERGE' | 'REPLACE')
+              setRestoreConfirmation('')
+            }}
+          >
             <option value="MERGE">MERGE</option>
             <option value="REPLACE">REPLACE</option>
           </select>
         </label>
+
+        {restoreMode === 'REPLACE' && (
+          <label className="journal-filter">
+            <span>Type REPLACE</span>
+            <input
+              type="text"
+              value={restoreConfirmation}
+              onChange={(event) => setRestoreConfirmation(event.target.value)}
+              placeholder="REPLACE"
+            />
+          </label>
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={handleRunBackupClick} disabled={runBackupMutation.isPending || backupsQuery.isLoading}>
@@ -107,6 +130,7 @@ export function PortfolioBackupsSection() {
 
       <div className="overview-notes">
         <p className="muted-copy">Directory: {backupsQuery.data?.directory ?? 'Loading...'}</p>
+        <p className="muted-copy">`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.</p>
         <p className="muted-copy">
           Last success: {backupsQuery.data?.lastSuccessAt ? formatTimestamp(backupsQuery.data.lastSuccessAt) : 'No successful backup yet.'}
         </p>
@@ -177,11 +201,58 @@ export function PortfolioBackupsSection() {
                 <button
                   type="button"
                   onClick={() => handleRestoreClick(backup.fileName)}
-                  disabled={restoreBackupMutation.isPending || !backup.isReadable}
+                  disabled={
+                    restoreBackupMutation.isPending ||
+                    !backup.isReadable ||
+                    (restoreMode === 'REPLACE' && restoreConfirmation.trim().toUpperCase() !== 'REPLACE')
+                  }
                 >
                   {restoreBackupMutation.isPending ? 'Restoring...' : 'Restore backup'}
                 </button>
               </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <div className="section-header">
+        <p className="eyebrow">Audit</p>
+        <h4>Backup activity</h4>
+        <p>Recent backup runs, restores and retention pruning events from the append-only audit log.</p>
+      </div>
+
+      <div className="backup-toolbar">
+        <label className="journal-filter">
+          <span>Outcome</span>
+          <select value={backupOutcomeFilter} onChange={(event) => setBackupOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')}>
+            <option value="ALL">ALL</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILURE">FAILURE</option>
+          </select>
+        </label>
+      </div>
+
+      {backupEventsQuery.isLoading && <p className="muted-copy">Loading backup activity...</p>}
+      {backupEventsQuery.isError && <p className="form-error">{backupEventsQuery.error.message}</p>}
+      {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length === 0 && (
+        <p className="muted-copy">No backup-related audit events yet.</p>
+      )}
+      {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length > 0 && (
+        <div className="audit-feed">
+          {visibleBackupEvents.map((event) => (
+            <article className="audit-event" key={event.id}>
+              <div className="audit-event-header">
+                <div>
+                  <strong>{event.message}</strong>
+                  <p>
+                    {event.action} · {formatTimestamp(event.occurredAt)}
+                  </p>
+                </div>
+                <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
+                  {event.outcome}
+                </span>
+              </div>
+              {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
             </article>
           ))}
         </div>

@@ -29,6 +29,7 @@ The product is optimized for:
 - Put portfolio calculation logic on the backend, not in the browser.
 - Prefer explicit domain names over spreadsheet-shaped naming.
 - Avoid binding new code to the legacy Google Sheets model unless it clearly improves the product.
+- Treat `REPLACE` import/restore as destructive operations: require explicit confirmation and preserve a safety backup first.
 
 ## Initial architecture
 
@@ -45,3 +46,5 @@ The product is optimized for:
 5. Support PostgreSQL-backed persistence for the write model.
 6. Add portfolio overview, holdings, and timeline reconstruction.
 7. Rebuild historical daily snapshots from transactions and external market data.
+
+See `docs/backlog.md` for the current phased execution order beyond the initial bootstrap milestones.

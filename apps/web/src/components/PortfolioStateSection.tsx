@@ -19,6 +19,7 @@ export function PortfolioStateSection() {
   const importMutation = useImportPortfolioState()
 
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE')
+  const [replaceConfirmation, setReplaceConfirmation] = useState('')
   const [selectedFileName, setSelectedFileName] = useState<string>('')
   const [selectedFileContent, setSelectedFileContent] = useState<string>('')
   const [previewResult, setPreviewResult] = useState<PreviewPortfolioStateImportResult | null>(null)
@@ -104,20 +105,18 @@ export function PortfolioStateSection() {
       return
     }
 
-    if (importMode === 'REPLACE' && !window.confirm('Replace the current portfolio state with the imported snapshot?')) {
-      return
-    }
-
     try {
       const snapshot = parseSelectedSnapshot(selectedFileContent)
       const result = await importMutation.mutateAsync({
         mode: importMode,
+        confirmation: importMode === 'REPLACE' ? replaceConfirmation : undefined,
         snapshot,
       })
       setPreviewResult(null)
       setImportFeedback(
-        `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments and ${result.transactionCount} transactions in ${result.mode} mode.`,
+        `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
+      setReplaceConfirmation('')
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Import failed.')
     }
@@ -168,6 +167,7 @@ export function PortfolioStateSection() {
             <p>
               `MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot.
             </p>
+            <p className="muted-copy">`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.</p>
           </div>
 
           <label className="journal-filter">
@@ -176,6 +176,7 @@ export function PortfolioStateSection() {
               value={importMode}
               onChange={(event) => {
                 setImportMode(event.target.value as 'MERGE' | 'REPLACE')
+                setReplaceConfirmation('')
                 setPreviewResult(null)
                 setImportFeedback(null)
                 setImportError(null)
@@ -185,6 +186,18 @@ export function PortfolioStateSection() {
               <option value="REPLACE">REPLACE</option>
             </select>
           </label>
+
+          {importMode === 'REPLACE' && (
+            <label className="journal-filter">
+              <span>Type REPLACE</span>
+              <input
+                type="text"
+                value={replaceConfirmation}
+                onChange={(event) => setReplaceConfirmation(event.target.value)}
+                placeholder="REPLACE"
+              />
+            </label>
+          )}
 
           <label className="transfer-file">
             <span>Snapshot file</span>
@@ -255,7 +268,8 @@ export function PortfolioStateSection() {
                 previewMutation.isPending ||
                 selectedFileContent.trim() === '' ||
                 previewResult == null ||
-                !previewResult.isValid
+                !previewResult.isValid ||
+                (importMode === 'REPLACE' && replaceConfirmation.trim().toUpperCase() !== 'REPLACE')
               }
             >
               {importMutation.isPending ? 'Importing...' : 'Import JSON'}

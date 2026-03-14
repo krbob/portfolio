@@ -49,6 +49,8 @@ portfolio/
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
 - transaction CSV import now supports preview, validation, name-based mapping, and duplicate skipping
 - append-only audit events are available for recent write-model, import, and backup activity
+- destructive `REPLACE` import and restore flows now require explicit confirmation and create safety backups automatically
+- the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 
 ## Local database
 
@@ -155,6 +157,13 @@ Available API endpoints:
 - `GET /v1/portfolio/backups/download?fileName=...`
 - `POST /v1/portfolio/backups/run`
 - `POST /v1/portfolio/backups/restore`
+
+For destructive `REPLACE` operations:
+
+- `POST /v1/portfolio/backups/restore` requires `confirmation: "REPLACE"`
+- `POST /v1/portfolio/state/import` requires `confirmation: "REPLACE"`
+
+Both flows create a safety backup automatically before applying destructive changes.
 
 ## Demo data
 

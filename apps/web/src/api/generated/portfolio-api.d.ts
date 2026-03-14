@@ -1250,6 +1250,7 @@ export interface components {
         RestorePortfolioBackupRequest: {
             fileName: string;
             mode?: string;
+            confirmation?: string | null;
         };
         /** net.bobinski.portfolio.api.route.PortfolioBackupRestoreResultResponse */
         PortfolioBackupRestoreResultResponse: {
@@ -1258,6 +1259,7 @@ export interface components {
             accountCount: number;
             instrumentCount: number;
             transactionCount: number;
+            safetyBackupFileName?: string | null;
         };
         /** net.bobinski.portfolio.api.route.AccountSnapshotResponse */
         AccountSnapshotResponse: {
@@ -1322,6 +1324,7 @@ export interface components {
         /** net.bobinski.portfolio.api.route.ImportPortfolioStateRequest */
         ImportPortfolioStateRequest: {
             mode?: string;
+            confirmation?: string | null;
             snapshot: components["schemas"]["PortfolioSnapshotResponse"];
         };
         /** net.bobinski.portfolio.api.route.PortfolioImportIssueResponse */
@@ -1354,6 +1357,7 @@ export interface components {
             accountCount: number;
             instrumentCount: number;
             transactionCount: number;
+            safetyBackupFileName?: string | null;
         };
         /** net.bobinski.portfolio.api.route.TransactionResponse */
         TransactionResponse: {

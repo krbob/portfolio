@@ -88,7 +88,7 @@ The ordering below is intentional:
   - backup runs
 - surface recent events in the UI
 
-### 9. Operational safeguards
+### 9. Operational safeguards (done)
 
 - require stronger confirmation for destructive actions
 - create a server backup before destructive restore/replace operations
@@ -96,7 +96,7 @@ The ordering below is intentional:
 - add idempotency or duplicate detection where practical
 - improve failure reporting for market data and backup jobs
 
-### 10. Backup retention and backup audit in UI
+### 10. Backup retention and backup audit in UI (done)
 
 - surface retention behaviour in the UI
 - show:
