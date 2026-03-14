@@ -96,7 +96,7 @@ The ordering below is intentional:
 
 ## Phase 3: Confidence and switch-over
 
-### 6. Persistence parity tests
+### 6. Persistence parity tests (done)
 
 - run the same fixtures through both persistence engines during migration
 - assert parity for:
@@ -109,7 +109,7 @@ The ordering below is intentional:
   - audit events
   - read-model cache metadata
 
-### 7. Switch runtime defaults to SQLite
+### 7. Switch runtime defaults to SQLite (done)
 
 - make SQLite the default in config, docs, and Docker setup
 - store the database file on a named Docker volume

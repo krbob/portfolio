@@ -42,9 +42,9 @@ portfolio/
 
 - backend write-model API exists for accounts, instruments, and transactions
 - domain model and initial relational schema are defined
-- repository storage currently runs in `memory` or `postgres` mode while the project migrates toward `sqlite-only`
-- default local mode remains `memory` for fast startup and tests
-- PostgreSQL wiring is available for the write model
+- repository storage currently runs in `memory`, `postgres`, or `sqlite` mode during the final migration stretch
+- default runtime is now `sqlite`
+- tests keep their own `memory` default through `apps/api/src/test/resources/application.yaml`
 - server-side JSON backups can be created, listed, retained, and restored
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
@@ -78,12 +78,26 @@ SQLite encoding conventions for the migration:
 - JSON payloads as `TEXT`
 - exact financial values as canonical decimal `TEXT`
 
-Until the migration is complete, the current backend config still supports `memory` and `postgres`.
+The current backend still carries transitional `memory` and `postgres` modes, but the default application runtime is already SQLite.
 
-For local PostgreSQL during the transition:
+For local default runtime:
 
 ```bash
-docker compose up -d
+cd apps/api
+./gradlew run
+```
+
+That starts the API on SQLite with:
+
+- database file `./data/portfolio.db`
+- WAL journaling
+- synchronous mode `FULL`
+- busy timeout `5000ms`
+
+For an explicit ephemeral in-memory run:
+
+```bash
+PORTFOLIO_PERSISTENCE_MODE=memory ./gradlew run
 ```
 
 To run the API in Docker Compose with a persistent backup volume:
@@ -94,12 +108,12 @@ docker compose --profile app up -d --build
 
 This starts:
 
-- `portfolio-postgres`
 - `portfolio-api`
 - `portfolio-web`
+- named volume `portfolio-sqlite-data` mounted at `/srv/portfolio/data`
 - named volume `portfolio-backup-data` mounted at `/srv/portfolio/backups`
 
-The Compose API profile enables server backups by default and stores them on the named volume.
+The Compose API profile enables server backups by default and stores them on a separate named volume.
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
 The web UI is exposed on `http://127.0.0.1:4174`.
 
@@ -110,6 +124,12 @@ PORTFOLIO_MARKET_DATA_ENABLED=true \
 PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst-host/api \
 PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator-host \
 docker compose --profile app up -d --build
+```
+
+Legacy PostgreSQL profile is still available temporarily for migration/debug work:
+
+```bash
+docker compose --profile postgres-legacy up -d
 ```
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.

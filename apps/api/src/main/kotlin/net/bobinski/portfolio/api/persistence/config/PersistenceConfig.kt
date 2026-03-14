@@ -17,7 +17,7 @@ data class PersistenceConfig(
         fun from(config: ApplicationConfig): PersistenceConfig = PersistenceConfig(
             mode = readSetting("PORTFOLIO_PERSISTENCE_MODE", config, "portfolio.persistence.mode")
                 ?.let(PersistenceMode::from)
-                ?: PersistenceMode.MEMORY,
+                ?: PersistenceMode.SQLITE,
             jdbcUrl = readSetting("PORTFOLIO_DB_JDBC_URL", config, "portfolio.persistence.jdbcUrl")
                 ?: "jdbc:postgresql://127.0.0.1:15432/portfolio",
             username = readSetting("PORTFOLIO_DB_USERNAME", config, "portfolio.persistence.username")

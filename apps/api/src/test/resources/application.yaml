@@ -7,20 +7,20 @@ ktor:
 
 portfolio:
   name: "Portfolio"
-  stage: "dev"
+  stage: "test"
   persistence:
-    mode: "sqlite"
+    mode: "memory"
     jdbcUrl: "jdbc:postgresql://127.0.0.1:15432/portfolio"
     username: "portfolio"
     password: "portfolio"
     sqlite:
-      databasePath: "./data/portfolio.db"
+      databasePath: "./build/test-data/portfolio.db"
       journalMode: "WAL"
       synchronousMode: "FULL"
       busyTimeoutMs: 5000
   backups:
     enabled: false
-    directory: "./data/backups"
+    directory: "./build/test-backups"
     intervalMinutes: 1440
     retentionCount: 30
   auth:
