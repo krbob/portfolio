@@ -8,6 +8,7 @@ import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
@@ -21,6 +22,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
+import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
@@ -43,12 +45,14 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionImportProfileRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteAuditEventRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteAccountRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteInstrumentRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqlitePortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.sqlite.SqliteTransactionRepository
+import net.bobinski.portfolio.api.persistence.sqlite.SqliteTransactionImportProfileRepository
 import java.net.http.HttpClient
 import org.koin.dsl.module
 import java.time.Clock
@@ -115,6 +119,7 @@ fun appModule(
         single<PortfolioTargetRepository> { SqlitePortfolioTargetRepository(dataSource = get()) }
         single<ReadModelCacheRepository> { SqliteReadModelCacheRepository(dataSource = get()) }
         single<TransactionRepository> { SqliteTransactionRepository(dataSource = get()) }
+        single<TransactionImportProfileRepository> { SqliteTransactionImportProfileRepository(dataSource = get(), json = get()) }
     } else {
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
@@ -122,12 +127,21 @@ fun appModule(
         single<PortfolioTargetRepository> { InMemoryPortfolioTargetRepository() }
         single<ReadModelCacheRepository> { InMemoryReadModelCacheRepository() }
         single<TransactionRepository> { InMemoryTransactionRepository() }
+        single<TransactionImportProfileRepository> { InMemoryTransactionImportProfileRepository() }
     }
 
     single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
     single { InstrumentService(instrumentRepository = get(), auditLogService = get(), clock = get()) }
+    single {
+        TransactionImportProfileService(
+            repository = get(),
+            accountRepository = get(),
+            auditLogService = get(),
+            clock = get()
+        )
+    }
     single {
         TransactionService(
             transactionRepository = get(),

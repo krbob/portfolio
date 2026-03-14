@@ -11,6 +11,12 @@ import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.AuditEvent
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
+import net.bobinski.portfolio.api.domain.model.CsvDateFormat
+import net.bobinski.portfolio.api.domain.model.CsvDecimalSeparator
+import net.bobinski.portfolio.api.domain.model.CsvDelimiter
+import net.bobinski.portfolio.api.domain.model.TransactionImportDefaults
+import net.bobinski.portfolio.api.domain.model.TransactionImportHeaderMappings
+import net.bobinski.portfolio.api.domain.model.TransactionImportProfile
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheInvalidationReason
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -26,10 +32,11 @@ import org.junit.jupiter.api.Test
 class SqliteOperationalRepositoriesTest {
 
     @Test
-    fun `sqlite operational repositories persist audit events and read model snapshots`() = runBlocking {
+    fun `sqlite operational repositories persist audit events read model snapshots and import profiles`() = runBlocking {
         sqliteDatabase { dataSource ->
             val auditRepository = SqliteAuditEventRepository(dataSource, Json.Default)
             val cacheRepository = SqliteReadModelCacheRepository(dataSource)
+            val profileRepository = SqliteTransactionImportProfileRepository(dataSource, Json.Default)
 
             val auditEvent = AuditEvent(
                 id = UUID.fromString("60000000-0000-0000-0000-000000000001"),
@@ -54,18 +61,36 @@ class SqliteOperationalRepositoriesTest {
                 payloadJson = """{"points":[]}""",
                 payloadSizeBytes = 13
             )
+            val profile = TransactionImportProfile(
+                id = UUID.fromString("70000000-0000-0000-0000-000000000001"),
+                name = "IBKR activity",
+                description = "Interactive Brokers CSV export",
+                delimiter = CsvDelimiter.COMMA,
+                dateFormat = CsvDateFormat.ISO_LOCAL_DATE,
+                decimalSeparator = CsvDecimalSeparator.DOT,
+                skipDuplicatesByDefault = true,
+                headerMappings = TransactionImportHeaderMappings(),
+                defaults = TransactionImportDefaults(currency = "USD"),
+                createdAt = Instant.parse("2026-03-01T12:17:00Z"),
+                updatedAt = Instant.parse("2026-03-01T12:17:00Z")
+            )
 
             auditRepository.append(auditEvent)
             cacheRepository.save(snapshot)
+            profileRepository.save(profile)
 
             val auditEvents = auditRepository.list()
             val cachedSnapshot = cacheRepository.get(snapshot.cacheKey)
             val snapshotList = cacheRepository.list()
+            val profiles = profileRepository.list()
+            val persistedProfile = profileRepository.get(profile.id)
 
             assertEquals(listOf(auditEvent), auditEvents)
             assertNotNull(cachedSnapshot)
             assertEquals(snapshot, cachedSnapshot)
             assertEquals(listOf(snapshot), snapshotList)
+            assertEquals(listOf(profile), profiles)
+            assertEquals(profile, persistedProfile)
         }
     }
 
