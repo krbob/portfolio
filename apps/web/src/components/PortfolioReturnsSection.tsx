@@ -1,14 +1,7 @@
 import { SectionCard } from './SectionCard'
 import { usePortfolioReturns } from '../hooks/use-read-model'
 import type { BenchmarkComparison, ReturnMetric } from '../api/read-model'
-
-function formatPercent(value: string | null | undefined) {
-  if (value == null) {
-    return 'Unavailable'
-  }
-
-  return `${(Number(value) * 100).toFixed(2)}%`
-}
+import { formatPercent } from '../lib/format'
 
 export function PortfolioReturnsSection() {
   const returnsQuery = usePortfolioReturns()
@@ -16,9 +9,9 @@ export function PortfolioReturnsSection() {
 
   return (
     <SectionCard
-      eyebrow="Returns"
-      title="Portfolio returns"
-      description="Each period exposes money-weighted return, time-weighted return, and benchmark comparisons, so cash-flow timing and strategy execution stay clearly separated."
+      eyebrow="Performance"
+      title="Return windows"
+      description="Cash-flow-aware returns, strategy returns and benchmark spread across standard horizons."
     >
       {returnsQuery.isLoading && <p className="muted-copy">Loading return summary...</p>}
       {returnsQuery.isError && <p className="form-error">{returnsQuery.error.message}</p>}
@@ -83,9 +76,9 @@ export function PortfolioReturnsSection() {
                 <p className="returns-note">
                   Requested from {period.requestedFrom}. Effective span {period.dayCount} days.
                   {period.nominalPln?.annualizedMoneyWeightedReturn &&
-                    ` Annualized PLN MWRR ${formatPercent(period.nominalPln.annualizedMoneyWeightedReturn)}.`}
+                    ` Annualized PLN MWRR ${formatReturn(period.nominalPln.annualizedMoneyWeightedReturn)}.`}
                   {period.nominalPln?.annualizedTimeWeightedReturn &&
-                    ` Annualized PLN TWR ${formatPercent(period.nominalPln.annualizedTimeWeightedReturn)}.`}
+                    ` Annualized PLN TWR ${formatReturn(period.nominalPln.annualizedTimeWeightedReturn)}.`}
                   {period.inflationMultiplier &&
                     ` Inflation window ${period.inflationFrom} to ${period.inflationUntil}, multiplier ${period.inflationMultiplier}.`}
                 </p>
@@ -125,7 +118,7 @@ function ReturnStat({
   return (
     <article className="overview-stat">
       <span>{label}</span>
-      <strong className={gainClassName(value)}>{formatPercent(value)}</strong>
+      <strong className={gainClassName(value)}>{formatReturn(value)}</strong>
     </article>
   )
 }
@@ -140,7 +133,7 @@ function BenchmarkCard({
       <header className="benchmark-card-header">
         <p className="returns-card-label">{benchmark.label}</p>
         <strong className={gainClassName(benchmark.excessTimeWeightedReturn)}>
-          {formatPercent(benchmark.excessTimeWeightedReturn)}
+          {formatReturn(benchmark.excessTimeWeightedReturn)}
         </strong>
       </header>
 
@@ -163,11 +156,15 @@ function BenchmarkCard({
       </div>
 
       <p className="returns-note">
-        Annualized benchmark TWR {formatPercent(benchmark.nominalPln?.annualizedTimeWeightedReturn)}.
-        Annualized excess TWR {formatPercent(benchmark.excessAnnualizedTimeWeightedReturn)}.
+        Annualized benchmark TWR {formatReturn(benchmark.nominalPln?.annualizedTimeWeightedReturn)}.
+        Annualized excess TWR {formatReturn(benchmark.excessAnnualizedTimeWeightedReturn)}.
       </p>
     </article>
   )
+}
+
+function formatReturn(value: string | null | undefined) {
+  return formatPercent(value, { scale: 100, signed: true })
 }
 
 function gainClassName(value: string | null | undefined) {

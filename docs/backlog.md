@@ -30,20 +30,20 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 
 ## Phase 0: UI revamp foundation
 
-### 0.1 Product-grade shell and design system (next)
+### 0.1 Product-grade shell and design system (done)
 
 - replace the current mixed "marketing + dashboard + admin" shell with a calmer investor product frame
 - define shared visual primitives instead of expanding the monolithic stylesheet
 - centralize locale-aware formatting for money, percentages, and dates
 - reduce top-level navigation to product-facing destinations
 
-### 0.2 Dashboard rewrite (next)
+### 0.2 Dashboard rewrite (done)
 
 - rebuild the dashboard around current value, daily move, allocation, one primary chart, and portfolio health
 - remove technical cards and duplicate summary sections from the main screen
 - shorten copy and make empty/error/loading states more product-like
 
-### 0.3 Performance rewrite (next)
+### 0.3 Performance rewrite (done)
 
 - merge returns and charts into a single coherent performance experience
 - standardize period switchers, legends, benchmark presentation, and chart cards

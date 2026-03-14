@@ -41,9 +41,9 @@ export function PortfolioHistorySection() {
 
   return (
     <SectionCard
-      eyebrow="History"
-      title="Daily portfolio history"
-      description="A rebuildable time series derived from transactions plus historical market data, with filtered views for PLN, USD and gold ounces, plus benchmark overlays indexed from the same starting point."
+      eyebrow="Performance"
+      title="History"
+      description="Rebuildable portfolio history in PLN, USD and gold, with allocation and benchmark overlays."
     >
       {historyQuery.isLoading && <p className="muted-copy">Loading daily history...</p>}
       {historyQuery.isError && <p className="form-error">{historyQuery.error.message}</p>}
