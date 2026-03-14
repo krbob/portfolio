@@ -8,6 +8,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import java.nio.file.Files
+import java.nio.file.Path
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -132,6 +134,92 @@ class PortfolioStateRouteTest {
     }
 
     @Test
+    fun `portfolio state import preserves fx rates on foreign-currency transactions`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount(name = "Primary")
+        val instrumentId = createInstrument(name = "VWRA", symbol = "VWRA.L", currency = "USD")
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "1000.00",
+              "currency": "USD",
+              "fxRateToPln": "3.98760000"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$instrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "2",
+              "unitPrice": "100.00",
+              "grossAmount": "200.00",
+              "currency": "USD",
+              "fxRateToPln": "3.99550000"
+            }
+            """.trimIndent()
+        )
+
+        val exportResponse = client.get("/v1/portfolio/state/export")
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "mode": "REPLACE",
+                  "confirmation": "REPLACE",
+                  "snapshot": ${exportResponse.bodyAsText()}
+                }
+                """.trimIndent()
+            )
+        }
+        val transactionsResponse = client.get("/v1/transactions")
+
+        assertEquals(HttpStatusCode.OK, exportResponse.status)
+        assertEquals(HttpStatusCode.OK, importResponse.status)
+        assertTrue(transactionsResponse.bodyAsText().contains("\"fxRateToPln\": \"3.98760000\""))
+        assertTrue(transactionsResponse.bodyAsText().contains("\"fxRateToPln\": \"3.99550000\""))
+    }
+
+    @Test
+    fun `demo portfolio snapshot imports without losing foreign exchange data`() = testApplication {
+        application {
+            module()
+        }
+
+        val fixture = Files.readString(
+            Path.of("..", "..", "demo", "demo-portfolio-import.json").normalize()
+        )
+
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(fixture)
+        }
+        val overviewResponse = client.get("/v1/portfolio/overview")
+        val holdingsResponse = client.get("/v1/portfolio/holdings")
+        val transactionsResponse = client.get("/v1/transactions")
+
+        assertEquals(HttpStatusCode.OK, importResponse.status)
+        assertTrue(overviewResponse.bodyAsText().contains("\"totalBookValuePln\": \"104736.00\""))
+        assertTrue(overviewResponse.bodyAsText().contains("\"missingFxTransactions\": 0"))
+        assertTrue(holdingsResponse.bodyAsText().contains("\"instrumentName\": \"Vanguard FTSE All-World UCITS ETF\""))
+        assertTrue(holdingsResponse.bodyAsText().contains("\"kind\": \"BOND_EDO\""))
+        assertTrue(transactionsResponse.bodyAsText().contains("\"fxRateToPln\": \"3.99000000\""))
+        assertTrue(transactionsResponse.bodyAsText().contains("\"fxRateToPln\": \"3.95500000\""))
+    }
+
+    @Test
     fun `replace import requires explicit confirmation`() = testApplication {
         application {
             module()
@@ -220,7 +308,11 @@ class PortfolioStateRouteTest {
         return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
     }
 
-    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createInstrument(name: String): String {
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createInstrument(
+        name: String,
+        symbol: String = "VWCE.DE",
+        currency: String = "EUR"
+    ): String {
         val response = client.post("/v1/instruments") {
             contentType(ContentType.Application.Json)
             setBody(
@@ -229,8 +321,8 @@ class PortfolioStateRouteTest {
                   "name": "$name",
                   "kind": "ETF",
                   "assetClass": "EQUITIES",
-                  "symbol": "VWCE.DE",
-                  "currency": "EUR",
+                  "symbol": "$symbol",
+                  "currency": "$currency",
                   "valuationSource": "STOCK_ANALYST"
                 }
                 """.trimIndent()

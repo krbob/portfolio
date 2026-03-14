@@ -7,9 +7,10 @@ COPY gradlew.bat gradlew.bat
 COPY settings.gradle.kts settings.gradle.kts
 COPY build.gradle.kts build.gradle.kts
 COPY gradle gradle
+COPY portfolio-domain portfolio-domain
 COPY src src
 
-RUN chmod +x gradlew && ./gradlew --no-daemon installDist
+RUN gradle --no-daemon installDist
 
 FROM eclipse-temurin:21-jre
 

@@ -114,6 +114,7 @@ This starts:
 The Compose API profile enables server backups by default and stores them on a separate named volume.
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
 The web UI is exposed on `http://127.0.0.1:4174`.
+You can override published ports with `PORTFOLIO_API_PORT` and `PORTFOLIO_WEB_PORT`.
 
 To run the full stack with live market data without persisting provider URLs in the repo:
 
@@ -124,10 +125,8 @@ PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator-host \
 docker compose --profile app up -d --build
 ```
 
-Legacy PostgreSQL profile is still available temporarily for migration/debug work:
-
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
-See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current SQLite migration roadmap.
+See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current product backlog and post-migration priorities.
 
 ## Authentication
 
@@ -246,3 +245,22 @@ If you are running the Docker profile and want to seed the containerized API thr
 ```bash
 ./scripts/seed-demo-portfolio-docker.sh
 ```
+
+## Smoke test
+
+To run an isolated end-to-end smoke test of the SQLite Docker stack:
+
+```bash
+./scripts/smoke-test-sqlite-stack.sh
+```
+
+The smoke test:
+
+- tears down any stale smoke stack first
+- starts an isolated Compose project on alternate ports
+- boots a fresh SQLite database
+- imports the demo portfolio
+- verifies overview, holdings and backups
+- restarts the API container
+- confirms data durability after restart
+- tears the smoke stack down again

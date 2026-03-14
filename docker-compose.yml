@@ -4,7 +4,6 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    container_name: portfolio-api
     environment:
       PORTFOLIO_PERSISTENCE_MODE: sqlite
       PORTFOLIO_SQLITE_DATABASE_PATH: "${PORTFOLIO_SQLITE_DATABASE_PATH:-/srv/portfolio/data/portfolio.db}"
@@ -19,7 +18,7 @@ services:
       PORTFOLIO_BACKUPS_INTERVAL_MINUTES: "${PORTFOLIO_BACKUPS_INTERVAL_MINUTES:-1440}"
       PORTFOLIO_BACKUPS_RETENTION_COUNT: "${PORTFOLIO_BACKUPS_RETENTION_COUNT:-30}"
     ports:
-      - "18082:18082"
+      - "${PORTFOLIO_API_PORT:-18082}:18082"
     volumes:
       - portfolio-sqlite-data:/srv/portfolio/data
       - portfolio-backup-data:${PORTFOLIO_BACKUPS_DIRECTORY:-/srv/portfolio/backups}
@@ -30,13 +29,12 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
-    container_name: portfolio-web
     environment:
       VITE_API_PROXY_TARGET: "${PORTFOLIO_WEB_API_PROXY_TARGET:-http://portfolio-api:18082}"
     depends_on:
       - portfolio-api
     ports:
-      - "4174:4174"
+      - "${PORTFOLIO_WEB_PORT:-4174}:4174"
     restart: unless-stopped
 
 volumes:

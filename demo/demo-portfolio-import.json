@@ -151,7 +151,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.99000000",
         "notes": "Funding for March 2024 ETF purchase",
         "createdAt": "2024-03-18T08:00:00Z",
         "updatedAt": "2024-03-18T08:00:00Z"
@@ -169,7 +169,7 @@
         "feeAmount": "1.25",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.98500000",
         "notes": "Initial VWRA position on IBKR",
         "createdAt": "2024-03-19T08:00:00Z",
         "updatedAt": "2024-03-19T08:00:00Z"
@@ -187,7 +187,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "4.01000000",
         "notes": "Funding for XTB VWRA purchase",
         "createdAt": "2024-08-12T08:00:00Z",
         "updatedAt": "2024-08-12T08:00:00Z"
@@ -205,7 +205,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "4.00500000",
         "notes": "VWRA purchase on XTB",
         "createdAt": "2024-08-13T08:00:00Z",
         "updatedAt": "2024-08-13T08:00:00Z"
@@ -223,7 +223,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "4.02000000",
         "notes": "Funding for February 2025 VWRA purchase",
         "createdAt": "2025-02-14T08:00:00Z",
         "updatedAt": "2025-02-14T08:00:00Z"
@@ -241,7 +241,7 @@
         "feeAmount": "3.50",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "4.01800000",
         "notes": "VWRA purchase on mBank Brokerage",
         "createdAt": "2025-02-17T08:00:00Z",
         "updatedAt": "2025-02-17T08:00:00Z"
@@ -259,7 +259,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.87000000",
         "notes": "Funding for September 2025 VWRA purchase",
         "createdAt": "2025-09-10T08:00:00Z",
         "updatedAt": "2025-09-10T08:00:00Z"
@@ -277,7 +277,7 @@
         "feeAmount": "1.30",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.86500000",
         "notes": "Second VWRA purchase on IBKR",
         "createdAt": "2025-09-11T08:00:00Z",
         "updatedAt": "2025-09-11T08:00:00Z"
@@ -295,7 +295,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.94000000",
         "notes": "Funding for December 2025 VWRA purchase",
         "createdAt": "2025-12-08T08:00:00Z",
         "updatedAt": "2025-12-08T08:00:00Z"
@@ -313,7 +313,7 @@
         "feeAmount": "3.50",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.93800000",
         "notes": "Year-end VWRA accumulation on mBank",
         "createdAt": "2025-12-09T08:00:00Z",
         "updatedAt": "2025-12-09T08:00:00Z"
@@ -331,7 +331,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.96000000",
         "notes": "Funding for latest VWRA purchase on XTB",
         "createdAt": "2026-02-12T08:00:00Z",
         "updatedAt": "2026-02-12T08:00:00Z"
@@ -349,7 +349,7 @@
         "feeAmount": "0.00",
         "taxAmount": "0.00",
         "currency": "USD",
-        "fxRateToPln": null,
+        "fxRateToPln": "3.95500000",
         "notes": "Latest VWRA purchase on XTB",
         "createdAt": "2026-02-13T08:00:00Z",
         "updatedAt": "2026-02-13T08:00:00Z"
