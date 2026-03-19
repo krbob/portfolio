@@ -14,7 +14,7 @@ export function FilterBar({ children, activeCount, onClear, summary }: FilterBar
       <div className="flex flex-wrap items-end gap-3">
         {children}
         {activeCount > 0 && (
-          <button className={btnGhost} onClick={onClear}>
+          <button type="button" className={btnGhost} onClick={onClear}>
             Clear ({activeCount})
           </button>
         )}

@@ -28,10 +28,11 @@ export function ConfirmDialog({
       size="sm"
       footer={
         <>
-          <button className={btnSecondary} onClick={onCancel}>
+          <button type="button" className={btnSecondary} onClick={onCancel}>
             Cancel
           </button>
           <button
+            type="button"
             className={variant === 'danger' ? btnDanger : btnSecondary}
             onClick={onConfirm}
           >

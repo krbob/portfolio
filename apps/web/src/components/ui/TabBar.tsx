@@ -2,14 +2,24 @@ interface TabBarProps<T extends string> {
   value: T
   onChange: (value: T) => void
   tabs: { value: T; label: string; count?: number }[]
+  ariaLabel?: string
 }
 
-export function TabBar<T extends string>({ value, onChange, tabs }: TabBarProps<T>) {
+export function TabBar<T extends string>({
+  value,
+  onChange,
+  tabs,
+  ariaLabel = 'Tab bar',
+}: TabBarProps<T>) {
   return (
-    <div className="flex gap-0 border-b border-zinc-800 mb-6">
+    <div className="mb-6 flex gap-0 border-b border-zinc-800" role="tablist" aria-label={ariaLabel}>
       {tabs.map((tab) => (
         <button
           key={tab.value}
+          type="button"
+          role="tab"
+          aria-selected={value === tab.value}
+          tabIndex={value === tab.value ? 0 : -1}
           onClick={() => onChange(tab.value)}
           className={`relative px-4 py-3 text-sm font-medium transition-colors ${
             value === tab.value

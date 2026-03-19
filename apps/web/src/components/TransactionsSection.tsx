@@ -722,6 +722,9 @@ export function TransactionsSection() {
             <button
               key={workspace}
               type="button"
+              role="tab"
+              aria-selected={workspace === activeWorkspace}
+              tabIndex={workspace === activeWorkspace ? 0 : -1}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${workspace === activeWorkspace ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
               onClick={() => setActiveWorkspace(workspace)}
             >
@@ -1279,6 +1282,9 @@ export function TransactionsSection() {
                     <button
                       key={status}
                       type="button"
+                      role="tab"
+                      aria-selected={status === importPreviewStatusFilter}
+                      tabIndex={status === importPreviewStatusFilter ? 0 : -1}
                       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${status === importPreviewStatusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
                       onClick={() => setImportPreviewStatusFilter(status)}
                     >

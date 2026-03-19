@@ -208,6 +208,14 @@ export function HoldingsScreen() {
                         isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/30'
                       }`}
                       onClick={() => setSelectedHoldingKey(key)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setSelectedHoldingKey(key)
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-selected={isSelected}
                     >
                       <td className={td}>
                         <div className="font-medium text-zinc-100">{holding.instrumentName}</div>

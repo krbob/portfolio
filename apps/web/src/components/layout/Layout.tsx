@@ -46,6 +46,8 @@ export function Layout({ children }: { children: ReactNode }) {
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
               onClick={() => setIsMobileNavOpen(true)}
               aria-label="Open navigation"
+              aria-expanded={isMobileNavOpen}
+              aria-controls="mobile-navigation"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -77,8 +79,11 @@ export function Layout({ children }: { children: ReactNode }) {
           />
 
           <aside
+            id="mobile-navigation"
             className="fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl lg:hidden"
-            aria-hidden="false"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
           >
             <Sidebar onNavigate={() => setIsMobileNavOpen(false)} />
           </aside>
