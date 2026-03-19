@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { PortfolioDailyHistoryPoint, BenchmarkComparison } from '../api/read-model'
+import type { PortfolioDailyHistoryPoint, BenchmarkComparison, PortfolioReturnPeriod } from '../api/read-model'
 import { PortfolioValueChart, AllocationTimeChart, BenchmarkChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, StatePanel, TabBar, SegmentedControl } from '../components/ui'
@@ -33,9 +33,9 @@ export function PerformanceScreen() {
   const series = seriesForUnit(unit)
 
   // Featured returns for stat cards
-  const ytdPeriod = allPeriods.find((p) => p.key === 'YTD')
-  const y1Period = allPeriods.find((p) => p.key === '1Y')
-  const inceptionPeriod = allPeriods.find((p) => p.key === 'INCEPTION')
+  const ytdPeriod = findReturnPeriod(allPeriods, 'YTD')
+  const y1Period = findReturnPeriod(allPeriods, 'ONE_YEAR')
+  const inceptionPeriod = findReturnPeriod(allPeriods, 'MAX')
   const hasHistory = allPoints.length > 0
   const hasReturns = allPeriods.length > 0
 
@@ -85,12 +85,14 @@ export function PerformanceScreen() {
   return (
     <>
       <PageHeader title="Performance">
-        <SegmentedControl
-          options={PERIODS.map((p) => ({ value: p, label: p }))}
-          value={period}
-          onChange={(v) => setPeriod(v as Period)}
-          ariaLabel="Performance period"
-        />
+        {tab === 'charts' ? (
+          <SegmentedControl
+            options={PERIODS.map((p) => ({ value: p, label: p }))}
+            value={period}
+            onChange={(v) => setPeriod(v as Period)}
+            ariaLabel="Performance chart period"
+          />
+        ) : null}
       </PageHeader>
 
       {/* Top stat cards */}
@@ -286,7 +288,7 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
             {data.periods.map((p) => (
               <tr
                 key={p.key}
-                className={`${tr} ${p.key === 'INCEPTION' ? 'bg-zinc-800/20' : ''}`}
+                className={`${tr} ${p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
               >
                 <td className={`${td} font-medium text-zinc-200`}>
                   {p.label}
@@ -379,6 +381,13 @@ function seriesForUnit(unit: Unit) {
     case 'AU': return { valueKey: 'totalCurrentValueAu' as const, contributionsKey: 'netContributionsAu' as const }
     default: return { valueKey: 'totalCurrentValuePln' as const, contributionsKey: 'netContributionsPln' as const }
   }
+}
+
+function findReturnPeriod(
+  periods: PortfolioReturnPeriod[],
+  key: PortfolioReturnPeriod['key'],
+) {
+  return periods.find((period) => period.key === key)
 }
 
 function formatReturn(value: string | null | undefined) {
