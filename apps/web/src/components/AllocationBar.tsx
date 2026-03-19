@@ -2,23 +2,31 @@ interface AllocationBarProps {
   equityWeightPct: number
   bondWeightPct: number
   cashWeightPct: number
+  compact?: boolean
 }
 
-export function AllocationBar({ equityWeightPct, bondWeightPct, cashWeightPct }: AllocationBarProps) {
+export function AllocationBar({
+  equityWeightPct,
+  bondWeightPct,
+  cashWeightPct,
+  compact = false,
+}: AllocationBarProps) {
   const segments = [
     { label: 'Equities', value: equityWeightPct, className: 'allocation-segment-equity' },
     { label: 'Bonds', value: bondWeightPct, className: 'allocation-segment-bond' },
     { label: 'Cash', value: cashWeightPct, className: 'allocation-segment-cash' },
   ]
 
-  return (
-    <div className="allocation-card">
-      <div className="allocation-header">
-        <div>
-          <strong>Current allocation</strong>
-          <p className="muted-copy">Portfolio split by market value across the active asset buckets.</p>
+  const content = (
+    <>
+      {!compact ? (
+        <div className="allocation-header">
+          <div>
+            <strong>Current allocation</strong>
+            <p className="muted-copy">Portfolio split by market value across the active asset buckets.</p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="allocation-bar" aria-label="Portfolio allocation">
         {segments.map((segment) => (
@@ -38,6 +46,8 @@ export function AllocationBar({ equityWeightPct, bondWeightPct, cashWeightPct }:
           </span>
         ))}
       </div>
-    </div>
+    </>
   )
+
+  return compact ? <div className="allocation-compact">{content}</div> : <div className="allocation-card">{content}</div>
 }
