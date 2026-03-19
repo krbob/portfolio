@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
 import { badge, badgeVariants, filterInput, label } from '../lib/styles'
@@ -26,11 +27,7 @@ export function ImportAuditPanel({
 
   return (
     <>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Audit</p>
-        <h4 className="mt-1 text-lg font-semibold text-zinc-100">{title}</h4>
-        <p className="mt-1 text-sm text-zinc-500">{description}</p>
-      </div>
+      <SectionHeader eyebrow="Audit" title={title} description={description} />
 
       {latestEvent && (
         <p className="text-sm text-zinc-500">

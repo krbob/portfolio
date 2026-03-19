@@ -1,6 +1,7 @@
 import { useReadModelCacheSnapshots } from '../hooks/use-read-model'
+import { Card, SectionHeader } from './ui'
 import { formatBytes, formatDateTime } from '../lib/format'
-import { card, badge, badgeVariants } from '../lib/styles'
+import { badge, badgeVariants } from '../lib/styles'
 
 export function ReadModelCacheSection() {
   const cacheQuery = useReadModelCacheSnapshots()
@@ -8,14 +9,12 @@ export function ReadModelCacheSection() {
   const totalPayloadBytes = snapshots.reduce((sum, snapshot) => sum + snapshot.payloadSizeBytes, 0)
 
   return (
-    <div className={card}>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Read models</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Cached snapshots</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened.
-        </p>
-      </div>
+    <Card>
+      <SectionHeader
+        eyebrow="Read models"
+        title="Cached snapshots"
+        description="History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened."
+      />
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -75,7 +74,7 @@ export function ReadModelCacheSection() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

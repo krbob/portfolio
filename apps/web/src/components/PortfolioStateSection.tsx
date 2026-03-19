@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Card, SectionHeader } from './ui'
 import {
   useAccounts,
   useExportPortfolioState,
@@ -8,7 +9,7 @@ import {
   useTransactions,
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
-import { card, label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
+import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioStateSection() {
   const accountsQuery = useAccounts()
@@ -123,14 +124,12 @@ export function PortfolioStateSection() {
   }
 
   return (
-    <div className={card}>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Transfer</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Backup and restore</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode.
-        </p>
-      </div>
+    <Card>
+      <SectionHeader
+        eyebrow="Transfer"
+        title="Backup and restore"
+        description="Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode."
+      />
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -305,7 +304,7 @@ export function PortfolioStateSection() {
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

@@ -1,20 +1,19 @@
 import { useAppReadiness } from '../hooks/use-app-readiness'
+import { Card, SectionHeader } from './ui'
 import { formatDateTime } from '../lib/format'
-import { card, badge, badgeVariants } from '../lib/styles'
+import { badge, badgeVariants } from '../lib/styles'
 
 export function SystemReadinessSection() {
   const readinessQuery = useAppReadiness()
   const readiness = readinessQuery.data
 
   return (
-    <div className={card}>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Health</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Runtime readiness</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Verify storage, backups, market-data wiring and authentication before trusting the portfolio state.
-        </p>
-      </div>
+    <Card>
+      <SectionHeader
+        eyebrow="Health"
+        title="Runtime readiness"
+        description="Verify storage, backups, market-data wiring and authentication before trusting the portfolio state."
+      />
 
       {readinessQuery.isLoading && <p className="text-sm text-zinc-500">Checking runtime dependencies...</p>}
       {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
@@ -60,7 +59,7 @@ export function SystemReadinessSection() {
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }
 

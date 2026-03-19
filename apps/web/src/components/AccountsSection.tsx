@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
+import { Card, SectionHeader } from './ui'
 import { useAccounts, useCreateAccount } from '../hooks/use-write-model'
-import { card, label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
+import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
 const initialForm = {
   name: '',
@@ -22,14 +23,12 @@ export function AccountsSection() {
   }
 
   return (
-    <div className={card}>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Write model</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Accounts</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Capture where assets are held before layering portfolio analytics on top.
-        </p>
-      </div>
+    <Card>
+      <SectionHeader
+        eyebrow="Write model"
+        title="Accounts"
+        description="Capture where assets are held before layering portfolio analytics on top."
+      />
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
@@ -106,6 +105,6 @@ export function AccountsSection() {
           </article>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }
