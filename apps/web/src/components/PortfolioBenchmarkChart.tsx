@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import {
-  ColorType,
   LineSeries,
   createChart,
   type IChartApi,
@@ -8,6 +7,7 @@ import {
   type SeriesType,
 } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import { chartPalette, createPortfolioChartOptions, isInteractiveChartEnvironment } from '../lib/chart-theme'
 
 interface PortfolioBenchmarkChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -26,44 +26,29 @@ export function PortfolioBenchmarkChart({ points }: PortfolioBenchmarkChartProps
       return
     }
 
-    const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#58705f',
-        fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
-      },
-      grid: {
-        vertLines: { color: 'rgba(19, 32, 24, 0.08)' },
-        horzLines: { color: 'rgba(19, 32, 24, 0.08)' },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      timeScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      width: containerRef.current.clientWidth,
-      height: 300,
-    })
+    const chart = createChart(
+      containerRef.current,
+      createPortfolioChartOptions(containerRef.current.clientWidth, 300),
+    )
 
     portfolioSeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#132018',
+      color: chartPalette.portfolio,
       lineWidth: 3,
       priceFormat: benchmarkPriceFormat,
     })
     vwraSeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#1d6a39',
+      color: chartPalette.equities,
       lineWidth: 2,
       priceFormat: benchmarkPriceFormat,
     })
     inflationSeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#8a6b3f',
+      color: chartPalette.bonds,
       lineWidth: 2,
       lineStyle: 2,
       priceFormat: benchmarkPriceFormat,
     })
     targetMixSeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#c07b1d',
+      color: chartPalette.cash,
       lineWidth: 2,
       lineStyle: 1,
       priceFormat: benchmarkPriceFormat,
@@ -155,12 +140,4 @@ const benchmarkPriceFormat = {
   type: 'price' as const,
   minMove: 0.01,
   precision: 2,
-}
-
-function isInteractiveChartEnvironment() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return false
-  }
-
-  return !window.navigator.userAgent.toLowerCase().includes('jsdom')
 }

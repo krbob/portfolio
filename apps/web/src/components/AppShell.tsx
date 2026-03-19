@@ -22,46 +22,46 @@ const primaryNavItems: NavItem[] = [
   {
     to: '/',
     label: 'Dashboard',
-    copy: 'Current value, allocation and operational health.',
+    copy: 'Value, allocation and health.',
     end: true,
     section: 'Investing',
-    title: 'Portfolio dashboard',
-    subtitle: 'Current value, allocation drift and portfolio health at a glance.',
+    title: 'Dashboard',
+    subtitle: 'Value, allocation drift and operational health.',
   },
   {
     to: '/holdings',
     label: 'Holdings',
-    copy: 'Positions, account exposure and valuation coverage.',
+    copy: 'Positions by account and status.',
     section: 'Investing',
     title: 'Holdings',
-    subtitle: 'Inspect positions by account, asset class and valuation status.',
+    subtitle: 'Positions, account exposure and valuation coverage.',
   },
   {
     to: '/performance',
     label: 'Performance',
-    copy: 'History, returns and benchmark context.',
+    copy: 'History, returns and benchmarks.',
     section: 'Investing',
     title: 'Performance',
-    subtitle: 'History, returns and benchmark context in one coherent read-heavy view.',
+    subtitle: 'History, returns and benchmark context.',
   },
   {
     to: '/transactions',
     label: 'Transactions',
-    copy: 'Journal, imports and canonical event history.',
+    copy: 'Journal, imports and parsing profiles.',
     section: 'Investing',
     title: 'Transactions',
-    subtitle: 'Manage the canonical events that drive valuation, history and returns.',
+    subtitle: 'Canonical events, imports and profile-driven parsing.',
   },
-] 
+]
 
 const secondaryNavItems: NavItem[] = [
   {
     to: '/settings',
     label: 'Settings',
-    copy: 'Reference data, backups, cache and state transfer.',
+    copy: 'Backups, reference data and diagnostics.',
     section: 'Operations',
     title: 'Settings',
-    subtitle: 'Accounts, instruments, backups, transfer workflows and read-model cache.',
+    subtitle: 'Reference data, backups, cache and state transfer.',
   },
 ]
 
@@ -92,14 +92,12 @@ export function AppShell({ children }: AppShellProps) {
     <div className="layout app-frame">
       <aside className="shell-sidebar">
         <div className="shell-brand">
-          <span className="shell-chip">Self-hosted portfolio tracker</span>
+          <span className="shell-chip">SQLite self-hosted</span>
           <div className="shell-brand-mark">
-            <span className="shell-brand-label">Portfolio</span>
-            <h1 className="shell-brand-title">Calm by default.</h1>
+            <span className="shell-brand-label">Long-term investing workspace</span>
+            <h1 className="shell-brand-title">Portfolio</h1>
           </div>
-          <p className="shell-brand-copy">
-            Transaction-based accounting, long-term performance and backup workflows in one focused workspace.
-          </p>
+          <p className="shell-brand-copy">ETF, EDO and cash from one canonical ledger.</p>
         </div>
 
         <nav className="shell-nav-group" aria-label="Primary">
@@ -199,7 +197,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="shell-topbar-badges">
             <span className={`shell-topbar-badge ${systemState.badgeClassName}`}>{systemState.label}</span>
             {metaQuery.data ? <span className="shell-topbar-badge">{metaQuery.data.stage.toUpperCase()}</span> : null}
-            <span className="shell-topbar-badge">{authSummary}</span>
+            {authState?.authEnabled ? <span className="shell-topbar-badge">Password lock</span> : null}
           </div>
         </header>
 

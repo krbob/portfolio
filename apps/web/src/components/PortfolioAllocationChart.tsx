@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
 import {
   AreaSeries,
-  ColorType,
   createChart,
   type IChartApi,
   type ISeriesApi,
   type SeriesType,
 } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import { chartPalette, createPortfolioChartOptions, isInteractiveChartEnvironment } from '../lib/chart-theme'
 
 interface PortfolioAllocationChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -25,42 +25,27 @@ export function PortfolioAllocationChart({ points }: PortfolioAllocationChartPro
       return
     }
 
-    const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#58705f',
-        fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
-      },
-      grid: {
-        vertLines: { color: 'rgba(19, 32, 24, 0.08)' },
-        horzLines: { color: 'rgba(19, 32, 24, 0.08)' },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      timeScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      width: containerRef.current.clientWidth,
-      height: 280,
-    })
+    const chart = createChart(
+      containerRef.current,
+      createPortfolioChartOptions(containerRef.current.clientWidth, 280),
+    )
 
     const equitySeries = chart.addSeries(AreaSeries, {
-      lineColor: '#1d6a39',
-      topColor: 'rgba(29, 106, 57, 0.28)',
-      bottomColor: 'rgba(29, 106, 57, 0.04)',
+      lineColor: chartPalette.equities,
+      topColor: chartPalette.positiveFill,
+      bottomColor: chartPalette.positiveFade,
       lineWidth: 2,
     })
     const bondSeries = chart.addSeries(AreaSeries, {
-      lineColor: '#c07b1d',
-      topColor: 'rgba(192, 123, 29, 0.24)',
-      bottomColor: 'rgba(192, 123, 29, 0.04)',
+      lineColor: chartPalette.bonds,
+      topColor: chartPalette.amberFill,
+      bottomColor: chartPalette.amberFade,
       lineWidth: 2,
     })
     const cashSeries = chart.addSeries(AreaSeries, {
-      lineColor: '#8a6b3f',
-      topColor: 'rgba(138, 107, 63, 0.18)',
-      bottomColor: 'rgba(138, 107, 63, 0.03)',
+      lineColor: chartPalette.cash,
+      topColor: chartPalette.cyanFill,
+      bottomColor: chartPalette.cyanFade,
       lineWidth: 2,
     })
 
@@ -137,12 +122,4 @@ export function PortfolioAllocationChart({ points }: PortfolioAllocationChartPro
       <div ref={containerRef} className="lightweight-chart" />
     </>
   )
-}
-
-function isInteractiveChartEnvironment() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return false
-  }
-
-  return !window.navigator.userAgent.toLowerCase().includes('jsdom')
 }

@@ -7,7 +7,7 @@ export function TransactionsScreen() {
       <PageIntro
         eyebrow="Operations"
         title="Transactions"
-        description="Work through the canonical event stream in focused modes: journal review, batch import and saved parsing profiles."
+        description="Maintain the canonical event stream through journal, import and profile workflows."
       />
       <TransactionsSection />
     </div>

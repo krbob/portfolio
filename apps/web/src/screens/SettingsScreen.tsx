@@ -14,7 +14,7 @@ export function SettingsScreen() {
       <PageIntro
         eyebrow="Operations"
         title="Settings"
-        description="Keep reference data, state transfer, backups and cache diagnostics in one operational workspace."
+        description="Keep backups, reference data and diagnostics in one operational workspace."
       />
 
       <SystemReadinessSection />

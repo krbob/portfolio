@@ -16,7 +16,7 @@ export function PerformanceScreen() {
       <PageIntro
         eyebrow="Performance"
         title="Performance"
-        description="Read the portfolio through one lens: history, cash-flow-aware returns and benchmark context."
+        description="Read history, returns and benchmarks through one coherent lens."
       />
 
       <section className="summary-grid">

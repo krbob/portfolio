@@ -7,7 +7,7 @@ export function HoldingsScreen() {
       <PageIntro
         eyebrow="Investing"
         title="Holdings"
-        description="Scan positions quickly, filter by account or asset class, and inspect one holding in detail without losing portfolio context."
+        description="Scan positions quickly, filter the view, and inspect one holding at a time."
       />
       <HoldingsSection />
     </div>

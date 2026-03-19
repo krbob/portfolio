@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import {
   AreaSeries,
-  ColorType,
   LineSeries,
   createChart,
   type IChartApi,
@@ -9,6 +8,7 @@ import {
   type SeriesType,
 } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import { chartPalette, createPortfolioChartOptions, isInteractiveChartEnvironment } from '../lib/chart-theme'
 
 interface PortfolioValueChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -21,6 +21,9 @@ interface PortfolioValueChartProps {
     | 'netContributionsUsd'
     | 'netContributionsAu'
   unit: 'PLN' | 'USD' | 'AU'
+  height?: number
+  title?: string
+  description?: string
 }
 
 export function PortfolioValueChart({
@@ -28,6 +31,9 @@ export function PortfolioValueChart({
   valueKey,
   contributionsKey,
   unit,
+  height = 320,
+  title = 'Portfolio value',
+  description = 'Current value versus cumulative contributions in',
 }: PortfolioValueChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -39,35 +45,20 @@ export function PortfolioValueChart({
       return
     }
 
-    const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#58705f',
-        fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
-      },
-      grid: {
-        vertLines: { color: 'rgba(19, 32, 24, 0.08)' },
-        horzLines: { color: 'rgba(19, 32, 24, 0.08)' },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      timeScale: {
-        borderColor: 'rgba(19, 32, 24, 0.12)',
-      },
-      width: containerRef.current.clientWidth,
-      height: 320,
-    })
+    const chart = createChart(
+      containerRef.current,
+      createPortfolioChartOptions(containerRef.current.clientWidth, height),
+    )
 
     const valueSeries = chart.addSeries(AreaSeries, {
-      lineColor: '#132018',
-      topColor: 'rgba(19, 32, 24, 0.24)',
-      bottomColor: 'rgba(19, 32, 24, 0.04)',
+      lineColor: chartPalette.equities,
+      topColor: chartPalette.positiveFill,
+      bottomColor: chartPalette.positiveFade,
       lineWidth: 2,
       priceFormat: priceFormatForUnit(unit),
     })
     const contributionsSeries = chart.addSeries(LineSeries, {
-      color: '#8a6b3f',
+      color: chartPalette.contributions,
       lineWidth: 2,
       lineStyle: 2,
       priceFormat: priceFormatForUnit(unit),
@@ -91,7 +82,7 @@ export function PortfolioValueChart({
       valueSeriesRef.current = null
       contributionsSeriesRef.current = null
     }
-  }, [unit])
+  }, [height, unit])
 
   useEffect(() => {
     if (!valueSeriesRef.current || !contributionsSeriesRef.current) {
@@ -121,8 +112,10 @@ export function PortfolioValueChart({
     <>
       <div className="chart-header">
         <div>
-          <strong>Portfolio value</strong>
-          <p className="muted-copy">Current value versus cumulative contributions in {unit}.</p>
+          <strong>{title}</strong>
+          <p className="muted-copy">
+            {description} {unit}.
+          </p>
         </div>
       </div>
       <div ref={containerRef} className="lightweight-chart" />
@@ -144,12 +137,4 @@ function priceFormatForUnit(unit: 'PLN' | 'USD' | 'AU') {
     minMove: 0.01,
     precision: 2,
   }
-}
-
-function isInteractiveChartEnvironment() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return false
-  }
-
-  return !window.navigator.userAgent.toLowerCase().includes('jsdom')
 }

@@ -56,7 +56,7 @@ function RouteLoadingState() {
     <div className="page-stack route-loading-state">
       <p className="eyebrow">Loading</p>
       <h2 className="page-title">Preparing workspace</h2>
-      <p className="page-copy">Fetching the next screen and attaching its portfolio data dependencies.</p>
+      <p className="page-copy">Attaching the next screen and its portfolio data.</p>
     </div>
   )
 }

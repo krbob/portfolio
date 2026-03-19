@@ -460,7 +460,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect((await screen.findAllByText(/portfolio dev/i)).length).toBeGreaterThan(0)
-    expect(await screen.findByRole('heading', { name: /portfolio dashboard/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /allocation snapshot/i })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /capital and gain/i })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: /target allocation and rebalancing/i })).toBeInTheDocument()
