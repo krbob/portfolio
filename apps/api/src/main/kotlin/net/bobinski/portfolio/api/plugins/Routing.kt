@@ -40,15 +40,17 @@ fun Application.configureRouting() {
             call.respondText(document.content, document.contentType)
         }
 
-        openAPI("/openapi") {
-            info = OpenApiInfo(
-                title = "Portfolio API",
-                version = "0.1.0"
-            )
-            outputPath = "build/openapi-ui"
-            source = OpenApiDocSource.Routing(
-                contentType = ContentType.Application.Json
-            )
+        if (this@configureRouting.openApiUiEnabled()) {
+            openAPI("/openapi") {
+                info = OpenApiInfo(
+                    title = "Portfolio API",
+                    version = "0.1.0"
+                )
+                outputPath = "build/openapi-ui"
+                source = OpenApiDocSource.Routing(
+                    contentType = ContentType.Application.Json
+                )
+            }
         }
 
         systemRoute(this@configureRouting)
@@ -62,3 +64,15 @@ fun Application.configureRouting() {
         }
     }
 }
+
+private fun Application.openApiUiEnabled(): Boolean =
+    environment.config
+        .propertyOrNull("portfolio.openapi.uiEnabled")
+        ?.getString()
+        ?.toBooleanStrictOrNull()
+        ?: (
+            environment.config
+                .propertyOrNull("portfolio.stage")
+                ?.getString()
+                ?.lowercase() != "test"
+        )

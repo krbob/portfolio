@@ -3,6 +3,8 @@ package net.bobinski.portfolio.api
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -12,9 +14,7 @@ class ApplicationTest {
 
     @Test
     fun `root endpoint returns splash text`() = testApplication {
-        application {
-            module()
-        }
+        configurePortfolioTestApplication()
 
         val response = client.get("/")
 
@@ -24,9 +24,7 @@ class ApplicationTest {
 
     @Test
     fun `health endpoint returns ok payload`() = testApplication {
-        application {
-            module()
-        }
+        configurePortfolioTestApplication()
 
         val response = client.get("/v1/health")
         val body = response.bodyAsText()
@@ -40,9 +38,7 @@ class ApplicationTest {
 
     @Test
     fun `meta endpoint returns stack summary`() = testApplication {
-        application {
-            module()
-        }
+        configurePortfolioTestApplication()
 
         val response = client.get("/v1/meta")
         val body = response.bodyAsText()
@@ -57,9 +53,7 @@ class ApplicationTest {
 
     @Test
     fun `readiness endpoint returns structured checks`() = testApplication {
-        application {
-            module()
-        }
+        configurePortfolioTestApplication()
 
         val response = client.get("/v1/readiness")
         val body = response.bodyAsText()
@@ -73,9 +67,7 @@ class ApplicationTest {
 
     @Test
     fun `openapi endpoint returns api specification`() = testApplication {
-        application {
-            module()
-        }
+        configurePortfolioTestApplication()
 
         val response = client.get("/v1/openapi.json")
         val body = response.bodyAsText()
@@ -84,5 +76,27 @@ class ApplicationTest {
         assertTrue(body.contains("\"openapi\""))
         assertTrue(body.contains("/v1/portfolio/overview"))
         assertTrue(body.contains("/v1/portfolio/returns"))
+    }
+
+    @Test
+    fun `openapi ui route is disabled in test stage`() = testApplication {
+        configurePortfolioTestApplication()
+
+        val response = client.get("/openapi")
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    private fun ApplicationTestBuilder.configurePortfolioTestApplication() {
+        environment {
+            config = MapApplicationConfig(
+                "portfolio.stage" to "test",
+                "portfolio.openapi.uiEnabled" to "false"
+            )
+        }
+
+        application {
+            module()
+        }
     }
 }

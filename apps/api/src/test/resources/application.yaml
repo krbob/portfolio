@@ -8,6 +8,8 @@ ktor:
 portfolio:
   name: "Portfolio"
   stage: "test"
+  openapi:
+    uiEnabled: false
   persistence:
     databasePath: "./build/test-data/portfolio.db"
     journalMode: "WAL"

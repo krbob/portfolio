@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import java.nio.file.Files
 import java.nio.file.Path
@@ -14,6 +15,13 @@ class OpenApiExportTest {
 
     @Test
     fun `exports openapi spec to build directory`() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "portfolio.stage" to "test",
+                "portfolio.openapi.uiEnabled" to "false"
+            )
+        }
+
         application {
             module()
         }
