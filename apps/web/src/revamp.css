@@ -378,6 +378,11 @@ textarea::placeholder {
   gap: 24px;
 }
 
+.route-loading-state {
+  min-height: 260px;
+  align-content: center;
+}
+
 .page-intro {
   display: grid;
   gap: 10px;
