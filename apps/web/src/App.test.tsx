@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -372,5 +372,208 @@ describe('App', () => {
     expect(await screen.findByPlaceholderText(/enter password/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /unlock/i })).toBeInTheDocument()
     expect(screen.getByText(/self-hosted portfolio tracker/i)).toBeInTheDocument()
+  })
+
+  it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(JSON.stringify({ message: 'Overview unavailable' }), { status: 503 })
+      }
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            points: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in dashboard error test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText(/dashboard unavailable/i)).toBeInTheDocument()
+    expect(screen.queryByText(/welcome to portfolio/i)).not.toBeInTheDocument()
+  })
+
+  it('opens and closes the mobile navigation drawer', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            valuationState: 'BOOK_ONLY',
+            totalBookValuePln: '2000.00',
+            totalCurrentValuePln: '2000.00',
+            investedBookValuePln: '1005.00',
+            investedCurrentValuePln: '1005.00',
+            cashBalancePln: '995.00',
+            netContributionsPln: '2000.00',
+            equityBookValuePln: '1005.00',
+            equityCurrentValuePln: '1005.00',
+            bondBookValuePln: '0.00',
+            bondCurrentValuePln: '0.00',
+            cashBookValuePln: '995.00',
+            cashCurrentValuePln: '995.00',
+            totalUnrealizedGainPln: '0.00',
+            accountCount: 1,
+            instrumentCount: 1,
+            activeHoldingCount: 1,
+            valuedHoldingCount: 0,
+            unvaluedHoldingCount: 1,
+            valuationIssueCount: 1,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            points: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in navigation drawer test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('dialog', { name: /navigation/i })).not.toBeInTheDocument()
+
+    const openNavigationButtons = await screen.findAllByRole('button', { name: /open navigation/i })
+    fireEvent.click(openNavigationButtons[0])
+
+    expect(await screen.findByRole('dialog', { name: /navigation/i })).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: /navigation/i })).not.toBeInTheDocument()
+    })
   })
 })

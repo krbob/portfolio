@@ -119,7 +119,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - replace the icon-only collapsed sidebar with a proper mobile navigation pattern
 - keep the desktop shell dense while making tablet/mobile navigation obvious
 
-### 8. Design system consolidation (next)
+### 8. Design system consolidation (done)
 
 - reduce the mixed use of `lib/styles`, inline utility strings, and old section wrappers
 - promote shared primitives for cards, tables, toolbars, buttons and section headers
@@ -135,6 +135,11 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - keep backup and restore flows easy to inspect after the fact (done)
 - add readiness-level checks where they materially improve self-hosted operation (done)
 - keep destructive flows safe-by-default (done)
+
+### 11. UI regression guardrails (done)
+
+- cover the shell, async/error handling, and critical investor-facing states with web tests
+- keep navigation and dashboard regressions visible before they ship
 
 ## Notes
 
