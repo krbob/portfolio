@@ -60,6 +60,22 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
+      - name: Set up JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Regenerate API client
+        working-directory: apps/web
+        run: npm run generate:api
+
+      - name: Verify generated API client is committed
+        run: git diff --exit-code -- apps/web/src/api/generated/portfolio-api.d.ts
+
   smoke-sqlite-docker:
     name: SQLite Docker smoke
     runs-on: ubuntu-latest
