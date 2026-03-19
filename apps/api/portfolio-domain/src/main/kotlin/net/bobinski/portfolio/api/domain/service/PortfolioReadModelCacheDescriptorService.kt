@@ -22,13 +22,13 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
-        modelVersion = 1
+        modelVersion = 2
     )
 
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.returns",
         modelName = "RETURNS",
-        modelVersion = 1
+        modelVersion = 2
     )
 
     private suspend fun descriptor(
