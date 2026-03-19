@@ -91,6 +91,15 @@ That starts the API on SQLite with:
 - synchronous mode `FULL`
 - busy timeout `5000ms`
 
+Startup guardrails:
+
+- the API creates the SQLite parent directory eagerly and fails fast if that path resolves to a directory instead of a file
+- the API creates the backup directory eagerly when backups are enabled and fails fast if it is not writable
+- unsafe SQLite durability settings are rejected at startup:
+  - `journalMode=OFF`
+  - `journalMode=MEMORY`
+  - `synchronousMode=OFF`
+
 To run the API in Docker Compose with a persistent backup volume:
 
 ```bash
@@ -103,6 +112,10 @@ This starts:
 - `portfolio-web`
 - named volume `portfolio-sqlite-data` mounted at `/srv/portfolio/data`
 - named volume `portfolio-backup-data` mounted at `/srv/portfolio/backups`
+- durable restart behavior:
+  - the SQLite file lives on `portfolio-sqlite-data`
+  - server-side JSON backups live on `portfolio-backup-data`
+  - recreating containers does not remove either volume unless you delete them explicitly
 
 The Compose API profile enables server backups by default and stores them on a separate named volume.
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
