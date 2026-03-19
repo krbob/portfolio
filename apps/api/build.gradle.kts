@@ -11,10 +11,6 @@ application {
     mainClass = "io.ktor.server.netty.EngineMain"
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(project(":portfolio-domain"))
     implementation(libs.ktor.server.core)

@@ -6,10 +6,6 @@ plugins {
 group = "net.bobinski.portfolio"
 version = "0.1.0"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
