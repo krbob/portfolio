@@ -7,6 +7,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
+import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
@@ -52,6 +53,7 @@ class PortfolioReturnsService(
             )
         }
         val inception = history.from
+        val referenceBenchmarks = loadReferenceBenchmarks(from = history.from, to = history.until)
 
         val periods = coroutineScope {
             ReturnPeriodDefinition.entries
@@ -64,7 +66,8 @@ class PortfolioReturnsService(
                             requestedFrom = requestedFrom,
                             effectiveFrom = effectiveFrom,
                             history = history,
-                            externalCashFlows = externalCashFlows
+                            externalCashFlows = externalCashFlows,
+                            referenceBenchmarks = referenceBenchmarks
                         )
                     }
                 }
@@ -82,7 +85,8 @@ class PortfolioReturnsService(
         requestedFrom: LocalDate,
         effectiveFrom: LocalDate,
         history: PortfolioDailyHistory,
-        externalCashFlows: List<ExternalCashFlow>
+        externalCashFlows: List<ExternalCashFlow>,
+        referenceBenchmarks: List<ReferenceBenchmarkSeries>
     ): PortfolioReturnPeriod {
         val nominalPln = calculateMetric(
             start = effectiveFrom,
@@ -114,7 +118,7 @@ class PortfolioReturnsService(
 
             is InflationAdjustmentResult.Failure -> null
         }
-        val benchmarkComparisons = listOfNotNull(
+        val benchmarkComparisons = buildList {
             buildBenchmarkComparison(
                 key = BenchmarkKey.VWRA,
                 label = "VWRA benchmark",
@@ -126,7 +130,7 @@ class PortfolioReturnsService(
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
-            ),
+            )?.let(::add)
             buildBenchmarkComparison(
                 key = BenchmarkKey.INFLATION,
                 label = "Inflation benchmark",
@@ -138,7 +142,7 @@ class PortfolioReturnsService(
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
-            ),
+            )?.let(::add)
             buildBenchmarkComparison(
                 key = BenchmarkKey.TARGET_MIX,
                 label = "Configured target mix",
@@ -150,8 +154,18 @@ class PortfolioReturnsService(
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
-            )
-        )
+            )?.let(::add)
+            referenceBenchmarks.forEach { benchmark ->
+                buildBenchmarkComparison(
+                    key = benchmark.key,
+                    label = benchmark.label,
+                    start = effectiveFrom,
+                    end = history.until,
+                    portfolioMetric = nominalPln,
+                    values = benchmark.values
+                )?.let(::add)
+            }
+        }
 
         return PortfolioReturnPeriod(
             key = definition.key,
@@ -240,6 +254,44 @@ class PortfolioReturnsService(
     ): TreeMap<LocalDate, BigDecimal> = when (val result = referenceSeriesProvider.usdPln(from = from, to = to)) {
         is ReferenceSeriesResult.Success -> result.prices.associateTo(TreeMap()) { it.date to it.closePricePln.scaleMoney(8) }
         is ReferenceSeriesResult.Failure -> TreeMap()
+    }
+
+    private suspend fun loadReferenceBenchmarks(
+        from: LocalDate,
+        to: LocalDate
+    ): List<ReferenceBenchmarkSeries> = coroutineScope {
+        PRODUCT_REFERENCE_BENCHMARKS.map { definition ->
+            async {
+                definition to referenceSeriesProvider.benchmarkPln(
+                    symbol = definition.symbol,
+                    from = from,
+                    to = to
+                )
+            }
+        }.awaitAll().mapNotNull { (definition, result) ->
+            when (result) {
+                is ReferenceSeriesResult.Success -> {
+                    val lookup = buildNormalizedIndexLookup(
+                        from = from,
+                        to = to,
+                        prices = result.prices.toLookup()
+                    )
+                    if (lookup.isEmpty()) {
+                        null
+                    } else {
+                        ReferenceBenchmarkSeries(
+                            key = definition.key,
+                            label = definition.label,
+                            values = lookup.entries.map { (date, value) ->
+                                ValuationPoint(date = date, value = value)
+                            }
+                        )
+                    }
+                }
+
+                is ReferenceSeriesResult.Failure -> null
+            }
+        }
     }
 
     private fun calculateMetric(
@@ -524,6 +576,31 @@ class PortfolioReturnsService(
     private fun BigDecimal.scaleMoney(scale: Int): BigDecimal =
         setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
 
+    private fun buildNormalizedIndexLookup(
+        from: LocalDate,
+        to: LocalDate,
+        prices: TreeMap<LocalDate, BigDecimal>
+    ): TreeMap<LocalDate, BigDecimal> {
+        val basePrice = prices.floorEntry(from)?.value ?: prices.ceilingEntry(from)?.value ?: return TreeMap()
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        var date = from
+
+        while (!date.isAfter(to)) {
+            prices.floorEntry(date)?.value?.let { price ->
+                lookup[date] = price
+                    .divide(basePrice, 12, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal(100))
+                    .scaleMoney(4)
+            }
+            date = date.plusDays(1)
+        }
+
+        return lookup
+    }
+
+    private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
+        associateTo(TreeMap()) { it.date to it.closePricePln.scaleMoney(8) }
+
     private fun Double.toRate(): BigDecimal =
         BigDecimal.valueOf(this).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
 
@@ -551,6 +628,18 @@ class PortfolioReturnsService(
         val value: BigDecimal
     )
 
+    private data class ReferenceBenchmarkDefinition(
+        val key: BenchmarkKey,
+        val label: String,
+        val symbol: String
+    )
+
+    private data class ReferenceBenchmarkSeries(
+        val key: BenchmarkKey,
+        val label: String,
+        val values: List<ValuationPoint>
+    )
+
     private data class TimeWeightedMetric(
         val totalReturn: BigDecimal,
         val annualizedReturn: BigDecimal?
@@ -573,6 +662,31 @@ class PortfolioReturnsService(
             FIVE_YEARS -> today.minusYears(5)
             MAX -> LocalDate.MIN
         }
+    }
+
+    private companion object {
+        val PRODUCT_REFERENCE_BENCHMARKS: List<ReferenceBenchmarkDefinition> = listOf(
+            ReferenceBenchmarkDefinition(
+                key = BenchmarkKey.V80A,
+                label = "V80A 80/20 benchmark",
+                symbol = "V80A.DE"
+            ),
+            ReferenceBenchmarkDefinition(
+                key = BenchmarkKey.V60A,
+                label = "V60A 60/40 benchmark",
+                symbol = "V60A.DE"
+            ),
+            ReferenceBenchmarkDefinition(
+                key = BenchmarkKey.V40A,
+                label = "V40A 40/60 benchmark",
+                symbol = "V40A.DE"
+            ),
+            ReferenceBenchmarkDefinition(
+                key = BenchmarkKey.V20A,
+                label = "V20A 20/80 benchmark",
+                symbol = "V20A.DE"
+            )
+        )
     }
 }
 
@@ -627,6 +741,10 @@ enum class ReturnPeriodKey {
 
 enum class BenchmarkKey {
     VWRA,
+    V80A,
+    V60A,
+    V40A,
+    V20A,
     INFLATION,
     TARGET_MIX
 }

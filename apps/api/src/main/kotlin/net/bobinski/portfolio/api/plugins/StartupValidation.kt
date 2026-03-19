@@ -49,6 +49,9 @@ internal fun validateStartupConfiguration(
         require(marketDataConfig.equityBenchmarkSymbol.isNotBlank()) {
             "Market data requires a non-blank equity benchmark symbol."
         }
+        require(marketDataConfig.bondBenchmarkSymbol.isNotBlank()) {
+            "Market data requires a non-blank bond benchmark symbol."
+        }
     }
 
     if (backupConfig.enabled) {

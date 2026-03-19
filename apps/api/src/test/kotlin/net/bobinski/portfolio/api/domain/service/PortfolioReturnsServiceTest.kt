@@ -83,6 +83,60 @@ class PortfolioReturnsServiceTest {
         assertEquals(BigDecimal("0.1"), max.nominalPln!!.moneyWeightedReturn)
     }
 
+    @Test
+    fun `returns expose multi-asset benchmark family when series are available`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(interestTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Failure("Equity benchmark not required.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.referenceProvider.benchmarksBySymbol["V80A.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "109.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["V60A.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "107.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["V40A.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "105.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["V20A.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "103.00")
+            )
+        )
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.02")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+        val benchmarkKeys = oneYear.benchmarks.map { it.key }.toSet()
+
+        assertEquals(
+            setOf(BenchmarkKey.V80A, BenchmarkKey.V60A, BenchmarkKey.V40A, BenchmarkKey.V20A, BenchmarkKey.INFLATION),
+            benchmarkKeys
+        )
+    }
+
     private fun returnsFixture(): ReturnsFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -189,12 +243,19 @@ class PortfolioReturnsServiceTest {
         var usd: ReferenceSeriesResult = ReferenceSeriesResult.Failure("USD not set.")
         var gold: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Gold not set.")
         var equity: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Equity benchmark not set.")
+        var bond: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Bond benchmark not set.")
+        val benchmarksBySymbol: MutableMap<String, ReferenceSeriesResult> = linkedMapOf()
 
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
         override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
 
         override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = equity
+
+        override suspend fun bondBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = bond
+
+        override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
+            benchmarksBySymbol[symbol] ?: ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
     }
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {

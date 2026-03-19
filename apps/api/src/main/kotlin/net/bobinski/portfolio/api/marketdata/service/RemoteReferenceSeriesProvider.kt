@@ -18,16 +18,29 @@ class RemoteReferenceSeriesProvider(
         )
 
     override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
-        loadSeries(
+        benchmarkPln(
             symbol = config.goldBenchmarkSymbol,
-            currency = "PLN",
             from = from,
             to = to
         )
 
     override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
-        loadSeries(
+        benchmarkPln(
             symbol = config.equityBenchmarkSymbol,
+            from = from,
+            to = to
+        )
+
+    override suspend fun bondBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
+        benchmarkPln(
+            symbol = config.bondBenchmarkSymbol,
+            from = from,
+            to = to
+        )
+
+    override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
+        loadSeries(
+            symbol = symbol,
             currency = "PLN",
             from = from,
             to = to

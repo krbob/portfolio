@@ -33,9 +33,9 @@ portfolio/
 - accounts, instruments, and transactions
 - holdings and allocation views
 - performance metrics including MWRR and real return
-- benchmark-relative performance including TWR, VWRA, inflation and target-mix comparisons
+- benchmark-relative performance including TWR, VWRA, inflation, multi-asset ETF benchmarks and target-mix comparisons
 - daily history rebuilt from transactions and market data
-- ETF pricing via `stock-analyst`
+- ETF pricing and benchmark series via `stock-analyst`
 - EDO valuation and inflation via `edo-calculator`
 
 ## Current implementation status

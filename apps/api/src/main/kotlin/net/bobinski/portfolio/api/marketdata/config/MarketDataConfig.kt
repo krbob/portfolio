@@ -9,7 +9,8 @@ data class MarketDataConfig(
     val edoCalculatorBaseUrl: String,
     val usdPlnSymbol: String,
     val goldBenchmarkSymbol: String,
-    val equityBenchmarkSymbol: String
+    val equityBenchmarkSymbol: String,
+    val bondBenchmarkSymbol: String
 ) {
     companion object {
         fun from(config: ApplicationConfig): MarketDataConfig = MarketDataConfig(
@@ -40,7 +41,12 @@ data class MarketDataConfig(
                 "PORTFOLIO_EQUITY_BENCHMARK_SYMBOL",
                 config,
                 "portfolio.marketData.equityBenchmarkSymbol"
-            ) ?: "VWRA.L"
+            ) ?: "VWRA.L",
+            bondBenchmarkSymbol = readSetting(
+                "PORTFOLIO_BOND_BENCHMARK_SYMBOL",
+                config,
+                "portfolio.marketData.bondBenchmarkSymbol"
+            ) ?: "VAGF.DE"
         )
 
         private fun readSetting(

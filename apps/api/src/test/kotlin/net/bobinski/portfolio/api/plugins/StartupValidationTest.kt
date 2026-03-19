@@ -73,6 +73,18 @@ class StartupValidationTest {
     }
 
     @Test
+    fun `startup validation rejects blank bond benchmark symbol`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig().copy(bondBenchmarkSymbol = ""),
+                backupConfig = validBackupConfig(),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
     fun `startup validation rejects blank backup directory when backups are enabled`() {
         assertThrows(IllegalArgumentException::class.java) {
             validateStartupConfiguration(
@@ -140,7 +152,8 @@ class StartupValidationTest {
         edoCalculatorBaseUrl = "http://127.0.0.1:18081",
         usdPlnSymbol = "USDPLN=X",
         goldBenchmarkSymbol = "XAUUSD=X",
-        equityBenchmarkSymbol = "VWRA.L"
+        equityBenchmarkSymbol = "VWRA.L",
+        bondBenchmarkSymbol = "VAGF.DE"
     )
 
     private fun validBackupConfig() = BackupConfig(

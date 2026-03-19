@@ -298,10 +298,12 @@ class PortfolioHistoryService(
         until: LocalDate
     ): BenchmarkLoads = coroutineScope {
         val equityDeferred = async { referenceSeriesProvider.equityBenchmarkPln(from = from, to = until) }
+        val bondDeferred = async { referenceSeriesProvider.bondBenchmarkPln(from = from, to = until) }
         val targetsDeferred = async { portfolioTargetRepository.list() }
         val inflationDeferred = async { loadInflationBenchmark(from = from, until = until) }
 
         val equity = equityDeferred.await()
+        val bond = bondDeferred.await()
         val targets = targetsDeferred.await()
         val inflation = inflationDeferred.await()
         val equityLookup = when (equity) {
@@ -313,12 +315,21 @@ class PortfolioHistoryService(
 
             is ReferenceSeriesResult.Failure -> TreeMap()
         }
+        val bondLookup = when (bond) {
+            is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
+                from = from,
+                until = until,
+                prices = bond.prices.toLookup()
+            )
+
+            is ReferenceSeriesResult.Failure -> TreeMap()
+        }
         val targetMixLookup = buildTargetMixIndexLookup(
             from = from,
             until = until,
             targets = targets,
             equityBenchmark = equityLookup,
-            inflationBenchmark = inflation.lookup
+            bondBenchmark = bondLookup
         )
 
         BenchmarkLoads(
@@ -515,7 +526,7 @@ class PortfolioHistoryService(
         until: LocalDate,
         targets: List<net.bobinski.portfolio.api.domain.model.PortfolioTarget>,
         equityBenchmark: TreeMap<LocalDate, BigDecimal>,
-        inflationBenchmark: TreeMap<LocalDate, BigDecimal>
+        bondBenchmark: TreeMap<LocalDate, BigDecimal>
     ): TargetMixBenchmarkLoad {
         if (targets.isEmpty()) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 0)
@@ -529,7 +540,7 @@ class PortfolioHistoryService(
         if (equityWeight > 0.0 && equityBenchmark.lookupOn(from) == null) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
         }
-        if (bondWeight > 0.0 && inflationBenchmark.lookupOn(from) == null) {
+        if (bondWeight > 0.0 && bondBenchmark.lookupOn(from) == null) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
         }
 
@@ -546,8 +557,8 @@ class PortfolioHistoryService(
                 currentDate = date,
                 weight = equityWeight
             ) ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
-            val inflationFactor = dailyIndexFactor(
-                lookup = inflationBenchmark,
+            val bondFactor = dailyIndexFactor(
+                lookup = bondBenchmark,
                 previousDate = previousDate,
                 currentDate = date,
                 weight = bondWeight
@@ -555,7 +566,7 @@ class PortfolioHistoryService(
 
             val mixFactor = 1.0 +
                 equityWeight * (equityFactor - 1.0) +
-                bondWeight * (inflationFactor - 1.0) +
+                bondWeight * (bondFactor - 1.0) +
                 cashWeight * 0.0
             index = BigDecimal.valueOf(index.toDouble() * mixFactor).index()
             lookup[date] = index

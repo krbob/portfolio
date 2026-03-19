@@ -149,8 +149,15 @@ class PortfolioHistoryServiceTest {
         fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
             prices = listOf(
                 pricePoint("2026-03-01", "100.00"),
-                pricePoint("2026-03-02", "101.00"),
-                pricePoint("2026-03-03", "102.00")
+                pricePoint("2026-03-02", "110.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.25")
             )
         )
         fixture.inflationProvider.resultByMonth = mapOf(
@@ -187,7 +194,8 @@ class PortfolioHistoryServiceTest {
         assertNotNull(lastPoint.equityBenchmarkIndex)
         assertNotNull(lastPoint.inflationBenchmarkIndex)
         assertNotNull(lastPoint.targetMixBenchmarkIndex)
-        assertTrue(lastPoint.equityBenchmarkIndex!!.compareTo(BigDecimal("102")) == 0)
+        assertTrue(lastPoint.equityBenchmarkIndex!!.compareTo(BigDecimal("121")) == 0)
+        assertTrue(lastPoint.targetMixBenchmarkIndex!!.compareTo(BigDecimal("118.81")) == 0)
     }
 
     private fun historyFixture(): HistoryFixture {
@@ -326,12 +334,19 @@ class PortfolioHistoryServiceTest {
         var usd: ReferenceSeriesResult = ReferenceSeriesResult.Failure("USD not set.")
         var gold: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Gold not set.")
         var equity: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Equity benchmark not set.")
+        var bond: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Bond benchmark not set.")
+        val benchmarksBySymbol: MutableMap<String, ReferenceSeriesResult> = linkedMapOf()
 
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
         override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
 
         override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = equity
+
+        override suspend fun bondBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = bond
+
+        override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
+            benchmarksBySymbol[symbol] ?: ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
     }
 
     private class FakeFxRateHistoryProvider : FxRateHistoryProvider {
