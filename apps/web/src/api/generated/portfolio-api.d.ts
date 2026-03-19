@@ -140,6 +140,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReadinessResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/session": {
         parameters: {
             query?: never;
@@ -1299,6 +1333,19 @@ export interface components {
             auth: components["schemas"]["AuthSummary"];
             stack: components["schemas"]["StackSummary"];
             capabilities: string[];
+        };
+        /** net.bobinski.portfolio.api.route.ReadinessCheckResponse */
+        ReadinessCheckResponse: {
+            key: string;
+            label: string;
+            status: string;
+            message: string;
+        };
+        /** net.bobinski.portfolio.api.route.ReadinessResponse */
+        ReadinessResponse: {
+            status: string;
+            checkedAt: string;
+            checks: components["schemas"]["ReadinessCheckResponse"][];
         };
         /** net.bobinski.portfolio.api.route.AuthSessionResponse */
         AuthSessionResponse: {

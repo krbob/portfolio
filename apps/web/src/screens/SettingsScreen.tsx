@@ -6,6 +6,7 @@ import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SectionCard } from '../components/SectionCard'
+import { SystemReadinessSection } from '../components/SystemReadinessSection'
 
 export function SettingsScreen() {
   return (
@@ -15,6 +16,8 @@ export function SettingsScreen() {
         title="Settings"
         description="Keep reference data, state transfer, backups and cache diagnostics in one operational workspace."
       />
+
+      <SystemReadinessSection />
 
       <section className="workspace-grid">
         <AccountsSection />

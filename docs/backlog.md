@@ -19,6 +19,7 @@ The original foundation backlog is effectively done.
 - extracted `portfolio-domain`
 - optional single-user password auth
 - SQLite-only runtime and Dockerized self-hosted deployment
+- runtime readiness endpoint and settings diagnostics for storage, backups, auth, and market-data wiring
 
 ## Current goal
 
@@ -111,11 +112,11 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 
 - superseded by the dedicated UI revamp phases above
 
-### 7. Operational trust layer (next)
+### 7. Operational trust layer (in progress)
 
 - expand audit visibility for imports, restores, and destructive actions
 - keep backup and restore flows easy to inspect after the fact
-- add readiness-level checks where they materially improve self-hosted operation
+- add readiness-level checks where they materially improve self-hosted operation (done)
 - keep destructive flows safe-by-default
 
 ## Notes

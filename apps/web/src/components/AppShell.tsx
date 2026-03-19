@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAppMeta } from '../hooks/use-app-meta'
+import { useAppReadiness } from '../hooks/use-app-readiness'
 import { useAuthSession, useLogout } from '../hooks/use-auth-session'
 
 interface AppShellProps {
@@ -69,12 +70,23 @@ const navItems = [...primaryNavItems, ...secondaryNavItems]
 export function AppShell({ children }: AppShellProps) {
   const location = useLocation()
   const metaQuery = useAppMeta()
+  const readinessQuery = useAppReadiness()
   const authSessionQuery = useAuthSession()
   const logoutMutation = useLogout()
   const authState = authSessionQuery.data
   const activeItem = navItems.find((item) => item.to === location.pathname) ?? primaryNavItems[0]
-  const systemStatus = metaQuery.isError ? 'Degraded' : metaQuery.isLoading ? 'Connecting' : 'Healthy'
+  const systemState = resolveSystemState({
+    metaError: metaQuery.isError,
+    readinessError: readinessQuery.isError,
+    loading: metaQuery.isLoading || readinessQuery.isLoading,
+    readinessStatus: readinessQuery.data?.status,
+  })
   const authSummary = authState?.authEnabled ? 'Password protected' : 'Single-user local mode'
+  const readinessChecks = readinessQuery.data?.checks ?? []
+  const passingChecksCount = readinessChecks.filter((check) => check.status === 'PASS').length
+  const issueChecksCount = readinessChecks.filter(
+    (check) => check.status === 'FAIL' || check.status === 'WARN',
+  ).length
 
   return (
     <div className="layout app-frame">
@@ -131,10 +143,14 @@ export function AppShell({ children }: AppShellProps) {
           <div className="shell-status-header">
             <div className="shell-status-title">
               <strong>System status</strong>
-              <p>{metaQuery.data ? `${metaQuery.data.name} ${metaQuery.data.stage.toUpperCase()}` : 'Connecting API'}</p>
+              <p>
+                {metaQuery.data
+                  ? `${metaQuery.data.name} ${metaQuery.data.stage.toUpperCase()}`
+                  : 'Connecting API'}
+              </p>
             </div>
-            <span className={`shell-status-chip ${metaQuery.isError ? 'shell-status-chip-degraded' : 'shell-status-chip-healthy'}`}>
-              {systemStatus}
+            <span className={`shell-status-chip ${systemState.chipClassName}`}>
+              {systemState.label}
             </span>
           </div>
 
@@ -148,8 +164,14 @@ export function AppShell({ children }: AppShellProps) {
               <strong>{authSummary}</strong>
             </div>
             <div className="shell-status-row">
-              <span>Capabilities</span>
-              <strong>{metaQuery.data?.capabilities.length ?? 0}</strong>
+              <span>Checks</span>
+              <strong>
+                {readinessQuery.data
+                  ? `${passingChecksCount}/${readinessChecks.length} pass · ${issueChecksCount} issues`
+                  : metaQuery.data
+                    ? `${metaQuery.data.capabilities.length} capabilities`
+                    : 'Pending'}
+              </strong>
             </div>
           </div>
 
@@ -175,7 +197,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <div className="shell-topbar-badges">
-            <span className="shell-topbar-badge">{systemStatus}</span>
+            <span className={`shell-topbar-badge ${systemState.badgeClassName}`}>{systemState.label}</span>
             {metaQuery.data ? <span className="shell-topbar-badge">{metaQuery.data.stage.toUpperCase()}</span> : null}
             <span className="shell-topbar-badge">{authSummary}</span>
           </div>
@@ -185,4 +207,59 @@ export function AppShell({ children }: AppShellProps) {
       </main>
     </div>
   )
+}
+
+function resolveSystemState({
+  metaError,
+  readinessError,
+  loading,
+  readinessStatus,
+}: {
+  metaError: boolean
+  readinessError: boolean
+  loading: boolean
+  readinessStatus: string | undefined
+}) {
+  if (metaError || readinessError) {
+    return {
+      label: 'Degraded',
+      chipClassName: 'shell-status-chip-warning',
+      badgeClassName: 'shell-topbar-badge-warning',
+    }
+  }
+
+  if (loading || !readinessStatus) {
+    return {
+      label: 'Connecting',
+      chipClassName: 'shell-status-chip-neutral',
+      badgeClassName: 'shell-topbar-badge-neutral',
+    }
+  }
+
+  switch (readinessStatus) {
+    case 'READY':
+      return {
+        label: 'Healthy',
+        chipClassName: 'shell-status-chip-healthy',
+        badgeClassName: 'shell-topbar-badge-healthy',
+      }
+    case 'DEGRADED':
+      return {
+        label: 'Degraded',
+        chipClassName: 'shell-status-chip-warning',
+        badgeClassName: 'shell-topbar-badge-warning',
+      }
+    case 'NOT_READY':
+      return {
+        label: 'Not ready',
+        chipClassName: 'shell-status-chip-critical',
+        badgeClassName: 'shell-topbar-badge-critical',
+      }
+    default:
+      return {
+        label: readinessStatus,
+        chipClassName: 'shell-status-chip-neutral',
+        badgeClassName: 'shell-topbar-badge-neutral',
+      }
+  }
 }

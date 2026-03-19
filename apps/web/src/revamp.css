@@ -269,9 +269,19 @@ textarea::placeholder {
   color: #86efac;
 }
 
-.shell-status-chip-degraded {
+.shell-status-chip-warning {
   background: rgba(251, 191, 36, 0.12);
   color: #fcd34d;
+}
+
+.shell-status-chip-critical {
+  background: rgba(251, 113, 133, 0.12);
+  color: #fda4af;
+}
+
+.shell-status-chip-neutral {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
 }
 
 .shell-status-grid {
@@ -338,6 +348,26 @@ textarea::placeholder {
   color: var(--text-secondary);
   padding: 6px 10px;
   font-size: 0.78rem;
+}
+
+.shell-topbar-badge-healthy {
+  background: rgba(52, 211, 153, 0.12);
+  color: #86efac;
+}
+
+.shell-topbar-badge-warning {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+}
+
+.shell-topbar-badge-critical {
+  background: rgba(251, 113, 133, 0.12);
+  color: #fda4af;
+}
+
+.shell-topbar-badge-neutral {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
 }
 
 .shell-content {
@@ -646,12 +676,47 @@ textarea::placeholder {
   color: #fda4af;
 }
 
+.status-info {
+  background: rgba(96, 165, 250, 0.12);
+  color: #93c5fd;
+}
+
 .status-underweight,
 .status-overweight,
 .status-unsupported,
 .status-unconfigured {
   background: rgba(251, 191, 36, 0.12);
   color: #fcd34d;
+}
+
+.readiness-summary-grid {
+  margin-bottom: 18px;
+}
+
+.readiness-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.readiness-check {
+  display: grid;
+  gap: 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px 18px;
+}
+
+.readiness-check-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.readiness-check-message {
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .value-positive {

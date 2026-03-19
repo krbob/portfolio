@@ -41,6 +41,36 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [
+              {
+                key: 'sqlite-directory',
+                label: 'SQLite directory',
+                status: 'PASS',
+                message: 'Using portfolio.db in /srv/portfolio/data.',
+              },
+              {
+                key: 'sqlite-connection',
+                label: 'SQLite connection',
+                status: 'PASS',
+                message: 'SQLite responded to a connection test query.',
+              },
+              {
+                key: 'market-data',
+                label: 'Market data',
+                status: 'INFO',
+                message: 'Live market data is disabled.',
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/overview')) {
         return new Response(
           JSON.stringify({
