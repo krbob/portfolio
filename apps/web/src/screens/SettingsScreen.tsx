@@ -1,6 +1,6 @@
-import { ImportAuditPanel } from '../components/ImportAuditPanel'
 import { AccountsSection } from '../components/AccountsSection'
 import { InstrumentsSection } from '../components/InstrumentsSection'
+import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageIntro } from '../components/PageIntro'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
@@ -27,14 +27,11 @@ export function SettingsScreen() {
       <PortfolioStateSection />
 
       <SectionCard
-        eyebrow="Imports"
-        title="Import history"
-        description="Inspect recent CSV import sessions, source metadata and conflict outcomes outside the transaction workspace."
+        eyebrow="Audit"
+        title="Operational activity"
+        description="Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace."
       >
-        <ImportAuditPanel
-          title="Recent imports"
-          description="Use this operational feed to verify what was imported, from which source, and with what outcome."
-        />
+        <OperationalAuditPanel />
       </SectionCard>
 
       <div id="backups">

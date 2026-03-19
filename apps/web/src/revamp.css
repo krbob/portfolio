@@ -719,6 +719,21 @@ textarea::placeholder {
   line-height: 1.5;
 }
 
+.operational-audit-summary {
+  margin-bottom: 18px;
+}
+
+.operational-audit-toolbar {
+  margin-bottom: 16px;
+}
+
+.audit-event-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .value-positive {
   color: var(--accent-positive);
 }
