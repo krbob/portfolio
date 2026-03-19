@@ -734,6 +734,32 @@ textarea::placeholder {
   gap: 8px;
 }
 
+.danger-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  background: rgba(251, 113, 133, 0.08);
+  padding: 14px 16px;
+}
+
+.danger-confirm-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.danger-confirm-copy p {
+  color: var(--text-muted);
+}
+
+.danger-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .value-positive {
   color: var(--accent-positive);
 }
@@ -777,6 +803,11 @@ textarea::placeholder {
 
 @media (max-width: 900px) {
   .shell-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .danger-confirm {
     flex-direction: column;
     align-items: flex-start;
   }

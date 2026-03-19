@@ -112,12 +112,12 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 
 - superseded by the dedicated UI revamp phases above
 
-### 7. Operational trust layer (in progress)
+### 7. Operational trust layer (done)
 
 - expand audit visibility for imports, restores, and destructive actions (done)
 - keep backup and restore flows easy to inspect after the fact (done)
 - add readiness-level checks where they materially improve self-hosted operation (done)
-- keep destructive flows safe-by-default
+- keep destructive flows safe-by-default (done)
 
 ## Notes
 

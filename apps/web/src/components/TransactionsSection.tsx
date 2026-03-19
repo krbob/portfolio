@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
 import { SectionCard } from './SectionCard'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
@@ -147,6 +148,8 @@ export function TransactionsSection() {
   const [importPreviewStatusFilter, setImportPreviewStatusFilter] =
     useState<ImportPreviewStatusFilter>('ALL')
   const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
+  const [pendingDeleteImportProfileId, setPendingDeleteImportProfileId] = useState<string | null>(null)
+  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
   const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
@@ -406,6 +409,7 @@ export function TransactionsSection() {
 
   function startEditing(transaction: Transaction) {
     setActiveWorkspace('journal')
+    setPendingDeleteTransactionId(null)
     setEditingTransactionId(transaction.id)
     setForm({
       accountId: transaction.accountId,
@@ -468,6 +472,7 @@ export function TransactionsSection() {
 
   function handleCreateNewImportProfile() {
     setImportProfileFeedback(null)
+    setPendingDeleteImportProfileId(null)
     setPendingSavedImportProfile(null)
     setSelectedImportProfileId(NEW_IMPORT_PROFILE_ID)
     setActiveWorkspace('profiles')
@@ -512,7 +517,11 @@ export function TransactionsSection() {
     if (!selectedImportProfile) {
       return
     }
-    if (!window.confirm(`Delete import profile "${selectedImportProfile.name}"?`)) {
+    setPendingDeleteImportProfileId(selectedImportProfile.id)
+  }
+
+  function confirmDeleteImportProfile() {
+    if (!selectedImportProfile) {
       return
     }
 
@@ -522,8 +531,25 @@ export function TransactionsSection() {
     deleteImportProfileMutation.mutate(selectedImportProfile.id, {
       onSuccess: () => {
         setPendingSavedImportProfile(null)
+        setPendingDeleteImportProfileId(null)
         setImportProfileFeedback(`Deleted import profile "${selectedImportProfile.name}".`)
         setSelectedImportProfileId(nextProfileId)
+      },
+    })
+  }
+
+  function requestDeleteTransaction(transactionId: string) {
+    setPendingDeleteTransactionId(transactionId)
+  }
+
+  function cancelDeleteTransaction() {
+    setPendingDeleteTransactionId(null)
+  }
+
+  function confirmDeleteTransaction(transactionId: string) {
+    deleteTransactionMutation.mutate(transactionId, {
+      onSuccess: () => {
+        setPendingDeleteTransactionId(null)
       },
     })
   }
@@ -833,6 +859,7 @@ export function TransactionsSection() {
                   value={selectedImportProfileId ?? ''}
                   onChange={(event) => {
                     setImportProfileFeedback(null)
+                    setPendingDeleteImportProfileId(null)
                     setSelectedImportProfileId(event.target.value)
                   }}
                 >
@@ -860,6 +887,18 @@ export function TransactionsSection() {
                 </button>
               </div>
             </div>
+
+            {selectedImportProfile && pendingDeleteImportProfileId === selectedImportProfile.id && (
+              <DangerConfirmInline
+                title={`Delete profile "${selectedImportProfile.name}"?`}
+                description="This removes the saved parsing rules from the server. Existing imported transactions stay untouched."
+                confirmLabel="Delete profile"
+                confirmPendingLabel="Deleting..."
+                isPending={deleteImportProfileMutation.isPending}
+                onCancel={() => setPendingDeleteImportProfileId(null)}
+                onConfirm={confirmDeleteImportProfile}
+              />
+            )}
 
               <form className="entity-form import-profile-form" onSubmit={handleImportProfileSubmit}>
                 <label>
@@ -1355,15 +1394,28 @@ export function TransactionsSection() {
                     <button type="button" className="button-secondary" onClick={() => startEditing(transaction)}>
                       Edit
                     </button>
-                    <button
-                      type="button"
-                      className="button-danger"
-                      onClick={() => deleteTransactionMutation.mutate(transaction.id)}
-                      disabled={deleteTransactionMutation.isPending}
-                    >
-                      Delete
-                    </button>
+                    {pendingDeleteTransactionId !== transaction.id && (
+                      <button
+                        type="button"
+                        className="button-danger"
+                        onClick={() => requestDeleteTransaction(transaction.id)}
+                        disabled={deleteTransactionMutation.isPending}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
+                  {pendingDeleteTransactionId === transaction.id && (
+                    <DangerConfirmInline
+                      title={`Delete transaction ${transaction.type} on ${transaction.tradeDate}?`}
+                      description="This removes the canonical event from the journal and immediately changes valuation, history, allocation and returns."
+                      confirmLabel="Delete transaction"
+                      confirmPendingLabel="Deleting..."
+                      isPending={deleteTransactionMutation.isPending}
+                      onCancel={cancelDeleteTransaction}
+                      onConfirm={() => confirmDeleteTransaction(transaction.id)}
+                    />
+                  )}
                 </article>
               ))}
               {deleteTransactionMutation.error && (
