@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card, SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   useDownloadPortfolioBackup,
@@ -7,7 +8,7 @@ import {
   useRunPortfolioBackup,
 } from '../hooks/use-write-model'
 import { formatBytes, formatDateTime } from '../lib/format'
-import { card, label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
+import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
 export function PortfolioBackupsSection() {
   const backupsQuery = usePortfolioBackups()
@@ -71,14 +72,12 @@ export function PortfolioBackupsSection() {
     backupOutcomeFilter === 'ALL' ? backupEvents : backupEvents.filter((event) => event.outcome === backupOutcomeFilter)
 
   return (
-    <div className={card}>
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Backups</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Server snapshots</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Keep canonical JSON backups on the server, trigger them on demand, and restore a known-good state without downloading files first.
-        </p>
-      </div>
+    <Card>
+      <SectionHeader
+        eyebrow="Backups"
+        title="Server snapshots"
+        description="Keep canonical JSON backups on the server, trigger them on demand, and restore a known-good state without downloading files first."
+      />
 
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -221,11 +220,12 @@ export function PortfolioBackupsSection() {
         </div>
       )}
 
-      <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Audit</p>
-        <h4 className="mt-1 text-base font-semibold text-zinc-100">Backup activity</h4>
-        <p className="mt-1 text-sm text-zinc-500">Recent backup runs, restores and retention pruning events from the append-only audit log.</p>
-      </div>
+      <SectionHeader
+        eyebrow="Audit"
+        title="Backup activity"
+        description="Recent backup runs, restores and retention pruning events from the append-only audit log."
+        className="mb-4 mt-8"
+      />
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
@@ -277,6 +277,6 @@ export function PortfolioBackupsSection() {
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

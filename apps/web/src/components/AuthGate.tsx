@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { API_UNAUTHORIZED_EVENT } from '../api/http'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession, useLogin } from '../hooks/use-auth-session'
+import { SectionHeader } from './ui'
 import { btnPrimary, input } from '../lib/styles'
 
 interface AuthGateProps {
@@ -14,6 +15,12 @@ export function AuthGate({ children }: AuthGateProps) {
   const queryClient = useQueryClient()
   const metaQuery = useAppMeta()
   const authSessionQuery = useAuthSession()
+  const startupErrorMessage =
+    metaQuery.error instanceof Error
+      ? metaQuery.error.message
+      : authSessionQuery.error instanceof Error
+        ? authSessionQuery.error.message
+        : 'The app could not load required startup state.'
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -29,9 +36,11 @@ export function AuthGate({ children }: AuthGateProps) {
   if (metaQuery.isLoading || authSessionQuery.isLoading) {
     return (
       <AuthLayout>
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Connecting</p>
-        <h1 className="mt-2 text-2xl font-bold text-zinc-100">Checking session</h1>
-        <p className="mt-2 text-sm text-zinc-500">Loading metadata and authentication state.</p>
+        <SectionHeader
+          eyebrow="Connecting"
+          title="Checking session"
+          description="Loading metadata and authentication state."
+        />
       </AuthLayout>
     )
   }
@@ -39,15 +48,11 @@ export function AuthGate({ children }: AuthGateProps) {
   if (metaQuery.isError || authSessionQuery.isError || !metaQuery.data || !authSessionQuery.data) {
     return (
       <AuthLayout>
-        <p className="text-xs font-medium uppercase tracking-wider text-red-400">Connection issue</p>
-        <h1 className="mt-2 text-2xl font-bold text-zinc-100">Portfolio is not reachable</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          {metaQuery.error instanceof Error
-            ? metaQuery.error.message
-            : authSessionQuery.error instanceof Error
-              ? authSessionQuery.error.message
-              : 'The app could not load required startup state.'}
-        </p>
+        <SectionHeader
+          eyebrow="Connection issue"
+          title="Portfolio is not reachable"
+          description={startupErrorMessage}
+        />
       </AuthLayout>
     )
   }
@@ -77,8 +82,12 @@ function LoginCard({ stage }: { stage: string }) {
     <div className="flex min-h-screen items-center justify-center bg-zinc-950">
       <div className="w-full max-w-sm">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
-          <h1 className="text-center text-2xl font-bold text-zinc-100">Portfolio</h1>
-          <p className="mt-1 text-center text-xs text-zinc-500">{stage.toUpperCase()}</p>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-zinc-100">Portfolio</h1>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              {stage}
+            </p>
+          </div>
 
           <form
             className="mt-8"
