@@ -55,20 +55,12 @@ const primaryNavItems: NavItem[] = [
 
 const secondaryNavItems: NavItem[] = [
   {
-    to: '/data',
+    to: '/settings',
     label: 'Settings',
-    copy: 'Reference data, cache and state transfer.',
+    copy: 'Reference data, backups, cache and state transfer.',
     section: 'Operations',
     title: 'Settings',
-    subtitle: 'Accounts, instruments, transfer workflows and read-model cache.',
-  },
-  {
-    to: '/backups',
-    label: 'Backups',
-    copy: 'Server snapshots, retention and restore.',
-    section: 'Operations',
-    title: 'Backups and restore',
-    subtitle: 'Server-side snapshots, retention state and recovery workflows.',
+    subtitle: 'Accounts, instruments, backups, transfer workflows and read-model cache.',
   },
 ]
 

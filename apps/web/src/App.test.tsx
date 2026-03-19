@@ -440,7 +440,7 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^backups$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
   })
 
   it('shows the login gate when password auth is enabled', async () => {

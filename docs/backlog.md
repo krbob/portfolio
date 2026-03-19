@@ -61,7 +61,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - keep preview and conflict handling visible before destructive or bulk actions
 - make transaction management feel operationally safe and quick to use
 
-### 0.6 Settings and operations consolidation (later)
+### 0.6 Settings and operations consolidation (done)
 
 - move accounts, instruments, backups, audit, and cache diagnostics into one coherent settings area
 - keep operational tooling discoverable without polluting primary investor screens

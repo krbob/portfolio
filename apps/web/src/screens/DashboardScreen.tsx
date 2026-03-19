@@ -17,7 +17,7 @@ const shortcuts = [
     description: 'Add, edit and import the raw events that drive all read models.',
   },
   {
-    to: '/backups',
+    to: '/settings#backups',
     label: 'Check backups',
     description: 'Inspect server snapshots before running restore or import operations.',
   },
