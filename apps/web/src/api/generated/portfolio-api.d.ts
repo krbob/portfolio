@@ -1770,6 +1770,8 @@ export interface components {
             profileId: string;
             csv: string;
             skipDuplicates?: boolean | null;
+            sourceFileName?: string | null;
+            sourceLabel?: string | null;
         };
         /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewRowResponse */
         ImportTransactionsPreviewRowResponse: {
@@ -1782,6 +1784,8 @@ export interface components {
             totalRowCount: number;
             importableRowCount: number;
             duplicateRowCount: number;
+            duplicateExistingCount: number;
+            duplicateBatchCount: number;
             invalidRowCount: number;
             rows: components["schemas"]["ImportTransactionsPreviewRowResponse"][];
         };

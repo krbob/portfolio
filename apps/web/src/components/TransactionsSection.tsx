@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { ImportAuditPanel } from './ImportAuditPanel'
 import { SectionCard } from './SectionCard'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
@@ -15,7 +16,6 @@ import {
   useUpdateTransaction,
   useUpdateTransactionImportProfile,
 } from '../hooks/use-write-model'
-import { formatDateTime } from '../lib/format'
 import type {
   ImportTransactionsPreviewResult,
   SaveTransactionImportProfilePayload,
@@ -90,6 +90,12 @@ interface JournalRow {
 }
 
 type TransactionsWorkspace = 'journal' | 'import' | 'profiles'
+type ImportPreviewStatusFilter =
+  | 'ALL'
+  | 'IMPORTABLE'
+  | 'DUPLICATE_EXISTING'
+  | 'DUPLICATE_BATCH'
+  | 'INVALID'
 
 const importMappingFields: Array<{
   key: ImportMappingField
@@ -133,9 +139,13 @@ export function TransactionsSection() {
   const [importProfileForm, setImportProfileForm] = useState<ImportProfileFormState>(createInitialImportProfileForm)
   const [importCsv, setImportCsv] = useState('')
   const [importSkipDuplicates, setImportSkipDuplicates] = useState(true)
+  const [importSourceFileName, setImportSourceFileName] = useState('')
+  const [importSourceLabel, setImportSourceLabel] = useState('')
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importPreview, setImportPreview] = useState<ImportTransactionsPreviewResult | null>(null)
+  const [importPreviewStatusFilter, setImportPreviewStatusFilter] =
+    useState<ImportPreviewStatusFilter>('ALL')
   const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
@@ -283,6 +293,13 @@ export function TransactionsSection() {
   )
   const importEvents = importEventsQuery.data ?? []
   const latestImportEvent = importEvents[0] ?? null
+  const visibleImportPreviewRows = useMemo(() => {
+    if (importPreview == null || importPreviewStatusFilter === 'ALL') {
+      return importPreview?.rows ?? []
+    }
+
+    return importPreview.rows.filter((row) => row.status === importPreviewStatusFilter)
+  }, [importPreview, importPreviewStatusFilter])
 
   useEffect(() => {
     if (selectedImportProfileId === null) {
@@ -336,7 +353,15 @@ export function TransactionsSection() {
     setImportFeedback(null)
     setImportError(null)
     setImportPreview(null)
-  }, [importCsv, importSkipDuplicates, selectedImportProfileId, importProfileDirty])
+    setImportPreviewStatusFilter('ALL')
+  }, [
+    importCsv,
+    importSkipDuplicates,
+    importSourceFileName,
+    importSourceLabel,
+    selectedImportProfileId,
+    importProfileDirty,
+  ])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -518,6 +543,8 @@ export function TransactionsSection() {
         profileId: selectedImportProfile.id,
         csv: importCsv,
         skipDuplicates: importSkipDuplicates,
+        sourceFileName: normalizeOptionalValue(importSourceFileName),
+        sourceLabel: normalizeOptionalValue(importSourceLabel),
       },
       {
         onSuccess: (result) => {
@@ -546,6 +573,8 @@ export function TransactionsSection() {
         profileId: selectedImportProfile.id,
         csv: importCsv,
         skipDuplicates: importSkipDuplicates,
+        sourceFileName: normalizeOptionalValue(importSourceFileName),
+        sourceLabel: normalizeOptionalValue(importSourceLabel),
       },
       {
         onSuccess: (result) => {
@@ -997,11 +1026,30 @@ export function TransactionsSection() {
                 </p>
               </div>
 
-              <div className="import-card-summary">
-                <span className="list-badge">
-                  {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
-                </span>
-                {importProfileBlockingReason && <p className="muted-copy">{importProfileBlockingReason}</p>}
+            <div className="import-card-summary">
+              <span className="list-badge">
+                {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
+              </span>
+              {importProfileBlockingReason && <p className="muted-copy">{importProfileBlockingReason}</p>}
+            </div>
+
+              <div className="journal-toolbar">
+                <label className="journal-filter journal-filter-wide">
+                  <span>Source file</span>
+                  <input
+                    value={importSourceFileName}
+                    onChange={(event) => setImportSourceFileName(event.target.value)}
+                    placeholder="ibkr-activity-2026-03.csv"
+                  />
+                </label>
+                <label className="journal-filter journal-filter-wide">
+                  <span>Source label</span>
+                  <input
+                    value={importSourceLabel}
+                    onChange={(event) => setImportSourceLabel(event.target.value)}
+                    placeholder="IBKR March 2026 export"
+                  />
+                </label>
               </div>
 
               <textarea
@@ -1050,44 +1098,76 @@ export function TransactionsSection() {
 
               {importPreview && (
                 <div className="import-preview">
-                <div className="import-preview-grid">
-                  <article className="import-preview-card">
-                    <span>Total rows</span>
-                    <strong>{importPreview.totalRowCount}</strong>
-                  </article>
-                  <article className="import-preview-card">
-                    <span>Importable</span>
-                    <strong>{importPreview.importableRowCount}</strong>
-                  </article>
-                  <article className="import-preview-card">
-                    <span>Duplicates</span>
-                    <strong>{importPreview.duplicateRowCount}</strong>
-                  </article>
-                  <article className="import-preview-card">
-                    <span>Invalid</span>
-                    <strong>{importPreview.invalidRowCount}</strong>
-                  </article>
-                </div>
-
-                <p className="muted-copy">
-                  {importSkipDuplicates
-                    ? 'Duplicate rows will be skipped automatically if you continue with the import.'
-                    : 'Duplicate rows are currently blocking the import. Enable duplicate skipping or fix the batch.'}
-                </p>
-
-                <div className="import-preview-list">
-                  {importPreview.rows.map((row) => (
-                    <article className="import-preview-row" key={`${row.rowNumber}-${row.status}`}>
-                      <div>
-                        <strong>Row {row.rowNumber}</strong>
-                        <p>{row.message}</p>
-                      </div>
-                      <span className={`import-preview-badge import-preview-badge-${row.status.toLowerCase()}`}>
-                        {formatImportRowStatus(row.status)}
-                      </span>
+                  <div className="import-preview-grid">
+                    <article className="import-preview-card">
+                      <span>Total rows</span>
+                      <strong>{importPreview.totalRowCount}</strong>
                     </article>
-                  ))}
-                </div>
+                    <article className="import-preview-card">
+                      <span>Importable</span>
+                      <strong>{importPreview.importableRowCount}</strong>
+                    </article>
+                    <article className="import-preview-card">
+                      <span>Existing duplicates</span>
+                      <strong>{importPreview.duplicateExistingCount}</strong>
+                    </article>
+                    <article className="import-preview-card">
+                      <span>Batch duplicates</span>
+                      <strong>{importPreview.duplicateBatchCount}</strong>
+                    </article>
+                    <article className="import-preview-card">
+                      <span>Invalid</span>
+                      <strong>{importPreview.invalidRowCount}</strong>
+                    </article>
+                  </div>
+
+                  <p className="muted-copy">
+                    {buildImportPreviewSummary(importPreview, importSkipDuplicates)}
+                  </p>
+
+                  <div className="history-toolbar">
+                    <div className="history-pill-group" role="tablist" aria-label="Import preview rows">
+                      {(
+                        [
+                          ['ALL', `All (${importPreview.totalRowCount})`],
+                          ['IMPORTABLE', `Importable (${importPreview.importableRowCount})`],
+                          ['DUPLICATE_EXISTING', `Existing (${importPreview.duplicateExistingCount})`],
+                          ['DUPLICATE_BATCH', `Batch (${importPreview.duplicateBatchCount})`],
+                          ['INVALID', `Invalid (${importPreview.invalidRowCount})`],
+                        ] as const
+                      ).map(([status, label]) => (
+                        <button
+                          key={status}
+                          type="button"
+                          className={
+                            status === importPreviewStatusFilter
+                              ? 'unit-pill unit-pill-active'
+                              : 'unit-pill'
+                          }
+                          onClick={() => setImportPreviewStatusFilter(status)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="import-preview-list">
+                    {visibleImportPreviewRows.map((row) => (
+                      <article className="import-preview-row" key={`${row.rowNumber}-${row.status}`}>
+                        <div>
+                          <strong>Row {row.rowNumber}</strong>
+                          <p>{row.message}</p>
+                        </div>
+                        <span className={`import-preview-badge import-preview-badge-${row.status.toLowerCase()}`}>
+                          {formatImportRowStatus(row.status)}
+                        </span>
+                      </article>
+                    ))}
+                    {visibleImportPreviewRows.length === 0 && (
+                      <p className="muted-copy">No preview rows match the selected status.</p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1294,43 +1374,11 @@ export function TransactionsSection() {
 
           {activeWorkspace === 'import' && (
             <section className="import-card">
-              <div className="section-header">
-                <p className="eyebrow">Import activity</p>
-                <h4>Recent imports</h4>
-                <p>Use this as a quick audit trail after batch operations.</p>
-              </div>
-
-              {latestImportEvent && (
-                <p className="muted-copy">
-                  Latest event: {latestImportEvent.message} · {formatDateTime(latestImportEvent.occurredAt)}
-                </p>
-              )}
-
-              {importEventsQuery.isLoading && <p className="muted-copy">Loading import activity...</p>}
-              {importEventsQuery.isError && <p className="form-error">{importEventsQuery.error.message}</p>}
-              {!importEventsQuery.isLoading && !importEventsQuery.isError && importEvents.length === 0 && (
-                <p className="muted-copy">No import-related audit events yet.</p>
-              )}
-              {!importEventsQuery.isLoading && !importEventsQuery.isError && importEvents.length > 0 && (
-                <div className="audit-feed">
-                  {importEvents.map((event) => (
-                    <article className="audit-event" key={event.id}>
-                      <div className="audit-event-header">
-                        <div>
-                          <strong>{event.message}</strong>
-                          <p>
-                            {event.action} · {formatDateTime(event.occurredAt)}
-                          </p>
-                        </div>
-                        <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
-                          {event.outcome}
-                        </span>
-                      </div>
-                      {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
-                    </article>
-                  ))}
-                </div>
-              )}
+              <ImportAuditPanel
+                title="Recent imports"
+                description="Use this as a quick audit trail after batch operations."
+                limit={8}
+              />
             </section>
           )}
         </div>
@@ -1527,6 +1575,25 @@ function buildImportResultMessage(createdCount: number, skippedDuplicateCount: n
   }
 
   return `Imported ${createdCount} transactions and skipped ${skippedDuplicateCount} duplicates.`
+}
+
+function buildImportPreviewSummary(
+  preview: ImportTransactionsPreviewResult,
+  skipDuplicates: boolean,
+) {
+  if (preview.invalidRowCount > 0) {
+    return skipDuplicates
+      ? `${preview.invalidRowCount} invalid rows still block the import. Duplicate rows can be skipped automatically, but invalid rows must be fixed first.`
+      : `${preview.invalidRowCount} invalid rows and ${preview.duplicateRowCount} duplicate rows currently block the import.`
+  }
+
+  if (preview.duplicateRowCount > 0) {
+    return skipDuplicates
+      ? `${preview.duplicateRowCount} duplicate rows will be skipped if you continue.`
+      : `${preview.duplicateRowCount} duplicate rows currently block the import. Enable duplicate skipping or adjust the batch.`
+  }
+
+  return 'All rows are importable. You can safely commit this batch.'
 }
 
 function formatImportRowStatus(status: string) {

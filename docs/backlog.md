@@ -91,7 +91,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - run preview/import through the backend so preview semantics match the final commit
 - keep imports idempotent through the canonical duplicate detection flow
 
-### 4. Better import UX and import history (next)
+### 4. Better import UX and import history (done)
 
 - add richer preview with per-row warnings and conflict summaries
 - expose import audit history in the UI next to backups and other operational events
