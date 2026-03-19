@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
 import { MiniChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
-import { StatCard, Badge, EmptyState } from '../components/ui'
+import { StatCard, Badge, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { card } from '../lib/styles'
@@ -39,22 +39,37 @@ export function DashboardScreen() {
     ? overview.valuationIssueCount + overview.missingFxTransactions + overview.unsupportedCorrectionTransactions
     : 0
 
+  function handleRetry() {
+    void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
+  }
+
   if (overviewQuery.isLoading) {
     return (
       <>
         <PageHeader title="Dashboard" />
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className={`${card} h-28 animate-pulse`} />
-            ))}
-          </div>
-        </div>
+        <LoadingState
+          title="Loading dashboard"
+          description="Preparing the current portfolio value, allocation and latest market-backed history."
+          blocks={4}
+        />
       </>
     )
   }
 
-  if (!overview || overviewQuery.isError) {
+  if (overviewQuery.isError) {
+    return (
+      <>
+        <PageHeader title="Dashboard" />
+        <ErrorState
+          title="Dashboard unavailable"
+          description="Portfolio overview could not load. Retry now or inspect system health in Settings."
+          onRetry={handleRetry}
+        />
+      </>
+    )
+  }
+
+  if (!overview) {
     return (
       <>
         <PageHeader title="Dashboard" />
@@ -145,10 +160,27 @@ export function DashboardScreen() {
               ))}
             </div>
           </div>
-          {historyQuery.isLoading ? (
-            <div className="h-[200px] animate-pulse rounded-lg bg-zinc-800" />
+          {historyQuery.isLoading && chartPoints.length === 0 ? (
+            <LoadingState
+              title="Loading history"
+              description="Fetching the daily portfolio curve for this dashboard range."
+              className="border-0 bg-transparent px-0 py-8"
+              blocks={2}
+            />
+          ) : historyQuery.isError && chartPoints.length === 0 ? (
+            <ErrorState
+              title="History unavailable"
+              description="The dashboard can still show current value, but the historical chart did not load."
+              onRetry={() => void historyQuery.refetch()}
+              className="border-0 bg-transparent px-0 py-8"
+            />
           ) : chartPoints.length === 0 ? (
-            <p className="py-12 text-center text-sm text-zinc-500">No history data yet.</p>
+            <StatePanel
+              title="No history data yet"
+              description="Record more transactions or open Performance later to build out the portfolio curve."
+              eyebrow="History"
+              className="border-0 bg-transparent px-0 py-8"
+            />
           ) : (
             <Link to="/performance" className="block">
               <MiniChart points={chartPoints} height={200} />

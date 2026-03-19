@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
+import { EmptyState, ErrorState, LoadingState } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import {
@@ -169,6 +170,16 @@ export function TransactionsSection() {
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
   const importProfiles = transactionImportProfilesQuery.data ?? []
+  const hasWorkspaceData =
+    accountsQuery.data != null ||
+    instrumentsQuery.data != null ||
+    transactionsQuery.data != null ||
+    transactionImportProfilesQuery.data != null
+  const workspaceError =
+    accountsQuery.error ??
+    instrumentsQuery.error ??
+    transactionsQuery.error ??
+    transactionImportProfilesQuery.error
 
   const selectedImportProfile = useMemo(
     () =>
@@ -623,6 +634,52 @@ export function TransactionsSection() {
           setImportError(error.message)
         },
       },
+    )
+  }
+
+  function handleRetryWorkspace() {
+    void Promise.all([
+      accountsQuery.refetch(),
+      instrumentsQuery.refetch(),
+      transactionsQuery.refetch(),
+      transactionImportProfilesQuery.refetch(),
+      importEventsQuery.refetch(),
+    ])
+  }
+
+  if (
+    !hasWorkspaceData &&
+    (accountsQuery.isLoading ||
+      instrumentsQuery.isLoading ||
+      transactionsQuery.isLoading ||
+      transactionImportProfilesQuery.isLoading)
+  ) {
+    return (
+      <LoadingState
+        title="Loading transactions workspace"
+        description="Fetching accounts, instruments, journal rows and saved import profiles."
+        blocks={4}
+      />
+    )
+  }
+
+  if (!hasWorkspaceData && workspaceError) {
+    return (
+      <ErrorState
+        title="Transactions unavailable"
+        description="The canonical transaction workspace could not load. Retry now or verify runtime health in Settings."
+        onRetry={handleRetryWorkspace}
+      />
+    )
+  }
+
+  if (accountOptions.length === 0) {
+    return (
+      <EmptyState
+        title="No accounts available yet"
+        description="Create your brokerage or bond accounts in Settings before recording transactions."
+        action={{ label: 'Go to Settings', to: '/settings' }}
+      />
     )
   }
 

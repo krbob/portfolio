@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
-import { Badge, FilterBar, EmptyState } from '../components/ui'
+import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatSignedCurrencyPln } from '../lib/format'
 import {
@@ -87,7 +87,24 @@ export function HoldingsScreen() {
     return (
       <>
         <PageHeader title="Holdings" />
-        <div className={`${cardFlush} h-96 animate-pulse`} />
+        <LoadingState
+          title="Loading holdings"
+          description="Resolving the current positions, valuation status and account exposure."
+          blocks={4}
+        />
+      </>
+    )
+  }
+
+  if (holdingsQuery.isError) {
+    return (
+      <>
+        <PageHeader title="Holdings" />
+        <ErrorState
+          title="Holdings unavailable"
+          description="Current positions could not load. Retry now or verify runtime readiness in Settings."
+          onRetry={() => void holdingsQuery.refetch()}
+        />
       </>
     )
   }
@@ -155,7 +172,13 @@ export function HoldingsScreen() {
 
       {/* Table */}
       {filteredHoldings.length === 0 ? (
-        <p className="py-12 text-center text-sm text-zinc-500">No holdings match the current filters.</p>
+        <StatePanel
+          eyebrow="Filtered out"
+          title="No holdings match the current filters"
+          description="Clear one or more filters to bring positions back into view."
+          action={{ label: 'Clear filters', onClick: clearFilters }}
+          className="py-10"
+        />
       ) : (
         <div className={cardFlush}>
           <div className="overflow-x-auto">

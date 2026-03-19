@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { PortfolioDailyHistoryPoint, BenchmarkComparison } from '../api/read-model'
 import { PortfolioValueChart, AllocationTimeChart, BenchmarkChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
-import { StatCard, TabBar, SegmentedControl } from '../components/ui'
+import { EmptyState, ErrorState, LoadingState, StatCard, StatePanel, TabBar, SegmentedControl } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatPercent } from '../lib/format'
 import { card, th, thRight, td, tdRight, tr } from '../lib/styles'
@@ -26,15 +26,61 @@ export function PerformanceScreen() {
   const returnsQuery = usePortfolioReturns()
 
   const allPoints = historyQuery.data?.points ?? []
+  const allPeriods = returnsQuery.data?.periods ?? []
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
 
   const series = seriesForUnit(unit)
 
   // Featured returns for stat cards
-  const ytdPeriod = returnsQuery.data?.periods.find((p) => p.key === 'YTD')
-  const y1Period = returnsQuery.data?.periods.find((p) => p.key === '1Y')
-  const inceptionPeriod = returnsQuery.data?.periods.find((p) => p.key === 'INCEPTION')
+  const ytdPeriod = allPeriods.find((p) => p.key === 'YTD')
+  const y1Period = allPeriods.find((p) => p.key === '1Y')
+  const inceptionPeriod = allPeriods.find((p) => p.key === 'INCEPTION')
+  const hasHistory = allPoints.length > 0
+  const hasReturns = allPeriods.length > 0
+
+  function handleRetry() {
+    void Promise.all([historyQuery.refetch(), returnsQuery.refetch()])
+  }
+
+  if (historyQuery.isLoading && returnsQuery.isLoading && !hasHistory && !hasReturns) {
+    return (
+      <>
+        <PageHeader title="Performance" />
+        <LoadingState
+          title="Loading performance"
+          description="Preparing history, returns and benchmark comparisons for the portfolio."
+          blocks={4}
+        />
+      </>
+    )
+  }
+
+  if (historyQuery.isError && returnsQuery.isError && !hasHistory && !hasReturns) {
+    return (
+      <>
+        <PageHeader title="Performance" />
+        <ErrorState
+          title="Performance unavailable"
+          description="History and return read models could not load. Retry now or inspect storage and market-data readiness."
+          onRetry={handleRetry}
+        />
+      </>
+    )
+  }
+
+  if (!historyQuery.isLoading && !returnsQuery.isLoading && !hasHistory && !hasReturns) {
+    return (
+      <>
+        <PageHeader title="Performance" />
+        <EmptyState
+          title="No performance data yet"
+          description="Record transactions first so Portfolio can reconstruct daily history, returns and benchmarks."
+          action={{ label: 'Open Transactions', to: '/transactions' }}
+        />
+      </>
+    )
+  }
 
   return (
     <>
@@ -75,13 +121,14 @@ export function PerformanceScreen() {
       <div className="mt-6">
         {tab === 'charts' ? (
           <ChartsTab
+            historyQuery={historyQuery}
             points={filteredPoints}
             unit={unit}
             onUnitChange={setUnit}
             series={series}
           />
         ) : (
-          <ReturnsTab />
+          <ReturnsTab returnsQuery={returnsQuery} />
         )}
       </div>
     </>
@@ -91,18 +138,45 @@ export function PerformanceScreen() {
 // --- Charts Tab ---
 
 function ChartsTab({
+  historyQuery,
   points,
   unit,
   onUnitChange,
   series,
 }: {
+  historyQuery: ReturnType<typeof usePortfolioDailyHistory>
   points: PortfolioDailyHistoryPoint[]
   unit: Unit
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
 }) {
+  if (historyQuery.isLoading && points.length === 0) {
+    return (
+      <LoadingState
+        title="Loading portfolio history"
+        description="Preparing value, contributions and allocation history for the selected period."
+      />
+    )
+  }
+
+  if (historyQuery.isError && points.length === 0) {
+    return (
+      <ErrorState
+        title="History unavailable"
+        description="Daily history could not load for the performance workspace."
+        onRetry={() => void historyQuery.refetch()}
+      />
+    )
+  }
+
   if (points.length === 0) {
-    return <p className="py-12 text-center text-sm text-zinc-500">No history data available.</p>
+    return (
+      <StatePanel
+        eyebrow="History"
+        title="No history data available"
+        description="Portfolio has not accumulated enough transactions to render the historical charts yet."
+      />
+    )
   }
 
   return (
@@ -146,20 +220,36 @@ function ChartsTab({
 
 // --- Returns Tab ---
 
-function ReturnsTab() {
-  const returnsQuery = usePortfolioReturns()
+function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortfolioReturns> }) {
   const data = returnsQuery.data
 
   if (returnsQuery.isLoading) {
-    return <div className={`${card} h-48 animate-pulse`} />
+    return (
+      <LoadingState
+        title="Loading returns"
+        description="Calculating money-weighted, time-weighted and benchmark-relative returns."
+      />
+    )
   }
 
   if (returnsQuery.isError) {
-    return <p className="text-sm text-red-400">{returnsQuery.error.message}</p>
+    return (
+      <ErrorState
+        title="Returns unavailable"
+        description="Return calculations could not be loaded for this workspace."
+        onRetry={() => void returnsQuery.refetch()}
+      />
+    )
   }
 
   if (!data || data.periods.length === 0) {
-    return <p className="py-12 text-center text-sm text-zinc-500">No return periods calculated yet.</p>
+    return (
+      <StatePanel
+        eyebrow="Returns"
+        title="No return periods calculated yet"
+        description="Return periods appear after Portfolio has enough history and external cash-flow data to evaluate."
+      />
+    )
   }
 
   return (
