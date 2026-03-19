@@ -3,6 +3,7 @@ import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
 import { SectionCard } from './SectionCard'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
+import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import {
   useAccounts,
   useCreateTransaction,
@@ -1369,25 +1370,60 @@ export function TransactionsSection() {
                 <p className="muted-copy">No journal rows match the current filters.</p>
               )}
               {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
-                <article className="list-item" key={transaction.id}>
+                <article className="list-item transaction-list-item" key={transaction.id}>
                   <div className="transaction-row-main">
-                    <strong>
-                      {transaction.type} · {transaction.grossAmount} {transaction.currency} · {accountName}
-                    </strong>
+                    <div className="transaction-row-heading">
+                      <div className="transaction-row-title">
+                        <span className={`status-badge ${transactionTypeStatusClassName(transaction.type)}`}>
+                          {transaction.type}
+                        </span>
+                        <strong>{accountName}</strong>
+                      </div>
+                      <strong className="transaction-row-amount">
+                        {formatCurrency(transaction.grossAmount, transaction.currency)}
+                      </strong>
+                    </div>
+
                     <p>
-                      trade {transaction.tradeDate}
-                      {transaction.settlementDate ? ` · settle ${transaction.settlementDate}` : ''}
+                      Trade {formatDate(transaction.tradeDate)}
+                      {transaction.settlementDate ? ` · settle ${formatDate(transaction.settlementDate)}` : ''}
                       {instrumentName ? ` · ${instrumentName}` : ''}
                       {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
-                      {transaction.quantity ? ` · qty ${transaction.quantity}` : ''}
-                      {transaction.unitPrice ? ` · px ${transaction.unitPrice}` : ''}
-                      {transaction.notes ? ` · ${transaction.notes}` : ''}
                     </p>
+
+                    {transaction.notes ? <p className="transaction-row-note">{transaction.notes}</p> : null}
+
                     <p className="transaction-row-meta">
-                      fee {transaction.feeAmount} · tax {transaction.taxAmount}
-                      {transaction.fxRateToPln ? ` · fx ${transaction.fxRateToPln}` : ''}
-                      {` · created ${transaction.createdAt.slice(0, 10)}`}
+                      Created {formatDate(transaction.createdAt)}
                     </p>
+
+                    <div className="transaction-row-tags">
+                      {transaction.quantity ? (
+                        <span className="list-badge">
+                          qty {formatNumber(transaction.quantity, { maximumFractionDigits: 6 })}
+                        </span>
+                      ) : null}
+                      {transaction.unitPrice ? (
+                        <span className="list-badge">
+                          px {formatCurrency(transaction.unitPrice, transaction.currency)}
+                        </span>
+                      ) : null}
+                      {Number(transaction.feeAmount) !== 0 ? (
+                        <span className="list-badge">
+                          fee {formatCurrency(transaction.feeAmount, transaction.currency)}
+                        </span>
+                      ) : null}
+                      {Number(transaction.taxAmount) !== 0 ? (
+                        <span className="list-badge">
+                          tax {formatCurrency(transaction.taxAmount, transaction.currency)}
+                        </span>
+                      ) : null}
+                      {transaction.fxRateToPln ? (
+                        <span className="list-badge">
+                          fx {formatNumber(transaction.fxRateToPln, { maximumFractionDigits: 6 })}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="list-item-actions">
                     <span className="list-badge">{transaction.id.slice(0, 8)}</span>
@@ -1660,6 +1696,22 @@ function formatImportRowStatus(status: string) {
       return 'Invalid'
     default:
       return status
+  }
+}
+
+function transactionTypeStatusClassName(type: Transaction['type']) {
+  switch (type) {
+    case 'DEPOSIT':
+    case 'INTEREST':
+      return 'status-valued'
+    case 'WITHDRAWAL':
+    case 'FEE':
+    case 'TAX':
+      return 'status-unavailable'
+    case 'CORRECTION':
+      return 'status-warning'
+    default:
+      return 'status-info'
   }
 }
 

@@ -781,7 +781,8 @@ textarea::placeholder {
 }
 
 .holdings-table-shell {
-  overflow-x: auto;
+  max-height: 560px;
+  overflow: auto;
   border-radius: 18px;
   border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.02);
@@ -811,6 +812,10 @@ textarea::placeholder {
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
 }
 
 .holdings-sort-button {
@@ -863,6 +868,9 @@ textarea::placeholder {
   display: grid;
   gap: 18px;
   padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .holdings-detail-header {
@@ -995,6 +1003,87 @@ textarea::placeholder {
   gap: 8px;
 }
 
+.import-card,
+.journal-card,
+.list-item,
+.import-preview-row,
+.import-preview-card,
+.import-preview,
+.import-checkbox-field,
+.import-mapping-panel,
+.import-template-preview,
+.allocation-form-note {
+  border-color: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.entity-form span,
+.journal-filter span,
+.journal-page-size span,
+.field-note {
+  color: var(--text-soft);
+}
+
+.list-item {
+  border: 1px solid var(--border-subtle);
+}
+
+.list-badge {
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+
+.journal-summary,
+.import-option,
+.transaction-row-meta,
+.import-checkbox-field p,
+.import-preview-row p,
+.list-item p {
+  color: var(--text-muted);
+}
+
+.transaction-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.transaction-row-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.transaction-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.transaction-row-amount {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-row-note {
+  color: var(--text-secondary);
+}
+
+.transaction-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.import-template-preview pre {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+}
+
 .value-positive {
   color: var(--accent-positive);
 }
@@ -1063,8 +1152,13 @@ textarea::placeholder {
 
   .dashboard-hero-header,
   .dashboard-stat-list div,
-  .dashboard-issue-row {
+  .dashboard-issue-row,
+  .transaction-row-heading {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .transaction-list-item {
+    grid-template-columns: 1fr;
   }
 }

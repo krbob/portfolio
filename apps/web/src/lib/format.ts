@@ -6,6 +6,12 @@ const plnFormatter = new Intl.NumberFormat(LOCALE, {
   maximumFractionDigits: 2,
 })
 
+const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+})
+
 const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
   month: 'short',
@@ -13,6 +19,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   hour: '2-digit',
   minute: '2-digit',
 })
+
+const numberFormatter = new Intl.NumberFormat(LOCALE, {
+  maximumFractionDigits: 2,
+})
+
+const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
 
 function toNumber(value: string | number | null | undefined) {
   if (value == null || value === '') {
@@ -31,6 +43,18 @@ export function formatCurrencyPln(value: string | number | null | undefined) {
   return plnFormatter.format(amount)
 }
 
+export function formatCurrency(
+  value: string | number | null | undefined,
+  currency: string | null | undefined,
+) {
+  const amount = toNumber(value)
+  if (amount == null || Number.isNaN(amount) || !currency) {
+    return 'Unavailable'
+  }
+
+  return formatterForCurrency(currency).format(amount)
+}
+
 export function formatSignedCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
@@ -39,6 +63,24 @@ export function formatSignedCurrencyPln(value: string | number | null | undefine
 
   const formatted = formatCurrencyPln(amount)
   return amount > 0 ? `+${formatted}` : formatted
+}
+
+export function formatNumber(
+  value: string | number | null | undefined,
+  options: { maximumFractionDigits?: number } = {},
+) {
+  const amount = toNumber(value)
+  if (amount == null || Number.isNaN(amount)) {
+    return 'Unavailable'
+  }
+
+  if (options.maximumFractionDigits != null) {
+    return new Intl.NumberFormat(LOCALE, {
+      maximumFractionDigits: options.maximumFractionDigits,
+    }).format(amount)
+  }
+
+  return numberFormatter.format(amount)
 }
 
 export function formatPercent(
@@ -85,6 +127,18 @@ export function formatDateTime(value: string | number | Date | null | undefined)
   return dateTimeFormatter.format(date)
 }
 
+export function formatDate(value: string | number | Date | null | undefined) {
+  if (value == null || value === '') {
+    return 'n/a'
+  }
+
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.valueOf())) {
+    return 'n/a'
+  }
+  return dateFormatter.format(date)
+}
+
 export function formatBytes(sizeBytes: number) {
   if (sizeBytes < 1024) {
     return `${sizeBytes} B`
@@ -93,4 +147,19 @@ export function formatBytes(sizeBytes: number) {
     return `${(sizeBytes / 1024).toFixed(1)} KB`
   }
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatterForCurrency(currency: string) {
+  if (!currencyFormatterCache.has(currency)) {
+    currencyFormatterCache.set(
+      currency,
+      new Intl.NumberFormat(LOCALE, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 2,
+      }),
+    )
+  }
+
+  return currencyFormatterCache.get(currency)!
 }

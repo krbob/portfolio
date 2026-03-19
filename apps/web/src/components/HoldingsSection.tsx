@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import type { PortfolioHolding } from '../api/read-model'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
-import { formatCurrencyPln, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrencyPln, formatDate, formatNumber, formatSignedCurrencyPln } from '../lib/format'
 
 type SortField =
   | 'instrumentName'
@@ -254,7 +254,7 @@ export function HoldingsSection() {
                         </td>
                         <td>{holding.accountName}</td>
                         <td>{assetClassLabel(holding.assetClass)}</td>
-                        <td className="holdings-numeric">{holding.quantity}</td>
+                        <td className="holdings-numeric">{formatNumber(holding.quantity, { maximumFractionDigits: 6 })}</td>
                         <td className="holdings-numeric">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</td>
                         <td className={`holdings-numeric ${gainClassName(holding.unrealizedGainPln)}`}>
                           {formatSignedCurrencyPln(holding.unrealizedGainPln)}
@@ -290,7 +290,7 @@ export function HoldingsSection() {
                 <div className="holdings-detail-grid">
                   <article className="overview-stat">
                     <span>Quantity</span>
-                    <strong>{selectedHolding.quantity}</strong>
+                    <strong>{formatNumber(selectedHolding.quantity, { maximumFractionDigits: 6 })}</strong>
                   </article>
                   <article className="overview-stat">
                     <span>Avg cost</span>
@@ -319,7 +319,7 @@ export function HoldingsSection() {
                 <div className="overview-notes">
                   <p>
                     {selectedHolding.transactionCount} transactions · currency {selectedHolding.currency}
-                    {selectedHolding.valuedAt ? ` · valued at ${selectedHolding.valuedAt}` : ''}
+                    {selectedHolding.valuedAt ? ` · valued ${formatDate(selectedHolding.valuedAt)}` : ''}
                   </p>
                   {selectedHolding.valuationIssue ? (
                     <p className="form-error">{selectedHolding.valuationIssue}</p>
