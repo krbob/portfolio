@@ -34,4 +34,4 @@ portfolio:
     usdPlnSymbol: "USDPLN=X"
     goldBenchmarkSymbol: "XAUUSD=X"
     equityBenchmarkSymbol: "VWRA.L"
-    bondBenchmarkSymbol: "VAGF.DE"
+    bondBenchmarkSymbol: "ETFBTBSP.WA"

@@ -198,6 +198,62 @@ class PortfolioHistoryServiceTest {
         assertTrue(lastPoint.targetMixBenchmarkIndex!!.compareTo(BigDecimal("118.81")) == 0)
     }
 
+    @Test
+    fun `daily history starts target mix when required benchmark leg becomes available`() = runBlocking {
+        val fixture = historyFixture()
+        val instrument = etfInstrument()
+        fixture.accountRepository.save(account())
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(buyTransaction(instrument.id))
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.00")
+            )
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "110.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.25")
+            )
+        )
+        fixture.portfolioTargetRepository.replaceAll(
+            listOf(
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("equities-target-delayed".toByteArray()),
+                    assetClass = AssetClass.EQUITIES,
+                    targetWeight = BigDecimal("0.80"),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                ),
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("bonds-target-delayed".toByteArray()),
+                    assetClass = AssetClass.BONDS,
+                    targetWeight = BigDecimal("0.20"),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                )
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(0, history.benchmarkSeriesIssueCount)
+        assertEquals(null, history.points.first().targetMixBenchmarkIndex)
+        assertTrue(history.points[1].targetMixBenchmarkIndex!!.compareTo(BigDecimal("100")) == 0)
+        assertNotNull(history.points.last().targetMixBenchmarkIndex)
+    }
+
     private fun historyFixture(): HistoryFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()

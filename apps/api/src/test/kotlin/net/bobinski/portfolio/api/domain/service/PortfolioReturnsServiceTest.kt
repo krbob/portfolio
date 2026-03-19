@@ -19,6 +19,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRe
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Clock
@@ -75,8 +76,8 @@ class PortfolioReturnsServiceTest {
         assertEquals(BigDecimal("0.1"), oneYearNominalUsd.moneyWeightedReturn)
         assertEquals(BigDecimal("0.1"), oneYearNominalUsd.timeWeightedReturn)
         assertNotNull(oneYear.realPln)
-        assertEquals(BigDecimal("0.0476190476"), oneYearRealPln.moneyWeightedReturn)
-        assertEquals(BigDecimal("0.0476190476"), oneYearRealPln.timeWeightedReturn)
+        assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.moneyWeightedReturn)
+        assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.timeWeightedReturn)
         assertEquals(BigDecimal("1.05"), oneYearInflation.multiplier)
         assertEquals(BenchmarkKey.VWRA, vwraBenchmark.key)
         assertEquals(BigDecimal("0.08"), vwraBenchmarkNominalPln.timeWeightedReturn)
@@ -87,7 +88,7 @@ class PortfolioReturnsServiceTest {
     fun `returns expose multi-asset benchmark family when series are available`() = runBlocking {
         val fixture = returnsFixture()
         fixture.accountRepository.save(account())
-        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(depositTransaction(tradeDate = "2024-03-01"))
         fixture.transactionRepository.save(interestTransaction())
         fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
             prices = listOf(
@@ -137,7 +138,47 @@ class PortfolioReturnsServiceTest {
         )
     }
 
-    private fun returnsFixture(): ReturnsFixture {
+    @Test
+    fun `real pln aligns to CPI-covered full months only`() = runBlocking {
+        val fixture = returnsFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-19T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction(tradeDate = "2024-03-01"))
+        fixture.transactionRepository.save(interestTransaction(tradeDate = "2026-03-01"))
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-19", "4.00"),
+                pricePoint("2026-03-19", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-19", "100.00"),
+                pricePoint("2026-03-19", "110.00")
+            )
+        )
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-04"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.05")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+        val oneYearRealPln = requireNotNull(oneYear.realPln)
+        val oneYearInflation = requireNotNull(oneYear.inflation)
+
+        assertEquals(BigDecimal("0.1"), oneYear.nominalPln!!.moneyWeightedReturn)
+        assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.moneyWeightedReturn)
+        assertEquals(YearMonth.parse("2025-04"), oneYearInflation.from)
+        assertEquals(YearMonth.parse("2026-03"), oneYearInflation.until)
+    }
+
+    private fun returnsFixture(
+        clock: Clock = Clock.fixed(Instant.parse("2026-03-01T12:00:00Z"), ZoneOffset.UTC)
+    ): ReturnsFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
         val portfolioTargetRepository = InMemoryPortfolioTargetRepository()
@@ -146,7 +187,6 @@ class PortfolioReturnsServiceTest {
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
-        val clock = Clock.fixed(Instant.parse("2026-03-01T12:00:00Z"), ZoneOffset.UTC)
         val historyService = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -187,16 +227,19 @@ class PortfolioReturnsServiceTest {
         updatedAt = CREATED_AT
     )
 
-    private fun depositTransaction(): Transaction = Transaction(
+    private fun depositTransaction(
+        tradeDate: String = "2025-03-01",
+        amount: String = "1000.00"
+    ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("returns-deposit".toByteArray()),
         accountId = ACCOUNT_ID,
         instrumentId = null,
         type = TransactionType.DEPOSIT,
-        tradeDate = LocalDate.parse("2025-03-01"),
-        settlementDate = LocalDate.parse("2025-03-01"),
+        tradeDate = LocalDate.parse(tradeDate),
+        settlementDate = LocalDate.parse(tradeDate),
         quantity = null,
         unitPrice = null,
-        grossAmount = BigDecimal("1000.00"),
+        grossAmount = BigDecimal(amount),
         feeAmount = BigDecimal.ZERO,
         taxAmount = BigDecimal.ZERO,
         currency = "PLN",
@@ -206,16 +249,19 @@ class PortfolioReturnsServiceTest {
         updatedAt = CREATED_AT
     )
 
-    private fun interestTransaction(): Transaction = Transaction(
+    private fun interestTransaction(
+        tradeDate: String = "2026-03-01",
+        amount: String = "100.00"
+    ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("returns-interest".toByteArray()),
         accountId = ACCOUNT_ID,
         instrumentId = null,
         type = TransactionType.INTEREST,
-        tradeDate = LocalDate.parse("2026-03-01"),
-        settlementDate = LocalDate.parse("2026-03-01"),
+        tradeDate = LocalDate.parse(tradeDate),
+        settlementDate = LocalDate.parse(tradeDate),
         quantity = null,
         unitPrice = null,
-        grossAmount = BigDecimal("100.00"),
+        grossAmount = BigDecimal(amount),
         feeAmount = BigDecimal.ZERO,
         taxAmount = BigDecimal.ZERO,
         currency = "PLN",

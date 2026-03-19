@@ -109,15 +109,6 @@ class PortfolioReturnsService(
             }
         )
 
-        val inflationWindow = when (val result = inflationAdjustmentProvider.cumulativeSince(YearMonth.from(effectiveFrom))) {
-            is InflationAdjustmentResult.Success -> InflationWindow(
-                from = result.from,
-                until = result.until,
-                multiplier = result.multiplier
-            )
-
-            is InflationAdjustmentResult.Failure -> null
-        }
         val benchmarkComparisons = buildList {
             buildBenchmarkComparison(
                 key = BenchmarkKey.VWRA,
@@ -166,6 +157,14 @@ class PortfolioReturnsService(
                 )?.let(::add)
             }
         }
+        val realPlnAdjustment = loadRealPlnAdjustment(
+            effectiveFrom = effectiveFrom,
+            end = history.until,
+            values = history.points.map { ValuationPoint(date = it.date, value = it.totalCurrentValuePln) },
+            cashFlows = externalCashFlows.mapNotNull { cashFlow ->
+                cashFlow.plnAmount?.let { amount -> MoneyWeightedCashFlow(date = cashFlow.date, amount = amount) }
+            }
+        )
 
         return PortfolioReturnPeriod(
             key = definition.key,
@@ -177,11 +176,8 @@ class PortfolioReturnsService(
             dayCount = ChronoUnit.DAYS.between(effectiveFrom, history.until),
             nominalPln = nominalPln,
             nominalUsd = nominalUsd,
-            realPln = nominalPln?.adjustForInflation(
-                inflation = inflationWindow,
-                periodDayCount = ChronoUnit.DAYS.between(effectiveFrom, history.until)
-            ),
-            inflation = inflationWindow,
+            realPln = realPlnAdjustment?.metric,
+            inflation = realPlnAdjustment?.inflationWindow,
             benchmarks = benchmarkComparisons
         )
     }
@@ -271,20 +267,21 @@ class PortfolioReturnsService(
         }.awaitAll().mapNotNull { (definition, result) ->
             when (result) {
                 is ReferenceSeriesResult.Success -> {
-                    val lookup = buildNormalizedIndexLookup(
-                        from = from,
-                        to = to,
-                        prices = result.prices.toLookup()
-                    )
-                    if (lookup.isEmpty()) {
+                    val values = result.prices
+                        .sortedBy(HistoricalPricePoint::date)
+                        .map { point ->
+                            ValuationPoint(
+                                date = point.date,
+                                value = point.closePricePln.scaleMoney(8)
+                            )
+                        }
+                    if (values.isEmpty()) {
                         null
                     } else {
                         ReferenceBenchmarkSeries(
                             key = definition.key,
                             label = definition.label,
-                            values = lookup.entries.map { (date, value) ->
-                                ValuationPoint(date = date, value = value)
-                            }
+                            values = values
                         )
                     }
                 }
@@ -292,6 +289,62 @@ class PortfolioReturnsService(
                 is ReferenceSeriesResult.Failure -> null
             }
         }
+    }
+
+    private suspend fun loadRealPlnAdjustment(
+        effectiveFrom: LocalDate,
+        end: LocalDate,
+        values: List<ValuationPoint>,
+        cashFlows: List<MoneyWeightedCashFlow>
+    ): RealPlnAdjustment? {
+        val realFromMonth = alignedRealStartMonth(effectiveFrom)
+        val baseInflation = when (val result = inflationAdjustmentProvider.cumulativeSince(realFromMonth)) {
+            is InflationAdjustmentResult.Success -> result
+            is InflationAdjustmentResult.Failure -> return null
+        }
+        val realUntilExclusive = minOf(baseInflation.until, latestCompletePortfolioMonthExclusive(end))
+        if (!realFromMonth.isBefore(realUntilExclusive)) {
+            return null
+        }
+
+        val multiplier = when {
+            baseInflation.until == realUntilExclusive -> baseInflation.multiplier
+            else -> {
+                val trimResult = when (val result = inflationAdjustmentProvider.cumulativeSince(realUntilExclusive)) {
+                    is InflationAdjustmentResult.Success -> result
+                    is InflationAdjustmentResult.Failure -> return null
+                }
+                if (trimResult.until != baseInflation.until || trimResult.multiplier.signum() <= 0) {
+                    return null
+                }
+                baseInflation.multiplier.divide(trimResult.multiplier, 12, RoundingMode.HALF_UP).stripTrailingZeros()
+            }
+        }
+        if (multiplier.signum() <= 0) {
+            return null
+        }
+
+        val realFrom = realFromMonth.atDay(1)
+        val realUntil = realUntilExclusive.atDay(1).minusDays(1)
+        val nominalMetric = calculateMetric(
+            start = realFrom,
+            end = realUntil,
+            values = values,
+            cashFlows = cashFlows
+        ) ?: return null
+        val inflationWindow = InflationWindow(
+            from = realFromMonth,
+            until = realUntilExclusive,
+            multiplier = multiplier
+        )
+
+        return RealPlnAdjustment(
+            metric = nominalMetric.adjustForInflation(
+                inflation = inflationWindow,
+                periodDayCount = ChronoUnit.DAYS.between(realFrom, realUntil)
+            ) ?: return null,
+            inflationWindow = inflationWindow
+        )
     }
 
     private fun calculateMetric(
@@ -576,30 +629,19 @@ class PortfolioReturnsService(
     private fun BigDecimal.scaleMoney(scale: Int): BigDecimal =
         setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
 
-    private fun buildNormalizedIndexLookup(
-        from: LocalDate,
-        to: LocalDate,
-        prices: TreeMap<LocalDate, BigDecimal>
-    ): TreeMap<LocalDate, BigDecimal> {
-        val basePrice = prices.floorEntry(from)?.value ?: prices.ceilingEntry(from)?.value ?: return TreeMap()
-        val lookup = TreeMap<LocalDate, BigDecimal>()
-        var date = from
-
-        while (!date.isAfter(to)) {
-            prices.floorEntry(date)?.value?.let { price ->
-                lookup[date] = price
-                    .divide(basePrice, 12, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal(100))
-                    .scaleMoney(4)
-            }
-            date = date.plusDays(1)
+    private fun alignedRealStartMonth(date: LocalDate): YearMonth =
+        if (date.dayOfMonth == 1) {
+            YearMonth.from(date)
+        } else {
+            YearMonth.from(date).plusMonths(1)
         }
 
-        return lookup
-    }
-
-    private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
-        associateTo(TreeMap()) { it.date to it.closePricePln.scaleMoney(8) }
+    private fun latestCompletePortfolioMonthExclusive(date: LocalDate): YearMonth =
+        if (date.dayOfMonth == date.lengthOfMonth()) {
+            YearMonth.from(date).plusMonths(1)
+        } else {
+            YearMonth.from(date)
+        }
 
     private fun Double.toRate(): BigDecimal =
         BigDecimal.valueOf(this).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
@@ -643,6 +685,11 @@ class PortfolioReturnsService(
     private data class TimeWeightedMetric(
         val totalReturn: BigDecimal,
         val annualizedReturn: BigDecimal?
+    )
+
+    private data class RealPlnAdjustment(
+        val metric: ReturnMetric,
+        val inflationWindow: InflationWindow
     )
 
     private enum class ReturnPeriodDefinition(

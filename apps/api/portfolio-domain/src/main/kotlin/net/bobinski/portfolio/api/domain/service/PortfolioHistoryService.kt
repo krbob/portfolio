@@ -348,11 +348,15 @@ class PortfolioHistoryService(
         from: LocalDate,
         until: LocalDate
     ): InflationBenchmarkLoad {
+        val lastStartMonth = latestCompletePortfolioMonthExclusive(until).minusMonths(1)
         val months = generateSequence(YearMonth.from(from)) { current -> current.plusMonths(1) }
-            .takeWhile { month -> !month.isAfter(YearMonth.from(until)) }
+            .takeWhile { month -> !month.isAfter(lastStartMonth) }
             .toList()
         if (months.isEmpty()) {
-            return InflationBenchmarkLoad(lookup = TreeMap(), issueCount = 0)
+            return InflationBenchmarkLoad(
+                lookup = buildFlatIndexLookup(from = from, until = until),
+                issueCount = 0
+            )
         }
 
         val cumulativeByMonth = linkedMapOf<YearMonth, BigDecimal>()
@@ -381,7 +385,7 @@ class PortfolioHistoryService(
         }
 
         val availableUntil = untils.single()
-        val availableMonths = months.filter { month -> !month.isAfter(availableUntil) }
+        val availableMonths = months.filter { month -> month.isBefore(availableUntil) }
         if (availableMonths.isEmpty()) {
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
@@ -507,7 +511,7 @@ class PortfolioHistoryService(
         var date = from.plusDays(1)
         while (!date.isAfter(until)) {
             val month = YearMonth.from(date)
-            if (!month.isAfter(availableUntil)) {
+            if (month.isBefore(availableUntil)) {
                 val monthlyMultiplier = monthlyMultipliers[month]
                 if (monthlyMultiplier != null && monthlyMultiplier.signum() > 0) {
                     val dailyFactor = monthlyMultiplier.toDouble().pow(1.0 / month.lengthOfMonth().toDouble())
@@ -537,18 +541,26 @@ class PortfolioHistoryService(
         val bondWeight = weightsByAssetClass[AssetClass.BONDS] ?: 0.0
         val cashWeight = weightsByAssetClass[AssetClass.CASH] ?: 0.0
 
-        if (equityWeight > 0.0 && equityBenchmark.lookupOn(from) == null) {
-            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+        val effectiveFromCandidates = mutableListOf(from)
+        if (equityWeight > 0.0) {
+            val firstEquityDate = equityBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            effectiveFromCandidates += firstEquityDate
         }
-        if (bondWeight > 0.0 && bondBenchmark.lookupOn(from) == null) {
+        if (bondWeight > 0.0) {
+            val firstBondDate = bondBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            effectiveFromCandidates += firstBondDate
+        }
+
+        val effectiveFrom = effectiveFromCandidates.maxOrNull() ?: from
+        if (effectiveFrom.isAfter(until)) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
         }
 
         val lookup = TreeMap<LocalDate, BigDecimal>()
         var index = BASE_INDEX
-        lookup[from] = index
-        var previousDate = from
-        var date = from.plusDays(1)
+        lookup[effectiveFrom] = index
+        var previousDate = effectiveFrom
+        var date = effectiveFrom.plusDays(1)
 
         while (!date.isAfter(until)) {
             val equityFactor = dailyIndexFactor(
@@ -609,6 +621,13 @@ class PortfolioHistoryService(
         }
         return lookup
     }
+
+    private fun latestCompletePortfolioMonthExclusive(date: LocalDate): YearMonth =
+        if (date.dayOfMonth == date.lengthOfMonth()) {
+            YearMonth.from(date).plusMonths(1)
+        } else {
+            YearMonth.from(date)
+        }
 
     private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
         associateTo(TreeMap()) { it.date to it.closePricePln.money() }

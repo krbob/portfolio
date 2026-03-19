@@ -46,7 +46,7 @@ data class MarketDataConfig(
                 "PORTFOLIO_BOND_BENCHMARK_SYMBOL",
                 config,
                 "portfolio.marketData.bondBenchmarkSymbol"
-            ) ?: "VAGF.DE"
+            ) ?: "ETFBTBSP.WA"
         )
 
         private fun readSetting(
