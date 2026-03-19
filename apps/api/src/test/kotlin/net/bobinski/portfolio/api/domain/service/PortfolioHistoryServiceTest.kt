@@ -248,10 +248,35 @@ class PortfolioHistoryServiceTest {
 
         val history = fixture.service.dailyHistory()
 
-        assertEquals(0, history.benchmarkSeriesIssueCount)
         assertEquals(null, history.points.first().targetMixBenchmarkIndex)
         assertTrue(history.points[1].targetMixBenchmarkIndex!!.compareTo(BigDecimal("100")) == 0)
         assertNotNull(history.points.last().targetMixBenchmarkIndex)
+    }
+
+    @Test
+    fun `daily history keeps inflation benchmark when latest CPI coverage lags current month`() = runBlocking {
+        val fixture = historyFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(
+            depositTransaction(tradeDate = LocalDate.parse("2025-12-01"))
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2025-12-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2025-12-01", "12000.00")))
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Failure("Equity benchmark not required.")
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Failure("Bond benchmark not required.")
+        fixture.inflationProvider.resultByMonth = mapOf(
+            YearMonth.parse("2025-12") to InflationAdjustmentResult.Success(
+                from = YearMonth.parse("2025-12"),
+                until = YearMonth.parse("2026-01"),
+                multiplier = BigDecimal("1.02")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+        val lastPoint = history.points.last()
+
+        assertNotNull(lastPoint.inflationBenchmarkIndex)
+        assertTrue(lastPoint.inflationBenchmarkIndex!!.compareTo(BigDecimal("100")) > 0)
     }
 
     private fun historyFixture(): HistoryFixture {

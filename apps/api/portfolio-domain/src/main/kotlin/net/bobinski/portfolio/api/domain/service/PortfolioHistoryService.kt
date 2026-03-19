@@ -348,24 +348,38 @@ class PortfolioHistoryService(
         from: LocalDate,
         until: LocalDate
     ): InflationBenchmarkLoad {
-        val lastStartMonth = latestCompletePortfolioMonthExclusive(until).minusMonths(1)
-        val months = generateSequence(YearMonth.from(from)) { current -> current.plusMonths(1) }
-            .takeWhile { month -> !month.isAfter(lastStartMonth) }
+        val firstMonth = YearMonth.from(from)
+        val initialResult = when (val result = inflationAdjustmentProvider.cumulativeSince(firstMonth)) {
+            is InflationAdjustmentResult.Success -> result
+            is InflationAdjustmentResult.Failure -> {
+                return InflationBenchmarkLoad(
+                    lookup = TreeMap(),
+                    issueCount = 1
+                )
+            }
+        }
+        val maxComparableUntil = minOf(initialResult.until, latestCompletePortfolioMonthExclusive(until))
+        val availableMonths = generateSequence(firstMonth) { current -> current.plusMonths(1) }
+            .takeWhile { month -> month.isBefore(maxComparableUntil) }
             .toList()
-        if (months.isEmpty()) {
+        if (availableMonths.isEmpty()) {
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
                 issueCount = 0
             )
         }
 
-        val cumulativeByMonth = linkedMapOf<YearMonth, BigDecimal>()
-        val untils = linkedSetOf<YearMonth>()
-        for (month in months) {
+        val cumulativeByMonth = linkedMapOf(firstMonth to initialResult.multiplier)
+        for (month in availableMonths.drop(1)) {
             when (val result = inflationAdjustmentProvider.cumulativeSince(month)) {
                 is InflationAdjustmentResult.Success -> {
+                    if (result.until != initialResult.until) {
+                        return InflationBenchmarkLoad(
+                            lookup = TreeMap(),
+                            issueCount = 1
+                        )
+                    }
                     cumulativeByMonth[month] = result.multiplier
-                    untils += result.until
                 }
 
                 is InflationAdjustmentResult.Failure -> {
@@ -375,22 +389,6 @@ class PortfolioHistoryService(
                     )
                 }
             }
-        }
-
-        if (untils.size != 1) {
-            return InflationBenchmarkLoad(
-                lookup = TreeMap(),
-                issueCount = 1
-            )
-        }
-
-        val availableUntil = untils.single()
-        val availableMonths = months.filter { month -> month.isBefore(availableUntil) }
-        if (availableMonths.isEmpty()) {
-            return InflationBenchmarkLoad(
-                lookup = buildFlatIndexLookup(from = from, until = until),
-                issueCount = 0
-            )
         }
 
         val monthlyMultipliers = linkedMapOf<YearMonth, BigDecimal>()
@@ -410,7 +408,7 @@ class PortfolioHistoryService(
                 from = from,
                 until = until,
                 monthlyMultipliers = monthlyMultipliers,
-                availableUntil = availableUntil
+                availableUntil = initialResult.until
             ),
             issueCount = 0
         )
