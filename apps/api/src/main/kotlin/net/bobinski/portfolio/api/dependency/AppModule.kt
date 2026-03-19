@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.dependency
 
+import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
@@ -54,6 +55,7 @@ import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionImportProfileRepository
+import net.bobinski.portfolio.api.system.SystemReadinessService
 import java.net.http.HttpClient
 import org.koin.dsl.module
 import java.time.Clock
@@ -64,12 +66,14 @@ fun appModule(
     config: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
     backupConfig: BackupConfig,
+    authConfig: AuthConfig,
     repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
 ) = module {
     single<Clock> { Clock.systemUTC() }
     single { config }
     single { marketDataConfig }
     single { backupConfig }
+    single { authConfig }
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
     single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystBaseUrl) }
@@ -231,6 +235,16 @@ fun appModule(
             auditLogService = get(),
             json = get(),
             clock = get()
+        )
+    }
+    single {
+        SystemReadinessService(
+            persistenceConfig = get(),
+            backupConfig = get(),
+            marketDataConfig = get(),
+            authConfig = get(),
+            clock = get(),
+            dataSource = if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) get<DataSource>() else null
         )
     }
 }

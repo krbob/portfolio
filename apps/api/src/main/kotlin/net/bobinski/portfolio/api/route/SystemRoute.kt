@@ -8,9 +8,14 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.auth.config.AuthConfig
+import net.bobinski.portfolio.api.system.SystemReadiness
+import net.bobinski.portfolio.api.system.SystemReadinessCheck
+import net.bobinski.portfolio.api.system.SystemReadinessService
+import org.koin.ktor.ext.inject
 
 fun Route.systemRoute(application: Application) {
     val authConfig = AuthConfig.from(application.environment.config)
+    val readinessService: SystemReadinessService by inject()
 
     route("/v1") {
         get("/health") {
@@ -52,6 +57,10 @@ fun Route.systemRoute(application: Application) {
                 )
             )
         }
+
+        get("/readiness") {
+            call.respond(readinessService.current().toResponse())
+        }
     }
 }
 
@@ -89,6 +98,21 @@ data class AppMetaResponse(
 )
 
 @Serializable
+data class ReadinessResponse(
+    val status: String,
+    val checkedAt: String,
+    val checks: List<ReadinessCheckResponse>
+)
+
+@Serializable
+data class ReadinessCheckResponse(
+    val key: String,
+    val label: String,
+    val status: String,
+    val message: String
+)
+
+@Serializable
 data class AuthSummary(
     val enabled: Boolean,
     val mode: String
@@ -99,4 +123,17 @@ data class StackSummary(
     val web: String,
     val api: String,
     val database: String
+)
+
+private fun SystemReadiness.toResponse(): ReadinessResponse = ReadinessResponse(
+    status = status.name,
+    checkedAt = checkedAt.toString(),
+    checks = checks.map(SystemReadinessCheck::toResponse)
+)
+
+private fun SystemReadinessCheck.toResponse(): ReadinessCheckResponse = ReadinessCheckResponse(
+    key = key,
+    label = label,
+    status = status.name,
+    message = message
 )

@@ -25,6 +25,6 @@ fun Application.configureDependencyInjection(
     )
 
     install(Koin) {
-        modules(appModule(persistenceConfig, marketDataConfig, backupConfig, repositoryBindingMode))
+        modules(appModule(persistenceConfig, marketDataConfig, backupConfig, authConfig, repositoryBindingMode))
     }
 }

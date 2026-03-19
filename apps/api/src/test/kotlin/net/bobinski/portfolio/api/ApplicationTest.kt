@@ -56,6 +56,22 @@ class ApplicationTest {
     }
 
     @Test
+    fun `readiness endpoint returns structured checks`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.get("/v1/readiness")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"status\": \"READY\""), body)
+        assertTrue(body.contains("\"key\": \"sqlite-directory\""), body)
+        assertTrue(body.contains("\"key\": \"sqlite-connection\""), body)
+        assertTrue(body.contains("\"key\": \"backups-directory\""), body)
+    }
+
+    @Test
     fun `openapi endpoint returns api specification`() = testApplication {
         application {
             module()

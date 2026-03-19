@@ -58,6 +58,7 @@ class SqliteApplicationTest {
                 val auditResponse = client.get("/v1/portfolio/audit/events")
                 val cacheResponse = client.get("/v1/portfolio/read-model-cache")
                 val metaResponse = client.get("/v1/meta")
+                val readinessResponse = client.get("/v1/readiness")
 
                 assertEquals(HttpStatusCode.Created, createAccountResponse.status)
                 assertEquals(HttpStatusCode.OK, accountsResponse.status)
@@ -69,6 +70,10 @@ class SqliteApplicationTest {
                 assertEquals(HttpStatusCode.OK, metaResponse.status)
                 assertTrue(metaResponse.bodyAsText().contains("\"persistenceMode\": \"SQLITE\""))
                 assertTrue(metaResponse.bodyAsText().contains("\"database\": \"SQLite\""))
+                assertEquals(HttpStatusCode.OK, readinessResponse.status)
+                assertTrue(readinessResponse.bodyAsText().contains("\"status\": \"READY\""))
+                assertTrue(readinessResponse.bodyAsText().contains("\"key\": \"sqlite-connection\""))
+                assertTrue(readinessResponse.bodyAsText().contains("\"status\": \"PASS\""))
             } finally {
                 tempDirectory.toFile().deleteRecursively()
             }
