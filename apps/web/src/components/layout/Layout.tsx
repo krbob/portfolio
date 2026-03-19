@@ -1,36 +1,84 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
+import { resolveRouteTitle } from './navigation'
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isMobileNavMounted, setIsMobileNavMounted] = useState(false)
+  const [isMobileNavVisible, setIsMobileNavVisible] = useState(false)
+  const isMobileNavMountedRef = useRef(false)
+  const openAnimationFrameRef = useRef<number | null>(null)
   const currentTitle = resolveRouteTitle(location.pathname)
 
+  function openMobileNav() {
+    isMobileNavMountedRef.current = true
+    setIsMobileNavMounted(true)
+  }
+
+  function closeMobileNav() {
+    if (openAnimationFrameRef.current != null) {
+      window.cancelAnimationFrame(openAnimationFrameRef.current)
+      openAnimationFrameRef.current = null
+    }
+    setIsMobileNavVisible(false)
+  }
+
   useEffect(() => {
-    setIsMobileNavOpen(false)
+    closeMobileNav()
   }, [location.pathname])
 
   useEffect(() => {
-    if (!isMobileNavOpen) {
-      return undefined
-    }
+    isMobileNavMountedRef.current = isMobileNavMounted
+  }, [isMobileNavMounted])
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsMobileNavOpen(false)
+      if (event.key === 'Escape' && isMobileNavMountedRef.current) {
+        closeMobileNav()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isMobileNavOpen])
+  }, [])
+
+  useEffect(() => {
+    if (!isMobileNavMounted) {
+      return undefined
+    }
+
+    openAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      openAnimationFrameRef.current = null
+      setIsMobileNavVisible(true)
+    })
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      if (openAnimationFrameRef.current != null) {
+        window.cancelAnimationFrame(openAnimationFrameRef.current)
+        openAnimationFrameRef.current = null
+      }
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isMobileNavMounted])
+
+  useEffect(() => {
+    if (!isMobileNavMounted || isMobileNavVisible) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      isMobileNavMountedRef.current = false
+      setIsMobileNavMounted(false)
+    }, 200)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [isMobileNavMounted, isMobileNavVisible])
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex">
@@ -40,13 +88,13 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3 px-4 py-3">
             <button
               type="button"
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
-              onClick={() => setIsMobileNavOpen(true)}
+              onClick={openMobileNav}
               aria-label="Open navigation"
-              aria-expanded={isMobileNavOpen}
+              aria-expanded={isMobileNavVisible}
               aria-controls="mobile-navigation"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor">
@@ -58,10 +106,6 @@ export function Layout({ children }: { children: ReactNode }) {
               <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Portfolio</p>
               <p className="truncate text-sm font-semibold text-zinc-100">{currentTitle}</p>
             </div>
-
-            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-400">
-              SQLite
-            </span>
           </div>
         </header>
 
@@ -70,44 +114,29 @@ export function Layout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {isMobileNavOpen && (
+      {isMobileNavMounted && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm lg:hidden"
-            onClick={() => setIsMobileNavOpen(false)}
+            className={`fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+              isMobileNavVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={closeMobileNav}
             aria-hidden="true"
           />
 
           <aside
             id="mobile-navigation"
-            className="fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl lg:hidden"
+            className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden ${
+              isMobileNavVisible ? 'translate-x-0' : '-translate-x-full'
+            }`}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
           >
-            <Sidebar onNavigate={() => setIsMobileNavOpen(false)} />
+            <Sidebar onNavigate={closeMobileNav} />
           </aside>
         </>
       )}
     </div>
   )
-}
-
-function resolveRouteTitle(pathname: string) {
-  if (pathname === '/') {
-    return 'Dashboard'
-  }
-  if (pathname.startsWith('/holdings')) {
-    return 'Holdings'
-  }
-  if (pathname.startsWith('/performance') || pathname.startsWith('/returns') || pathname.startsWith('/charts')) {
-    return 'Performance'
-  }
-  if (pathname.startsWith('/transactions')) {
-    return 'Transactions'
-  }
-  if (pathname.startsWith('/settings') || pathname.startsWith('/data') || pathname.startsWith('/backups')) {
-    return 'Settings'
-  }
-  return 'Portfolio'
 }

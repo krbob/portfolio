@@ -569,8 +569,15 @@ describe('App', () => {
     fireEvent.click(openNavigationButtons[0])
 
     expect(await screen.findByRole('dialog', { name: /navigation/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(document.body.style.overflow).toBe('hidden')
+    })
 
     fireEvent.keyDown(window, { key: 'Escape' })
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /navigation/i })).toHaveClass('-translate-x-full')
+    })
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: /navigation/i })).not.toBeInTheDocument()
