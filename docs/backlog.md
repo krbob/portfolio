@@ -108,11 +108,22 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 
 ## Phase 3: Product polish
 
-### 6. Dashboard and chart refinement (next)
+### 6. Async state clarity (in progress)
 
-- superseded by the dedicated UI revamp phases above
+- introduce explicit `loading`, `error`, `empty`, and `degraded` states instead of mixing onboarding with failures
+- give every investor-facing screen a predictable retry path
+- keep state copy short and product-oriented
 
-### 7. Operational trust layer (done)
+### 7. Responsive shell and mobile navigation (next)
+
+- replace the icon-only collapsed sidebar with a proper mobile navigation pattern
+- keep the desktop shell dense while making tablet/mobile navigation obvious
+
+### 8. Dashboard and chart refinement (later)
+
+- continue tightening hierarchy and chart framing after the new state system and responsive shell land
+
+### 9. Operational trust layer (done)
 
 - expand audit visibility for imports, restores, and destructive actions (done)
 - keep backup and restore flows easy to inspect after the fact (done)
