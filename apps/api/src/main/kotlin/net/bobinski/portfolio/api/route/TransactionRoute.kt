@@ -128,6 +128,8 @@ data class ImportTransactionsPreviewResponse(
     val totalRowCount: Int,
     val importableRowCount: Int,
     val duplicateRowCount: Int,
+    val duplicateExistingCount: Int,
+    val duplicateBatchCount: Int,
     val invalidRowCount: Int,
     val rows: List<ImportTransactionsPreviewRowResponse>
 )
@@ -184,6 +186,8 @@ private fun TransactionImportPreview.toResponse(): ImportTransactionsPreviewResp
     totalRowCount = totalRowCount,
     importableRowCount = importableRowCount,
     duplicateRowCount = duplicateRowCount,
+    duplicateExistingCount = duplicateExistingCount,
+    duplicateBatchCount = duplicateBatchCount,
     invalidRowCount = invalidRowCount,
     rows = rows.map { it.toResponse() }
 )

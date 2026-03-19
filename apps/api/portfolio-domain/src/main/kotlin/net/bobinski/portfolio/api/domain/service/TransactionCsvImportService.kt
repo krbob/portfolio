@@ -24,22 +24,37 @@ class TransactionCsvImportService(
     private val transactionService: TransactionService
 ) {
     suspend fun preview(command: PreviewTransactionCsvImportCommand): TransactionImportPreview =
-        parse(command.profileId, command.csv, command.skipDuplicates).preview
+        parse(
+            profileId = command.profileId,
+            csv = command.csv,
+            skipDuplicatesOverride = command.skipDuplicates,
+            sourceFileName = command.sourceFileName,
+            sourceLabel = command.sourceLabel
+        ).preview
 
     suspend fun import(command: ImportTransactionCsvCommand): TransactionImportResult {
-        val parsed = parse(command.profileId, command.csv, command.skipDuplicates)
+        val parsed = parse(
+            profileId = command.profileId,
+            csv = command.csv,
+            skipDuplicatesOverride = command.skipDuplicates,
+            sourceFileName = command.sourceFileName,
+            sourceLabel = command.sourceLabel
+        )
         val firstInvalid = parsed.preview.rows.firstOrNull { it.status == TransactionImportRowStatus.INVALID }
         require(firstInvalid == null) { firstInvalid?.message ?: "CSV import contains invalid rows." }
         return transactionService.importAll(
             commands = parsed.parsedRows.map(ParsedCsvImportRow::command),
-            skipDuplicates = parsed.skipDuplicates
+            skipDuplicates = parsed.skipDuplicates,
+            context = parsed.context
         )
     }
 
     private suspend fun parse(
         profileId: UUID,
         csv: String,
-        skipDuplicatesOverride: Boolean?
+        skipDuplicatesOverride: Boolean?,
+        sourceFileName: String?,
+        sourceLabel: String?
     ): ParsedCsvImport {
         val profile = profileRepository.get(profileId)
             ?: throw ResourceNotFoundException("Transaction import profile $profileId was not found.")
@@ -90,6 +105,8 @@ class TransactionCsvImportService(
                 totalRowCount = mergedPreviewRows.size,
                 importableRowCount = 0,
                 duplicateRowCount = 0,
+                duplicateExistingCount = 0,
+                duplicateBatchCount = 0,
                 invalidRowCount = mergedPreviewRows.size,
                 rows = mergedPreviewRows
             )
@@ -108,6 +125,12 @@ class TransactionCsvImportService(
 
         return ParsedCsvImport(
             profile = profile,
+            context = TransactionImportContext(
+                profileId = profile.id,
+                profileName = profile.name,
+                sourceFileName = sourceFileName?.trim()?.takeIf(String::isNotEmpty),
+                sourceLabel = sourceLabel?.trim()?.takeIf(String::isNotEmpty)
+            ),
             skipDuplicates = effectiveSkipDuplicates,
             parsedRows = parsedRows,
             preview = TransactionImportPreview(
@@ -117,6 +140,8 @@ class TransactionCsvImportService(
                     it.status == TransactionImportRowStatus.DUPLICATE_EXISTING ||
                         it.status == TransactionImportRowStatus.DUPLICATE_BATCH
                 },
+                duplicateExistingCount = sortedRows.count { it.status == TransactionImportRowStatus.DUPLICATE_EXISTING },
+                duplicateBatchCount = sortedRows.count { it.status == TransactionImportRowStatus.DUPLICATE_BATCH },
                 invalidRowCount = sortedRows.count { it.status == TransactionImportRowStatus.INVALID },
                 rows = sortedRows
             )
@@ -302,17 +327,22 @@ class TransactionCsvImportService(
 data class PreviewTransactionCsvImportCommand(
     val profileId: UUID,
     val csv: String,
-    val skipDuplicates: Boolean? = null
+    val skipDuplicates: Boolean? = null,
+    val sourceFileName: String? = null,
+    val sourceLabel: String? = null
 )
 
 data class ImportTransactionCsvCommand(
     val profileId: UUID,
     val csv: String,
-    val skipDuplicates: Boolean? = null
+    val skipDuplicates: Boolean? = null,
+    val sourceFileName: String? = null,
+    val sourceLabel: String? = null
 )
 
 private data class ParsedCsvImport(
     val profile: TransactionImportProfile,
+    val context: TransactionImportContext,
     val skipDuplicates: Boolean,
     val parsedRows: List<ParsedCsvImportRow>,
     val preview: TransactionImportPreview

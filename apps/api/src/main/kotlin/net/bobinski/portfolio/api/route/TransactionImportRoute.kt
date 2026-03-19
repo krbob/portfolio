@@ -148,7 +148,9 @@ data class TransactionImportDefaultsResponse(
 data class CsvTransactionsImportRequest(
     val profileId: String,
     val csv: String,
-    val skipDuplicates: Boolean? = null
+    val skipDuplicates: Boolean? = null,
+    val sourceFileName: String? = null,
+    val sourceLabel: String? = null
 )
 
 private fun SaveTransactionImportProfileRequest.toCommand(): SaveTransactionImportProfileCommand =
@@ -184,14 +186,18 @@ private fun CsvTransactionsImportRequest.toPreviewCommand(): PreviewTransactionC
     PreviewTransactionCsvImportCommand(
         profileId = parseUuid(profileId),
         csv = csv,
-        skipDuplicates = skipDuplicates
+        skipDuplicates = skipDuplicates,
+        sourceFileName = sourceFileName,
+        sourceLabel = sourceLabel
     )
 
 private fun CsvTransactionsImportRequest.toImportCommand(): ImportTransactionCsvCommand =
     ImportTransactionCsvCommand(
         profileId = parseUuid(profileId),
         csv = csv,
-        skipDuplicates = skipDuplicates
+        skipDuplicates = skipDuplicates,
+        sourceFileName = sourceFileName,
+        sourceLabel = sourceLabel
     )
 
 private fun TransactionImportProfile.toResponse(): TransactionImportProfileResponse =
@@ -256,6 +262,8 @@ private fun TransactionImportPreview.toResponse(): ImportTransactionsPreviewResp
         totalRowCount = totalRowCount,
         importableRowCount = importableRowCount,
         duplicateRowCount = duplicateRowCount,
+        duplicateExistingCount = duplicateExistingCount,
+        duplicateBatchCount = duplicateBatchCount,
         invalidRowCount = invalidRowCount,
         rows = rows.map(TransactionImportPreviewRow::toResponse)
     )

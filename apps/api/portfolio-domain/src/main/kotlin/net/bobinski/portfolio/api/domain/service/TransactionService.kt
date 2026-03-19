@@ -41,7 +41,8 @@ class TransactionService(
 
     suspend fun importAll(
         commands: List<CreateTransactionCommand>,
-        skipDuplicates: Boolean
+        skipDuplicates: Boolean,
+        context: TransactionImportContext? = null
     ): TransactionImportResult {
         val preview = analyzeImport(commands)
         require(preview.invalidRowCount == 0) {
@@ -70,13 +71,15 @@ class TransactionService(
             category = AuditEventCategory.IMPORTS,
             action = "TRANSACTION_BATCH_IMPORTED",
             entityType = "TRANSACTION_BATCH",
-            message = "Imported ${result.createdCount} transaction rows.",
+            message = buildImportMessage(result, context),
             metadata = mapOf(
                 "rowCount" to preview.totalRowCount.toString(),
                 "createdCount" to result.createdCount.toString(),
                 "skippedDuplicateCount" to result.skippedDuplicateCount.toString(),
-                "invalidRowCount" to preview.invalidRowCount.toString()
-            )
+                "invalidRowCount" to preview.invalidRowCount.toString(),
+                "duplicateExistingCount" to preview.duplicateExistingCount.toString(),
+                "duplicateBatchCount" to preview.duplicateBatchCount.toString()
+            ) + (context?.auditMetadata() ?: emptyMap())
         )
         return result
     }
@@ -200,6 +203,8 @@ class TransactionService(
                 it.status == TransactionImportRowStatus.DUPLICATE_EXISTING ||
                     it.status == TransactionImportRowStatus.DUPLICATE_BATCH
             },
+            duplicateExistingCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_EXISTING },
+            duplicateBatchCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_BATCH },
             invalidRowCount = rows.count { it.status == TransactionImportRowStatus.INVALID },
             rows = rows
         )
@@ -274,6 +279,18 @@ class TransactionService(
         settlementDate?.let { put("settlementDate", it.toString()) }
     }
 
+    private fun buildImportMessage(
+        result: TransactionImportResult,
+        context: TransactionImportContext?
+    ): String {
+        val sourceDescription = context?.displaySourceDescription()
+        return if (sourceDescription == null) {
+            "Imported ${result.createdCount} transaction rows."
+        } else {
+            "Imported ${result.createdCount} transaction rows from $sourceDescription."
+        }
+    }
+
     private fun BigDecimal.normalized(): BigDecimal = stripTrailingZeros()
 }
 
@@ -303,6 +320,8 @@ data class TransactionImportPreview(
     val totalRowCount: Int,
     val importableRowCount: Int,
     val duplicateRowCount: Int,
+    val duplicateExistingCount: Int,
+    val duplicateBatchCount: Int,
     val invalidRowCount: Int,
     val rows: List<TransactionImportPreviewRow>
 )
@@ -318,6 +337,27 @@ enum class TransactionImportRowStatus {
     DUPLICATE_EXISTING,
     DUPLICATE_BATCH,
     INVALID
+}
+
+data class TransactionImportContext(
+    val profileId: UUID,
+    val profileName: String,
+    val sourceFileName: String? = null,
+    val sourceLabel: String? = null
+) {
+    fun auditMetadata(): Map<String, String> = buildMap {
+        put("profileId", profileId.toString())
+        put("profileName", profileName)
+        sourceFileName?.let { put("sourceFileName", it) }
+        sourceLabel?.let { put("sourceLabel", it) }
+    }
+
+    fun displaySourceDescription(): String? = when {
+        sourceLabel != null && sourceFileName != null -> "$sourceLabel ($sourceFileName)"
+        sourceLabel != null -> sourceLabel
+        sourceFileName != null -> sourceFileName
+        else -> null
+    }
 }
 
 private data class TransactionFingerprint(

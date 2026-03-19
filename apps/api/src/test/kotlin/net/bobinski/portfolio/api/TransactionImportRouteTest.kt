@@ -163,7 +163,9 @@ class TransactionImportRouteTest {
                 """
                 {
                   "profileId": "$profileId",
-                  "csv": ${jsonString(csv)}
+                  "csv": ${jsonString(csv)},
+                  "sourceFileName": "ibkr-activity-2026-03.csv",
+                  "sourceLabel": "IBKR March 2026 export"
                 }
                 """.trimIndent()
             )
@@ -174,24 +176,107 @@ class TransactionImportRouteTest {
                 """
                 {
                   "profileId": "$profileId",
-                  "csv": ${jsonString(csv)}
+                  "csv": ${jsonString(csv)},
+                  "sourceFileName": "ibkr-activity-2026-03.csv",
+                  "sourceLabel": "IBKR March 2026 export"
                 }
                 """.trimIndent()
             )
         }
         val transactionsResponse = client.get("/v1/transactions")
+        val auditResponse = client.get("/v1/portfolio/audit/events?limit=5&category=IMPORTS")
         val previewBody = previewResponse.bodyAsText()
         val importBody = importResponse.bodyAsText()
         val transactionsBody = transactionsResponse.bodyAsText()
+        val auditBody = auditResponse.bodyAsText()
 
         assertEquals(HttpStatusCode.OK, previewResponse.status)
         assertTrue(previewBody.contains("\"importableRowCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"duplicateExistingCount\": 0"), previewBody)
+        assertTrue(previewBody.contains("\"duplicateBatchCount\": 0"), previewBody)
         assertTrue(previewBody.contains("\"rowNumber\": 2"), previewBody)
         assertEquals(HttpStatusCode.Created, importResponse.status)
         assertTrue(importBody.contains("\"createdCount\": 1"), importBody)
         assertTrue(transactionsBody.contains("\"currency\": \"USD\""), transactionsBody)
         assertTrue(transactionsBody.contains("\"fxRateToPln\": \"3.9876\""), transactionsBody)
         assertTrue(transactionsBody.contains("\"quantity\": \"3.5\""), transactionsBody)
+        assertTrue(auditBody.contains("\"sourceFileName\": \"ibkr-activity-2026-03.csv\""), auditBody)
+        assertTrue(auditBody.contains("\"sourceLabel\": \"IBKR March 2026 export\""), auditBody)
+        assertTrue(auditBody.contains("\"profileName\": \"IBKR activity export\""), auditBody)
+    }
+
+    @Test
+    fun `csv preview exposes duplicate breakdown`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount("Degiro")
+        createInstrument(name = "Vanguard FTSE All-World UCITS ETF", symbol = "VWRA.L", currency = "USD")
+
+        val profileResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Degiro export",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "headerMappings": {
+                    "account": null,
+                    "type": "type",
+                    "tradeDate": "tradeDate",
+                    "settlementDate": null,
+                    "instrument": "instrument",
+                    "quantity": "quantity",
+                    "unitPrice": "unitPrice",
+                    "grossAmount": "grossAmount",
+                    "feeAmount": "feeAmount",
+                    "taxAmount": null,
+                    "currency": null,
+                    "fxRateToPln": null,
+                    "notes": null
+                  },
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val profileId = Regex("\"id\":\\s*\"([^\"]+)\"").find(profileResponse.bodyAsText())!!.groupValues[1]
+        val csv = """
+            type,tradeDate,instrument,quantity,unitPrice,grossAmount,feeAmount
+            BUY,2026-03-10,VWRA.L,1.5,120.10,180.15,0.80
+            BUY,2026-03-10,VWRA.L,1.5,120.10,180.15,0.80
+            BUY,2026-03-11,UNKNOWN,1,50.00,50.00,0
+        """.trimIndent()
+
+        val previewResponse = client.post("/v1/transactions/import/csv/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "profileId": "$profileId",
+                  "csv": ${jsonString(csv)}
+                }
+                """.trimIndent()
+            )
+        }
+        val previewBody = previewResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status)
+        assertTrue(previewBody.contains("\"totalRowCount\": 3"), previewBody)
+        assertTrue(previewBody.contains("\"importableRowCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"duplicateRowCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"duplicateExistingCount\": 0"), previewBody)
+        assertTrue(previewBody.contains("\"duplicateBatchCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"invalidRowCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"status\": \"DUPLICATE_BATCH\""), previewBody)
+        assertTrue(previewBody.contains("\"status\": \"INVALID\""), previewBody)
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(name: String): String {
