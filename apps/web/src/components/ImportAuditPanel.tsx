@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
+import { badge, badgeVariants, filterInput, label } from '../lib/styles'
 
 interface ImportAuditPanelProps {
   title: string
@@ -25,22 +26,23 @@ export function ImportAuditPanel({
 
   return (
     <>
-      <div className="section-header">
-        <p className="eyebrow">Audit</p>
-        <h4>{title}</h4>
-        <p>{description}</p>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Audit</p>
+        <h4 className="mt-1 text-lg font-semibold text-zinc-100">{title}</h4>
+        <p className="mt-1 text-sm text-zinc-500">{description}</p>
       </div>
 
       {latestEvent && (
-        <p className="muted-copy">
+        <p className="text-sm text-zinc-500">
           Latest event: {latestEvent.message} · {formatDateTime(latestEvent.occurredAt)}
         </p>
       )}
 
-      <div className="backup-toolbar">
-        <label className="journal-filter">
-          <span>Outcome</span>
+      <div className="flex items-center gap-3 my-3">
+        <label>
+          <span className={label}>Outcome</span>
           <select
+            className={filterInput}
             value={outcomeFilter}
             onChange={(event) =>
               setOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')
@@ -53,32 +55,32 @@ export function ImportAuditPanel({
         </label>
       </div>
 
-      {eventsQuery.isLoading && <p className="muted-copy">Loading import activity...</p>}
-      {eventsQuery.isError && <p className="form-error">{eventsQuery.error.message}</p>}
+      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">Loading import activity...</p>}
+      {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="muted-copy">No import-related audit events yet.</p>
+        <p className="text-sm text-zinc-500">No import-related audit events yet.</p>
       )}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
-        <div className="audit-feed">
+        <div className="space-y-3">
           {visibleEvents.map((event) => {
             const metadataSummary = buildImportMetadataSummary(event.metadata)
             return (
-              <article className="audit-event" key={event.id}>
-                <div className="audit-event-header">
+              <article className="rounded-lg border border-zinc-800/50 p-3" key={event.id}>
+                <div className="flex items-center justify-between">
                   <div>
-                    <strong>{event.message}</strong>
-                    <p>
+                    <strong className="text-sm font-medium text-zinc-200">{event.message}</strong>
+                    <p className="text-xs text-zinc-500">
                       {event.action} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
                   <span
-                    className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}
+                    className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}
                   >
                     {event.outcome}
                   </span>
                 </div>
-                {metadataSummary && <p className="muted-copy">{metadataSummary}</p>}
-                {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
+                {metadataSummary && <p className="text-sm text-zinc-500">{metadataSummary}</p>}
+                {event.entityId && <p className="text-xs text-zinc-600 font-mono mt-1">{event.entityId}</p>}
               </article>
             )
           })}

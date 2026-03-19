@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { SectionCard } from './SectionCard'
 import { useAccounts, useCreateAccount } from '../hooks/use-write-model'
+import { card, label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
 const initialForm = {
   name: '',
@@ -22,82 +22,90 @@ export function AccountsSection() {
   }
 
   return (
-    <SectionCard
-      eyebrow="Write model"
-      title="Accounts"
-      description="Capture where assets are held before layering portfolio analytics on top."
-    >
-      <div className="section-body">
-        <form className="entity-form" onSubmit={handleSubmit}>
-          <label>
-            <span>Name</span>
-            <input
-              value={form.name}
-              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Interactive Brokers"
-              required
-            />
-          </label>
+    <div className={card}>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Write model</p>
+        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Accounts</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          Capture where assets are held before layering portfolio analytics on top.
+        </p>
+      </div>
 
-          <label>
-            <span>Institution</span>
-            <input
-              value={form.institution}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, institution: event.target.value }))
-              }
-              placeholder="Interactive Brokers"
-              required
-            />
-          </label>
+      <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
+        <div>
+          <span className={labelClass}>Name</span>
+          <input
+            className={input}
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            placeholder="Interactive Brokers"
+            required
+          />
+        </div>
 
-          <label>
-            <span>Type</span>
-            <select
-              value={form.type}
-              onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
-            >
-              <option value="BROKERAGE">BROKERAGE</option>
-              <option value="BOND_REGISTER">BOND_REGISTER</option>
-              <option value="CASH">CASH</option>
-            </select>
-          </label>
+        <div>
+          <span className={labelClass}>Institution</span>
+          <input
+            className={input}
+            value={form.institution}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, institution: event.target.value }))
+            }
+            placeholder="Interactive Brokers"
+            required
+          />
+        </div>
 
-          <label>
-            <span>Base currency</span>
-            <input
-              value={form.baseCurrency}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, baseCurrency: event.target.value.toUpperCase() }))
-              }
-              maxLength={3}
-              required
-            />
-          </label>
+        <div>
+          <span className={labelClass}>Type</span>
+          <select
+            className={input}
+            value={form.type}
+            onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+          >
+            <option value="BROKERAGE">BROKERAGE</option>
+            <option value="BOND_REGISTER">BOND_REGISTER</option>
+            <option value="CASH">CASH</option>
+          </select>
+        </div>
 
-          <button type="submit" disabled={createAccountMutation.isPending}>
+        <div>
+          <span className={labelClass}>Base currency</span>
+          <input
+            className={input}
+            value={form.baseCurrency}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, baseCurrency: event.target.value.toUpperCase() }))
+            }
+            maxLength={3}
+            required
+          />
+        </div>
+
+        <div className="col-span-full flex items-center gap-3 mt-2">
+          <button className={btnPrimary} type="submit" disabled={createAccountMutation.isPending}>
             {createAccountMutation.isPending ? 'Saving...' : 'Add account'}
           </button>
-          {createAccountMutation.error && <p className="form-error">{createAccountMutation.error.message}</p>}
-        </form>
-
-        <div className="entity-list">
-          {accountsQuery.isLoading && <p className="muted-copy">Loading accounts...</p>}
-          {accountsQuery.isError && <p className="form-error">{accountsQuery.error.message}</p>}
-          {accountsQuery.data?.length === 0 && <p className="muted-copy">No accounts yet.</p>}
-          {accountsQuery.data?.map((account) => (
-            <article className="list-item" key={account.id}>
-              <div>
-                <strong>{account.name}</strong>
-                <p>
-                  {account.institution} · {account.type}
-                </p>
-              </div>
-              <span className="list-badge">{account.baseCurrency}</span>
-            </article>
-          ))}
+          {createAccountMutation.error && <p className="text-sm text-red-400">{createAccountMutation.error.message}</p>}
         </div>
+      </form>
+
+      <div className="space-y-3 mt-4">
+        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">Loading accounts...</p>}
+        {accountsQuery.isError && <p className="text-sm text-red-400">{accountsQuery.error.message}</p>}
+        {accountsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">No accounts yet.</p>}
+        {accountsQuery.data?.map((account) => (
+          <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={account.id}>
+            <div>
+              <strong className="text-sm text-zinc-100">{account.name}</strong>
+              <p className="text-sm text-zinc-500">
+                {account.institution} · {account.type}
+              </p>
+            </div>
+            <span className={`${badge} ${badgeVariants.default}`}>{account.baseCurrency}</span>
+          </article>
+        ))}
       </div>
-    </SectionCard>
+    </div>
   )
 }

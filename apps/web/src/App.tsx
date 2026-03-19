@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthGate } from './components/AuthGate'
-import { AppShell } from './components/AppShell'
+import { Layout } from './components/layout'
 
 const DashboardScreen = lazy(async () => {
   const module = await import('./screens/DashboardScreen')
@@ -31,7 +31,7 @@ const SettingsScreen = lazy(async () => {
 export function App() {
   return (
     <AuthGate>
-      <AppShell>
+      <Layout>
         <Suspense fallback={<RouteLoadingState />}>
           <Routes>
             <Route path="/" element={<DashboardScreen />} />
@@ -46,17 +46,17 @@ export function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </AppShell>
+      </Layout>
     </AuthGate>
   )
 }
 
 function RouteLoadingState() {
   return (
-    <div className="page-stack route-loading-state">
-      <p className="eyebrow">Loading</p>
-      <h2 className="page-title">Preparing workspace</h2>
-      <p className="page-copy">Attaching the next screen and its portfolio data.</p>
+    <div className="space-y-3 py-16 text-center">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Loading</p>
+      <h2 className="text-lg font-semibold text-zinc-300">Preparing workspace</h2>
+      <p className="text-sm text-zinc-500">Attaching the next screen and its portfolio data.</p>
     </div>
   )
 }

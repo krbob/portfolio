@@ -1,6 +1,6 @@
-import { SectionCard } from './SectionCard'
 import { useReadModelCacheSnapshots } from '../hooks/use-read-model'
 import { formatBytes, formatDateTime } from '../lib/format'
+import { card, badge, badgeVariants } from '../lib/styles'
 
 export function ReadModelCacheSection() {
   const cacheQuery = useReadModelCacheSnapshots()
@@ -8,70 +8,74 @@ export function ReadModelCacheSection() {
   const totalPayloadBytes = snapshots.reduce((sum, snapshot) => sum + snapshot.payloadSizeBytes, 0)
 
   return (
-    <SectionCard
-      eyebrow="Read models"
-      title="Cached snapshots"
-      description="History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened."
-    >
-      <div className="backup-summary-grid">
-        <article className="transfer-box">
-          <span>Snapshots</span>
-          <strong>{cacheQuery.data ? snapshots.length : '...'}</strong>
-        </article>
-        <article className="transfer-box">
-          <span>Total payload</span>
-          <strong>{cacheQuery.data ? formatBytes(totalPayloadBytes) : '...'}</strong>
-        </article>
-            <article className="transfer-box">
-              <span>Latest generation</span>
-              <strong>{snapshots[0]?.generatedAt ? formatDateTime(snapshots[0].generatedAt) : 'n/a'}</strong>
-            </article>
+    <div className={card}>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Read models</p>
+        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Cached snapshots</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened.
+        </p>
       </div>
 
-      {cacheQuery.isLoading && <p className="muted-copy">Loading read-model cache snapshots...</p>}
-      {cacheQuery.isError && <p className="form-error">{cacheQuery.error.message}</p>}
+      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Snapshots</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? snapshots.length : '...'}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Total payload</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? formatBytes(totalPayloadBytes) : '...'}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Latest generation</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{snapshots[0]?.generatedAt ? formatDateTime(snapshots[0].generatedAt) : 'n/a'}</strong>
+        </article>
+      </div>
+
+      {cacheQuery.isLoading && <p className="text-sm text-zinc-500">Loading read-model cache snapshots...</p>}
+      {cacheQuery.isError && <p className="text-sm text-red-400">{cacheQuery.error.message}</p>}
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length === 0 && (
-        <p className="muted-copy">No cached read models yet. Open history or returns to populate them.</p>
+        <p className="text-sm text-zinc-500">No cached read models yet. Open history or returns to populate them.</p>
       )}
 
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length > 0 && (
-        <div className="backup-list">
+        <div className="space-y-3">
           {snapshots.map((snapshot) => (
-            <article key={snapshot.cacheKey} className="backup-item">
-              <div className="backup-item-header">
+            <article key={snapshot.cacheKey} className="rounded-lg border border-zinc-800/50 p-4">
+              <div className="flex items-start justify-between">
                 <div>
-                  <h4>{snapshot.modelName}</h4>
-                  <p className="muted-copy">
+                  <h4 className="text-sm font-semibold text-zinc-100">{snapshot.modelName}</h4>
+                  <p className="text-sm text-zinc-500">
                     {snapshot.cacheKey} · generated {formatDateTime(snapshot.generatedAt)}
                   </p>
                 </div>
 
-                <span className="status-badge status-valued">{snapshot.invalidationReason}</span>
+                <span className={`${badge} ${badgeVariants.success}`}>{snapshot.invalidationReason}</span>
               </div>
 
-              <dl className="backup-item-meta">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-4">
                 <div>
-                  <dt>Version</dt>
-                  <dd>{snapshot.modelVersion}</dd>
+                  <dt className="text-zinc-500">Version</dt>
+                  <dd className="text-zinc-100">{snapshot.modelVersion}</dd>
                 </div>
                 <div>
-                  <dt>Input window</dt>
-                  <dd>{formatWindow(snapshot.inputsFrom, snapshot.inputsTo)}</dd>
+                  <dt className="text-zinc-500">Input window</dt>
+                  <dd className="text-zinc-100">{formatWindow(snapshot.inputsFrom, snapshot.inputsTo)}</dd>
                 </div>
                 <div>
-                  <dt>Source updated</dt>
-                  <dd>{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
+                  <dt className="text-zinc-500">Source updated</dt>
+                  <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt>Payload</dt>
-                  <dd>{formatBytes(snapshot.payloadSizeBytes)}</dd>
+                  <dt className="text-zinc-500">Payload</dt>
+                  <dd className="text-zinc-100">{formatBytes(snapshot.payloadSizeBytes)}</dd>
                 </div>
               </dl>
             </article>
           ))}
         </div>
       )}
-    </SectionCard>
+    </div>
   )
 }
 

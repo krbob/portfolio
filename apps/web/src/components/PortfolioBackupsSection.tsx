@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { SectionCard } from './SectionCard'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   useDownloadPortfolioBackup,
@@ -8,6 +7,7 @@ import {
   useRunPortfolioBackup,
 } from '../hooks/use-write-model'
 import { formatBytes, formatDateTime } from '../lib/format'
+import { card, label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
 export function PortfolioBackupsSection() {
   const backupsQuery = usePortfolioBackups()
@@ -71,34 +71,39 @@ export function PortfolioBackupsSection() {
     backupOutcomeFilter === 'ALL' ? backupEvents : backupEvents.filter((event) => event.outcome === backupOutcomeFilter)
 
   return (
-    <SectionCard
-      eyebrow="Backups"
-      title="Server snapshots"
-      description="Keep canonical JSON backups on the server, trigger them on demand, and restore a known-good state without downloading files first."
-    >
-      <div className="backup-summary-grid">
-        <article className="transfer-box">
-          <span>Scheduler</span>
-          <strong>{backupsQuery.data?.schedulerEnabled ? 'Enabled' : 'Manual only'}</strong>
+    <div className={card}>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Backups</p>
+        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Server snapshots</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          Keep canonical JSON backups on the server, trigger them on demand, and restore a known-good state without downloading files first.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Scheduler</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data?.schedulerEnabled ? 'Enabled' : 'Manual only'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Interval</span>
-          <strong>{backupsQuery.data ? `${backupsQuery.data.intervalMinutes} min` : '...'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Interval</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.intervalMinutes} min` : '...'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Retention</span>
-          <strong>{backupsQuery.data ? `${backupsQuery.data.retentionCount} files` : '...'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Retention</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} files` : '...'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Stored backups</span>
-          <strong>{backupsQuery.data ? backups.length : '...'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Stored backups</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? backups.length : '...'}</strong>
         </article>
       </div>
 
-      <div className="backup-toolbar">
-        <label className="journal-filter">
-          <span>Restore mode</span>
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <span className={labelClass}>Restore mode</span>
           <select
+            className={filterInput}
             value={restoreMode}
             onChange={(event) => {
               setRestoreMode(event.target.value as 'MERGE' | 'REPLACE')
@@ -108,92 +113,91 @@ export function PortfolioBackupsSection() {
             <option value="MERGE">MERGE</option>
             <option value="REPLACE">REPLACE</option>
           </select>
-        </label>
+        </div>
 
         {restoreMode === 'REPLACE' && (
-          <label className="journal-filter">
-            <span>Type REPLACE</span>
+          <div>
+            <span className={labelClass}>Type REPLACE</span>
             <input
+              className={filterInput}
               type="text"
               value={restoreConfirmation}
               onChange={(event) => setRestoreConfirmation(event.target.value)}
               placeholder="REPLACE"
             />
-          </label>
+          </div>
         )}
 
-        <div className="form-actions">
-          <button type="button" onClick={handleRunBackupClick} disabled={runBackupMutation.isPending || backupsQuery.isLoading}>
-            {runBackupMutation.isPending ? 'Running...' : 'Run backup now'}
-          </button>
-        </div>
+        <button className={btnPrimary} type="button" onClick={handleRunBackupClick} disabled={runBackupMutation.isPending || backupsQuery.isLoading}>
+          {runBackupMutation.isPending ? 'Running...' : 'Run backup now'}
+        </button>
       </div>
 
-      <div className="overview-notes">
-        <p className="muted-copy">Directory: {backupsQuery.data?.directory ?? 'Loading...'}</p>
-        <p className="muted-copy">`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.</p>
-        <p className="muted-copy">
+      <div className="space-y-1 mb-4">
+        <p className="text-sm text-zinc-500">Directory: {backupsQuery.data?.directory ?? 'Loading...'}</p>
+        <p className="text-sm text-zinc-500">`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.</p>
+        <p className="text-sm text-zinc-500">
           Last success: {backupsQuery.data?.lastSuccessAt ? formatDateTime(backupsQuery.data.lastSuccessAt) : 'No successful backup yet.'}
         </p>
         {backupsQuery.data?.lastFailureMessage && (
-          <p className="form-error">
+          <p className="text-sm text-red-400">
             Last failure: {backupsQuery.data.lastFailureAt ? `${formatDateTime(backupsQuery.data.lastFailureAt)}: ` : ''}
             {backupsQuery.data.lastFailureMessage}
           </p>
         )}
       </div>
 
-      {backupsQuery.isLoading && <p className="muted-copy">Loading server backups...</p>}
-      {backupsQuery.isError && <p className="form-error">{backupsQuery.error.message}</p>}
+      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">Loading server backups...</p>}
+      {backupsQuery.isError && <p className="text-sm text-red-400">{backupsQuery.error.message}</p>}
 
       {!backupsQuery.isLoading && !backupsQuery.isError && (
-        <div className="backup-list">
-          {backups.length === 0 && <p className="muted-copy">No server backups have been created yet.</p>}
+        <div className="space-y-3 mb-4">
+          {backups.length === 0 && <p className="text-sm text-zinc-500">No server backups have been created yet.</p>}
 
           {backups.map((backup) => (
-            <article key={backup.fileName} className="backup-item">
-              <div className="backup-item-header">
+            <article key={backup.fileName} className="rounded-lg border border-zinc-800/50 p-4">
+              <div className="flex items-start justify-between">
                 <div>
-                  <h4>{backup.fileName}</h4>
-                  <p className="muted-copy">
+                  <h4 className="text-sm font-semibold text-zinc-100">{backup.fileName}</h4>
+                  <p className="text-sm text-zinc-500">
                     Exported {backup.exportedAt ? formatDateTime(backup.exportedAt) : 'unknown'} · {formatBytes(backup.sizeBytes)}
                   </p>
                 </div>
 
-                <span className={`status-badge ${backup.isReadable ? 'status-valued' : 'status-unavailable'}`}>
+                <span className={`${badge} ${backup.isReadable ? badgeVariants.success : badgeVariants.error}`}>
                   {backup.isReadable ? 'READY' : 'BROKEN'}
                 </span>
               </div>
 
-              <dl className="backup-item-meta">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-5">
                 <div>
-                  <dt>Accounts</dt>
-                  <dd>{backup.accountCount ?? 'n/a'}</dd>
+                  <dt className="text-zinc-500">Accounts</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt>Instruments</dt>
-                  <dd>{backup.instrumentCount ?? 'n/a'}</dd>
+                  <dt className="text-zinc-500">Instruments</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt>Transactions</dt>
-                  <dd>{backup.transactionCount ?? 'n/a'}</dd>
+                  <dt className="text-zinc-500">Transactions</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt>Schema</dt>
-                  <dd>{backup.schemaVersion ?? 'n/a'}</dd>
+                  <dt className="text-zinc-500">Schema</dt>
+                  <dd className="text-zinc-100">{backup.schemaVersion ?? 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt>Created</dt>
-                  <dd>{formatDateTime(backup.createdAt)}</dd>
+                  <dt className="text-zinc-500">Created</dt>
+                  <dd className="text-zinc-100">{formatDateTime(backup.createdAt)}</dd>
                 </div>
               </dl>
 
-              {backup.errorMessage && <p className="holding-note">{backup.errorMessage}</p>}
+              {backup.errorMessage && <p className="mt-2 text-sm text-amber-400">{backup.errorMessage}</p>}
 
-              <div className="backup-item-actions">
+              <div className="flex items-center gap-3 mt-3">
                 <button
                   type="button"
-                  className="button-secondary"
+                  className={btnSecondary}
                   onClick={() => handleDownloadClick(backup.fileName)}
                   disabled={downloadBackupMutation.isPending}
                 >
@@ -201,6 +205,7 @@ export function PortfolioBackupsSection() {
                 </button>
                 <button
                   type="button"
+                  className={btnPrimary}
                   onClick={() => handleRestoreClick(backup.fileName)}
                   disabled={
                     restoreBackupMutation.isPending ||
@@ -216,54 +221,54 @@ export function PortfolioBackupsSection() {
         </div>
       )}
 
-      <div className="section-header">
-        <p className="eyebrow">Audit</p>
-        <h4>Backup activity</h4>
-        <p>Recent backup runs, restores and retention pruning events from the append-only audit log.</p>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Audit</p>
+        <h4 className="mt-1 text-base font-semibold text-zinc-100">Backup activity</h4>
+        <p className="mt-1 text-sm text-zinc-500">Recent backup runs, restores and retention pruning events from the append-only audit log.</p>
       </div>
 
-      <div className="backup-toolbar">
-        <label className="journal-filter">
-          <span>Outcome</span>
-          <select value={backupOutcomeFilter} onChange={(event) => setBackupOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')}>
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <span className={labelClass}>Outcome</span>
+          <select className={filterInput} value={backupOutcomeFilter} onChange={(event) => setBackupOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')}>
             <option value="ALL">ALL</option>
             <option value="SUCCESS">SUCCESS</option>
             <option value="FAILURE">FAILURE</option>
           </select>
-        </label>
+        </div>
       </div>
 
-      {backupEventsQuery.isLoading && <p className="muted-copy">Loading backup activity...</p>}
-      {backupEventsQuery.isError && <p className="form-error">{backupEventsQuery.error.message}</p>}
+      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">Loading backup activity...</p>}
+      {backupEventsQuery.isError && <p className="text-sm text-red-400">{backupEventsQuery.error.message}</p>}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length === 0 && (
-        <p className="muted-copy">No backup-related audit events yet.</p>
+        <p className="text-sm text-zinc-500">No backup-related audit events yet.</p>
       )}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length > 0 && (
-        <div className="audit-feed">
+        <div className="space-y-3">
           {visibleBackupEvents.map((event) => (
-            <article className="audit-event" key={event.id}>
-              <div className="audit-event-header">
+            <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
+              <div className="flex items-start justify-between">
                     <div>
-                      <strong>{event.message}</strong>
-                      <p>
+                      <strong className="text-sm text-zinc-100">{event.message}</strong>
+                      <p className="text-sm text-zinc-500">
                         {event.action} · {formatDateTime(event.occurredAt)}
                       </p>
                     </div>
-                    <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
+                    <span className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}>
                       {event.outcome}
                     </span>
               </div>
-              {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
+              {event.entityId && <p className="mt-1 text-xs font-mono text-zinc-600">{event.entityId}</p>}
             </article>
           ))}
         </div>
       )}
 
       {(feedback || actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
-        <div className="overview-notes">
-          {feedback && <p className="muted-copy">{feedback}</p>}
+        <div className="mt-4 space-y-1">
+          {feedback && <p className="text-sm text-zinc-500">{feedback}</p>}
           {(actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
-            <p className="form-error">
+            <p className="text-sm text-red-400">
               {actionError ??
                 downloadBackupMutation.error?.message ??
                 runBackupMutation.error?.message ??
@@ -272,6 +277,6 @@ export function PortfolioBackupsSection() {
           )}
         </div>
       )}
-    </SectionCard>
+    </div>
   )
 }

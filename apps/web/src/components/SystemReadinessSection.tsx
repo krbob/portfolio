@@ -1,60 +1,66 @@
-import { SectionCard } from './SectionCard'
 import { useAppReadiness } from '../hooks/use-app-readiness'
 import { formatDateTime } from '../lib/format'
+import { card, badge, badgeVariants } from '../lib/styles'
 
 export function SystemReadinessSection() {
   const readinessQuery = useAppReadiness()
   const readiness = readinessQuery.data
 
   return (
-    <SectionCard
-      eyebrow="Health"
-      title="Runtime readiness"
-      description="Verify storage, backups, market-data wiring and authentication before trusting the portfolio state."
-    >
-      {readinessQuery.isLoading && <p className="muted-copy">Checking runtime dependencies...</p>}
-      {readinessQuery.isError && <p className="form-error">{readinessQuery.error.message}</p>}
+    <div className={card}>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Health</p>
+        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Runtime readiness</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          Verify storage, backups, market-data wiring and authentication before trusting the portfolio state.
+        </p>
+      </div>
+
+      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">Checking runtime dependencies...</p>}
+      {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
 
       {readiness && (
         <>
-          <div className="summary-grid readiness-summary-grid">
-            <article className="overview-stat">
-              <span>Overall status</span>
-              <strong>{formatOverallStatus(readiness.status)}</strong>
+          <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
+            <article className="rounded-lg border border-zinc-800/50 p-4">
+              <span className="text-xs text-zinc-500">Overall status</span>
+              <strong className="mt-1 block text-sm text-zinc-100">{formatOverallStatus(readiness.status)}</strong>
             </article>
-            <article className="overview-stat">
-              <span>Blocking issues</span>
-              <strong>{countChecks(readiness.checks, 'FAIL')}</strong>
+            <article className="rounded-lg border border-zinc-800/50 p-4">
+              <span className="text-xs text-zinc-500">Blocking issues</span>
+              <strong className="mt-1 block text-sm text-zinc-100">{countChecks(readiness.checks, 'FAIL')}</strong>
             </article>
-            <article className="overview-stat">
-              <span>Advisory notices</span>
-              <strong>{countChecks(readiness.checks, 'WARN') + countChecks(readiness.checks, 'INFO')}</strong>
+            <article className="rounded-lg border border-zinc-800/50 p-4">
+              <span className="text-xs text-zinc-500">Advisory notices</span>
+              <strong className="mt-1 block text-sm text-zinc-100">
+                {countChecks(readiness.checks, 'WARN') + countChecks(readiness.checks, 'INFO')}
+              </strong>
             </article>
-            <article className="overview-stat">
-              <span>Checked at</span>
-              <strong>{formatDateTime(readiness.checkedAt)}</strong>
+            <article className="rounded-lg border border-zinc-800/50 p-4">
+              <span className="text-xs text-zinc-500">Checked at</span>
+              <strong className="mt-1 block text-sm text-zinc-100">{formatDateTime(readiness.checkedAt)}</strong>
             </article>
           </div>
 
-          <div className="readiness-grid">
+          <div className="space-y-3">
             {readiness.checks.map((check) => (
-              <article className="readiness-check" key={check.key}>
-                <div className="readiness-check-header">
+              <article className="rounded-lg border border-zinc-800/50 p-4" key={check.key}>
+                <div className="flex items-start justify-between">
                   <div>
-                    <strong>{check.label}</strong>
-                    <p className="muted-copy">{check.key}</p>
+                    <strong className="text-sm text-zinc-100">{check.label}</strong>
+                    <p className="text-sm text-zinc-500">{check.key}</p>
                   </div>
-                  <span className={`status-badge ${readinessStatusClassName(check.status)}`}>
+                  <span className={`${badge} ${readinessBadgeVariant(check.status)}`}>
                     {check.status}
                   </span>
                 </div>
-                <p className="readiness-check-message">{check.message}</p>
+                <p className="mt-2 text-sm text-zinc-400">{check.message}</p>
               </article>
             ))}
           </div>
         </>
       )}
-    </SectionCard>
+    </div>
   )
 }
 
@@ -78,17 +84,17 @@ function formatOverallStatus(status: string) {
   }
 }
 
-function readinessStatusClassName(status: string) {
+function readinessBadgeVariant(status: string) {
   switch (status) {
     case 'PASS':
-      return 'status-valued'
+      return badgeVariants.success
     case 'WARN':
-      return 'status-underweight'
+      return badgeVariants.warning
     case 'FAIL':
-      return 'status-unavailable'
+      return badgeVariants.error
     case 'INFO':
-      return 'status-info'
+      return badgeVariants.info
     default:
-      return 'status-unconfigured'
+      return badgeVariants.default
   }
 }

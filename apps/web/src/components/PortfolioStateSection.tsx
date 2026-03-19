@@ -1,5 +1,4 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { SectionCard } from './SectionCard'
 import {
   useAccounts,
   useExportPortfolioState,
@@ -9,6 +8,7 @@ import {
   useTransactions,
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
+import { card, label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioStateSection() {
   const accountsQuery = useAccounts()
@@ -123,101 +123,114 @@ export function PortfolioStateSection() {
   }
 
   return (
-    <SectionCard
-      eyebrow="Transfer"
-      title="Backup and restore"
-      description="Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode."
-    >
-      <div className="transfer-grid">
-        <article className="transfer-box">
-          <span>Accounts</span>
-          <strong>{accountsQuery.data?.length ?? '...'}</strong>
+    <div className={card}>
+      <div className="mb-4">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Transfer</p>
+        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Backup and restore</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Accounts</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Instruments</span>
-          <strong>{instrumentsQuery.data?.length ?? '...'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Instruments</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
         </article>
-        <article className="transfer-box">
-          <span>Transactions</span>
-          <strong>{transactionsQuery.data?.length ?? '...'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Transactions</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{transactionsQuery.data?.length ?? '...'}</strong>
         </article>
       </div>
 
-      <div className="transfer-layout">
-        <div className="transfer-card">
-          <div className="section-header">
-            <p className="eyebrow">Export</p>
-            <h4>Download snapshot</h4>
-            <p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-lg border border-zinc-800/50 p-4">
+          <div className="mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Export</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">Download snapshot</h4>
+            <p className="mt-1 text-sm text-zinc-500">
               Generates a canonical JSON snapshot that includes accounts, instruments and transactions with original ids and timestamps.
             </p>
           </div>
 
-          <div className="form-actions">
-            <button type="button" onClick={handleExportClick} disabled={exportMutation.isPending}>
+          <div className="flex items-center gap-3 mt-2">
+            <button className={btnPrimary} type="button" onClick={handleExportClick} disabled={exportMutation.isPending}>
               {exportMutation.isPending ? 'Exporting...' : 'Export JSON'}
             </button>
           </div>
         </div>
 
-        <form className="transfer-card" onSubmit={handleImportSubmit}>
-          <div className="section-header">
-            <p className="eyebrow">Import</p>
-            <h4>Restore snapshot</h4>
-            <p>
+        <form className="rounded-lg border border-zinc-800/50 p-4" onSubmit={handleImportSubmit}>
+          <div className="mb-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Import</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">Restore snapshot</h4>
+            <p className="mt-1 text-sm text-zinc-500">
               `MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot.
             </p>
-            <p className="muted-copy">`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.</p>
+            <p className="mt-1 text-sm text-zinc-500">`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.</p>
           </div>
 
-          <label className="journal-filter">
-            <span>Import mode</span>
-            <select
-              value={importMode}
-              onChange={(event) => {
-                setImportMode(event.target.value as 'MERGE' | 'REPLACE')
-                setReplaceConfirmation('')
-                setPreviewResult(null)
-                setImportFeedback(null)
-                setImportError(null)
-              }}
-            >
-              <option value="MERGE">MERGE</option>
-              <option value="REPLACE">REPLACE</option>
-            </select>
-          </label>
+          <div className="space-y-3">
+            <div>
+              <span className={labelClass}>Import mode</span>
+              <select
+                className={input}
+                value={importMode}
+                onChange={(event) => {
+                  setImportMode(event.target.value as 'MERGE' | 'REPLACE')
+                  setReplaceConfirmation('')
+                  setPreviewResult(null)
+                  setImportFeedback(null)
+                  setImportError(null)
+                }}
+              >
+                <option value="MERGE">MERGE</option>
+                <option value="REPLACE">REPLACE</option>
+              </select>
+            </div>
 
-          {importMode === 'REPLACE' && (
-            <label className="journal-filter">
-              <span>Type REPLACE</span>
+            {importMode === 'REPLACE' && (
+              <div>
+                <span className={labelClass}>Type REPLACE</span>
+                <input
+                  className={input}
+                  type="text"
+                  value={replaceConfirmation}
+                  onChange={(event) => setReplaceConfirmation(event.target.value)}
+                  placeholder="REPLACE"
+                />
+              </div>
+            )}
+
+            <div>
+              <span className={labelClass}>Snapshot file</span>
               <input
-                type="text"
-                value={replaceConfirmation}
-                onChange={(event) => setReplaceConfirmation(event.target.value)}
-                placeholder="REPLACE"
+                type="file"
+                accept="application/json,.json"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-zinc-400 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-sm file:font-medium file:text-zinc-300 hover:file:bg-zinc-700"
               />
-            </label>
-          )}
+            </div>
+          </div>
 
-          <label className="transfer-file">
-            <span>Snapshot file</span>
-            <input type="file" accept="application/json,.json" onChange={handleFileChange} />
-          </label>
-
-          <p className="muted-copy">
+          <p className="text-sm text-zinc-500 mt-2">
             {selectedFileName !== '' ? `Selected file: ${selectedFileName}` : 'No snapshot file selected yet.'}
           </p>
 
           {previewResult && (
-            <div className="transfer-preview">
-              <div className="holding-header">
-                <h5>Preview summary</h5>
-                <span className={`status-badge ${previewResult.isValid ? 'status-valued' : 'status-unavailable'}`}>
+            <div className="mt-4 rounded-lg border border-zinc-800/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-sm font-semibold text-zinc-100">Preview summary</h5>
+                <span className={`${badge} ${previewResult.isValid ? badgeVariants.success : badgeVariants.error}`}>
                   {previewResult.isValid ? 'VALID' : 'BLOCKED'}
                 </span>
               </div>
 
-              <div className="transfer-preview-grid">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <PreviewMetricCard
                   label="Accounts"
                   snapshotCount={previewResult.snapshotAccountCount}
@@ -238,18 +251,21 @@ export function PortfolioStateSection() {
                 />
               </div>
 
-              <p className="muted-copy">
+              <p className="text-sm text-zinc-500 mt-3">
                 {previewResult.mode === 'REPLACE'
                   ? `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments and ${previewResult.existingTransactionCount} transactions.`
                   : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments and ${previewResult.matchingTransactionCount} transactions by id.`}
               </p>
 
               {previewResult.issues.length > 0 && (
-                <ul className="transfer-issues">
+                <ul className="mt-3 space-y-2">
                   {previewResult.issues.map((issue) => (
-                    <li key={`${issue.code}:${issue.message}`} className={`transfer-issue transfer-issue-${issue.severity.toLowerCase()}`}>
+                    <li
+                      key={`${issue.code}:${issue.message}`}
+                      className={`rounded-lg px-3 py-2 text-sm ${issue.severity === 'ERROR' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}
+                    >
                       <strong>{issue.code}</strong>
-                      <span>{issue.message}</span>
+                      <span className="ml-2">{issue.message}</span>
                     </li>
                   ))}
                 </ul>
@@ -257,11 +273,12 @@ export function PortfolioStateSection() {
             </div>
           )}
 
-          <div className="form-actions">
-            <button type="button" onClick={handlePreviewClick} disabled={previewMutation.isPending || selectedFileContent.trim() === ''}>
+          <div className="flex items-center gap-3 mt-3">
+            <button className={btnSecondary} type="button" onClick={handlePreviewClick} disabled={previewMutation.isPending || selectedFileContent.trim() === ''}>
               {previewMutation.isPending ? 'Previewing...' : 'Preview snapshot'}
             </button>
             <button
+              className={btnPrimary}
               type="submit"
               disabled={
                 importMutation.isPending ||
@@ -279,16 +296,16 @@ export function PortfolioStateSection() {
       </div>
 
       {(importFeedback || importError || exportMutation.error || previewMutation.error || importMutation.error) && (
-        <div className="overview-notes">
-          {importFeedback && <p className="muted-copy">{importFeedback}</p>}
+        <div className="mt-4 space-y-1">
+          {importFeedback && <p className="text-sm text-zinc-500">{importFeedback}</p>}
           {(importError || exportMutation.error || previewMutation.error || importMutation.error) && (
-            <p className="form-error">
+            <p className="text-sm text-red-400">
               {importError ?? exportMutation.error?.message ?? previewMutation.error?.message ?? importMutation.error?.message}
             </p>
           )}
         </div>
       )}
-    </SectionCard>
+    </div>
   )
 }
 
@@ -304,20 +321,20 @@ function PreviewMetricCard({
   matchingCount: number
 }) {
   return (
-    <article className="transfer-preview-card">
-      <span>{label}</span>
-      <dl>
-        <div>
-          <dt>Snapshot</dt>
-          <dd>{snapshotCount}</dd>
+    <article className="rounded-lg border border-zinc-800/50 p-3">
+      <span className="text-xs font-medium text-zinc-400">{label}</span>
+      <dl className="mt-2 space-y-1 text-sm">
+        <div className="flex justify-between">
+          <dt className="text-zinc-500">Snapshot</dt>
+          <dd className="text-zinc-100 tabular-nums">{snapshotCount}</dd>
         </div>
-        <div>
-          <dt>Current</dt>
-          <dd>{existingCount}</dd>
+        <div className="flex justify-between">
+          <dt className="text-zinc-500">Current</dt>
+          <dd className="text-zinc-100 tabular-nums">{existingCount}</dd>
         </div>
-        <div>
-          <dt>Matching ids</dt>
-          <dd>{matchingCount}</dd>
+        <div className="flex justify-between">
+          <dt className="text-zinc-500">Matching ids</dt>
+          <dd className="text-zinc-100 tabular-nums">{matchingCount}</dd>
         </div>
       </dl>
     </article>

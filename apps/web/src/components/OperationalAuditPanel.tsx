@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
+import { badge, badgeVariants, filterInput, label as labelClass } from '../lib/styles'
 
 const CATEGORY_OPTIONS = [
   'ALL',
@@ -53,29 +54,30 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
 
   return (
     <>
-      <div className="summary-grid operational-audit-summary">
-        <article className="overview-stat">
-          <span>Events in window</span>
-          <strong>{events.length}</strong>
+      <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Events in window</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
         </article>
-        <article className="overview-stat">
-          <span>Failures</span>
-          <strong>{failureCount}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Failures</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{failureCount}</strong>
         </article>
-        <article className="overview-stat">
-          <span>High impact</span>
-          <strong>{highImpactCount}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">High impact</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{highImpactCount}</strong>
         </article>
-        <article className="overview-stat">
-          <span>Latest failure</span>
-          <strong>{latestFailure ? formatDateTime(latestFailure.occurredAt) : 'None'}</strong>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Latest failure</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{latestFailure ? formatDateTime(latestFailure.occurredAt) : 'None'}</strong>
         </article>
       </div>
 
-      <div className="backup-toolbar operational-audit-toolbar">
-        <label className="journal-filter">
-          <span>Category</span>
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <span className={labelClass}>Category</span>
           <select
+            className={filterInput}
             aria-label="Category"
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
@@ -86,11 +88,12 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label className="journal-filter">
-          <span>Outcome</span>
+        <div>
+          <span className={labelClass}>Outcome</span>
           <select
+            className={filterInput}
             aria-label="Outcome"
             value={outcomeFilter}
             onChange={(event) => setOutcomeFilter(event.target.value as OutcomeFilter)}
@@ -101,11 +104,12 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label className="journal-filter">
-          <span>Impact</span>
+        <div>
+          <span className={labelClass}>Impact</span>
           <select
+            className={filterInput}
             aria-label="Impact"
             value={impactFilter}
             onChange={(event) => setImpactFilter(event.target.value as ImpactFilter)}
@@ -113,43 +117,43 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
             <option value="ALL">ALL</option>
             <option value="HIGH_IMPACT_ONLY">HIGH IMPACT ONLY</option>
           </select>
-        </label>
+        </div>
       </div>
 
-      {eventsQuery.isLoading && <p className="muted-copy">Loading operational activity...</p>}
-      {eventsQuery.isError && <p className="form-error">{eventsQuery.error.message}</p>}
+      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">Loading operational activity...</p>}
+      {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="muted-copy">No operational audit events match the current filters.</p>
+        <p className="text-sm text-zinc-500">No operational audit events match the current filters.</p>
       )}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
-        <div className="audit-feed">
+        <div className="space-y-3">
           {visibleEvents.map((event) => {
             const metadataSummary = buildMetadataSummary(event.metadata)
             const highImpact = isHighImpactAction(event.action)
             return (
-              <article className="audit-event" key={event.id}>
-                <div className="audit-event-header">
+              <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
+                <div className="flex items-start justify-between">
                   <div>
-                    <strong>{humanizeAction(event.action)}</strong>
-                    <p>
+                    <strong className="text-sm text-zinc-100">{humanizeAction(event.action)}</strong>
+                    <p className="text-sm text-zinc-500">
                       {event.category} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
-                  <div className="audit-event-tags">
-                    {highImpact ? <span className="status-badge status-underweight">HIGH IMPACT</span> : null}
+                  <div className="flex items-center gap-2">
+                    {highImpact ? <span className={`${badge} ${badgeVariants.warning}`}>HIGH IMPACT</span> : null}
                     <span
-                      className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}
+                      className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}
                     >
                       {event.outcome}
                     </span>
                   </div>
                 </div>
 
-                <p>{event.message}</p>
-                {metadataSummary ? <p className="muted-copy">{metadataSummary}</p> : null}
-                {event.entityId ? <p className="audit-event-entity">{event.entityId}</p> : null}
+                <p className="mt-2 text-sm text-zinc-300">{event.message}</p>
+                {metadataSummary ? <p className="text-sm text-zinc-500">{metadataSummary}</p> : null}
+                {event.entityId ? <p className="mt-1 text-xs font-mono text-zinc-600">{event.entityId}</p> : null}
               </article>
             )
           })}

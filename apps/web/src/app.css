@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}

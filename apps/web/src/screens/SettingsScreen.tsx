@@ -1,7 +1,7 @@
 import { AccountsSection } from '../components/AccountsSection'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
-import { PageIntro } from '../components/PageIntro'
+import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
@@ -10,35 +10,33 @@ import { SystemReadinessSection } from '../components/SystemReadinessSection'
 
 export function SettingsScreen() {
   return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Operations"
-        title="Settings"
-        description="Keep backups, reference data and diagnostics in one operational workspace."
-      />
+    <>
+      <PageHeader title="Settings" />
 
-      <SystemReadinessSection />
+      <div className="space-y-8">
+        <SystemReadinessSection />
 
-      <section className="workspace-grid">
-        <AccountsSection />
-        <InstrumentsSection />
-      </section>
+        <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <AccountsSection />
+          <InstrumentsSection />
+        </section>
 
-      <PortfolioStateSection />
+        <PortfolioStateSection />
 
-      <SectionCard
-        eyebrow="Audit"
-        title="Operational activity"
-        description="Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace."
-      >
-        <OperationalAuditPanel />
-      </SectionCard>
+        <SectionCard
+          eyebrow="Audit"
+          title="Operational activity"
+          description="Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace."
+        >
+          <OperationalAuditPanel />
+        </SectionCard>
 
-      <div id="backups">
-        <PortfolioBackupsSection />
+        <div id="backups">
+          <PortfolioBackupsSection />
+        </div>
+
+        <ReadModelCacheSection />
       </div>
-
-      <ReadModelCacheSection />
-    </div>
+    </>
   )
 }

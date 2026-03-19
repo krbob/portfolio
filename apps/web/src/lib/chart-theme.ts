@@ -1,21 +1,35 @@
 import { ColorType } from 'lightweight-charts'
 
 export const chartPalette = {
-  text: '#a1a1aa',
-  grid: 'rgba(255, 255, 255, 0.05)',
-  border: 'rgba(255, 255, 255, 0.12)',
-  crosshair: 'rgba(255, 255, 255, 0.18)',
-  portfolio: '#f4f4f5',
-  equities: '#60a5fa',
-  bonds: '#f59e0b',
-  cash: '#22d3ee',
-  contributions: '#71717a',
-  positiveFill: 'rgba(96, 165, 250, 0.22)',
-  positiveFade: 'rgba(96, 165, 250, 0.02)',
-  amberFill: 'rgba(245, 158, 11, 0.2)',
-  amberFade: 'rgba(245, 158, 11, 0.03)',
-  cyanFill: 'rgba(34, 211, 238, 0.18)',
-  cyanFade: 'rgba(34, 211, 238, 0.03)',
+  // Chrome
+  text: '#a1a1aa',       // zinc-400
+  grid: '#27272a',       // zinc-800
+  border: '#3f3f46',     // zinc-700
+  crosshair: '#52525b',  // zinc-600
+
+  // Series
+  portfolio: '#3b82f6',  // blue-500 — primary PLN area
+  equities: '#3b82f6',   // blue-500
+  bonds: '#f59e0b',      // amber-500
+  cash: '#71717a',       // zinc-500
+  contributions: '#52525b', // zinc-600 dashed
+
+  // Area fills
+  portfolioFill: 'rgba(59, 130, 246, 0.18)',
+  portfolioFade: 'rgba(59, 130, 246, 0.02)',
+  equityFill: 'rgba(59, 130, 246, 0.18)',
+  equityFade: 'rgba(59, 130, 246, 0.02)',
+  bondFill: 'rgba(245, 158, 11, 0.15)',
+  bondFade: 'rgba(245, 158, 11, 0.02)',
+  cashFill: 'rgba(113, 113, 122, 0.12)',
+  cashFade: 'rgba(113, 113, 122, 0.02)',
+
+  // Extra series
+  usd: '#8b5cf6',        // violet-500
+  gold: '#d97706',       // amber-600
+  vwra: '#a1a1aa',       // zinc-400
+  inflation: '#f59e0b',  // amber-500
+  targetMix: '#52525b',  // zinc-600
 } as const
 
 export function createPortfolioChartOptions(width: number, height: number) {
@@ -23,7 +37,7 @@ export function createPortfolioChartOptions(width: number, height: number) {
     layout: {
       background: { type: ColorType.Solid, color: 'transparent' },
       textColor: chartPalette.text,
-      fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
     },
     grid: {
       vertLines: { color: chartPalette.grid },
@@ -36,8 +50,8 @@ export function createPortfolioChartOptions(width: number, height: number) {
       borderColor: chartPalette.border,
     },
     crosshair: {
-      vertLine: { color: chartPalette.crosshair },
-      horzLine: { color: chartPalette.grid },
+      vertLine: { color: chartPalette.crosshair, style: 3 },
+      horzLine: { color: chartPalette.crosshair, style: 3 },
     },
     width,
     height,

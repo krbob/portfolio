@@ -227,64 +227,7 @@ describe('App', () => {
         return new Response(
           JSON.stringify({
             asOf: '2026-03-13',
-            periods: [
-              {
-                key: 'YTD',
-                label: 'YTD',
-                requestedFrom: '2026-01-01',
-                from: '2026-01-01',
-                until: '2026-03-13',
-                clippedToInception: false,
-                dayCount: 71,
-                nominalPln: {
-                  moneyWeightedReturn: '0.0412',
-                  annualizedMoneyWeightedReturn: '0.2263',
-                  timeWeightedReturn: '0.0389',
-                  annualizedTimeWeightedReturn: '0.2114',
-                },
-                nominalUsd: {
-                  moneyWeightedReturn: '0.0381',
-                  annualizedMoneyWeightedReturn: '0.2070',
-                  timeWeightedReturn: '0.0350',
-                  annualizedTimeWeightedReturn: '0.1902',
-                },
-                realPln: {
-                  moneyWeightedReturn: '0.0198',
-                  annualizedMoneyWeightedReturn: '0.1048',
-                  timeWeightedReturn: '0.0176',
-                  annualizedTimeWeightedReturn: '0.0935',
-                },
-                inflationFrom: '2026-01',
-                inflationUntil: '2026-03',
-                inflationMultiplier: '1.021',
-                benchmarks: [
-                  {
-                    key: 'VWRA',
-                    label: 'VWRA benchmark',
-                    nominalPln: {
-                      moneyWeightedReturn: '0.0320',
-                      annualizedMoneyWeightedReturn: '0.1722',
-                      timeWeightedReturn: '0.0320',
-                      annualizedTimeWeightedReturn: '0.1722',
-                    },
-                    excessTimeWeightedReturn: '0.0069',
-                    excessAnnualizedTimeWeightedReturn: '0.0392',
-                  },
-                  {
-                    key: 'INFLATION',
-                    label: 'Inflation benchmark',
-                    nominalPln: {
-                      moneyWeightedReturn: '0.0100',
-                      annualizedMoneyWeightedReturn: '0.0527',
-                      timeWeightedReturn: '0.0100',
-                      annualizedTimeWeightedReturn: '0.0527',
-                    },
-                    excessTimeWeightedReturn: '0.0289',
-                    excessAnnualizedTimeWeightedReturn: '0.1587',
-                  },
-                ],
-              },
-            ],
+            periods: [],
           }),
           { status: 200 },
         )
@@ -299,109 +242,18 @@ describe('App', () => {
             targetWeightSumPct: '100.00',
             totalCurrentValuePln: '2095.00',
             availableCashPln: '995.00',
-            buckets: [
-              {
-                assetClass: 'EQUITIES',
-                currentValuePln: '1100.00',
-                currentWeightPct: '52.51',
-                targetWeightPct: '80.00',
-                targetValuePln: '1676.00',
-                driftPctPoints: '-27.49',
-                gapValuePln: '576.00',
-                suggestedContributionPln: '576.00',
-                status: 'UNDERWEIGHT',
-              },
-              {
-                assetClass: 'BONDS',
-                currentValuePln: '0.00',
-                currentWeightPct: '0.00',
-                targetWeightPct: '20.00',
-                targetValuePln: '419.00',
-                driftPctPoints: '-20.00',
-                gapValuePln: '419.00',
-                suggestedContributionPln: '419.00',
-                status: 'UNDERWEIGHT',
-              },
-              {
-                assetClass: 'CASH',
-                currentValuePln: '995.00',
-                currentWeightPct: '47.49',
-                targetWeightPct: '0.00',
-                targetValuePln: '0.00',
-                driftPctPoints: '47.49',
-                gapValuePln: '-995.00',
-                suggestedContributionPln: '0.00',
-                status: 'OVERWEIGHT',
-              },
-            ],
+            buckets: [],
           }),
           { status: 200 },
         )
       }
 
       if (url.includes('/api/v1/portfolio/audit/events')) {
-        return new Response(
-          JSON.stringify([
-            {
-              id: 'audit-1',
-              category: 'IMPORTS',
-              action: 'TRANSACTION_BATCH_IMPORTED',
-              outcome: 'SUCCESS',
-              entityType: 'TRANSACTION_BATCH',
-              entityId: null,
-              message: 'Imported 2 transaction rows.',
-              metadata: {
-                rowCount: '2',
-                createdCount: '2',
-                skippedDuplicateCount: '0',
-              },
-              occurredAt: '2026-03-13T18:05:00Z',
-            },
-            {
-              id: 'audit-2',
-              category: 'BACKUPS',
-              action: 'BACKUP_CREATED',
-              outcome: 'SUCCESS',
-              entityType: 'BACKUP',
-              entityId: 'portfolio-backup-20260313T180000000Z.json',
-              message: 'Created manual backup portfolio-backup-20260313T180000000Z.json.',
-              metadata: {
-                trigger: 'MANUAL',
-              },
-              occurredAt: '2026-03-13T18:00:00Z',
-            },
-          ]),
-          { status: 200 },
-        )
+        return new Response(JSON.stringify([]), { status: 200 })
       }
 
       if (url.includes('/api/v1/portfolio/targets')) {
-        return new Response(
-          JSON.stringify([
-            {
-              id: 'target-1',
-              assetClass: 'EQUITIES',
-              targetWeight: '0.80',
-              createdAt: '2026-03-13T10:00:00Z',
-              updatedAt: '2026-03-13T10:00:00Z',
-            },
-            {
-              id: 'target-2',
-              assetClass: 'BONDS',
-              targetWeight: '0.20',
-              createdAt: '2026-03-13T10:00:00Z',
-              updatedAt: '2026-03-13T10:00:00Z',
-            },
-            {
-              id: 'target-3',
-              assetClass: 'CASH',
-              targetWeight: '0.00',
-              createdAt: '2026-03-13T10:00:00Z',
-              updatedAt: '2026-03-13T10:00:00Z',
-            },
-          ]),
-          { status: 200 },
-        )
+        return new Response(JSON.stringify([]), { status: 200 })
       }
 
       if (url.includes('/api/v1/portfolio/backups')) {
@@ -412,24 +264,11 @@ describe('App', () => {
             intervalMinutes: 1440,
             retentionCount: 30,
             running: false,
-            lastRunAt: '2026-03-13T18:00:00Z',
-            lastSuccessAt: '2026-03-13T18:00:00Z',
+            lastRunAt: null,
+            lastSuccessAt: null,
             lastFailureAt: null,
             lastFailureMessage: null,
-            backups: [
-              {
-                fileName: 'portfolio-backup-20260313T180000000Z.json',
-                createdAt: '2026-03-13T18:00:01Z',
-                exportedAt: '2026-03-13T18:00:00Z',
-                sizeBytes: 4096,
-                schemaVersion: 1,
-                accountCount: 1,
-                instrumentCount: 1,
-                transactionCount: 2,
-                isReadable: true,
-                errorMessage: null,
-              },
-            ],
+            backups: [],
           }),
           { status: 200 },
         )
@@ -458,21 +297,21 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
+    // Sidebar navigation links
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
-    expect((await screen.findAllByText(/portfolio dev/i)).length).toBeGreaterThan(0)
-    expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /allocation snapshot/i })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /portfolio health/i })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /recent activity/i })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /next actions/i })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /target allocation and rebalancing/i })).toBeInTheDocument()
-    expect(await screen.findByText(/1 items still require attention\./i)).toBeInTheDocument()
-    expect(await screen.findByText(/imported 2 transaction rows\./i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /inspect holdings/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /manage transactions/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /check backups/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
+
+    // Sidebar system status
+    expect(await screen.findByText(/sqlite · dev/i)).toBeInTheDocument()
+    expect(await screen.findByText(/healthy/i)).toBeInTheDocument()
+
+    // Dashboard page header
+    expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()
+
+    // Dashboard stat cards
+    expect(await screen.findByText(/total value/i)).toBeInTheDocument()
+    expect(await screen.findByText(/daily change/i)).toBeInTheDocument()
   })
 
   it('shows the login gate when password auth is enabled', async () => {
@@ -530,7 +369,8 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /portfolio is locked/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    expect(await screen.findByPlaceholderText(/enter password/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /unlock/i })).toBeInTheDocument()
+    expect(screen.getByText(/self-hosted portfolio tracker/i)).toBeInTheDocument()
   })
 })
