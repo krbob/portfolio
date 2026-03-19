@@ -429,6 +429,7 @@ textarea::placeholder {
 .benchmark-card,
 .allocation-bucket-card,
 .holding-item,
+.holdings-detail-card,
 .backup-item,
 .shortcut-card,
 .audit-event {
@@ -505,6 +506,125 @@ textarea::placeholder {
 .shortcut-card:hover {
   border-color: var(--border-strong);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.holdings-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.holdings-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.holdings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.holdings-table-shell {
+  overflow-x: auto;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.holdings-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.holdings-table th,
+.holdings-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.holdings-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.holdings-table th {
+  color: var(--text-soft);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.holdings-sort-button {
+  display: inline-flex;
+  min-height: auto;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.holdings-sort-button:hover,
+.holdings-sort-button-active {
+  background: none;
+  border: 0;
+  color: var(--text-primary);
+}
+
+.holdings-row {
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.holdings-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.holdings-row-selected {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.holdings-cell-primary {
+  display: grid;
+  gap: 4px;
+}
+
+.holdings-cell-primary span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.holdings-numeric {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.holdings-detail-card {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.holdings-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.holdings-detail-header h3 {
+  font-size: 1.25rem;
+}
+
+.holdings-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .status-badge {
@@ -584,7 +704,8 @@ textarea::placeholder {
   .dashboard-stat-grid,
   .summary-grid,
   .detail-grid,
-  .workspace-grid {
+  .workspace-grid,
+  .holdings-detail-grid {
     grid-template-columns: 1fr;
   }
 }

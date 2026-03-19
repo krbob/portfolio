@@ -5,9 +5,9 @@ export function HoldingsScreen() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Read model"
+        eyebrow="Investing"
         title="Holdings"
-        description="Inspect active positions grouped by account and instrument, with cost basis, current valuation and valuation coverage status."
+        description="Scan positions quickly, filter by account or asset class, and inspect one holding in detail without losing portfolio context."
       />
       <HoldingsSection />
     </div>

@@ -49,7 +49,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - standardize period switchers, legends, benchmark presentation, and chart cards
 - keep performance screens optimized for read-heavy usage
 
-### 0.4 Holdings rewrite (later)
+### 0.4 Holdings rewrite (done)
 
 - replace the current mixed section/card view with a dense, deliberate holdings table
 - improve grouping, sorting, filters, and position drilldown
