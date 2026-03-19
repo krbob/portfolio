@@ -4,7 +4,7 @@ import { PortfolioValueChart, AllocationTimeChart, BenchmarkChart } from '../com
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, StatePanel, TabBar, SegmentedControl } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
-import { formatCurrencyPln, formatPercent } from '../lib/format'
+import { formatCurrencyPln, formatPercent, formatYearMonth } from '../lib/format'
 import { card, th, thRight, td, tdRight, tr } from '../lib/styles'
 
 type Period = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
@@ -84,16 +84,7 @@ export function PerformanceScreen() {
 
   return (
     <>
-      <PageHeader title="Performance">
-        {tab === 'charts' ? (
-          <SegmentedControl
-            options={PERIODS.map((p) => ({ value: p, label: p }))}
-            value={period}
-            onChange={(v) => setPeriod(v as Period)}
-            ariaLabel="Performance chart period"
-          />
-        ) : null}
-      </PageHeader>
+      <PageHeader title="Performance" />
 
       {/* Top stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -131,6 +122,8 @@ export function PerformanceScreen() {
             <ChartsTab
               historyQuery={historyQuery}
               points={filteredPoints}
+              period={period}
+              onPeriodChange={setPeriod}
               unit={unit}
               onUnitChange={setUnit}
               series={series}
@@ -155,12 +148,16 @@ export function PerformanceScreen() {
 function ChartsTab({
   historyQuery,
   points,
+  period,
+  onPeriodChange,
   unit,
   onUnitChange,
   series,
 }: {
   historyQuery: ReturnType<typeof usePortfolioDailyHistory>
   points: PortfolioDailyHistoryPoint[]
+  period: Period
+  onPeriodChange: (period: Period) => void
   unit: Unit
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
@@ -198,18 +195,29 @@ function ChartsTab({
     <div className="space-y-4">
       {/* Portfolio Value Chart */}
       <div className={card}>
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-400">Unit</span>
-          <SegmentedControl
-            options={[
-              { value: 'PLN', label: 'PLN' },
-              { value: 'USD', label: 'USD' },
-              { value: 'AU', label: 'Gold' },
-            ]}
-            value={unit}
-            onChange={(v) => onUnitChange(v as Unit)}
-            ariaLabel="Performance chart unit"
-          />
+        <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-zinc-400">Range</span>
+            <SegmentedControl
+              options={PERIODS.map((value) => ({ value, label: value }))}
+              value={period}
+              onChange={(value) => onPeriodChange(value as Period)}
+              ariaLabel="Performance chart period"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-zinc-400">Unit</span>
+            <SegmentedControl
+              options={[
+                { value: 'PLN', label: 'PLN' },
+                { value: 'USD', label: 'USD' },
+                { value: 'AU', label: 'Gold' },
+              ]}
+              value={unit}
+              onChange={(value) => onUnitChange(value as Unit)}
+              ariaLabel="Performance chart unit"
+            />
+          </div>
         </div>
         <PortfolioValueChart
           points={points}
@@ -268,6 +276,8 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
     )
   }
 
+  const realCoverageUntil = findRealPlnCoverageMonth(data.periods)
+
   return (
     <div className="space-y-4">
       {/* Returns table */}
@@ -317,6 +327,11 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
           </tbody>
         </table>
       </div>
+      {realCoverageUntil ? (
+        <p className="text-xs text-zinc-500">
+          Real PLN uses CPI-covered full months only; current CPI coverage through {realCoverageUntil}.
+        </p>
+      ) : null}
 
       {/* Benchmark comparisons per period */}
       {data.periods
@@ -408,4 +423,28 @@ function returnColor(value: string | null | undefined) {
   if (n > 0) return 'text-emerald-400'
   if (n < 0) return 'text-red-400'
   return 'text-zinc-400'
+}
+
+function findRealPlnCoverageMonth(periods: PortfolioReturnPeriod[]) {
+  const exclusiveCoverageMonth = periods
+    .map((period) => period.inflationUntil)
+    .find((value): value is string => Boolean(value))
+
+  if (!exclusiveCoverageMonth) {
+    return null
+  }
+
+  const match = /^(\d{4})-(\d{2})$/.exec(exclusiveCoverageMonth)
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (Number.isNaN(year) || Number.isNaN(month)) {
+    return null
+  }
+
+  const coverageDate = new Date(Date.UTC(year, month - 2, 1))
+  return formatYearMonth(`${coverageDate.getUTCFullYear()}-${String(coverageDate.getUTCMonth() + 1).padStart(2, '0')}`)
 }

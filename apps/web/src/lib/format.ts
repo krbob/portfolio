@@ -20,6 +20,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   minute: '2-digit',
 })
 
+const monthFormatter = new Intl.DateTimeFormat(LOCALE, {
+  year: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+})
+
 const numberFormatter = new Intl.NumberFormat(LOCALE, {
   maximumFractionDigits: 2,
 })
@@ -137,6 +143,25 @@ export function formatDate(value: string | number | Date | null | undefined) {
     return 'n/a'
   }
   return dateFormatter.format(date)
+}
+
+export function formatYearMonth(value: string | null | undefined) {
+  if (!value) {
+    return 'n/a'
+  }
+
+  const match = /^(\d{4})-(\d{2})$/.exec(value)
+  if (!match) {
+    return 'n/a'
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
+    return 'n/a'
+  }
+
+  return monthFormatter.format(new Date(Date.UTC(year, month - 1, 1)))
 }
 
 export function formatBytes(sizeBytes: number) {
