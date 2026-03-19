@@ -65,10 +65,23 @@ const operationsNav: NavItem[] = [
   },
 ]
 
-function NavSection({ label, items }: { label: string; items: NavItem[] }) {
+interface SidebarProps {
+  className?: string
+  onNavigate?: () => void
+}
+
+function NavSection({
+  label,
+  items,
+  onNavigate,
+}: {
+  label: string
+  items: NavItem[]
+  onNavigate?: () => void
+}) {
   return (
     <div className="mb-6">
-      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-zinc-600 max-lg:sr-only">
+      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
         {label}
       </span>
       <ul className="flex flex-col gap-0.5">
@@ -78,16 +91,17 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
               to={item.to}
               end={item.end}
               title={item.label}
+              onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors max-lg:justify-center max-lg:px-0 max-lg:py-2 ${
+                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'border-l-2 border-blue-500 bg-zinc-800 text-zinc-100 pl-2.5 max-lg:border-l-0 max-lg:pl-0'
+                    ? 'border-l-2 border-blue-500 bg-zinc-800 text-zinc-100 pl-2.5'
                     : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'
                 }`
               }
             >
               {item.icon}
-              <span className="max-lg:hidden">{item.label}</span>
+              <span>{item.label}</span>
             </NavLink>
           </li>
         ))}
@@ -96,7 +110,7 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   const metaQuery = useAppMeta()
   const readinessQuery = useAppReadiness()
   const authSessionQuery = useAuthSession()
@@ -105,41 +119,39 @@ export function Sidebar() {
   const systemStatus = resolveStatus(metaQuery.isError, readinessQuery.isError, readinessQuery.data?.status)
 
   return (
-    <nav className="flex w-16 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/50 lg:w-60">
-      <div className="px-3 py-6 lg:px-5">
-        <h1 className="text-center text-xl font-bold tracking-tight text-zinc-100 lg:text-left">
-          <span className="lg:hidden">P</span>
-          <span className="max-lg:hidden">Portfolio</span>
-        </h1>
-        <p className="mt-1 text-xs text-zinc-600 max-lg:hidden">Long-term investing workspace</p>
+    <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`}>
+      <div className="px-5 py-6">
+        <h1 className="text-xl font-bold tracking-tight text-zinc-100">Portfolio</h1>
+        <p className="mt-1 text-xs text-zinc-600">Long-term investing workspace</p>
       </div>
 
-      <div className="flex-1 px-2 lg:px-3">
-        <NavSection label="Investing" items={investingNav} />
-        <NavSection label="Operations" items={operationsNav} />
+      <div className="flex-1 overflow-y-auto px-3">
+        <NavSection label="Investing" items={investingNav} onNavigate={onNavigate} />
+        <NavSection label="Operations" items={operationsNav} onNavigate={onNavigate} />
       </div>
 
-      <div className="border-t border-zinc-800 px-2 py-4 lg:px-4">
-        <div className="flex items-center gap-2 max-lg:justify-center">
+      <div className="border-t border-zinc-800 px-4 py-4">
+        <div className="flex items-center gap-2">
           <StatusDot status={systemStatus.dot} />
-          <span className="text-xs text-zinc-500 max-lg:hidden">{systemStatus.label}</span>
+          <span className="text-xs text-zinc-500">{systemStatus.label}</span>
         </div>
         {metaQuery.data && (
-          <p className="mt-1 text-xs text-zinc-600 max-lg:hidden">
+          <p className="mt-1 text-xs text-zinc-600">
             {metaQuery.data.stack.database} · {metaQuery.data.stage}
           </p>
         )}
         {authSessionQuery.data?.authEnabled && (
           <button
-            className={`mt-2 w-full text-left max-lg:text-center ${btnGhost}`}
-            onClick={() => logoutMutation.mutate()}
+            type="button"
+            className={`mt-2 w-full text-left ${btnGhost}`}
+            onClick={() => {
+              onNavigate?.()
+              logoutMutation.mutate()
+            }}
             disabled={logoutMutation.isPending}
             title="Sign out"
           >
-            <span className="max-lg:hidden">{logoutMutation.isPending ? 'Signing out...' : 'Sign out'}</span>
-            <svg className="mx-auto h-4 w-4 lg:hidden" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-            </svg>
+            {logoutMutation.isPending ? 'Signing out...' : 'Sign out'}
           </button>
         )}
       </div>
