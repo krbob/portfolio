@@ -55,7 +55,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - improve grouping, sorting, filters, and position drilldown
 - make valuation quality and asset-allocation context easy to read at a glance
 
-### 0.5 Transactions rewrite (later)
+### 0.5 Transactions rewrite (done)
 
 - split journal, import, profiles, and import history into clearer flows
 - keep preview and conflict handling visible before destructive or bulk actions

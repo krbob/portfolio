@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { SectionCard } from './SectionCard'
+import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   useAccounts,
   useCreateTransaction,
@@ -14,6 +15,7 @@ import {
   useUpdateTransaction,
   useUpdateTransactionImportProfile,
 } from '../hooks/use-write-model'
+import { formatDateTime } from '../lib/format'
 import type {
   ImportTransactionsPreviewResult,
   SaveTransactionImportProfilePayload,
@@ -87,6 +89,8 @@ interface JournalRow {
   instrumentSymbol: string | null
 }
 
+type TransactionsWorkspace = 'journal' | 'import' | 'profiles'
+
 const importMappingFields: Array<{
   key: ImportMappingField
   label: string
@@ -113,6 +117,7 @@ export function TransactionsSection() {
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
   const transactionImportProfilesQuery = useTransactionImportProfiles()
+  const importEventsQuery = usePortfolioAuditEvents({ limit: 8, category: 'IMPORTS' })
   const createTransactionMutation = useCreateTransaction()
   const updateTransactionMutation = useUpdateTransaction()
   const deleteTransactionMutation = useDeleteTransaction()
@@ -134,6 +139,7 @@ export function TransactionsSection() {
   const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
+  const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
@@ -275,6 +281,8 @@ export function TransactionsSection() {
     importPreview &&
       (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),
   )
+  const importEvents = importEventsQuery.data ?? []
+  const latestImportEvent = importEvents[0] ?? null
 
   useEffect(() => {
     if (selectedImportProfileId === null) {
@@ -372,6 +380,7 @@ export function TransactionsSection() {
   }
 
   function startEditing(transaction: Transaction) {
+    setActiveWorkspace('journal')
     setEditingTransactionId(transaction.id)
     setForm({
       accountId: transaction.accountId,
@@ -436,6 +445,7 @@ export function TransactionsSection() {
     setImportProfileFeedback(null)
     setPendingSavedImportProfile(null)
     setSelectedImportProfileId(NEW_IMPORT_PROFILE_ID)
+    setActiveWorkspace('profiles')
   }
 
   function handleImportProfileSubmit(event: FormEvent<HTMLFormElement>) {
@@ -554,197 +564,238 @@ export function TransactionsSection() {
     <SectionCard
       eyebrow="Write model"
       title="Transactions"
-      description="Cash flows and trades are the canonical portfolio events that everything else will derive from."
+      description="Keep the canonical event stream in one place, but work through journal, import and profile flows separately."
     >
       <div className="section-body section-body-wide">
-        <form className="entity-form entity-form-wide" onSubmit={handleSubmit}>
-          <label>
-            <span>Account</span>
-            <select
-              value={form.accountId}
-              onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
-              required
-            >
-              <option value="">Select account</option>
-              {accountOptions.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="summary-grid">
+          <article className="overview-stat">
+            <span>Transactions</span>
+            <strong>{journalRows.length}</strong>
+          </article>
+          <article className="overview-stat">
+            <span>Journal rows in view</span>
+            <strong>{sortedRows.length}</strong>
+          </article>
+          <article className="overview-stat">
+            <span>Saved profiles</span>
+            <strong>{importProfiles.length}</strong>
+          </article>
+          <article className="overview-stat">
+            <span>Latest import event</span>
+            <strong>{latestImportEvent ? latestImportEvent.outcome : 'n/a'}</strong>
+          </article>
+        </div>
 
-          <label>
-            <span>Type</span>
-            <select
-              value={form.type}
-              onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
-            >
-              {transactionTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Trade date</span>
-            <input
-              type="date"
-              value={form.tradeDate}
-              onChange={(event) => setForm((current) => ({ ...current, tradeDate: event.target.value }))}
-              required
-            />
-          </label>
-
-          <label>
-            <span>Settlement date</span>
-            <input
-              type="date"
-              value={form.settlementDate}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, settlementDate: event.target.value }))
-              }
-            />
-          </label>
-
-          <label>
-            <span>Instrument</span>
-            <select
-              value={form.instrumentId}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, instrumentId: event.target.value }))
-              }
-              disabled={!requiresInstrument}
-            >
-              <option value="">Not required</option>
-              {instrumentOptions.map((instrument) => (
-                <option key={instrument.id} value={instrument.id}>
-                  {instrument.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Quantity</span>
-            <input
-              value={form.quantity}
-              onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
-              placeholder="10"
-              disabled={!requiresInstrument}
-            />
-          </label>
-
-          <label>
-            <span>Unit price</span>
-            <input
-              value={form.unitPrice}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, unitPrice: event.target.value }))
-              }
-              placeholder="123.45"
-              disabled={!requiresInstrument}
-            />
-          </label>
-
-          <label>
-            <span>Gross amount</span>
-            <input
-              value={form.grossAmount}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, grossAmount: event.target.value }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            <span>Fee amount</span>
-            <input
-              value={form.feeAmount}
-              onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
-            />
-          </label>
-
-          <label>
-            <span>Tax amount</span>
-            <input
-              value={form.taxAmount}
-              onChange={(event) => setForm((current) => ({ ...current, taxAmount: event.target.value }))}
-            />
-          </label>
-
-          <label>
-            <span>Currency</span>
-            <input
-              value={form.currency}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-              }
-              maxLength={3}
-              required
-            />
-          </label>
-
-          <label>
-            <span>FX rate to PLN</span>
-            <input
-              value={form.fxRateToPln}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
-              }
-              placeholder="4.0321"
-            />
-          </label>
-
-          <label className="form-span-wide">
-            <span>Notes</span>
-            <input
-              value={form.notes}
-              onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-              placeholder="Optional audit note"
-            />
-          </label>
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              disabled={
-                !canSubmit || createTransactionMutation.isPending || updateTransactionMutation.isPending
-              }
-            >
-              {createTransactionMutation.isPending || updateTransactionMutation.isPending
-                ? 'Saving...'
-                : editingTransactionId
-                  ? 'Save changes'
-                  : 'Add transaction'}
-            </button>
-
-            {editingTransactionId && (
-              <button type="button" className="button-secondary" onClick={resetForm}>
-                Cancel edit
+        <div className="history-toolbar">
+          <div className="history-pill-group" role="tablist" aria-label="Transactions workspace">
+            {([
+              ['journal', 'Journal'],
+              ['import', 'Import'],
+              ['profiles', 'Profiles'],
+            ] as const).map(([workspace, label]) => (
+              <button
+                key={workspace}
+                type="button"
+                className={workspace === activeWorkspace ? 'unit-pill unit-pill-active' : 'unit-pill'}
+                onClick={() => setActiveWorkspace(workspace)}
+              >
+                {label}
               </button>
-            )}
+            ))}
           </div>
-          {(createTransactionMutation.error || updateTransactionMutation.error) && (
-            <p className="form-error">
-              {createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message}
-            </p>
-          )}
-        </form>
+        </div>
+
+        {activeWorkspace === 'journal' && (
+          <form className="entity-form entity-form-wide" onSubmit={handleSubmit}>
+            <label>
+              <span>Account</span>
+              <select
+                value={form.accountId}
+                onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
+                required
+              >
+                <option value="">Select account</option>
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Type</span>
+              <select
+                value={form.type}
+                onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+              >
+                {transactionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Trade date</span>
+              <input
+                type="date"
+                value={form.tradeDate}
+                onChange={(event) => setForm((current) => ({ ...current, tradeDate: event.target.value }))}
+                required
+              />
+            </label>
+
+            <label>
+              <span>Settlement date</span>
+              <input
+                type="date"
+                value={form.settlementDate}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, settlementDate: event.target.value }))
+                }
+              />
+            </label>
+
+            <label>
+              <span>Instrument</span>
+              <select
+                value={form.instrumentId}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, instrumentId: event.target.value }))
+                }
+                disabled={!requiresInstrument}
+              >
+                <option value="">Not required</option>
+                {instrumentOptions.map((instrument) => (
+                  <option key={instrument.id} value={instrument.id}>
+                    {instrument.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Quantity</span>
+              <input
+                value={form.quantity}
+                onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
+                placeholder="10"
+                disabled={!requiresInstrument}
+              />
+            </label>
+
+            <label>
+              <span>Unit price</span>
+              <input
+                value={form.unitPrice}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, unitPrice: event.target.value }))
+                }
+                placeholder="123.45"
+                disabled={!requiresInstrument}
+              />
+            </label>
+
+            <label>
+              <span>Gross amount</span>
+              <input
+                value={form.grossAmount}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, grossAmount: event.target.value }))
+                }
+                required
+              />
+            </label>
+
+            <label>
+              <span>Fee amount</span>
+              <input
+                value={form.feeAmount}
+                onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span>Tax amount</span>
+              <input
+                value={form.taxAmount}
+                onChange={(event) => setForm((current) => ({ ...current, taxAmount: event.target.value }))}
+              />
+            </label>
+
+            <label>
+              <span>Currency</span>
+              <input
+                value={form.currency}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
+                }
+                maxLength={3}
+                required
+              />
+            </label>
+
+            <label>
+              <span>FX rate to PLN</span>
+              <input
+                value={form.fxRateToPln}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
+                }
+                placeholder="4.0321"
+              />
+            </label>
+
+            <label className="form-span-wide">
+              <span>Notes</span>
+              <input
+                value={form.notes}
+                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Optional audit note"
+              />
+            </label>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={
+                  !canSubmit || createTransactionMutation.isPending || updateTransactionMutation.isPending
+                }
+              >
+                {createTransactionMutation.isPending || updateTransactionMutation.isPending
+                  ? 'Saving...'
+                  : editingTransactionId
+                    ? 'Save changes'
+                    : 'Add transaction'}
+              </button>
+
+              {editingTransactionId && (
+                <button type="button" className="button-secondary" onClick={resetForm}>
+                  Cancel edit
+                </button>
+              )}
+            </div>
+            {(createTransactionMutation.error || updateTransactionMutation.error) && (
+              <p className="form-error">
+                {createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message}
+              </p>
+            )}
+          </form>
+        )}
 
         <div className="entity-list">
-          <section className="import-card">
-            <div className="section-header">
-              <p className="eyebrow">Import profiles</p>
-              <h4>Saved CSV parsing rules</h4>
-              <p>
-                Keep one profile per broker or export format. Preview and import will always use the last saved version
-                of the selected profile.
-              </p>
-            </div>
+          {activeWorkspace === 'profiles' && (
+            <section className="import-card">
+              <div className="section-header">
+                <p className="eyebrow">Import profiles</p>
+                <h4>Saved CSV parsing rules</h4>
+                <p>
+                  Keep one profile per broker or export format. Preview and import will always use the last saved
+                  version of the selected profile.
+                </p>
+              </div>
 
             <div className="import-profile-toolbar">
               <label className="journal-filter import-profile-select">
@@ -781,16 +832,16 @@ export function TransactionsSection() {
               </div>
             </div>
 
-            <form className="entity-form import-profile-form" onSubmit={handleImportProfileSubmit}>
-              <label>
-                <span>Name</span>
-                <input
-                  value={importProfileForm.name}
-                  onChange={(event) => updateImportProfileField('name', event.target.value)}
-                  placeholder="IBKR activity export"
-                  required
-                />
-              </label>
+              <form className="entity-form import-profile-form" onSubmit={handleImportProfileSubmit}>
+                <label>
+                  <span>Name</span>
+                  <input
+                    value={importProfileForm.name}
+                    onChange={(event) => updateImportProfileField('name', event.target.value)}
+                    placeholder="IBKR activity export"
+                    required
+                  />
+                </label>
 
               <label>
                 <span>Description</span>
@@ -931,72 +982,74 @@ export function TransactionsSection() {
                     deleteImportProfileMutation.error?.message}
                 </p>
               )}
-            </form>
-          </section>
+              </form>
+            </section>
+          )}
 
-          <form className="import-card" onSubmit={handleImportSubmit}>
-            <div className="section-header">
-              <p className="eyebrow">Batch import</p>
-              <h4>Preview and import broker CSV</h4>
-              <p>
-                Paste the raw broker export and let the server parse it with the selected profile. Account names and
-                instruments are resolved on the backend, so the preview matches the final import.
-              </p>
-            </div>
+          {activeWorkspace === 'import' && (
+            <form className="import-card" onSubmit={handleImportSubmit}>
+              <div className="section-header">
+                <p className="eyebrow">Batch import</p>
+                <h4>Preview and import broker CSV</h4>
+                <p>
+                  Paste the raw broker export and let the server parse it with the selected profile. Account names and
+                  instruments are resolved on the backend, so the preview matches the final import.
+                </p>
+              </div>
 
-            <div className="import-card-summary">
-              <span className="list-badge">
-                {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
-              </span>
-              {importProfileBlockingReason && <p className="muted-copy">{importProfileBlockingReason}</p>}
-            </div>
+              <div className="import-card-summary">
+                <span className="list-badge">
+                  {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
+                </span>
+                {importProfileBlockingReason && <p className="muted-copy">{importProfileBlockingReason}</p>}
+              </div>
 
-            <textarea
-              className="import-textarea"
-              value={importCsv}
-              onChange={(event) => setImportCsv(event.target.value)}
-              placeholder={importProfileTemplate}
-            />
-
-            <label className="import-option">
-              <input
-                type="checkbox"
-                checked={importSkipDuplicates}
-                onChange={(event) => setImportSkipDuplicates(event.target.checked)}
-                disabled={selectedImportProfile == null}
+              <textarea
+                className="import-textarea"
+                value={importCsv}
+                onChange={(event) => setImportCsv(event.target.value)}
+                placeholder={importProfileTemplate}
               />
-              <span>Skip duplicate rows during import</span>
-            </label>
 
-            <div className="form-actions">
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={handleImportPreview}
-                disabled={
-                  previewTransactionsCsvImportMutation.isPending ||
-                  importCsv.trim() === '' ||
-                  importProfileBlockingReason !== null
-                }
-              >
-                {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  importTransactionsCsvMutation.isPending ||
-                  previewTransactionsCsvImportMutation.isPending ||
-                  importCsv.trim() === '' ||
-                  importBlockedByPreview ||
-                  importProfileBlockingReason !== null
-                }
-              >
-                {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
-              </button>
-            </div>
+              <label className="import-option">
+                <input
+                  type="checkbox"
+                  checked={importSkipDuplicates}
+                  onChange={(event) => setImportSkipDuplicates(event.target.checked)}
+                  disabled={selectedImportProfile == null}
+                />
+                <span>Skip duplicate rows during import</span>
+              </label>
 
-            {importPreview && (
-              <div className="import-preview">
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={handleImportPreview}
+                  disabled={
+                    previewTransactionsCsvImportMutation.isPending ||
+                    importCsv.trim() === '' ||
+                    importProfileBlockingReason !== null
+                  }
+                >
+                  {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    importTransactionsCsvMutation.isPending ||
+                    previewTransactionsCsvImportMutation.isPending ||
+                    importCsv.trim() === '' ||
+                    importBlockedByPreview ||
+                    importProfileBlockingReason !== null
+                  }
+                >
+                  {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
+                </button>
+              </div>
+
+              {importPreview && (
+                <div className="import-preview">
                 <div className="import-preview-grid">
                   <article className="import-preview-card">
                     <span>Total rows</span>
@@ -1035,37 +1088,37 @@ export function TransactionsSection() {
                     </article>
                   ))}
                 </div>
+                </div>
+              )}
+
+              {importFeedback && <p className="muted-copy">{importFeedback}</p>}
+              {(importError || previewTransactionsCsvImportMutation.error || importTransactionsCsvMutation.error) && (
+                <p className="form-error">
+                  {importError ??
+                    previewTransactionsCsvImportMutation.error?.message ??
+                    importTransactionsCsvMutation.error?.message}
+                </p>
+              )}
+            </form>
+          )}
+
+          {activeWorkspace === 'journal' && (
+            <section className="journal-card">
+              <div className="section-header">
+                <p className="eyebrow">Journal</p>
+                <h4>Transaction journal</h4>
+                <p>Filter and sort the canonical event stream before editing or deleting rows.</p>
               </div>
-            )}
 
-            {importFeedback && <p className="muted-copy">{importFeedback}</p>}
-            {(importError || previewTransactionsCsvImportMutation.error || importTransactionsCsvMutation.error) && (
-              <p className="form-error">
-                {importError ??
-                  previewTransactionsCsvImportMutation.error?.message ??
-                  importTransactionsCsvMutation.error?.message}
-              </p>
-            )}
-          </form>
-
-          <section className="journal-card">
-            <div className="section-header">
-              <p className="eyebrow">Journal</p>
-              <h4>Transaction journal</h4>
-              <p>
-                Filter and sort the canonical event stream before editing or deleting rows.
-              </p>
-            </div>
-
-            <div className="journal-toolbar">
-              <label className="journal-filter journal-filter-wide">
-                <span>Search</span>
-                <input
-                  value={journalFilters.search}
-                  onChange={(event) => updateJournalFilter('search', event.target.value)}
-                  placeholder="Type, account, instrument, note, amount..."
-                />
-              </label>
+              <div className="journal-toolbar">
+                <label className="journal-filter journal-filter-wide">
+                  <span>Search</span>
+                  <input
+                    value={journalFilters.search}
+                    onChange={(event) => updateJournalFilter('search', event.target.value)}
+                    placeholder="Type, account, instrument, note, amount..."
+                  />
+                </label>
 
               <label className="journal-filter">
                 <span>Account</span>
@@ -1142,12 +1195,12 @@ export function TransactionsSection() {
                   <option value="createdAt-desc">Recently created</option>
                 </select>
               </label>
-            </div>
+              </div>
 
-            <div className="journal-summary">
-              <span>
-                Showing {pagedRows.length} of {sortedRows.length} matching rows ({journalRows.length} total).
-              </span>
+              <div className="journal-summary">
+                <span>
+                  Showing {pagedRows.length} of {sortedRows.length} matching rows ({journalRows.length} total).
+                </span>
 
               <div className="journal-pagination">
                 <label className="journal-page-size">
@@ -1182,56 +1235,103 @@ export function TransactionsSection() {
                   Next
                 </button>
               </div>
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
 
-          {transactionsQuery.isLoading && <p className="muted-copy">Loading transactions...</p>}
-          {transactionsQuery.isError && (
-            <p className="form-error">{transactionsQuery.error.message}</p>
+          {activeWorkspace === 'journal' && (
+            <>
+              {transactionsQuery.isLoading && <p className="muted-copy">Loading transactions...</p>}
+              {transactionsQuery.isError && (
+                <p className="form-error">{transactionsQuery.error.message}</p>
+              )}
+              {transactionsQuery.data?.length === 0 && <p className="muted-copy">No transactions yet.</p>}
+              {transactionsQuery.data?.length !== 0 && pagedRows.length === 0 && (
+                <p className="muted-copy">No journal rows match the current filters.</p>
+              )}
+              {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
+                <article className="list-item" key={transaction.id}>
+                  <div className="transaction-row-main">
+                    <strong>
+                      {transaction.type} · {transaction.grossAmount} {transaction.currency} · {accountName}
+                    </strong>
+                    <p>
+                      trade {transaction.tradeDate}
+                      {transaction.settlementDate ? ` · settle ${transaction.settlementDate}` : ''}
+                      {instrumentName ? ` · ${instrumentName}` : ''}
+                      {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
+                      {transaction.quantity ? ` · qty ${transaction.quantity}` : ''}
+                      {transaction.unitPrice ? ` · px ${transaction.unitPrice}` : ''}
+                      {transaction.notes ? ` · ${transaction.notes}` : ''}
+                    </p>
+                    <p className="transaction-row-meta">
+                      fee {transaction.feeAmount} · tax {transaction.taxAmount}
+                      {transaction.fxRateToPln ? ` · fx ${transaction.fxRateToPln}` : ''}
+                      {` · created ${transaction.createdAt.slice(0, 10)}`}
+                    </p>
+                  </div>
+                  <div className="list-item-actions">
+                    <span className="list-badge">{transaction.id.slice(0, 8)}</span>
+                    <button type="button" className="button-secondary" onClick={() => startEditing(transaction)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="button-danger"
+                      onClick={() => deleteTransactionMutation.mutate(transaction.id)}
+                      disabled={deleteTransactionMutation.isPending}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {deleteTransactionMutation.error && (
+                <p className="form-error">{deleteTransactionMutation.error.message}</p>
+              )}
+            </>
           )}
-          {transactionsQuery.data?.length === 0 && <p className="muted-copy">No transactions yet.</p>}
-          {transactionsQuery.data?.length !== 0 && pagedRows.length === 0 && (
-            <p className="muted-copy">No journal rows match the current filters.</p>
-          )}
-          {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
-            <article className="list-item" key={transaction.id}>
-              <div className="transaction-row-main">
-                <strong>
-                  {transaction.type} · {transaction.grossAmount} {transaction.currency} · {accountName}
-                </strong>
-                <p>
-                  trade {transaction.tradeDate}
-                  {transaction.settlementDate ? ` · settle ${transaction.settlementDate}` : ''}
-                  {instrumentName ? ` · ${instrumentName}` : ''}
-                  {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
-                  {transaction.quantity ? ` · qty ${transaction.quantity}` : ''}
-                  {transaction.unitPrice ? ` · px ${transaction.unitPrice}` : ''}
-                  {transaction.notes ? ` · ${transaction.notes}` : ''}
-                </p>
-                <p className="transaction-row-meta">
-                  fee {transaction.feeAmount} · tax {transaction.taxAmount}
-                  {transaction.fxRateToPln ? ` · fx ${transaction.fxRateToPln}` : ''}
-                  {` · created ${transaction.createdAt.slice(0, 10)}`}
-                </p>
+
+          {activeWorkspace === 'import' && (
+            <section className="import-card">
+              <div className="section-header">
+                <p className="eyebrow">Import activity</p>
+                <h4>Recent imports</h4>
+                <p>Use this as a quick audit trail after batch operations.</p>
               </div>
-              <div className="list-item-actions">
-                <span className="list-badge">{transaction.id.slice(0, 8)}</span>
-                <button type="button" className="button-secondary" onClick={() => startEditing(transaction)}>
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="button-danger"
-                  onClick={() => deleteTransactionMutation.mutate(transaction.id)}
-                  disabled={deleteTransactionMutation.isPending}
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-          {deleteTransactionMutation.error && (
-            <p className="form-error">{deleteTransactionMutation.error.message}</p>
+
+              {latestImportEvent && (
+                <p className="muted-copy">
+                  Latest event: {latestImportEvent.message} · {formatDateTime(latestImportEvent.occurredAt)}
+                </p>
+              )}
+
+              {importEventsQuery.isLoading && <p className="muted-copy">Loading import activity...</p>}
+              {importEventsQuery.isError && <p className="form-error">{importEventsQuery.error.message}</p>}
+              {!importEventsQuery.isLoading && !importEventsQuery.isError && importEvents.length === 0 && (
+                <p className="muted-copy">No import-related audit events yet.</p>
+              )}
+              {!importEventsQuery.isLoading && !importEventsQuery.isError && importEvents.length > 0 && (
+                <div className="audit-feed">
+                  {importEvents.map((event) => (
+                    <article className="audit-event" key={event.id}>
+                      <div className="audit-event-header">
+                        <div>
+                          <strong>{event.message}</strong>
+                          <p>
+                            {event.action} · {formatDateTime(event.occurredAt)}
+                          </p>
+                        </div>
+                        <span className={`status-badge ${event.outcome === 'FAILURE' ? 'status-unavailable' : 'status-valued'}`}>
+                          {event.outcome}
+                        </span>
+                      </div>
+                      {event.entityId && <p className="audit-event-entity">{event.entityId}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
         </div>
       </div>

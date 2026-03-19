@@ -5,9 +5,9 @@ export function TransactionsScreen() {
   return (
     <div className="page-stack">
       <PageIntro
-        eyebrow="Write model"
+        eyebrow="Operations"
         title="Transactions"
-        description="Maintain the canonical event stream for the portfolio. Imports, edits and deletes flow from here into valuation, history, returns and backups."
+        description="Work through the canonical event stream in focused modes: journal review, batch import and saved parsing profiles."
       />
       <TransactionsSection />
     </div>
