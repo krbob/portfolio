@@ -3,6 +3,7 @@ interface TabBarProps<T extends string> {
   onChange: (value: T) => void
   tabs: { value: T; label: string; count?: number }[]
   ariaLabel?: string
+  idBase?: string
 }
 
 export function TabBar<T extends string>({
@@ -10,15 +11,18 @@ export function TabBar<T extends string>({
   onChange,
   tabs,
   ariaLabel = 'Tab bar',
+  idBase,
 }: TabBarProps<T>) {
   return (
     <div className="mb-6 flex gap-0 border-b border-zinc-800" role="tablist" aria-label={ariaLabel}>
       {tabs.map((tab) => (
         <button
           key={tab.value}
+          id={idBase ? `${idBase}-tab-${tab.value}` : undefined}
           type="button"
           role="tab"
           aria-selected={value === tab.value}
+          aria-controls={idBase ? `${idBase}-panel-${tab.value}` : undefined}
           tabIndex={value === tab.value ? 0 : -1}
           onClick={() => onChange(tab.value)}
           className={`relative px-4 py-3 text-sm font-medium transition-colors ${

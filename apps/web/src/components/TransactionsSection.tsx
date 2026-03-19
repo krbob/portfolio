@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
-import { EmptyState, ErrorState, LoadingState } from './ui'
+import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import {
@@ -685,13 +685,12 @@ export function TransactionsSection() {
 
   return (
     <section className="space-y-6">
-      <header className="mb-2">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Write model</p>
-        <h3 className="mt-1 text-lg font-semibold text-zinc-100">Transactions</h3>
-        <p className="mt-1 text-sm text-zinc-500">
-          Keep the canonical event stream in one place, but work through journal, import and profile flows separately.
-        </p>
-      </header>
+      <SectionHeader
+        eyebrow="Write model"
+        title="Transactions"
+        description="Keep the canonical event stream in one place, but work through journal, import and profile flows separately."
+        className="mb-2"
+      />
 
       <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
@@ -721,9 +720,11 @@ export function TransactionsSection() {
           ] as const).map(([workspace, wsLabel]) => (
             <button
               key={workspace}
+              id={`transactions-workspace-tab-${workspace}`}
               type="button"
               role="tab"
               aria-selected={workspace === activeWorkspace}
+              aria-controls={`transactions-workspace-panel-${workspace}`}
               tabIndex={workspace === activeWorkspace ? 0 : -1}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${workspace === activeWorkspace ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
               onClick={() => setActiveWorkspace(workspace)}
@@ -735,7 +736,12 @@ export function TransactionsSection() {
       </div>
 
       {activeWorkspace === 'journal' && (
-        <div className={card}>
+        <div
+          className={card}
+          role="tabpanel"
+          id="transactions-workspace-panel-journal"
+          aria-labelledby="transactions-workspace-tab-journal"
+        >
           <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={handleSubmit}>
             <label>
               <span className={labelClass}>Account</span>
@@ -931,7 +937,12 @@ export function TransactionsSection() {
       )}
 
       {activeWorkspace === 'profiles' && (
-        <section className={card}>
+        <section
+          className={card}
+          role="tabpanel"
+          id="transactions-workspace-panel-profiles"
+          aria-labelledby="transactions-workspace-tab-profiles"
+        >
           <div className="mb-4">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Import profiles</p>
             <h4 className="mt-1 text-lg font-semibold text-zinc-100">Saved CSV parsing rules</h4>
@@ -1155,7 +1166,13 @@ export function TransactionsSection() {
       )}
 
       {activeWorkspace === 'import' && (
-        <form className={card} onSubmit={handleImportSubmit}>
+        <form
+          className={card}
+          onSubmit={handleImportSubmit}
+          role="tabpanel"
+          id="transactions-workspace-panel-import"
+          aria-labelledby="transactions-workspace-tab-import"
+        >
           <div className="mb-4">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Batch import</p>
             <h4 className="mt-1 text-lg font-semibold text-zinc-100">Preview and import broker CSV</h4>
@@ -1269,7 +1286,7 @@ export function TransactionsSection() {
               </p>
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Import preview rows">
+                <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label="Import preview rows">
                   {(
                     [
                       ['ALL', `All (${importPreview.totalRowCount})`],
@@ -1282,9 +1299,7 @@ export function TransactionsSection() {
                     <button
                       key={status}
                       type="button"
-                      role="tab"
-                      aria-selected={status === importPreviewStatusFilter}
-                      tabIndex={status === importPreviewStatusFilter ? 0 : -1}
+                      aria-pressed={status === importPreviewStatusFilter}
                       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${status === importPreviewStatusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
                       onClick={() => setImportPreviewStatusFilter(status)}
                     >

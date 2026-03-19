@@ -14,16 +14,14 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1"
-      role="tablist"
+      role="group"
       aria-label={ariaLabel}
     >
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
-          role="tab"
-          aria-selected={value === opt.value}
-          tabIndex={value === opt.value ? 0 : -1}
+          aria-pressed={value === opt.value}
           onClick={() => onChange(opt.value)}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             value === opt.value

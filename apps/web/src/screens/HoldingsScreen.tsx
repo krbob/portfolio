@@ -215,7 +215,6 @@ export function HoldingsScreen() {
                         }
                       }}
                       tabIndex={0}
-                      aria-selected={isSelected}
                     >
                       <td className={td}>
                         <div className="font-medium text-zinc-100">{holding.instrumentName}</div>

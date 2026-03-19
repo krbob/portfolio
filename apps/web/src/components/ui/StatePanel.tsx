@@ -28,6 +28,12 @@ const descriptionToneClasses: Record<StateTone, string> = {
   error: 'text-red-200/70',
 }
 
+const eyebrowToneClasses: Record<StateTone, string> = {
+  default: 'text-zinc-500',
+  warning: 'text-amber-300/80',
+  error: 'text-red-300/80',
+}
+
 const iconToneClasses: Record<StateTone, string> = {
   default: 'bg-zinc-800 text-zinc-300',
   warning: 'bg-amber-500/15 text-amber-300',
@@ -52,7 +58,7 @@ export function StatePanel({
           </div>
         )}
         {eyebrow && (
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          <p className={`text-[11px] font-medium uppercase tracking-[0.18em] ${eyebrowToneClasses[tone]}`}>
             {eyebrow}
           </p>
         )}

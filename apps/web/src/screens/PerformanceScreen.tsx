@@ -89,6 +89,7 @@ export function PerformanceScreen() {
           options={PERIODS.map((p) => ({ value: p, label: p }))}
           value={period}
           onChange={(v) => setPeriod(v as Period)}
+          ariaLabel="Performance period"
         />
       </PageHeader>
 
@@ -116,19 +117,31 @@ export function PerformanceScreen() {
       </div>
 
       {/* Tab bar */}
-      <TabBar tabs={TABS} value={tab} onChange={setTab} />
+      <TabBar tabs={TABS} value={tab} onChange={setTab} ariaLabel="Performance workspace" idBase="performance-workspace" />
 
       <div className="mt-6">
         {tab === 'charts' ? (
-          <ChartsTab
-            historyQuery={historyQuery}
-            points={filteredPoints}
-            unit={unit}
-            onUnitChange={setUnit}
-            series={series}
-          />
+          <section
+            role="tabpanel"
+            id="performance-workspace-panel-charts"
+            aria-labelledby="performance-workspace-tab-charts"
+          >
+            <ChartsTab
+              historyQuery={historyQuery}
+              points={filteredPoints}
+              unit={unit}
+              onUnitChange={setUnit}
+              series={series}
+            />
+          </section>
         ) : (
-          <ReturnsTab returnsQuery={returnsQuery} />
+          <section
+            role="tabpanel"
+            id="performance-workspace-panel-returns"
+            aria-labelledby="performance-workspace-tab-returns"
+          >
+            <ReturnsTab returnsQuery={returnsQuery} />
+          </section>
         )}
       </div>
     </>
@@ -193,6 +206,7 @@ function ChartsTab({
             ]}
             value={unit}
             onChange={(v) => onUnitChange(v as Unit)}
+            ariaLabel="Performance chart unit"
           />
         </div>
         <PortfolioValueChart

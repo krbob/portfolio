@@ -164,7 +164,7 @@ export function DashboardScreen() {
             <LoadingState
               title="Loading history"
               description="Fetching the daily portfolio curve for this dashboard range."
-              className="border-0 bg-transparent px-0 py-8"
+              variant="inline"
               blocks={2}
             />
           ) : historyQuery.isError && chartPoints.length === 0 ? (
