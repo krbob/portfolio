@@ -228,6 +228,9 @@ export function useReplacePortfolioTargets() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['portfolio-targets'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
       ])
     },
   })

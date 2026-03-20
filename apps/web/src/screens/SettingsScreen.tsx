@@ -4,6 +4,7 @@ import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
+import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { Card, SectionHeader } from '../components/ui'
@@ -11,6 +12,7 @@ import { Card, SectionHeader } from '../components/ui'
 const SETTINGS_SECTIONS = [
   { id: 'health', label: 'Health' },
   { id: 'setup', label: 'Setup' },
+  { id: 'targets', label: 'Targets' },
   { id: 'transfer', label: 'Transfer' },
   { id: 'audit', label: 'Audit' },
   { id: 'backups', label: 'Backups' },
@@ -42,6 +44,10 @@ export function SettingsScreen() {
         <section id="setup" className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <AccountsSection />
           <InstrumentsSection />
+        </section>
+
+        <section id="targets">
+          <PortfolioTargetsSection />
         </section>
 
         <section id="transfer">
