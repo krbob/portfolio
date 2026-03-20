@@ -719,7 +719,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /settings/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /settings|ustawienia/i })).toBeInTheDocument()
     await waitFor(() => {
       expect(scrollIntoViewMock).toHaveBeenCalled()
     })
