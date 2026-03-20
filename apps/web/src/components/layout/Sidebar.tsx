@@ -34,7 +34,7 @@ function NavSection({
               title={item.label}
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                `flex select-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors [webkit-tap-highlight-color:transparent] active:bg-zinc-800 ${
                   isActive
                     ? 'border-l-2 border-blue-500 bg-zinc-800 text-zinc-100 pl-2.5'
                     : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'

@@ -712,7 +712,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/settings#targets']}>
+      <MemoryRouter initialEntries={[{ pathname: '/settings', hash: '#targets' }]}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
