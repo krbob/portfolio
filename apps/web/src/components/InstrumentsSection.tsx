@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useCreateInstrument, useInstruments } from '../hooks/use-write-model'
+import { useI18n } from '../lib/i18n'
+import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -23,6 +25,7 @@ const initialForm = {
 }
 
 export function InstrumentsSection() {
+  const { isPolish } = useI18n()
   const instrumentsQuery = useInstruments()
   const createInstrumentMutation = useCreateInstrument()
   const [form, setForm] = useState(initialForm)
@@ -81,13 +84,15 @@ export function InstrumentsSection() {
     <Card>
       <SectionHeader
         eyebrow="Write model"
-        title="Instruments"
-        description="Keep ETF, benchmark, and purchase-specific EDO instruments in one canonical catalog."
+        title={isPolish ? 'Instrumenty' : 'Instruments'}
+        description={isPolish
+          ? 'Trzymaj ETF-y, benchmarki i zakupowe serie EDO w jednym kanonicznym katalogu.'
+          : 'Keep ETF, benchmark, and purchase-specific EDO instruments in one canonical catalog.'}
       />
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
-          <span className={labelClass}>Name</span>
+          <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
           <input
             className={input}
             value={form.name}
@@ -98,18 +103,18 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>Kind</span>
+          <span className={labelClass}>{isPolish ? 'Rodzaj' : 'Kind'}</span>
           <select className={input} value={form.kind} onChange={(event) => handleKindChange(event.target.value)}>
-            <option value="ETF">ETF</option>
-            <option value="STOCK">STOCK</option>
-            <option value="BOND_EDO">BOND_EDO</option>
-            <option value="CASH">CASH</option>
-            <option value="BENCHMARK_GOLD">BENCHMARK_GOLD</option>
+            <option value="ETF">{labelInstrumentKind('ETF')}</option>
+            <option value="STOCK">{labelInstrumentKind('STOCK')}</option>
+            <option value="BOND_EDO">{labelInstrumentKind('BOND_EDO')}</option>
+            <option value="CASH">{labelInstrumentKind('CASH')}</option>
+            <option value="BENCHMARK_GOLD">{labelInstrumentKind('BENCHMARK_GOLD')}</option>
           </select>
         </div>
 
         <div>
-          <span className={labelClass}>Asset class</span>
+          <span className={labelClass}>{isPolish ? 'Klasa aktywów' : 'Asset class'}</span>
           <select
             className={input}
             value={form.assetClass}
@@ -117,16 +122,16 @@ export function InstrumentsSection() {
               setForm((current) => ({ ...current, assetClass: event.target.value }))
             }
           >
-            <option value="EQUITIES">EQUITIES</option>
-            <option value="BONDS">BONDS</option>
-            <option value="CASH">CASH</option>
-            <option value="FX">FX</option>
-            <option value="BENCHMARK">BENCHMARK</option>
+            <option value="EQUITIES">{labelAssetClass('EQUITIES')}</option>
+            <option value="BONDS">{labelAssetClass('BONDS')}</option>
+            <option value="CASH">{labelAssetClass('CASH')}</option>
+            <option value="FX">{labelAssetClass('FX')}</option>
+            <option value="BENCHMARK">{labelAssetClass('BENCHMARK')}</option>
           </select>
         </div>
 
         <div>
-          <span className={labelClass}>Symbol</span>
+          <span className={labelClass}>{isPolish ? 'Symbol' : 'Symbol'}</span>
           <input
             className={input}
             value={form.symbol}
@@ -137,7 +142,7 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>Currency</span>
+          <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
           <input
             className={input}
             value={form.currency}
@@ -150,7 +155,7 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>Valuation source</span>
+          <span className={labelClass}>{isPolish ? 'Źródło wyceny' : 'Valuation source'}</span>
           <select
             className={input}
             value={form.valuationSource}
@@ -158,16 +163,16 @@ export function InstrumentsSection() {
               setForm((current) => ({ ...current, valuationSource: event.target.value }))
             }
           >
-            <option value="STOCK_ANALYST">STOCK_ANALYST</option>
-            <option value="EDO_CALCULATOR">EDO_CALCULATOR</option>
-            <option value="MANUAL">MANUAL</option>
+            <option value="STOCK_ANALYST">{labelValuationSource('STOCK_ANALYST')}</option>
+            <option value="EDO_CALCULATOR">{labelValuationSource('EDO_CALCULATOR')}</option>
+            <option value="MANUAL">{labelValuationSource('MANUAL')}</option>
           </select>
         </div>
 
         {isEdo && (
           <>
             <div>
-              <span className={labelClass}>Purchase date</span>
+              <span className={labelClass}>{isPolish ? 'Data zakupu' : 'Purchase date'}</span>
               <input
                 className={input}
                 type="date"
@@ -180,7 +185,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>First period rate (bps)</span>
+              <span className={labelClass}>{isPolish ? 'Oprocentowanie 1. okresu (bps)' : 'First period rate (bps)'}</span>
               <input
                 className={input}
                 type="number"
@@ -196,7 +201,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>Margin (bps)</span>
+              <span className={labelClass}>{isPolish ? 'Marża (bps)' : 'Margin (bps)'}</span>
               <input
                 className={input}
                 type="number"
@@ -209,7 +214,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>Principal units</span>
+              <span className={labelClass}>{isPolish ? 'Jednostki nominalne' : 'Principal units'}</span>
               <input
                 className={input}
                 type="number"
@@ -225,7 +230,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>Maturity date</span>
+              <span className={labelClass}>{isPolish ? 'Data wykupu' : 'Maturity date'}</span>
               <input
                 className={input}
                 type="date"
@@ -241,7 +246,7 @@ export function InstrumentsSection() {
 
         <div className="col-span-full flex items-center gap-3 mt-2">
           <button className={btnPrimary} type="submit" disabled={createInstrumentMutation.isPending}>
-            {createInstrumentMutation.isPending ? 'Saving...' : 'Add instrument'}
+            {createInstrumentMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Dodaj instrument' : 'Add instrument')}
           </button>
           {createInstrumentMutation.error && (
             <p className="text-sm text-red-400">{createInstrumentMutation.error.message}</p>
@@ -250,15 +255,15 @@ export function InstrumentsSection() {
       </form>
 
       <div className="space-y-3 mt-4">
-        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-500">Loading instruments...</p>}
+        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie instrumentów...' : 'Loading instruments...'}</p>}
         {instrumentsQuery.isError && <p className="text-sm text-red-400">{instrumentsQuery.error.message}</p>}
-        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">No instruments yet.</p>}
+        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak instrumentów.' : 'No instruments yet.'}</p>}
         {instrumentsQuery.data?.map((instrument) => (
           <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={instrument.id}>
             <div>
               <strong className="text-sm text-zinc-100">{instrument.name}</strong>
               <p className="text-sm text-zinc-500">
-                {instrument.kind} · {instrument.assetClass}
+                {labelInstrumentKind(instrument.kind)} · {labelAssetClass(instrument.assetClass)}
                 {instrument.symbol ? ` · ${instrument.symbol}` : ''}
               </p>
             </div>

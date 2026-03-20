@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useAccounts, useCreateAccount } from '../hooks/use-write-model'
+import { useI18n } from '../lib/i18n'
+import { labelAccountType } from '../lib/labels'
 import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
 const initialForm = {
@@ -11,6 +13,7 @@ const initialForm = {
 }
 
 export function AccountsSection() {
+  const { isPolish } = useI18n()
   const accountsQuery = useAccounts()
   const createAccountMutation = useCreateAccount()
   const [form, setForm] = useState(initialForm)
@@ -25,14 +28,16 @@ export function AccountsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow="Write model"
-        title="Accounts"
-        description="Capture where assets are held before layering portfolio analytics on top."
+        eyebrow={isPolish ? 'Write model' : 'Write model'}
+        title={isPolish ? 'Konta' : 'Accounts'}
+        description={isPolish
+          ? 'Zapisz miejsca przechowywania aktywów, zanim nałożysz na nie analitykę portfela.'
+          : 'Capture where assets are held before layering portfolio analytics on top.'}
       />
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
-          <span className={labelClass}>Name</span>
+          <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
           <input
             className={input}
             value={form.name}
@@ -43,7 +48,7 @@ export function AccountsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>Institution</span>
+          <span className={labelClass}>{isPolish ? 'Instytucja' : 'Institution'}</span>
           <input
             className={input}
             value={form.institution}
@@ -56,20 +61,20 @@ export function AccountsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>Type</span>
+          <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
           <select
             className={input}
             value={form.type}
             onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
           >
-            <option value="BROKERAGE">BROKERAGE</option>
-            <option value="BOND_REGISTER">BOND_REGISTER</option>
-            <option value="CASH">CASH</option>
+            <option value="BROKERAGE">{labelAccountType('BROKERAGE')}</option>
+            <option value="BOND_REGISTER">{labelAccountType('BOND_REGISTER')}</option>
+            <option value="CASH">{labelAccountType('CASH')}</option>
           </select>
         </div>
 
         <div>
-          <span className={labelClass}>Base currency</span>
+          <span className={labelClass}>{isPolish ? 'Waluta bazowa' : 'Base currency'}</span>
           <input
             className={input}
             value={form.baseCurrency}
@@ -83,22 +88,22 @@ export function AccountsSection() {
 
         <div className="col-span-full flex items-center gap-3 mt-2">
           <button className={btnPrimary} type="submit" disabled={createAccountMutation.isPending}>
-            {createAccountMutation.isPending ? 'Saving...' : 'Add account'}
+            {createAccountMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Dodaj konto' : 'Add account')}
           </button>
           {createAccountMutation.error && <p className="text-sm text-red-400">{createAccountMutation.error.message}</p>}
         </div>
       </form>
 
       <div className="space-y-3 mt-4">
-        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">Loading accounts...</p>}
+        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie kont...' : 'Loading accounts...'}</p>}
         {accountsQuery.isError && <p className="text-sm text-red-400">{accountsQuery.error.message}</p>}
-        {accountsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">No accounts yet.</p>}
+        {accountsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak kont.' : 'No accounts yet.'}</p>}
         {accountsQuery.data?.map((account) => (
           <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={account.id}>
             <div>
               <strong className="text-sm text-zinc-100">{account.name}</strong>
               <p className="text-sm text-zinc-500">
-                {account.institution} · {account.type}
+                {account.institution} · {labelAccountType(account.type)}
               </p>
             </div>
             <span className={`${badge} ${badgeVariants.default}`}>{account.baseCurrency}</span>

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
+import { getActiveUiLanguage, useI18n } from '../lib/i18n'
+import { labelAuditOutcome } from '../lib/labels'
 import { badge, badgeVariants, filterInput, label } from '../lib/styles'
 
 interface ImportAuditPanelProps {
@@ -15,6 +17,7 @@ export function ImportAuditPanel({
   description,
   limit = 12,
 }: ImportAuditPanelProps) {
+  const { isPolish } = useI18n()
   const eventsQuery = usePortfolioAuditEvents({ limit, category: 'IMPORTS' })
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'SUCCESS' | 'FAILURE'>('ALL')
 
@@ -27,17 +30,18 @@ export function ImportAuditPanel({
 
   return (
     <>
-      <SectionHeader eyebrow="Audit" title={title} description={description} />
+      <SectionHeader eyebrow={isPolish ? 'Audyt' : 'Audit'} title={title} description={description} />
 
       {latestEvent && (
         <p className="text-sm text-zinc-500">
-          Latest event: {latestEvent.message} · {formatDateTime(latestEvent.occurredAt)}
+          {isPolish ? 'Ostatnie zdarzenie:' : 'Latest event:'} {latestEvent.message} ·{' '}
+          {formatDateTime(latestEvent.occurredAt)}
         </p>
       )}
 
       <div className="flex items-center gap-3 my-3">
         <label>
-          <span className={label}>Outcome</span>
+          <span className={label}>{isPolish ? 'Wynik' : 'Outcome'}</span>
           <select
             className={filterInput}
             value={outcomeFilter}
@@ -45,17 +49,25 @@ export function ImportAuditPanel({
               setOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')
             }
           >
-            <option value="ALL">ALL</option>
-            <option value="SUCCESS">SUCCESS</option>
-            <option value="FAILURE">FAILURE</option>
+            <option value="ALL">{labelAuditOutcome('ALL')}</option>
+            <option value="SUCCESS">{labelAuditOutcome('SUCCESS')}</option>
+            <option value="FAILURE">{labelAuditOutcome('FAILURE')}</option>
           </select>
         </label>
       </div>
 
-      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">Loading import activity...</p>}
+      {eventsQuery.isLoading && (
+        <p className="text-sm text-zinc-500">
+          {isPolish ? 'Ładowanie aktywności importu...' : 'Loading import activity...'}
+        </p>
+      )}
       {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">No import-related audit events yet.</p>
+        <p className="text-sm text-zinc-500">
+          {isPolish
+            ? 'Brak jeszcze zdarzeń audytu związanych z importem.'
+            : 'No import-related audit events yet.'}
+        </p>
       )}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
         <div className="space-y-3">
@@ -73,7 +85,7 @@ export function ImportAuditPanel({
                   <span
                     className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}
                   >
-                    {event.outcome}
+                    {labelAuditOutcome(event.outcome)}
                   </span>
                 </div>
                 {metadataSummary && <p className="text-sm text-zinc-500">{metadataSummary}</p>}
@@ -88,6 +100,7 @@ export function ImportAuditPanel({
 }
 
 function buildImportMetadataSummary(metadata: Record<string, string>) {
+  const isPolish = getActiveUiLanguage() === 'pl'
   const parts: string[] = []
 
   if (metadata.sourceLabel) {
@@ -99,19 +112,19 @@ function buildImportMetadataSummary(metadata: Record<string, string>) {
   }
 
   if (metadata.profileName) {
-    parts.push(`profile ${metadata.profileName}`)
+    parts.push(isPolish ? `profil ${metadata.profileName}` : `profile ${metadata.profileName}`)
   }
 
   if (metadata.createdCount) {
-    parts.push(`created ${metadata.createdCount}`)
+    parts.push(isPolish ? `utworzono ${metadata.createdCount}` : `created ${metadata.createdCount}`)
   }
 
   if (metadata.skippedDuplicateCount && metadata.skippedDuplicateCount !== '0') {
-    parts.push(`skipped ${metadata.skippedDuplicateCount}`)
+    parts.push(isPolish ? `pominięto ${metadata.skippedDuplicateCount}` : `skipped ${metadata.skippedDuplicateCount}`)
   }
 
   if (metadata.invalidRowCount && metadata.invalidRowCount !== '0') {
-    parts.push(`invalid ${metadata.invalidRowCount}`)
+    parts.push(isPolish ? `błędne ${metadata.invalidRowCount}` : `invalid ${metadata.invalidRowCount}`)
   }
 
   return parts.length > 0 ? parts.join(' · ') : null

@@ -10,9 +10,11 @@ import {
   useTransactions,
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
+import { useI18n } from '../lib/i18n'
 import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioStateSection() {
+  const { isPolish } = useI18n()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const targetsQuery = usePortfolioTargets()
@@ -37,10 +39,12 @@ export function PortfolioStateSection() {
       const snapshot = await exportMutation.mutateAsync()
       downloadSnapshot(snapshot)
       setImportFeedback(
-        `Exported ${snapshot.accounts.length} accounts, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets and ${snapshot.transactions.length} transactions.`,
+        isPolish
+          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} targetów i ${snapshot.transactions.length} transakcji.`
+          : `Exported ${snapshot.accounts.length} accounts, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets and ${snapshot.transactions.length} transactions.`,
       )
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Export failed.')
+      setImportError(error instanceof Error ? error.message : isPolish ? 'Eksport nie powiódł się.' : 'Export failed.')
     }
   }
 
@@ -49,7 +53,7 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError('Choose a JSON snapshot file first.')
+      setImportError(isPolish ? 'Najpierw wybierz plik ze snapshotem JSON.' : 'Choose a JSON snapshot file first.')
       setPreviewResult(null)
       return
     }
@@ -63,12 +67,16 @@ export function PortfolioStateSection() {
       setPreviewResult(result)
       setImportFeedback(
         result.isValid
-          ? 'Preview ready. The snapshot passed validation.'
-          : 'Preview ready. Resolve blocking issues before importing.',
+          ? isPolish
+            ? 'Podgląd gotowy. Snapshot przeszedł walidację.'
+            : 'Preview ready. The snapshot passed validation.'
+          : isPolish
+            ? 'Podgląd gotowy. Rozwiąż blokujące problemy przed importem.'
+            : 'Preview ready. Resolve blocking issues before importing.',
       )
     } catch (error) {
       setPreviewResult(null)
-      setImportError(error instanceof Error ? error.message : 'Preview failed.')
+      setImportError(error instanceof Error ? error.message : isPolish ? 'Podgląd nie powiódł się.' : 'Preview failed.')
     }
   }
 
@@ -94,17 +102,21 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError('Choose a JSON snapshot file first.')
+      setImportError(isPolish ? 'Najpierw wybierz plik ze snapshotem JSON.' : 'Choose a JSON snapshot file first.')
       return
     }
 
     if (previewResult == null) {
-      setImportError('Preview the selected snapshot before importing.')
+      setImportError(isPolish ? 'Najpierw uruchom podgląd wybranego snapshotu.' : 'Preview the selected snapshot before importing.')
       return
     }
 
     if (!previewResult.isValid) {
-      setImportError('The selected snapshot has blocking issues. Fix them before importing.')
+      setImportError(
+        isPolish
+          ? 'Wybrany snapshot ma blokujące problemy. Napraw je przed importem.'
+          : 'The selected snapshot has blocking issues. Fix them before importing.',
+      )
       return
     }
 
@@ -117,37 +129,43 @@ export function PortfolioStateSection() {
       })
       setPreviewResult(null)
       setImportFeedback(
-        `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+        isPolish
+          ? `Zaimportowano ${result.accountCount} kont, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów i ${result.transactionCount} transakcji w trybie ${result.mode}.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
+          : `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setReplaceConfirmation('')
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Import failed.')
+      setImportError(error instanceof Error ? error.message : isPolish ? 'Import nie powiódł się.' : 'Import failed.')
     }
   }
 
   return (
     <Card>
       <SectionHeader
-        eyebrow="Transfer"
-        title="Backup and restore"
-        description="Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode."
+        eyebrow={isPolish ? 'Transfer' : 'Transfer'}
+        title={isPolish ? 'Backup i odtwarzanie' : 'Backup and restore'}
+        description={
+          isPolish
+            ? 'Wyeksportuj kanoniczny write model jako snapshot JSON albo zaimportuj wcześniej wyeksportowany snapshot w trybie merge lub replace.'
+            : 'Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode.'
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Accounts</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Instruments</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Instrumenty' : 'Instruments'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Targets</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Targety' : 'Targets'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{targetsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Transactions</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{transactionsQuery.data?.length ?? '...'}</strong>
         </article>
       </div>
@@ -155,33 +173,47 @@ export function PortfolioStateSection() {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-zinc-800/50 p-4">
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Export</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">Download snapshot</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Eksport' : 'Export'}</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Pobierz snapshot' : 'Download snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              Generates a canonical JSON snapshot that includes accounts, instruments, targets and transactions with original ids and timestamps.
+              {isPolish
+                ? 'Generuje kanoniczny snapshot JSON zawierający konta, instrumenty, targety i transakcje z oryginalnymi identyfikatorami i timestampami.'
+                : 'Generates a canonical JSON snapshot that includes accounts, instruments, targets and transactions with original ids and timestamps.'}
             </p>
           </div>
 
           <div className="flex items-center gap-3 mt-2">
             <button className={btnPrimary} type="button" onClick={handleExportClick} disabled={exportMutation.isPending}>
-              {exportMutation.isPending ? 'Exporting...' : 'Export JSON'}
+              {exportMutation.isPending
+                ? isPolish
+                  ? 'Eksportowanie...'
+                  : 'Exporting...'
+                : isPolish
+                  ? 'Eksportuj JSON'
+                  : 'Export JSON'}
             </button>
           </div>
         </div>
 
         <form className="rounded-lg border border-zinc-800/50 p-4" onSubmit={handleImportSubmit}>
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Import</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">Restore snapshot</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Import' : 'Import'}</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Odtwórz snapshot' : 'Restore snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              `MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot, including target allocation.
+              {isPolish
+                ? '`MERGE` wykonuje upsert po id. `REPLACE` czyści bieżący write model przed załadowaniem snapshotu, łącznie z alokacją targetów.'
+                : '`MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot, including target allocation.'}
             </p>
-            <p className="mt-1 text-sm text-zinc-500">`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {isPolish
+                ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy backup bezpieczeństwa.'
+                : '`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.'}
+            </p>
           </div>
 
           <div className="space-y-3">
             <div>
-              <span className={labelClass}>Import mode</span>
+              <span className={labelClass}>{isPolish ? 'Tryb importu' : 'Import mode'}</span>
               <select
                 className={input}
                 value={importMode}
@@ -200,7 +232,7 @@ export function PortfolioStateSection() {
 
             {importMode === 'REPLACE' && (
               <div>
-                <span className={labelClass}>Type REPLACE</span>
+                <span className={labelClass}>{isPolish ? 'Wpisz REPLACE' : 'Type REPLACE'}</span>
                 <input
                   className={input}
                   type="text"
@@ -212,7 +244,7 @@ export function PortfolioStateSection() {
             )}
 
             <div>
-              <span className={labelClass}>Snapshot file</span>
+              <span className={labelClass}>{isPolish ? 'Plik snapshotu' : 'Snapshot file'}</span>
               <input
                 type="file"
                 accept="application/json,.json"
@@ -223,39 +255,51 @@ export function PortfolioStateSection() {
           </div>
 
           <p className="text-sm text-zinc-500 mt-2">
-            {selectedFileName !== '' ? `Selected file: ${selectedFileName}` : 'No snapshot file selected yet.'}
+            {selectedFileName !== ''
+              ? isPolish
+                ? `Wybrany plik: ${selectedFileName}`
+                : `Selected file: ${selectedFileName}`
+              : isPolish
+                ? 'Nie wybrano jeszcze pliku snapshotu.'
+                : 'No snapshot file selected yet.'}
           </p>
 
           {previewResult && (
             <div className="mt-4 rounded-lg border border-zinc-800/50 p-4">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-semibold text-zinc-100">Preview summary</h5>
+                <h5 className="text-sm font-semibold text-zinc-100">{isPolish ? 'Podsumowanie podglądu' : 'Preview summary'}</h5>
                 <span className={`${badge} ${previewResult.isValid ? badgeVariants.success : badgeVariants.error}`}>
-                  {previewResult.isValid ? 'VALID' : 'BLOCKED'}
+                  {previewResult.isValid
+                    ? isPolish
+                      ? 'POPRAWNY'
+                      : 'VALID'
+                    : isPolish
+                      ? 'ZABLOKOWANY'
+                      : 'BLOCKED'}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetricCard
-                  label="Accounts"
+                  label={isPolish ? 'Konta' : 'Accounts'}
                   snapshotCount={previewResult.snapshotAccountCount}
                   existingCount={previewResult.existingAccountCount}
                   matchingCount={previewResult.matchingAccountCount}
                 />
                 <PreviewMetricCard
-                  label="Instruments"
+                  label={isPolish ? 'Instrumenty' : 'Instruments'}
                   snapshotCount={previewResult.snapshotInstrumentCount}
                   existingCount={previewResult.existingInstrumentCount}
                   matchingCount={previewResult.matchingInstrumentCount}
                 />
                 <PreviewMetricCard
-                  label="Targets"
+                  label={isPolish ? 'Targety' : 'Targets'}
                   snapshotCount={previewResult.snapshotTargetCount}
                   existingCount={previewResult.existingTargetCount}
                   matchingCount={previewResult.matchingTargetCount}
                 />
                 <PreviewMetricCard
-                  label="Transactions"
+                  label={isPolish ? 'Transakcje' : 'Transactions'}
                   snapshotCount={previewResult.snapshotTransactionCount}
                   existingCount={previewResult.existingTransactionCount}
                   matchingCount={previewResult.matchingTransactionCount}
@@ -264,8 +308,12 @@ export function PortfolioStateSection() {
 
               <p className="text-sm text-zinc-500 mt-3">
                 {previewResult.mode === 'REPLACE'
-                  ? `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets and ${previewResult.existingTransactionCount} transactions.`
-                  : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets and ${previewResult.matchingTransactionCount} transactions by id.`}
+                  ? isPolish
+                    ? `REPLACE najpierw wyczyści bieżący write model: ${previewResult.existingAccountCount} kont, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} targetów i ${previewResult.existingTransactionCount} transakcji.`
+                    : `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets and ${previewResult.existingTransactionCount} transactions.`
+                  : isPolish
+                    ? `MERGE wykona upsert po id dla ${previewResult.matchingAccountCount} kont, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} targetów i ${previewResult.matchingTransactionCount} transakcji.`
+                    : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets and ${previewResult.matchingTransactionCount} transactions by id.`}
               </p>
 
               {previewResult.issues.length > 0 && (
@@ -286,7 +334,13 @@ export function PortfolioStateSection() {
 
           <div className="flex items-center gap-3 mt-3">
             <button className={btnSecondary} type="button" onClick={handlePreviewClick} disabled={previewMutation.isPending || selectedFileContent.trim() === ''}>
-              {previewMutation.isPending ? 'Previewing...' : 'Preview snapshot'}
+              {previewMutation.isPending
+                ? isPolish
+                  ? 'Przygotowywanie podglądu...'
+                  : 'Previewing...'
+                : isPolish
+                  ? 'Podgląd snapshotu'
+                  : 'Preview snapshot'}
             </button>
             <button
               className={btnPrimary}
@@ -300,7 +354,13 @@ export function PortfolioStateSection() {
                 (importMode === 'REPLACE' && replaceConfirmation.trim().toUpperCase() !== 'REPLACE')
               }
             >
-              {importMutation.isPending ? 'Importing...' : 'Import JSON'}
+              {importMutation.isPending
+                ? isPolish
+                  ? 'Importowanie...'
+                  : 'Importing...'
+                : isPolish
+                  ? 'Importuj JSON'
+                  : 'Import JSON'}
             </button>
           </div>
         </form>
@@ -331,20 +391,21 @@ function PreviewMetricCard({
   existingCount: number
   matchingCount: number
 }) {
+  const { isPolish } = useI18n()
   return (
     <article className="rounded-lg border border-zinc-800/50 p-3">
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       <dl className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-zinc-500">Snapshot</dt>
+          <dt className="text-zinc-500">{isPolish ? 'Snapshot' : 'Snapshot'}</dt>
           <dd className="text-zinc-100 tabular-nums">{snapshotCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">Current</dt>
+          <dt className="text-zinc-500">{isPolish ? 'Bieżący stan' : 'Current'}</dt>
           <dd className="text-zinc-100 tabular-nums">{existingCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">Matching ids</dt>
+          <dt className="text-zinc-500">{isPolish ? 'Pasujące id' : 'Matching ids'}</dt>
           <dd className="text-zinc-100 tabular-nums">{matchingCount}</dd>
         </div>
       </dl>

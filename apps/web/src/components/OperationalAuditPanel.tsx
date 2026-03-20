@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
+import { useI18n } from '../lib/i18n'
 import { badge, badgeVariants, filterInput, label as labelClass } from '../lib/styles'
 
 const CATEGORY_OPTIONS = [
@@ -26,6 +27,7 @@ interface OperationalAuditPanelProps {
 }
 
 export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps) {
+  const { isPolish } = useI18n()
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL')
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('ALL')
   const [impactFilter, setImpactFilter] = useState<ImpactFilter>('ALL')
@@ -60,30 +62,34 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">
-            {categoryFilter === 'ALL' ? 'Events in window' : `${categoryFilter} events`}
+            {categoryFilter === 'ALL'
+              ? (isPolish ? 'Zdarzenia w oknie' : 'Events in window')
+              : isPolish
+                ? `Zdarzenia ${categoryFilter}`
+                : `${categoryFilter} events`}
           </span>
           <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Failures</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Błędy' : 'Failures'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{failureCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">High impact</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Wysoki wpływ' : 'High impact'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{highImpactCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Latest failure</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{latestFailure ? formatDateTime(latestFailure.occurredAt) : 'None'}</strong>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Ostatni błąd' : 'Latest failure'}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{latestFailure ? formatDateTime(latestFailure.occurredAt) : isPolish ? 'Brak' : 'None'}</strong>
         </article>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
-          <span className={labelClass}>Category</span>
+          <span className={labelClass}>{isPolish ? 'Kategoria' : 'Category'}</span>
           <select
             className={filterInput}
-            aria-label="Category"
+            aria-label={isPolish ? 'Kategoria' : 'Category'}
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
           >
@@ -96,10 +102,10 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
         </div>
 
         <div>
-          <span className={labelClass}>Outcome</span>
+          <span className={labelClass}>{isPolish ? 'Wynik' : 'Outcome'}</span>
           <select
             className={filterInput}
-            aria-label="Outcome"
+            aria-label={isPolish ? 'Wynik' : 'Outcome'}
             value={outcomeFilter}
             onChange={(event) => setOutcomeFilter(event.target.value as OutcomeFilter)}
           >
@@ -112,24 +118,24 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
         </div>
 
         <div>
-          <span className={labelClass}>Impact</span>
+          <span className={labelClass}>{isPolish ? 'Wpływ' : 'Impact'}</span>
           <select
             className={filterInput}
-            aria-label="Impact"
+            aria-label={isPolish ? 'Wpływ' : 'Impact'}
             value={impactFilter}
             onChange={(event) => setImpactFilter(event.target.value as ImpactFilter)}
           >
             <option value="ALL">ALL</option>
-            <option value="HIGH_IMPACT_ONLY">HIGH IMPACT ONLY</option>
+            <option value="HIGH_IMPACT_ONLY">{isPolish ? 'TYLKO WYSOKI WPŁYW' : 'HIGH IMPACT ONLY'}</option>
           </select>
         </div>
       </div>
 
-      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">Loading operational activity...</p>}
+      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie aktywności operacyjnej...' : 'Loading operational activity...'}</p>}
       {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">No operational audit events match the current filters.</p>
+        <p className="text-sm text-zinc-500">{isPolish ? 'Brak zdarzeń pasujących do bieżących filtrów.' : 'No operational audit events match the current filters.'}</p>
       )}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
@@ -147,11 +153,11 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {highImpact ? <span className={`${badge} ${badgeVariants.warning}`}>HIGH IMPACT</span> : null}
+                    {highImpact ? <span className={`${badge} ${badgeVariants.warning}`}>{isPolish ? 'WYSOKI WPŁYW' : 'HIGH IMPACT'}</span> : null}
                     <span
                       className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}
                     >
-                      {event.outcome}
+                      {isPolish ? (event.outcome === 'FAILURE' ? 'BŁĄD' : 'SUKCES') : event.outcome}
                     </span>
                   </div>
                 </div>

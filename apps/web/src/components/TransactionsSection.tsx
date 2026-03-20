@@ -4,6 +4,8 @@ import { ImportAuditPanel } from './ImportAuditPanel'
 import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
+import { getActiveUiLanguage, useI18n } from '../lib/i18n'
+import { labelAuditOutcome, labelImportRowStatus, labelTransactionType } from '../lib/labels'
 import {
   badge,
   btnDanger,
@@ -153,6 +155,7 @@ const importMappingFields: Array<{
 ]
 
 export function TransactionsSection() {
+  const { isPolish } = useI18n()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
@@ -201,6 +204,10 @@ export function TransactionsSection() {
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
   const importProfiles = transactionImportProfilesQuery.data ?? []
+  const localizedImportMappingFields = useMemo(
+    () => getImportMappingFields(isPolish),
+    [isPolish],
+  )
   const hasWorkspaceData =
     accountsQuery.data != null ||
     instrumentsQuery.data != null ||
@@ -334,13 +341,21 @@ export function TransactionsSection() {
 
   const importProfileBlockingReason =
     selectedImportProfileId == null
-      ? 'Loading saved import profiles.'
+      ? isPolish
+        ? 'Ładowanie zapisanych profili importu.'
+        : 'Loading saved import profiles.'
       : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
-        ? 'Save a CSV import profile before previewing or importing.'
+        ? isPolish
+          ? 'Zapisz profil importu CSV przed podglądem albo importem.'
+          : 'Save a CSV import profile before previewing or importing.'
         : selectedImportProfile == null
-          ? 'Selected CSV import profile is no longer available.'
+          ? isPolish
+            ? 'Wybrany profil importu CSV nie jest już dostępny.'
+            : 'Selected CSV import profile is no longer available.'
           : importProfileDirty
-            ? 'Save profile changes before previewing or importing.'
+            ? isPolish
+              ? 'Zapisz zmiany w profilu przed podglądem albo importem.'
+              : 'Save profile changes before previewing or importing.'
             : null
 
   const importBlockedByPreview = Boolean(
@@ -557,7 +572,11 @@ export function TransactionsSection() {
         {
           onSuccess: (profile) => {
             setPendingSavedImportProfile(profile)
-            setImportProfileFeedback(`Updated import profile "${profile.name}".`)
+            setImportProfileFeedback(
+              isPolish
+                ? `Zaktualizowano profil importu "${profile.name}".`
+                : `Updated import profile "${profile.name}".`,
+            )
             setSelectedImportProfileId(profile.id)
             setImportProfileForm(importProfileToForm(profile))
             setImportSkipDuplicates(profile.skipDuplicatesByDefault)
@@ -570,7 +589,11 @@ export function TransactionsSection() {
     createImportProfileMutation.mutate(payload, {
       onSuccess: (profile) => {
         setPendingSavedImportProfile(profile)
-        setImportProfileFeedback(`Created import profile "${profile.name}".`)
+        setImportProfileFeedback(
+          isPolish
+            ? `Utworzono profil importu "${profile.name}".`
+            : `Created import profile "${profile.name}".`,
+        )
         setSelectedImportProfileId(profile.id)
         setImportProfileForm(importProfileToForm(profile))
         setImportSkipDuplicates(profile.skipDuplicatesByDefault)
@@ -597,7 +620,11 @@ export function TransactionsSection() {
       onSuccess: () => {
         setPendingSavedImportProfile(null)
         setPendingDeleteImportProfileId(null)
-        setImportProfileFeedback(`Deleted import profile "${selectedImportProfile.name}".`)
+        setImportProfileFeedback(
+          isPolish
+            ? `Usunięto profil importu "${selectedImportProfile.name}".`
+            : `Deleted import profile "${selectedImportProfile.name}".`,
+        )
         setSelectedImportProfileId(nextProfileId)
       },
     })
@@ -625,7 +652,12 @@ export function TransactionsSection() {
 
     if (selectedImportProfile == null) {
       setImportPreview(null)
-      setImportError(importProfileBlockingReason ?? 'Save a CSV import profile before previewing.')
+      setImportError(
+        importProfileBlockingReason ??
+          (isPolish
+            ? 'Zapisz profil importu CSV przed uruchomieniem podglądu.'
+            : 'Save a CSV import profile before previewing.'),
+      )
       return
     }
 
@@ -655,7 +687,12 @@ export function TransactionsSection() {
     setImportError(null)
 
     if (selectedImportProfile == null) {
-      setImportError(importProfileBlockingReason ?? 'Save a CSV import profile before importing.')
+      setImportError(
+        importProfileBlockingReason ??
+          (isPolish
+            ? 'Zapisz profil importu CSV przed importem.'
+            : 'Save a CSV import profile before importing.'),
+      )
       return
     }
 
@@ -697,7 +734,9 @@ export function TransactionsSection() {
       })
     } catch (error) {
       setStructuredImportPreview(null)
-      setStructuredImportError(error instanceof Error ? error.message : 'Preview failed.')
+      setStructuredImportError(
+        error instanceof Error ? error.message : isPolish ? 'Podgląd nie powiódł się.' : 'Preview failed.',
+      )
     }
   }
 
@@ -721,7 +760,9 @@ export function TransactionsSection() {
         },
       })
     } catch (error) {
-      setStructuredImportError(error instanceof Error ? error.message : 'Import failed.')
+      setStructuredImportError(
+        error instanceof Error ? error.message : isPolish ? 'Import nie powiódł się.' : 'Import failed.',
+      )
     }
   }
 
@@ -744,8 +785,12 @@ export function TransactionsSection() {
   ) {
     return (
       <LoadingState
-        title="Loading transactions workspace"
-        description="Fetching accounts, instruments, journal rows and saved import profiles."
+        title={isPolish ? 'Ładowanie obszaru transakcji' : 'Loading transactions workspace'}
+        description={
+          isPolish
+            ? 'Pobieranie kont, instrumentów, wierszy dziennika i zapisanych profili importu.'
+            : 'Fetching accounts, instruments, journal rows and saved import profiles.'
+        }
         blocks={4}
       />
     )
@@ -754,8 +799,12 @@ export function TransactionsSection() {
   if (!hasWorkspaceData && workspaceError) {
     return (
       <ErrorState
-        title="Transactions unavailable"
-        description="The canonical transaction workspace could not load. Retry now or verify runtime health in Settings."
+        title={isPolish ? 'Transakcje niedostępne' : 'Transactions unavailable'}
+        description={
+          isPolish
+            ? 'Nie udało się załadować kanonicznego obszaru transakcji. Spróbuj ponownie albo sprawdź health w Ustawieniach.'
+            : 'The canonical transaction workspace could not load. Retry now or verify runtime health in Settings.'
+        }
         onRetry={handleRetryWorkspace}
       />
     )
@@ -764,9 +813,13 @@ export function TransactionsSection() {
   if (accountOptions.length === 0) {
     return (
       <EmptyState
-        title="No accounts available yet"
-        description="Create your brokerage or bond accounts in Settings before recording transactions."
-        action={{ label: 'Go to Settings', to: '/settings' }}
+        title={isPolish ? 'Brak jeszcze kont' : 'No accounts available yet'}
+        description={
+          isPolish
+            ? 'Utwórz konta maklerskie albo rejestry obligacji w Ustawieniach, zanim zaczniesz zapisywać transakcje.'
+            : 'Create your brokerage or bond accounts in Settings before recording transactions.'
+        }
+        action={{ label: isPolish ? 'Przejdź do Ustawień' : 'Go to Settings', to: '/settings' }}
       />
     )
   }
@@ -774,37 +827,43 @@ export function TransactionsSection() {
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow="Write model"
-        title="Transactions"
-        description="Keep the canonical event stream in one place, but work through journal, import and profile flows separately."
+        eyebrow={isPolish ? 'Write model' : 'Write model'}
+        title={isPolish ? 'Transakcje' : 'Transactions'}
+        description={
+          isPolish
+            ? 'Trzymaj kanoniczny strumień zdarzeń w jednym miejscu, ale pracuj osobno na dzienniku, imporcie i profilach.'
+            : 'Keep the canonical event stream in one place, but work through journal, import and profile flows separately.'
+        }
         className="mb-2"
       />
 
       <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Transactions</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{journalRows.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Journal rows in view</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Wiersze dziennika w widoku' : 'Journal rows in view'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{sortedRows.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Saved profiles</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Zapisane profile' : 'Saved profiles'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importProfiles.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Latest import event</span>
-          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{latestImportEvent ? latestImportEvent.outcome : 'n/a'}</strong>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Ostatnie zdarzenie importu' : 'Latest import event'}</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
+            {latestImportEvent ? labelAuditOutcome(latestImportEvent.outcome) : isPolish ? 'n/d' : 'n/a'}
+          </strong>
         </article>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Transactions workspace">
+        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={isPolish ? 'Obszar transakcji' : 'Transactions workspace'}>
           {([
-            ['journal', 'Journal'],
-            ['import', 'Import'],
-            ['profiles', 'Profiles'],
+            ['journal', isPolish ? 'Dziennik' : 'Journal'],
+            ['import', isPolish ? 'Import' : 'Import'],
+            ['profiles', isPolish ? 'Profile' : 'Profiles'],
           ] as const).map(([workspace, wsLabel]) => (
             <button
               key={workspace}
@@ -832,14 +891,14 @@ export function TransactionsSection() {
         >
           <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={handleSubmit}>
             <label>
-              <span className={labelClass}>Account</span>
+              <span className={labelClass}>{isPolish ? 'Konto' : 'Account'}</span>
               <select
                 className={input}
                 value={form.accountId}
                 onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
                 required
               >
-                <option value="">Select account</option>
+                <option value="">{isPolish ? 'Wybierz konto' : 'Select account'}</option>
                 {accountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
@@ -849,7 +908,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Type</span>
+              <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
               <select
                 className={input}
                 value={form.type}
@@ -857,14 +916,14 @@ export function TransactionsSection() {
               >
                 {transactionTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {labelTransactionType(type)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label>
-              <span className={labelClass}>Trade date</span>
+              <span className={labelClass}>{isPolish ? 'Data transakcji' : 'Trade date'}</span>
               <input
                 className={input}
                 type="date"
@@ -875,7 +934,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Settlement date</span>
+              <span className={labelClass}>{isPolish ? 'Data rozliczenia' : 'Settlement date'}</span>
               <input
                 className={input}
                 type="date"
@@ -887,7 +946,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Instrument</span>
+              <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
               <select
                 className={input}
                 value={form.instrumentId}
@@ -896,7 +955,7 @@ export function TransactionsSection() {
                 }
                 disabled={!requiresInstrument}
               >
-                <option value="">Not required</option>
+                <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
                 {instrumentOptions.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
@@ -906,7 +965,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Quantity</span>
+              <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
               <input
                 className={input}
                 value={form.quantity}
@@ -917,7 +976,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Unit price</span>
+              <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
               <input
                 className={input}
                 value={form.unitPrice}
@@ -930,7 +989,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Gross amount</span>
+              <span className={labelClass}>{isPolish ? 'Kwota brutto' : 'Gross amount'}</span>
               <input
                 className={input}
                 value={form.grossAmount}
@@ -942,7 +1001,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Fee amount</span>
+              <span className={labelClass}>{isPolish ? 'Prowizja' : 'Fee amount'}</span>
               <input
                 className={input}
                 value={form.feeAmount}
@@ -951,7 +1010,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Tax amount</span>
+              <span className={labelClass}>{isPolish ? 'Podatek' : 'Tax amount'}</span>
               <input
                 className={input}
                 value={form.taxAmount}
@@ -960,7 +1019,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Currency</span>
+              <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
               <input
                 className={input}
                 value={form.currency}
@@ -973,7 +1032,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>FX rate to PLN</span>
+              <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
               <input
                 className={input}
                 value={form.fxRateToPln}
@@ -985,12 +1044,12 @@ export function TransactionsSection() {
             </label>
 
             <label className="col-span-2">
-              <span className={labelClass}>Notes</span>
+              <span className={labelClass}>{isPolish ? 'Notatki' : 'Notes'}</span>
               <input
                 className={input}
                 value={form.notes}
                 onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                placeholder="Optional audit note"
+                placeholder={isPolish ? 'Opcjonalna notatka audytowa' : 'Optional audit note'}
               />
             </label>
 
@@ -1003,15 +1062,21 @@ export function TransactionsSection() {
                 }
               >
                 {createTransactionMutation.isPending || updateTransactionMutation.isPending
-                  ? 'Saving...'
+                  ? isPolish
+                    ? 'Zapisywanie...'
+                    : 'Saving...'
                   : editingTransactionId
-                    ? 'Save changes'
-                    : 'Add transaction'}
+                    ? isPolish
+                      ? 'Zapisz zmiany'
+                      : 'Save changes'
+                    : isPolish
+                      ? 'Dodaj transakcję'
+                      : 'Add transaction'}
               </button>
 
               {editingTransactionId && (
                 <button type="button" className={btnSecondary} onClick={resetForm}>
-                  Cancel edit
+                  {isPolish ? 'Anuluj edycję' : 'Cancel edit'}
                 </button>
               )}
             </div>
@@ -1032,17 +1097,18 @@ export function TransactionsSection() {
           aria-labelledby="transactions-workspace-tab-profiles"
         >
           <div className="mb-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Import profiles</p>
-            <h4 className="mt-1 text-lg font-semibold text-zinc-100">Saved CSV parsing rules</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</p>
+            <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Zapisane reguły parsowania CSV' : 'Saved CSV parsing rules'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              Keep one profile per broker or export format. Preview and import will always use the last saved
-              version of the selected profile.
+              {isPolish
+                ? 'Utrzymuj jeden profil na brokera albo format eksportu. Podgląd i import zawsze użyją ostatniej zapisanej wersji wybranego profilu.'
+                : 'Keep one profile per broker or export format. Preview and import will always use the last saved version of the selected profile.'}
             </p>
           </div>
 
           <div className="flex items-center gap-3 mb-4">
             <label>
-              <span className={labelClass}>Saved profile</span>
+              <span className={labelClass}>{isPolish ? 'Zapisany profil' : 'Saved profile'}</span>
               <select
                 className={filterInput}
                 value={selectedImportProfileId ?? ''}
@@ -1052,19 +1118,19 @@ export function TransactionsSection() {
                   setSelectedImportProfileId(event.target.value)
                 }}
               >
-                {selectedImportProfileId === null && <option value="">Loading profiles...</option>}
+                {selectedImportProfileId === null && <option value="">{isPolish ? 'Ładowanie profili...' : 'Loading profiles...'}</option>}
                 {importProfiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>
                     {profile.name}
                   </option>
                 ))}
-                <option value={NEW_IMPORT_PROFILE_ID}>New profile</option>
+                <option value={NEW_IMPORT_PROFILE_ID}>{isPolish ? 'Nowy profil' : 'New profile'}</option>
               </select>
             </label>
 
             <div className="flex items-center gap-3">
               <button type="button" className={btnSecondary} onClick={handleCreateNewImportProfile}>
-                New profile
+                {isPolish ? 'Nowy profil' : 'New profile'}
               </button>
               <button
                 type="button"
@@ -1072,17 +1138,27 @@ export function TransactionsSection() {
                 onClick={handleDeleteImportProfile}
                 disabled={selectedImportProfile == null || deleteImportProfileMutation.isPending}
               >
-                {deleteImportProfileMutation.isPending ? 'Deleting...' : 'Delete profile'}
+                {deleteImportProfileMutation.isPending
+                  ? isPolish
+                    ? 'Usuwanie...'
+                    : 'Deleting...'
+                  : isPolish
+                    ? 'Usuń profil'
+                    : 'Delete profile'}
               </button>
             </div>
           </div>
 
           {selectedImportProfile && pendingDeleteImportProfileId === selectedImportProfile.id && (
             <DangerConfirmInline
-              title={`Delete profile "${selectedImportProfile.name}"?`}
-              description="This removes the saved parsing rules from the server. Existing imported transactions stay untouched."
-              confirmLabel="Delete profile"
-              confirmPendingLabel="Deleting..."
+              title={isPolish ? `Usunąć profil "${selectedImportProfile.name}"?` : `Delete profile "${selectedImportProfile.name}"?`}
+              description={
+                isPolish
+                  ? 'To usuwa zapisane reguły parsowania z serwera. Już zaimportowane transakcje pozostają bez zmian.'
+                  : 'This removes the saved parsing rules from the server. Existing imported transactions stay untouched.'
+              }
+              confirmLabel={isPolish ? 'Usuń profil' : 'Delete profile'}
+              confirmPendingLabel={isPolish ? 'Usuwanie...' : 'Deleting...'}
               isPending={deleteImportProfileMutation.isPending}
               onCancel={() => setPendingDeleteImportProfileId(null)}
               onConfirm={confirmDeleteImportProfile}
@@ -1091,41 +1167,41 @@ export function TransactionsSection() {
 
           <form className="grid grid-cols-2 gap-3 mt-4 lg:grid-cols-4" onSubmit={handleImportProfileSubmit}>
             <label>
-              <span className={labelClass}>Name</span>
+              <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
               <input
                 className={input}
                 value={importProfileForm.name}
                 onChange={(event) => updateImportProfileField('name', event.target.value)}
-                placeholder="IBKR activity export"
+                placeholder={isPolish ? 'Eksport aktywności IBKR' : 'IBKR activity export'}
                 required
               />
             </label>
 
             <label>
-              <span className={labelClass}>Description</span>
+              <span className={labelClass}>{isPolish ? 'Opis' : 'Description'}</span>
               <input
                 className={input}
                 value={importProfileForm.description}
                 onChange={(event) => updateImportProfileField('description', event.target.value)}
-                placeholder="Semicolon export with European decimals"
+                placeholder={isPolish ? 'Eksport średnikiem z europejskimi separatorami dziesiętnymi' : 'Semicolon export with European decimals'}
               />
             </label>
 
             <label>
-              <span className={labelClass}>Delimiter</span>
+              <span className={labelClass}>{isPolish ? 'Separator pól' : 'Delimiter'}</span>
               <select
                 className={input}
                 value={importProfileForm.delimiter}
                 onChange={(event) => updateImportProfileField('delimiter', event.target.value)}
               >
-                <option value="COMMA">Comma</option>
-                <option value="SEMICOLON">Semicolon</option>
+                <option value="COMMA">{isPolish ? 'Przecinek' : 'Comma'}</option>
+                <option value="SEMICOLON">{isPolish ? 'Średnik' : 'Semicolon'}</option>
                 <option value="TAB">Tab</option>
               </select>
             </label>
 
             <label>
-              <span className={labelClass}>Date format</span>
+              <span className={labelClass}>{isPolish ? 'Format daty' : 'Date format'}</span>
               <select
                 className={input}
                 value={importProfileForm.dateFormat}
@@ -1139,25 +1215,25 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Decimal separator</span>
+              <span className={labelClass}>{isPolish ? 'Separator dziesiętny' : 'Decimal separator'}</span>
               <select
                 className={input}
                 value={importProfileForm.decimalSeparator}
                 onChange={(event) => updateImportProfileField('decimalSeparator', event.target.value)}
               >
-                <option value="DOT">Dot</option>
-                <option value="COMMA">Comma</option>
+                <option value="DOT">{isPolish ? 'Kropka' : 'Dot'}</option>
+                <option value="COMMA">{isPolish ? 'Przecinek' : 'Comma'}</option>
               </select>
             </label>
 
             <label>
-              <span className={labelClass}>Default account</span>
+              <span className={labelClass}>{isPolish ? 'Domyślne konto' : 'Default account'}</span>
               <select
                 className={input}
                 value={importProfileForm.defaults.accountId}
                 onChange={(event) => updateImportProfileDefault('accountId', event.target.value)}
               >
-                <option value="">CSV provides account column</option>
+                <option value="">{isPolish ? 'CSV zawiera kolumnę konta' : 'CSV provides account column'}</option>
                 {accountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
@@ -1167,7 +1243,7 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Default currency</span>
+              <span className={labelClass}>{isPolish ? 'Domyślna waluta' : 'Default currency'}</span>
               <input
                 className={input}
                 value={importProfileForm.defaults.currency}
@@ -1185,18 +1261,22 @@ export function TransactionsSection() {
                 onChange={(event) => updateImportProfileField('skipDuplicatesByDefault', event.target.checked)}
               />
               <div>
-                <span className={labelClass}>Skip duplicates by default</span>
-                <p className="text-sm text-zinc-500">Used to prefill the import checkbox for this profile.</p>
+                <span className={labelClass}>{isPolish ? 'Domyślnie pomijaj duplikaty' : 'Skip duplicates by default'}</span>
+                <p className="text-sm text-zinc-500">
+                  {isPolish
+                    ? 'Używane do domyślnego ustawienia checkboxa importu dla tego profilu.'
+                    : 'Used to prefill the import checkbox for this profile.'}
+                </p>
               </div>
             </label>
 
             <div className="col-span-full">
               <div className="mb-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Header mappings</p>
-                <h5 className="mt-1 text-sm font-semibold text-zinc-100">Match CSV columns to canonical transaction fields</h5>
+                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Mapowanie nagłówków' : 'Header mappings'}</p>
+                <h5 className="mt-1 text-sm font-semibold text-zinc-100">{isPolish ? 'Dopasuj kolumny CSV do kanonicznych pól transakcji' : 'Match CSV columns to canonical transaction fields'}</h5>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {importMappingFields.map((field) => (
+                {localizedImportMappingFields.map((field) => (
                   <label key={field.key}>
                     <span className={labelClass}>{field.label}</span>
                     <input
@@ -1205,7 +1285,11 @@ export function TransactionsSection() {
                       onChange={(event) => updateImportProfileMapping(field.key, event.target.value)}
                       placeholder={field.placeholder}
                     />
-                    {field.required && <small className="text-xs text-zinc-600">Required by the backend parser.</small>}
+                    {field.required && (
+                      <small className="text-xs text-zinc-600">
+                        {isPolish ? 'Wymagane przez parser backendu.' : 'Required by the backend parser.'}
+                      </small>
+                    )}
                   </label>
                 ))}
               </div>
@@ -1213,8 +1297,12 @@ export function TransactionsSection() {
 
             <div className="col-span-full">
               <div className="mb-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Template preview</p>
-                <p className="mt-1 text-sm text-zinc-500">Sample header and one example row generated from the current profile form.</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Podgląd szablonu' : 'Template preview'}</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {isPolish
+                    ? 'Przykładowy nagłówek i jeden wiersz wygenerowany z bieżącego formularza profilu.'
+                    : 'Sample header and one example row generated from the current profile form.'}
+                </p>
               </div>
               <pre className="mt-2 rounded-lg bg-zinc-800 p-3 text-xs text-zinc-400 font-mono overflow-x-auto">{importProfileTemplate}</pre>
             </div>
@@ -1230,10 +1318,16 @@ export function TransactionsSection() {
                 }
               >
                 {createImportProfileMutation.isPending || updateImportProfileMutation.isPending
-                  ? 'Saving...'
+                  ? isPolish
+                    ? 'Zapisywanie...'
+                    : 'Saving...'
                   : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
-                    ? 'Create profile'
-                    : 'Save profile'}
+                    ? isPolish
+                      ? 'Utwórz profil'
+                      : 'Create profile'
+                    : isPolish
+                      ? 'Zapisz profil'
+                      : 'Save profile'}
               </button>
             </div>
 
@@ -1261,17 +1355,19 @@ export function TransactionsSection() {
           aria-labelledby="transactions-workspace-tab-import"
         >
           <div className="mb-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Batch import</p>
-            <h4 className="mt-1 text-lg font-semibold text-zinc-100">Preview and import transaction batches</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Import paczki' : 'Batch import'}</p>
+            <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Podgląd i import paczek transakcji' : 'Preview and import transaction batches'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              Use saved CSV profiles for broker exports or post canonical JSON batches directly against the transaction import endpoint.
+              {isPolish
+                ? 'Użyj zapisanych profili CSV dla eksportów od brokera albo wyślij kanoniczne paczki JSON bezpośrednio na endpoint importu transakcji.'
+                : 'Use saved CSV profiles for broker exports or post canonical JSON batches directly against the transaction import endpoint.'}
             </p>
           </div>
 
-          <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Import batch mode">
+          <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={isPolish ? 'Tryb importu paczki' : 'Import batch mode'}>
             {([
-              ['csv', 'CSV with profile'],
-              ['structured', 'Structured JSON'],
+              ['csv', isPolish ? 'CSV z profilem' : 'CSV with profile'],
+              ['structured', isPolish ? 'Strukturalny JSON' : 'Structured JSON'],
             ] as const).map(([mode, modeLabel]) => (
               <button
                 key={mode}
@@ -1299,14 +1395,18 @@ export function TransactionsSection() {
             >
               <div>
                 <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                  {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
+                  {selectedImportProfile
+                    ? selectedImportProfile.name
+                    : isPolish
+                      ? 'Nie wybrano zapisanego profilu'
+                      : 'No saved profile selected'}
                 </span>
                 {importProfileBlockingReason && <p className="text-sm text-zinc-500 mt-1">{importProfileBlockingReason}</p>}
               </div>
 
               <div className="flex flex-wrap items-end gap-3">
                 <label className="flex-1 min-w-[200px]">
-                  <span className={labelClass}>Source file</span>
+                  <span className={labelClass}>{isPolish ? 'Plik źródłowy' : 'Source file'}</span>
                   <input
                     className={filterInput}
                     value={importSourceFileName}
@@ -1315,12 +1415,12 @@ export function TransactionsSection() {
                   />
                 </label>
                 <label className="flex-1 min-w-[200px]">
-                  <span className={labelClass}>Source label</span>
+                  <span className={labelClass}>{isPolish ? 'Etykieta źródła' : 'Source label'}</span>
                   <input
                     className={filterInput}
                     value={importSourceLabel}
                     onChange={(event) => setImportSourceLabel(event.target.value)}
-                    placeholder="IBKR March 2026 export"
+                    placeholder={isPolish ? 'Eksport IBKR marzec 2026' : 'IBKR March 2026 export'}
                   />
                 </label>
               </div>
@@ -1340,7 +1440,7 @@ export function TransactionsSection() {
                   onChange={(event) => setImportSkipDuplicates(event.target.checked)}
                   disabled={selectedImportProfile == null}
                 />
-                <span>Skip duplicate rows during import</span>
+                <span>{isPolish ? 'Pomijaj duplikaty podczas importu' : 'Skip duplicate rows during import'}</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -1354,7 +1454,13 @@ export function TransactionsSection() {
                     importProfileBlockingReason !== null
                   }
                 >
-                  {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                  {previewTransactionsCsvImportMutation.isPending
+                    ? isPolish
+                      ? 'Przygotowywanie podglądu...'
+                      : 'Previewing...'
+                    : isPolish
+                      ? 'Podgląd importu'
+                      : 'Preview import'}
                 </button>
                 <button
                   className={btnPrimary}
@@ -1367,7 +1473,13 @@ export function TransactionsSection() {
                     importProfileBlockingReason !== null
                   }
                 >
-                  {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
+                  {importTransactionsCsvMutation.isPending
+                    ? isPolish
+                      ? 'Importowanie...'
+                      : 'Importing...'
+                    : isPolish
+                      ? 'Importuj CSV'
+                      : 'Import CSV'}
                 </button>
               </div>
 
@@ -1402,10 +1514,14 @@ export function TransactionsSection() {
             >
               <div className="space-y-1">
                 <p className="text-sm text-zinc-500">
-                  Paste either a canonical JSON array of transaction rows or a full import payload with `rows`.
+                  {isPolish
+                    ? 'Wklej albo kanoniczną tablicę JSON z wierszami transakcji, albo pełny payload importu z polem `rows`.'
+                    : 'Paste either a canonical JSON array of transaction rows or a full import payload with `rows`.'}
                 </p>
                 <p className="text-sm text-zinc-500">
-                  This path calls `/v1/transactions/import` directly and bypasses CSV parsing profiles.
+                  {isPolish
+                    ? 'Ta ścieżka wywołuje bezpośrednio `/v1/transactions/import` i omija profile parsowania CSV.'
+                    : 'This path calls `/v1/transactions/import` directly and bypasses CSV parsing profiles.'}
                 </p>
               </div>
 
@@ -1423,7 +1539,7 @@ export function TransactionsSection() {
                   checked={structuredImportSkipDuplicates}
                   onChange={(event) => setStructuredImportSkipDuplicates(event.target.checked)}
                 />
-                <span>Skip duplicate rows during import</span>
+                <span>{isPolish ? 'Pomijaj duplikaty podczas importu' : 'Skip duplicate rows during import'}</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -1433,7 +1549,13 @@ export function TransactionsSection() {
                   onClick={handleStructuredImportPreview}
                   disabled={previewTransactionsImportMutation.isPending || structuredImportJson.trim() === ''}
                 >
-                  {previewTransactionsImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                  {previewTransactionsImportMutation.isPending
+                    ? isPolish
+                      ? 'Przygotowywanie podglądu...'
+                      : 'Previewing...'
+                    : isPolish
+                      ? 'Podgląd importu'
+                      : 'Preview import'}
                 </button>
                 <button
                   className={btnPrimary}
@@ -1445,7 +1567,13 @@ export function TransactionsSection() {
                     structuredImportBlockedByPreview
                   }
                 >
-                  {importTransactionsMutation.isPending ? 'Importing...' : 'Import JSON batch'}
+                  {importTransactionsMutation.isPending
+                    ? isPolish
+                      ? 'Importowanie...'
+                      : 'Importing...'
+                    : isPolish
+                      ? 'Importuj paczkę JSON'
+                      : 'Import JSON batch'}
                 </button>
               </div>
 
@@ -1477,30 +1605,34 @@ export function TransactionsSection() {
       {activeWorkspace === 'journal' && (
         <section className={card}>
           <div className="mb-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Journal</p>
-            <h4 className="mt-1 text-lg font-semibold text-zinc-100">Transaction journal</h4>
-            <p className="mt-1 text-sm text-zinc-500">Filter and sort the canonical event stream before editing or deleting rows.</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Dziennik' : 'Journal'}</p>
+            <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Dziennik transakcji' : 'Transaction journal'}</h4>
+            <p className="mt-1 text-sm text-zinc-500">
+              {isPolish
+                ? 'Filtruj i sortuj kanoniczny strumień zdarzeń, zanim przejdziesz do edycji albo usuwania wierszy.'
+                : 'Filter and sort the canonical event stream before editing or deleting rows.'}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <label className="flex-1 min-w-[200px]">
-              <span className={labelClass}>Search</span>
+              <span className={labelClass}>{isPolish ? 'Szukaj' : 'Search'}</span>
               <input
                 className={filterInput}
                 value={journalFilters.search}
                 onChange={(event) => updateJournalFilter('search', event.target.value)}
-                placeholder="Type, account, instrument, note, amount..."
+                placeholder={isPolish ? 'Typ, konto, instrument, notatka, kwota...' : 'Type, account, instrument, note, amount...'}
               />
             </label>
 
             <label>
-              <span className={labelClass}>Account</span>
+              <span className={labelClass}>{isPolish ? 'Konto' : 'Account'}</span>
               <select
                 className={filterInput}
                 value={journalFilters.accountId}
                 onChange={(event) => updateJournalFilter('accountId', event.target.value)}
               >
-                <option value="ALL">All accounts</option>
+                <option value="ALL">{isPolish ? 'Wszystkie konta' : 'All accounts'}</option>
                 {accountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
@@ -1510,13 +1642,13 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Instrument</span>
+              <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
               <select
                 className={filterInput}
                 value={journalFilters.instrumentId}
                 onChange={(event) => updateJournalFilter('instrumentId', event.target.value)}
               >
-                <option value="ALL">All instruments</option>
+                <option value="ALL">{isPolish ? 'Wszystkie instrumenty' : 'All instruments'}</option>
                 {instrumentOptions.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
@@ -1526,29 +1658,29 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Type</span>
+              <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
               <select
                 className={filterInput}
                 value={journalFilters.type}
                 onChange={(event) => updateJournalFilter('type', event.target.value)}
               >
-                <option value="ALL">All types</option>
+                <option value="ALL">{isPolish ? 'Wszystkie typy' : 'All types'}</option>
                 {transactionTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {labelTransactionType(type)}
                   </option>
                 ))}
               </select>
             </label>
 
             <label>
-              <span className={labelClass}>Currency</span>
+              <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
               <select
                 className={filterInput}
                 value={journalFilters.currency}
                 onChange={(event) => updateJournalFilter('currency', event.target.value)}
               >
-                <option value="ALL">All currencies</option>
+                <option value="ALL">{isPolish ? 'Wszystkie waluty' : 'All currencies'}</option>
                 {currencyOptions.map((currency) => (
                   <option key={currency} value={currency}>
                     {currency}
@@ -1558,31 +1690,33 @@ export function TransactionsSection() {
             </label>
 
             <label>
-              <span className={labelClass}>Sort</span>
+              <span className={labelClass}>{isPolish ? 'Sortowanie' : 'Sort'}</span>
               <select
                 className={filterInput}
                 value={journalFilters.sort}
                 onChange={(event) => updateJournalFilter('sort', event.target.value)}
               >
-                <option value="tradeDate-desc">Trade date newest</option>
-                <option value="tradeDate-asc">Trade date oldest</option>
-                <option value="grossAmount-desc">Gross amount high to low</option>
-                <option value="grossAmount-asc">Gross amount low to high</option>
-                <option value="type-asc">Type A to Z</option>
-                <option value="account-asc">Account A to Z</option>
-                <option value="createdAt-desc">Recently created</option>
+                <option value="tradeDate-desc">{isPolish ? 'Data transakcji od najnowszych' : 'Trade date newest'}</option>
+                <option value="tradeDate-asc">{isPolish ? 'Data transakcji od najstarszych' : 'Trade date oldest'}</option>
+                <option value="grossAmount-desc">{isPolish ? 'Kwota brutto malejąco' : 'Gross amount high to low'}</option>
+                <option value="grossAmount-asc">{isPolish ? 'Kwota brutto rosnąco' : 'Gross amount low to high'}</option>
+                <option value="type-asc">{isPolish ? 'Typ od A do Z' : 'Type A to Z'}</option>
+                <option value="account-asc">{isPolish ? 'Konto od A do Z' : 'Account A to Z'}</option>
+                <option value="createdAt-desc">{isPolish ? 'Ostatnio utworzone' : 'Recently created'}</option>
               </select>
             </label>
           </div>
 
           <div className="flex items-center justify-between text-sm text-zinc-500 mb-4">
             <span>
-              Showing {pagedRows.length} of {sortedRows.length} matching rows ({journalRows.length} total).
+              {isPolish
+                ? `Wyświetlono ${pagedRows.length} z ${sortedRows.length} pasujących wierszy (${journalRows.length} łącznie).`
+                : `Showing ${pagedRows.length} of ${sortedRows.length} matching rows (${journalRows.length} total).`}
             </span>
 
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2">
-                <span>Rows</span>
+                <span>{isPolish ? 'Wiersze' : 'Rows'}</span>
                 <select
                   className={filterInput}
                   value={journalFilters.pageSize}
@@ -1600,10 +1734,10 @@ export function TransactionsSection() {
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage <= 1}
               >
-                Previous
+                {isPolish ? 'Poprzednia' : 'Previous'}
               </button>
               <span>
-                Page {currentPage} / {totalPages}
+                {isPolish ? `Strona ${currentPage} / ${totalPages}` : `Page ${currentPage} / ${totalPages}`}
               </span>
               <button
                 type="button"
@@ -1611,7 +1745,7 @@ export function TransactionsSection() {
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                 disabled={currentPage >= totalPages}
               >
-                Next
+                {isPolish ? 'Następna' : 'Next'}
               </button>
             </div>
           </div>
@@ -1620,13 +1754,13 @@ export function TransactionsSection() {
 
       {activeWorkspace === 'journal' && (
         <div className="space-y-3">
-          {transactionsQuery.isLoading && <p className="text-sm text-zinc-500">Loading transactions...</p>}
+          {transactionsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie transakcji...' : 'Loading transactions...'}</p>}
           {transactionsQuery.isError && (
             <p className="text-sm text-red-400">{transactionsQuery.error.message}</p>
           )}
-          {transactionsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">No transactions yet.</p>}
+          {transactionsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze transakcji.' : 'No transactions yet.'}</p>}
           {transactionsQuery.data?.length !== 0 && pagedRows.length === 0 && (
-            <p className="text-sm text-zinc-500">No journal rows match the current filters.</p>
+            <p className="text-sm text-zinc-500">{isPolish ? 'Żaden wiersz dziennika nie pasuje do bieżących filtrów.' : 'No journal rows match the current filters.'}</p>
           )}
           {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
             <article className="rounded-lg border border-zinc-800/50 bg-zinc-900 p-4 space-y-2" key={transaction.id}>
@@ -1634,7 +1768,7 @@ export function TransactionsSection() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`${badge} ${txBadgeVariants[transaction.type as keyof typeof txBadgeVariants] ?? ''}`}>
-                      {transaction.type}
+                      {labelTransactionType(transaction.type)}
                     </span>
                     <strong className="text-sm font-medium text-zinc-100">{accountName}</strong>
                   </div>
@@ -1644,8 +1778,8 @@ export function TransactionsSection() {
                 </div>
 
                 <p className="text-sm text-zinc-400 mt-1">
-                  Trade {formatDate(transaction.tradeDate)}
-                  {transaction.settlementDate ? ` · settle ${formatDate(transaction.settlementDate)}` : ''}
+                  {isPolish ? 'Transakcja' : 'Trade'} {formatDate(transaction.tradeDate)}
+                  {transaction.settlementDate ? isPolish ? ` · rozliczenie ${formatDate(transaction.settlementDate)}` : ` · settle ${formatDate(transaction.settlementDate)}` : ''}
                   {instrumentName ? ` · ${instrumentName}` : ''}
                   {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
                 </p>
@@ -1653,28 +1787,28 @@ export function TransactionsSection() {
                 {transaction.notes ? <p className="text-sm text-zinc-500 italic">{transaction.notes}</p> : null}
 
                 <p className="text-xs text-zinc-600">
-                  Created {formatDate(transaction.createdAt)}
+                  {isPolish ? 'Utworzono' : 'Created'} {formatDate(transaction.createdAt)}
                 </p>
 
                 <div className="flex flex-wrap gap-2 mt-1">
                   {transaction.quantity ? (
                     <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                      qty {formatNumber(transaction.quantity, { maximumFractionDigits: 6 })}
+                      {isPolish ? 'ilość' : 'qty'} {formatNumber(transaction.quantity, { maximumFractionDigits: 6 })}
                     </span>
                   ) : null}
                   {transaction.unitPrice ? (
                     <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                      px {formatCurrency(transaction.unitPrice, transaction.currency)}
+                      {isPolish ? 'cena' : 'px'} {formatCurrency(transaction.unitPrice, transaction.currency)}
                     </span>
                   ) : null}
                   {Number(transaction.feeAmount) !== 0 ? (
                     <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                      fee {formatCurrency(transaction.feeAmount, transaction.currency)}
+                      {isPolish ? 'prow.' : 'fee'} {formatCurrency(transaction.feeAmount, transaction.currency)}
                     </span>
                   ) : null}
                   {Number(transaction.taxAmount) !== 0 ? (
                     <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                      tax {formatCurrency(transaction.taxAmount, transaction.currency)}
+                      {isPolish ? 'pod.' : 'tax'} {formatCurrency(transaction.taxAmount, transaction.currency)}
                     </span>
                   ) : null}
                   {transaction.fxRateToPln ? (
@@ -1687,7 +1821,7 @@ export function TransactionsSection() {
               <div className="flex items-center gap-2">
                 <span className={`${badge} bg-zinc-800 text-zinc-400`}>{transaction.id.slice(0, 8)}</span>
                 <button type="button" className={btnSecondary} onClick={() => startEditing(transaction)}>
-                  Edit
+                  {isPolish ? 'Edytuj' : 'Edit'}
                 </button>
                 {pendingDeleteTransactionId !== transaction.id && (
                   <button
@@ -1696,16 +1830,24 @@ export function TransactionsSection() {
                     onClick={() => requestDeleteTransaction(transaction.id)}
                     disabled={deleteTransactionMutation.isPending}
                   >
-                    Delete
+                    {isPolish ? 'Usuń' : 'Delete'}
                   </button>
                 )}
               </div>
               {pendingDeleteTransactionId === transaction.id && (
                 <DangerConfirmInline
-                  title={`Delete transaction ${transaction.type} on ${transaction.tradeDate}?`}
-                  description="This removes the canonical event from the journal and immediately changes valuation, history, allocation and returns."
-                  confirmLabel="Delete transaction"
-                  confirmPendingLabel="Deleting..."
+                  title={
+                    isPolish
+                      ? `Usunąć transakcję ${labelTransactionType(transaction.type)} z dnia ${transaction.tradeDate}?`
+                      : `Delete transaction ${transaction.type} on ${transaction.tradeDate}?`
+                  }
+                  description={
+                    isPolish
+                      ? 'To usuwa kanoniczne zdarzenie z dziennika i od razu zmienia wycenę, historię, alokację i zwroty.'
+                      : 'This removes the canonical event from the journal and immediately changes valuation, history, allocation and returns.'
+                  }
+                  confirmLabel={isPolish ? 'Usuń transakcję' : 'Delete transaction'}
+                  confirmPendingLabel={isPolish ? 'Usuwanie...' : 'Deleting...'}
                   isPending={deleteTransactionMutation.isPending}
                   onCancel={cancelDeleteTransaction}
                   onConfirm={() => confirmDeleteTransaction(transaction.id)}
@@ -1722,8 +1864,12 @@ export function TransactionsSection() {
       {activeWorkspace === 'import' && (
         <section className={card}>
           <ImportAuditPanel
-            title="Recent imports"
-            description="Use this as a quick audit trail after batch operations."
+            title={isPolish ? 'Ostatnie importy' : 'Recent imports'}
+            description={
+              isPolish
+                ? 'Używaj tego jako szybkiego śladu audytowego po operacjach batch.'
+                : 'Use this as a quick audit trail after batch operations.'
+            }
             limit={8}
           />
         </section>
@@ -1733,9 +1879,12 @@ export function TransactionsSection() {
 }
 
 function createInitialImportProfileForm(): ImportProfileFormState {
+  const isPolish = getActiveUiLanguage() === 'pl'
   return {
-    name: 'Canonical CSV',
-    description: 'Default profile for the canonical transaction CSV format.',
+    name: isPolish ? 'Kanoniczny CSV' : 'Canonical CSV',
+    description: isPolish
+      ? 'Domyślny profil dla kanonicznego formatu CSV transakcji.'
+      : 'Default profile for the canonical transaction CSV format.',
     delimiter: 'COMMA',
     dateFormat: 'ISO_LOCAL_DATE',
     decimalSeparator: 'DOT',
@@ -1775,27 +1924,28 @@ function ImportPreviewPanel({
   onStatusFilterChange: (status: ImportPreviewStatusFilter) => void
   rows: ImportTransactionsPreviewResult['rows']
 }) {
+  const { isPolish } = useI18n()
   return (
     <div className="mt-6">
       <div className="grid grid-cols-2 gap-3 mb-3 lg:grid-cols-5">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Total rows</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Wszystkie wiersze' : 'Total rows'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.totalRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Importable</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Do importu' : 'Importable'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.importableRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Existing duplicates</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Istniejące duplikaty' : 'Existing duplicates'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateExistingCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Batch duplicates</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Duplikaty w paczce' : 'Batch duplicates'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateBatchCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">Invalid</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Błędne' : 'Invalid'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.invalidRowCount}</strong>
         </article>
       </div>
@@ -1805,14 +1955,14 @@ function ImportPreviewPanel({
       </p>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label="Import preview rows">
+        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label={isPolish ? 'Wiersze podglądu importu' : 'Import preview rows'}>
           {(
             [
-              ['ALL', `All (${preview.totalRowCount})`],
-              ['IMPORTABLE', `Importable (${preview.importableRowCount})`],
-              ['DUPLICATE_EXISTING', `Existing (${preview.duplicateExistingCount})`],
-              ['DUPLICATE_BATCH', `Batch (${preview.duplicateBatchCount})`],
-              ['INVALID', `Invalid (${preview.invalidRowCount})`],
+              ['ALL', isPolish ? `Wszystkie (${preview.totalRowCount})` : `All (${preview.totalRowCount})`],
+              ['IMPORTABLE', isPolish ? `Do importu (${preview.importableRowCount})` : `Importable (${preview.importableRowCount})`],
+              ['DUPLICATE_EXISTING', isPolish ? `Istniejące (${preview.duplicateExistingCount})` : `Existing (${preview.duplicateExistingCount})`],
+              ['DUPLICATE_BATCH', isPolish ? `Paczka (${preview.duplicateBatchCount})` : `Batch (${preview.duplicateBatchCount})`],
+              ['INVALID', isPolish ? `Błędne (${preview.invalidRowCount})` : `Invalid (${preview.invalidRowCount})`],
             ] as const
           ).map(([status, statusLabel]) => (
             <button
@@ -1832,16 +1982,20 @@ function ImportPreviewPanel({
         {rows.map((row) => (
           <article className="flex items-center justify-between rounded-lg border border-zinc-800/50 px-4 py-3" key={`${row.rowNumber}-${row.status}`}>
             <div>
-              <strong className="text-sm font-medium text-zinc-100">Row {row.rowNumber}</strong>
+              <strong className="text-sm font-medium text-zinc-100">{isPolish ? 'Wiersz' : 'Row'} {row.rowNumber}</strong>
               <p className="text-sm text-zinc-500">{row.message}</p>
             </div>
             <span className={`${badge} ${importPreviewBadgeVariant(row.status)}`}>
-              {formatImportRowStatus(row.status)}
+              {labelImportRowStatus(row.status)}
             </span>
           </article>
         ))}
         {rows.length === 0 && (
-          <p className="text-sm text-zinc-500">No preview rows match the selected status.</p>
+          <p className="text-sm text-zinc-500">
+            {isPolish
+              ? 'Żaden wiersz podglądu nie pasuje do wybranego statusu.'
+              : 'No preview rows match the selected status.'}
+          </p>
         )}
       </div>
     </div>
@@ -1909,16 +2063,25 @@ function buildImportProfilePayload(form: ImportProfileFormState): SaveTransactio
 }
 
 function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): ImportTransactionsPayload {
+  const isPolish = getActiveUiLanguage() === 'pl'
   const trimmed = raw.trim()
   if (trimmed === '') {
-    throw new Error('Paste a JSON array of transaction rows or a full import payload first.')
+    throw new Error(
+      isPolish
+        ? 'Najpierw wklej tablicę JSON z wierszami transakcji albo pełny payload importu.'
+        : 'Paste a JSON array of transaction rows or a full import payload first.',
+    )
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(trimmed)
   } catch {
-    throw new Error('Structured import must contain valid JSON.')
+    throw new Error(
+      isPolish
+        ? 'Strukturalny import musi zawierać poprawny JSON.'
+        : 'Structured import must contain valid JSON.',
+    )
   }
 
   if (Array.isArray(parsed)) {
@@ -1931,7 +2094,11 @@ function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): Imp
   if (typeof parsed === 'object' && parsed !== null && 'rows' in parsed) {
     const rows = (parsed as { rows?: unknown }).rows
     if (!Array.isArray(rows)) {
-      throw new Error('Structured import payload must expose a "rows" array.')
+      throw new Error(
+        isPolish
+          ? 'Payload strukturalnego importu musi udostępniać tablicę "rows".'
+          : 'Structured import payload must expose a "rows" array.',
+      )
     }
 
     return {
@@ -1940,7 +2107,11 @@ function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): Imp
     }
   }
 
-  throw new Error('Structured import expects either a JSON array of rows or an object with a "rows" array.')
+  throw new Error(
+    isPolish
+      ? 'Strukturalny import oczekuje tablicy JSON z wierszami albo obiektu z tablicą "rows".'
+      : 'Structured import expects either a JSON array of rows or an object with a "rows" array.',
+  )
 }
 
 function normalizeOptionalValue(value: string): string | null {
@@ -1953,10 +2124,13 @@ function serializeImportProfilePayload(payload: SaveTransactionImportProfilePayl
 }
 
 function buildImportProfileTemplate(form: ImportProfileFormState): string {
+  const isPolish = getActiveUiLanguage() === 'pl'
   const delimiter = delimiterCharacter(form.delimiter)
-  const mappedFields = importMappingFields.filter((field) => form.headerMappings[field.key].trim() !== '')
+  const mappedFields = getImportMappingFields(isPolish).filter((field) => form.headerMappings[field.key].trim() !== '')
   if (mappedFields.length === 0) {
-    return 'Map at least one CSV column to generate a sample.'
+    return isPolish
+      ? 'Zmapuj przynajmniej jedną kolumnę CSV, aby wygenerować przykład.'
+      : 'Map at least one CSV column to generate a sample.'
   }
 
   const headers = mappedFields.map((field) => form.headerMappings[field.key].trim())
@@ -1992,7 +2166,7 @@ function exampleValueForField(field: ImportMappingField, form: ImportProfileForm
     case 'fxRateToPln':
       return formatExampleDecimal('4.0123', form.decimalSeparator)
     case 'notes':
-      return 'Starter lot'
+      return getActiveUiLanguage() === 'pl' ? 'Pierwsza partia' : 'Starter lot'
     default:
       return ''
   }
@@ -2036,44 +2210,89 @@ function escapeCsvCell(delimiter: string, value: string) {
 }
 
 function buildImportResultMessage(createdCount: number, skippedDuplicateCount: number) {
+  const isPolish = getActiveUiLanguage() === 'pl'
   if (skippedDuplicateCount === 0) {
-    return `Imported ${createdCount} transactions.`
+    return isPolish
+      ? `Zaimportowano ${createdCount} transakcji.`
+      : `Imported ${createdCount} transactions.`
   }
 
-  return `Imported ${createdCount} transactions and skipped ${skippedDuplicateCount} duplicates.`
+  return isPolish
+    ? `Zaimportowano ${createdCount} transakcji i pominięto ${skippedDuplicateCount} duplikatów.`
+    : `Imported ${createdCount} transactions and skipped ${skippedDuplicateCount} duplicates.`
 }
 
 function buildImportPreviewSummary(
   preview: ImportTransactionsPreviewResult,
   skipDuplicates: boolean,
 ) {
+  const isPolish = getActiveUiLanguage() === 'pl'
   if (preview.invalidRowCount > 0) {
     return skipDuplicates
-      ? `${preview.invalidRowCount} invalid rows still block the import. Duplicate rows can be skipped automatically, but invalid rows must be fixed first.`
-      : `${preview.invalidRowCount} invalid rows and ${preview.duplicateRowCount} duplicate rows currently block the import.`
+      ? isPolish
+        ? `${preview.invalidRowCount} błędnych wierszy nadal blokuje import. Duplikaty można pominąć automatycznie, ale błędne wiersze trzeba najpierw poprawić.`
+        : `${preview.invalidRowCount} invalid rows still block the import. Duplicate rows can be skipped automatically, but invalid rows must be fixed first.`
+      : isPolish
+        ? `${preview.invalidRowCount} błędnych wierszy i ${preview.duplicateRowCount} duplikatów blokuje obecnie import.`
+        : `${preview.invalidRowCount} invalid rows and ${preview.duplicateRowCount} duplicate rows currently block the import.`
   }
 
   if (preview.duplicateRowCount > 0) {
     return skipDuplicates
-      ? `${preview.duplicateRowCount} duplicate rows will be skipped if you continue.`
-      : `${preview.duplicateRowCount} duplicate rows currently block the import. Enable duplicate skipping or adjust the batch.`
+      ? isPolish
+        ? `${preview.duplicateRowCount} duplikatów zostanie pominiętych, jeśli będziesz kontynuować.`
+        : `${preview.duplicateRowCount} duplicate rows will be skipped if you continue.`
+      : isPolish
+        ? `${preview.duplicateRowCount} duplikatów blokuje obecnie import. Włącz pomijanie duplikatów albo popraw paczkę.`
+        : `${preview.duplicateRowCount} duplicate rows currently block the import. Enable duplicate skipping or adjust the batch.`
   }
 
-  return 'All rows are importable. You can safely commit this batch.'
+  return isPolish
+    ? 'Wszystkie wiersze nadają się do importu. Możesz bezpiecznie zatwierdzić tę paczkę.'
+    : 'All rows are importable. You can safely commit this batch.'
 }
 
-function formatImportRowStatus(status: string) {
-  switch (status) {
-    case 'IMPORTABLE':
-      return 'Importable'
-    case 'DUPLICATE_EXISTING':
-      return 'Existing duplicate'
-    case 'DUPLICATE_BATCH':
-      return 'Batch duplicate'
-    case 'INVALID':
-      return 'Invalid'
+function getImportMappingFields(isPolish: boolean) {
+  return importMappingFields.map((field) => ({
+    ...field,
+    label: translateImportMappingLabel(field.key, isPolish),
+  }))
+}
+
+function translateImportMappingLabel(field: ImportMappingField, isPolish: boolean) {
+  if (!isPolish) {
+    return importMappingFields.find((candidate) => candidate.key === field)?.label ?? field
+  }
+
+  switch (field) {
+    case 'account':
+      return 'Kolumna konta'
+    case 'type':
+      return 'Kolumna typu'
+    case 'tradeDate':
+      return 'Kolumna daty transakcji'
+    case 'settlementDate':
+      return 'Kolumna daty rozliczenia'
+    case 'instrument':
+      return 'Kolumna instrumentu'
+    case 'quantity':
+      return 'Kolumna liczby sztuk'
+    case 'unitPrice':
+      return 'Kolumna ceny jednostkowej'
+    case 'grossAmount':
+      return 'Kolumna kwoty brutto'
+    case 'feeAmount':
+      return 'Kolumna prowizji'
+    case 'taxAmount':
+      return 'Kolumna podatku'
+    case 'currency':
+      return 'Kolumna waluty'
+    case 'fxRateToPln':
+      return 'Kolumna kursu FX do PLN'
+    case 'notes':
+      return 'Kolumna notatek'
     default:
-      return status
+      return field
   }
 }
 

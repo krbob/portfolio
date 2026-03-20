@@ -8,6 +8,7 @@ import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { Card, SectionHeader } from '../components/ui'
+import { useI18n } from '../lib/i18n'
 
 const SETTINGS_SECTIONS = [
   { id: 'health', label: 'Health' },
@@ -20,9 +21,11 @@ const SETTINGS_SECTIONS = [
 ] as const
 
 export function SettingsScreen() {
+  const { isPolish } = useI18n()
+
   return (
     <>
-      <PageHeader title="Settings">
+      <PageHeader title={isPolish ? 'Ustawienia' : 'Settings'}>
         <div className="hidden flex-wrap items-center gap-2 xl:flex">
           {SETTINGS_SECTIONS.map((section) => (
             <a
@@ -30,7 +33,17 @@ export function SettingsScreen() {
               href={`#${section.id}`}
               className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
             >
-              {section.label}
+              {isPolish
+                ? ({
+                    Health: 'Stan systemu',
+                    Setup: 'Konfiguracja',
+                    Targets: 'Cele',
+                    Transfer: 'Transfer',
+                    Audit: 'Audyt',
+                    Backups: 'Kopie',
+                    Cache: 'Cache',
+                  } as Record<string, string>)[section.label]
+                : section.label}
             </a>
           ))}
         </div>
@@ -56,9 +69,11 @@ export function SettingsScreen() {
 
         <Card as="section" id="audit">
           <SectionHeader
-            eyebrow="Audit"
-            title="Operational activity"
-            description="Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace."
+            eyebrow={isPolish ? 'Audyt' : 'Audit'}
+            title={isPolish ? 'Aktywność operacyjna' : 'Operational activity'}
+            description={isPolish
+              ? 'Sprawdź ostatnie backupy, restore, importy i inne operacje zmieniające stan poza przestrzenią transakcji.'
+              : 'Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace.'}
           />
           <OperationalAuditPanel />
         </Card>
