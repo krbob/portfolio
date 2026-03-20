@@ -352,6 +352,7 @@ data class PortfolioSnapshotResponse(
     val exportedAt: String,
     val accounts: List<AccountSnapshotResponse>,
     val instruments: List<InstrumentSnapshotResponse>,
+    val targets: List<PortfolioTargetSnapshotResponse> = emptyList(),
     val transactions: List<TransactionSnapshotResponse>
 )
 
@@ -412,6 +413,15 @@ data class TransactionSnapshotResponse(
 )
 
 @Serializable
+data class PortfolioTargetSnapshotResponse(
+    val id: String,
+    val assetClass: String,
+    val targetWeight: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
 data class ImportPortfolioStateRequest(
     val mode: String = "MERGE",
     val confirmation: String? = null,
@@ -423,6 +433,7 @@ data class PortfolioImportResultResponse(
     val mode: String,
     val accountCount: Int,
     val instrumentCount: Int,
+    val targetCount: Int,
     val transactionCount: Int,
     val safetyBackupFileName: String? = null
 )
@@ -434,12 +445,15 @@ data class PortfolioImportPreviewResponse(
     val isValid: Boolean,
     val snapshotAccountCount: Int,
     val snapshotInstrumentCount: Int,
+    val snapshotTargetCount: Int,
     val snapshotTransactionCount: Int,
     val existingAccountCount: Int,
     val existingInstrumentCount: Int,
+    val existingTargetCount: Int,
     val existingTransactionCount: Int,
     val matchingAccountCount: Int,
     val matchingInstrumentCount: Int,
+    val matchingTargetCount: Int,
     val matchingTransactionCount: Int,
     val blockingIssueCount: Int,
     val warningCount: Int,
@@ -502,6 +516,7 @@ data class PortfolioBackupRecordResponse(
     val schemaVersion: Int?,
     val accountCount: Int?,
     val instrumentCount: Int?,
+    val targetCount: Int?,
     val transactionCount: Int?,
     val isReadable: Boolean,
     val errorMessage: String?
@@ -520,6 +535,7 @@ data class PortfolioBackupRestoreResultResponse(
     val mode: String,
     val accountCount: Int,
     val instrumentCount: Int,
+    val targetCount: Int,
     val transactionCount: Int,
     val safetyBackupFileName: String? = null
 )
@@ -724,6 +740,15 @@ private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfoli
             updatedAt = snapshot.updatedAt
         )
     },
+    targets = targets.map { snapshot ->
+        PortfolioTargetSnapshotResponse(
+            id = snapshot.id,
+            assetClass = snapshot.assetClass,
+            targetWeight = snapshot.targetWeight,
+            createdAt = snapshot.createdAt,
+            updatedAt = snapshot.updatedAt
+        )
+    },
     transactions = transactions.map { snapshot ->
         TransactionSnapshotResponse(
             id = snapshot.id,
@@ -790,6 +815,15 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
                 updatedAt = instrument.updatedAt
             )
         },
+        targets = snapshot.targets.map { target ->
+            net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot(
+                id = target.id,
+                assetClass = target.assetClass,
+                targetWeight = target.targetWeight,
+                createdAt = target.createdAt,
+                updatedAt = target.updatedAt
+            )
+        },
         transactions = snapshot.transactions.map { transaction ->
             net.bobinski.portfolio.api.domain.service.TransactionSnapshot(
                 id = transaction.id,
@@ -818,6 +852,7 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toRe
         mode = mode.name,
         accountCount = accountCount,
         instrumentCount = instrumentCount,
+        targetCount = targetCount,
         transactionCount = transactionCount,
         safetyBackupFileName = safetyBackupFileName
     )
@@ -829,12 +864,15 @@ private fun PortfolioImportPreview.toResponse(): PortfolioImportPreviewResponse 
         isValid = isValid,
         snapshotAccountCount = snapshotAccountCount,
         snapshotInstrumentCount = snapshotInstrumentCount,
+        snapshotTargetCount = snapshotTargetCount,
         snapshotTransactionCount = snapshotTransactionCount,
         existingAccountCount = existingAccountCount,
         existingInstrumentCount = existingInstrumentCount,
+        existingTargetCount = existingTargetCount,
         existingTransactionCount = existingTransactionCount,
         matchingAccountCount = matchingAccountCount,
         matchingInstrumentCount = matchingInstrumentCount,
+        matchingTargetCount = matchingTargetCount,
         matchingTransactionCount = matchingTransactionCount,
         blockingIssueCount = blockingIssueCount,
         warningCount = warningCount,
@@ -868,6 +906,7 @@ private fun PortfolioBackupRecord.toResponse(): PortfolioBackupRecordResponse = 
     schemaVersion = schemaVersion,
     accountCount = accountCount,
     instrumentCount = instrumentCount,
+    targetCount = targetCount,
     transactionCount = transactionCount,
     isReadable = isReadable,
     errorMessage = errorMessage
@@ -912,6 +951,7 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreResu
         mode = mode.name,
         accountCount = accountCount,
         instrumentCount = instrumentCount,
+        targetCount = targetCount,
         transactionCount = transactionCount,
         safetyBackupFileName = safetyBackupFileName
     )

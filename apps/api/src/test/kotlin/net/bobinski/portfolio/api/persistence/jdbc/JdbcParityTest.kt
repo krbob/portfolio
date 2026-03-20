@@ -29,10 +29,7 @@ import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
-import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
-import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
-import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
@@ -129,15 +126,11 @@ class JdbcParityTest {
         private val transferService = PortfolioTransferService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
+            portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             auditLogService = auditLogService,
             clock = clock
         )
-        private val targetService = PortfolioTargetService(
-            portfolioTargetRepository = portfolioTargetRepository,
-            clock = clock
-        )
-
         suspend fun seedFixture() {
             accountRepository.save(account("Primary Brokerage", "Broker A", UUID.fromString("70000000-0000-0000-0000-000000000001")))
             accountRepository.save(account("Retirement Brokerage", "Broker B", UUID.fromString("70000000-0000-0000-0000-000000000002")))
@@ -199,11 +192,17 @@ class JdbcParityTest {
                 )
             )
 
-            targetService.replace(
-                ReplacePortfolioTargetsCommand(
-                    items = listOf(
-                        ReplacePortfolioTargetItem(assetClass = AssetClass.EQUITIES, targetWeight = BigDecimal("0.80")),
-                        ReplacePortfolioTargetItem(assetClass = AssetClass.BONDS, targetWeight = BigDecimal("0.20"))
+            portfolioTargetRepository.replaceAll(
+                listOf(
+                    target(
+                        id = UUID.fromString("72000000-0000-0000-0000-000000000001"),
+                        assetClass = AssetClass.EQUITIES,
+                        targetWeight = BigDecimal("0.80")
+                    ),
+                    target(
+                        id = UUID.fromString("72000000-0000-0000-0000-000000000002"),
+                        assetClass = AssetClass.BONDS,
+                        targetWeight = BigDecimal("0.20")
                     )
                 )
             )
@@ -301,6 +300,18 @@ class JdbcParityTest {
         notes = "",
         createdAt = tradeDate.atStartOfDay().toInstant(ZoneOffset.UTC),
         updatedAt = tradeDate.atStartOfDay().toInstant(ZoneOffset.UTC)
+    )
+
+    private fun target(
+        id: UUID,
+        assetClass: AssetClass,
+        targetWeight: BigDecimal
+    ) = PortfolioTarget(
+        id = id,
+        assetClass = assetClass,
+        targetWeight = targetWeight,
+        createdAt = Instant.parse("2026-03-15T12:00:00Z"),
+        updatedAt = Instant.parse("2026-03-15T12:00:00Z")
     )
 
     private object UnsupportedValuationProvider : CurrentInstrumentValuationProvider {

@@ -51,6 +51,16 @@ class PortfolioStateRouteTest {
             }
             """.trimIndent()
         )
+        createTargets(
+            """
+            {
+              "items": [
+                { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                { "assetClass": "BONDS", "targetWeight": "0.20" }
+              ]
+            }
+            """.trimIndent()
+        )
 
         val exportResponse = client.get("/v1/portfolio/state/export")
         val previewResponse = client.post("/v1/portfolio/state/preview") {
@@ -68,6 +78,8 @@ class PortfolioStateRouteTest {
 
         assertEquals(HttpStatusCode.OK, previewResponse.status)
         assertTrue(previewResponse.bodyAsText().contains("\"isValid\": true"))
+        assertTrue(previewResponse.bodyAsText().contains("\"snapshotTargetCount\": 2"))
+        assertTrue(previewResponse.bodyAsText().contains("\"existingTargetCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"snapshotTransactionCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"existingTransactionCount\": 2"))
     }
@@ -107,6 +119,16 @@ class PortfolioStateRouteTest {
             }
             """.trimIndent()
         )
+        createTargets(
+            """
+            {
+              "items": [
+                { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                { "assetClass": "BONDS", "targetWeight": "0.20" }
+              ]
+            }
+            """.trimIndent()
+        )
 
         val exportResponse = client.get("/v1/portfolio/state/export")
         val importResponse = client.post("/v1/portfolio/state/import") {
@@ -125,9 +147,11 @@ class PortfolioStateRouteTest {
 
         assertEquals(HttpStatusCode.OK, exportResponse.status)
         assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 1"))
+        assertTrue(exportResponse.bodyAsText().contains("\"targets\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"name\": \"Primary\""))
         assertEquals(HttpStatusCode.OK, importResponse.status)
         assertTrue(importResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
+        assertTrue(importResponse.bodyAsText().contains("\"targetCount\": 2"))
         assertTrue(importResponse.bodyAsText().contains("\"transactionCount\": 2"))
         assertTrue(importResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
         assertTrue(transactionsResponse.bodyAsText().contains("\"type\": \"BUY\""))
@@ -337,5 +361,13 @@ class PortfolioStateRouteTest {
             setBody(body)
         }
         assertEquals(HttpStatusCode.Created, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createTargets(body: String) {
+        val response = client.post("/v1/portfolio/targets") {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
     }
 }

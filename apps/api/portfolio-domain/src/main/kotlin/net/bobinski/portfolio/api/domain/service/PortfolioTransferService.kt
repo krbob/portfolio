@@ -6,11 +6,13 @@ import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
+import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
+import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import java.math.BigDecimal
 import java.time.Clock
@@ -23,6 +25,7 @@ import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 class PortfolioTransferService(
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
+    private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val auditLogService: AuditLogService,
     private val clock: Clock
@@ -30,6 +33,8 @@ class PortfolioTransferService(
     suspend fun exportState(): PortfolioSnapshot {
         val accounts = accountRepository.list().sortedBy(Account::createdAt)
         val instruments = instrumentRepository.list().sortedBy(Instrument::createdAt)
+        val targets = portfolioTargetRepository.list()
+            .sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
         val transactions = transactionRepository.list()
             .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
 
@@ -38,6 +43,7 @@ class PortfolioTransferService(
             exportedAt = Instant.now(clock),
             accounts = accounts.map { it.toSnapshot() },
             instruments = instruments.map { it.toSnapshot() },
+            targets = targets.map { it.toSnapshot() },
             transactions = transactions.map { it.toSnapshot() }
         )
     }
@@ -45,6 +51,7 @@ class PortfolioTransferService(
     suspend fun previewImport(request: PortfolioImportRequest): PortfolioImportPreview {
         val existingAccounts = accountRepository.list()
         val existingInstruments = instrumentRepository.list()
+        val existingTargets = portfolioTargetRepository.list()
         val existingTransactions = transactionRepository.list()
         val issues = mutableListOf<PortfolioImportIssue>()
 
@@ -63,6 +70,10 @@ class PortfolioTransferService(
         issues += duplicateIdIssues(
             entityName = "instrument",
             ids = request.snapshot.instruments.map(InstrumentSnapshot::id)
+        )
+        issues += duplicateIdIssues(
+            entityName = "target",
+            ids = request.snapshot.targets.map(PortfolioTargetSnapshot::id)
         )
         issues += duplicateIdIssues(
             entityName = "transaction",
@@ -95,6 +106,17 @@ class PortfolioTransferService(
                         entityName = "instrument",
                         entityId = snapshot.id,
                         message = exception.message ?: "Invalid instrument snapshot."
+                    )
+                }
+        }
+
+        request.snapshot.targets.forEach { snapshot ->
+            runCatching { snapshot.toDomain() }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "target",
+                        entityId = snapshot.id,
+                        message = exception.message ?: "Invalid target snapshot."
                     )
                 }
         }
@@ -142,6 +164,7 @@ class PortfolioTransferService(
 
         val snapshotAccountIdsRaw = request.snapshot.accounts.map(AccountSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
         val snapshotInstrumentIdsRaw = request.snapshot.instruments.map(InstrumentSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
+        val snapshotTargetIdsRaw = request.snapshot.targets.map(PortfolioTargetSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
         val snapshotTransactionIdsRaw = request.snapshot.transactions.map(TransactionSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
 
         return PortfolioImportPreview(
@@ -150,12 +173,15 @@ class PortfolioTransferService(
             isValid = issues.none { issue -> issue.severity == ImportIssueSeverity.ERROR },
             snapshotAccountCount = request.snapshot.accounts.size,
             snapshotInstrumentCount = request.snapshot.instruments.size,
+            snapshotTargetCount = request.snapshot.targets.size,
             snapshotTransactionCount = request.snapshot.transactions.size,
             existingAccountCount = existingAccounts.size,
             existingInstrumentCount = existingInstruments.size,
+            existingTargetCount = existingTargets.size,
             existingTransactionCount = existingTransactions.size,
             matchingAccountCount = existingAccounts.count { account -> account.id in snapshotAccountIdsRaw },
             matchingInstrumentCount = existingInstruments.count { instrument -> instrument.id in snapshotInstrumentIdsRaw },
+            matchingTargetCount = existingTargets.count { target -> target.id in snapshotTargetIdsRaw },
             matchingTransactionCount = existingTransactions.count { transaction -> transaction.id in snapshotTransactionIdsRaw },
             blockingIssueCount = issues.count { issue -> issue.severity == ImportIssueSeverity.ERROR },
             warningCount = issues.count { issue -> issue.severity == ImportIssueSeverity.WARNING },
@@ -180,6 +206,7 @@ class PortfolioTransferService(
 
         if (request.mode == ImportMode.REPLACE) {
             transactionRepository.deleteAll()
+            portfolioTargetRepository.deleteAll()
             instrumentRepository.deleteAll()
             accountRepository.deleteAll()
         }
@@ -194,6 +221,11 @@ class PortfolioTransferService(
             .map { snapshot ->
                 instrumentRepository.save(snapshot.toDomain())
             }
+        val targets = request.snapshot.targets
+            .sortedWith(compareBy<PortfolioTargetSnapshot>({ it.createdAt }, { it.assetClass }))
+            .also { snapshots ->
+                portfolioTargetRepository.replaceAll(snapshots.map { it.toDomain() })
+            }
         val transactions = request.snapshot.transactions
             .sortedWith(compareBy<TransactionSnapshot>({ it.tradeDate }, { it.createdAt }))
             .map { snapshot ->
@@ -204,6 +236,7 @@ class PortfolioTransferService(
             mode = request.mode,
             accountCount = accounts.size,
             instrumentCount = instruments.size,
+            targetCount = targets.size,
             transactionCount = transactions.size
         )
         auditLogService.record(
@@ -215,6 +248,7 @@ class PortfolioTransferService(
                 "mode" to request.mode.name,
                 "accountCount" to result.accountCount.toString(),
                 "instrumentCount" to result.instrumentCount.toString(),
+                "targetCount" to result.targetCount.toString(),
                 "transactionCount" to result.transactionCount.toString()
             )
         )
@@ -288,6 +322,14 @@ class PortfolioTransferService(
         updatedAt = updatedAt.toString()
     )
 
+    private fun PortfolioTarget.toSnapshot(): PortfolioTargetSnapshot = PortfolioTargetSnapshot(
+        id = id.toString(),
+        assetClass = assetClass.name,
+        targetWeight = targetWeight.toPlainString(),
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt.toString()
+    )
+
     private fun Transaction.toSnapshot(): TransactionSnapshot = TransactionSnapshot(
         id = id.toString(),
         accountId = accountId.toString(),
@@ -332,6 +374,14 @@ class PortfolioTransferService(
         updatedAt = Instant.parse(updatedAt)
     )
 
+    private fun PortfolioTargetSnapshot.toDomain(): PortfolioTarget = PortfolioTarget(
+        id = UUID.fromString(id),
+        assetClass = AssetClass.valueOf(assetClass),
+        targetWeight = targetWeight.toBigDecimal(),
+        createdAt = Instant.parse(createdAt),
+        updatedAt = Instant.parse(updatedAt)
+    )
+
     private fun EdoTermsSnapshot.toDomain(): EdoTerms = EdoTerms(
         purchaseDate = LocalDate.parse(purchaseDate),
         firstPeriodRateBps = firstPeriodRateBps,
@@ -369,6 +419,7 @@ data class PortfolioSnapshot(
     val exportedAt: Instant,
     val accounts: List<AccountSnapshot>,
     val instruments: List<InstrumentSnapshot>,
+    val targets: List<PortfolioTargetSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
 
@@ -428,6 +479,15 @@ data class TransactionSnapshot(
     val updatedAt: String
 )
 
+@Serializable
+data class PortfolioTargetSnapshot(
+    val id: String,
+    val assetClass: String,
+    val targetWeight: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
 data class PortfolioImportRequest(
     val mode: ImportMode,
     val snapshot: PortfolioSnapshot
@@ -437,6 +497,7 @@ data class PortfolioImportResult(
     val mode: ImportMode,
     val accountCount: Int,
     val instrumentCount: Int,
+    val targetCount: Int,
     val transactionCount: Int,
     val safetyBackupFileName: String? = null
 )
@@ -452,12 +513,15 @@ data class PortfolioImportPreview(
     val isValid: Boolean,
     val snapshotAccountCount: Int,
     val snapshotInstrumentCount: Int,
+    val snapshotTargetCount: Int,
     val snapshotTransactionCount: Int,
     val existingAccountCount: Int,
     val existingInstrumentCount: Int,
+    val existingTargetCount: Int,
     val existingTransactionCount: Int,
     val matchingAccountCount: Int,
     val matchingInstrumentCount: Int,
+    val matchingTargetCount: Int,
     val matchingTransactionCount: Int,
     val blockingIssueCount: Int,
     val warningCount: Int,

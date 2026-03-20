@@ -223,6 +223,7 @@ fun appModule(
         PortfolioTransferService(
             accountRepository = get(),
             instrumentRepository = get(),
+            portfolioTargetRepository = get(),
             transactionRepository = get(),
             auditLogService = get(),
             clock = get()

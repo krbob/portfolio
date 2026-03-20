@@ -90,6 +90,7 @@ class PortfolioBackupService(
                 message = "Created ${trigger.name.lowercase()} backup ${backup.fileName}.",
                 metadata = mapOf(
                     "trigger" to trigger.name,
+                    "targetCount" to (backup.targetCount?.toString() ?: "n/a"),
                     "transactionCount" to (backup.transactionCount?.toString() ?: "n/a"),
                     "sizeBytes" to backup.sizeBytes.toString()
                 )
@@ -153,6 +154,7 @@ class PortfolioBackupService(
                 mode = result.mode,
                 accountCount = result.accountCount,
                 instrumentCount = result.instrumentCount,
+                targetCount = result.targetCount,
                 transactionCount = result.transactionCount,
                 safetyBackupFileName = safetyBackup?.fileName
             )
@@ -166,6 +168,7 @@ class PortfolioBackupService(
                     "mode" to restoreResult.mode.name,
                     "accountCount" to restoreResult.accountCount.toString(),
                     "instrumentCount" to restoreResult.instrumentCount.toString(),
+                    "targetCount" to restoreResult.targetCount.toString(),
                     "transactionCount" to restoreResult.transactionCount.toString(),
                     "safetyBackupFileName" to (restoreResult.safetyBackupFileName ?: "none")
                 )
@@ -238,6 +241,7 @@ class PortfolioBackupService(
                 schemaVersion = snapshot.schemaVersion,
                 accountCount = snapshot.accounts.size,
                 instrumentCount = snapshot.instruments.size,
+                targetCount = snapshot.targets.size,
                 transactionCount = snapshot.transactions.size,
                 isReadable = true,
                 errorMessage = null
@@ -251,6 +255,7 @@ class PortfolioBackupService(
                 schemaVersion = null,
                 accountCount = null,
                 instrumentCount = null,
+                targetCount = null,
                 transactionCount = null,
                 isReadable = false,
                 errorMessage = exception.message ?: "Failed to read backup."
@@ -314,6 +319,7 @@ data class PortfolioBackupRecord(
     val schemaVersion: Int?,
     val accountCount: Int?,
     val instrumentCount: Int?,
+    val targetCount: Int?,
     val transactionCount: Int?,
     val isReadable: Boolean,
     val errorMessage: String?
@@ -329,6 +335,7 @@ data class PortfolioBackupRestoreResult(
     val mode: ImportMode,
     val accountCount: Int,
     val instrumentCount: Int,
+    val targetCount: Int,
     val transactionCount: Int,
     val safetyBackupFileName: String? = null
 )
@@ -351,6 +358,7 @@ private data class StoredPortfolioSnapshot(
     val exportedAt: String,
     val accounts: List<AccountSnapshot>,
     val instruments: List<InstrumentSnapshot>,
+    val targets: List<PortfolioTargetSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
 
@@ -359,6 +367,7 @@ private fun PortfolioSnapshot.toStored(): StoredPortfolioSnapshot = StoredPortfo
     exportedAt = exportedAt.toString(),
     accounts = accounts,
     instruments = instruments,
+    targets = targets,
     transactions = transactions
 )
 
@@ -367,5 +376,6 @@ private fun StoredPortfolioSnapshot.toDomain(): PortfolioSnapshot = PortfolioSna
     exportedAt = Instant.parse(exportedAt),
     accounts = accounts,
     instruments = instruments,
+    targets = targets,
     transactions = transactions
 )
