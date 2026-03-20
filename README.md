@@ -54,6 +54,7 @@ portfolio/
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
 - optional background refresh can warm cached history and returns on startup and on a fixed interval
+- dashboard and settings expose a dedicated data-quality view for valuation coverage, benchmark coverage, CPI coverage and read-model freshness
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 - optional single-user password auth is available through signed session cookies and a login gate in the web UI
 

@@ -476,6 +476,39 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            periods: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            intervalMinutes: 720,
+            runOnStart: true,
+            running: false,
+            lastRunAt: null,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            lastTrigger: null,
+            lastDurationMs: null,
+            modelNames: ['DAILY_HISTORY', 'RETURNS'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-cache')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
       throw new Error(`Unhandled fetch in dashboard error test: ${url}`)
     })
 
@@ -584,6 +617,39 @@ describe('App', () => {
           }),
           { status: 200 },
         )
+      }
+
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            periods: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            intervalMinutes: 720,
+            runOnStart: true,
+            running: false,
+            lastRunAt: null,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            lastTrigger: null,
+            lastDurationMs: null,
+            modelNames: ['DAILY_HISTORY', 'RETURNS'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-cache')) {
+        return new Response(JSON.stringify([]), { status: 200 })
       }
 
       throw new Error(`Unhandled fetch in navigation drawer test: ${url}`)
@@ -734,6 +800,131 @@ describe('App', () => {
 
       if (url.includes('/api/v1/portfolio/targets')) {
         return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            valuationState: 'MARK_TO_MARKET',
+            totalBookValuePln: '2000.00',
+            totalCurrentValuePln: '2100.00',
+            investedBookValuePln: '1600.00',
+            investedCurrentValuePln: '1700.00',
+            cashBalancePln: '400.00',
+            netContributionsPln: '2000.00',
+            equityBookValuePln: '1600.00',
+            equityCurrentValuePln: '1700.00',
+            bondBookValuePln: '0.00',
+            bondCurrentValuePln: '0.00',
+            cashBookValuePln: '400.00',
+            cashCurrentValuePln: '400.00',
+            totalUnrealizedGainPln: '100.00',
+            accountCount: 1,
+            instrumentCount: 1,
+            activeHoldingCount: 1,
+            valuedHoldingCount: 1,
+            unvaluedHoldingCount: 0,
+            valuationIssueCount: 0,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            from: '2026-01-01',
+            until: '2026-03-13',
+            valuationState: 'MARK_TO_MARKET',
+            instrumentHistoryIssueCount: 0,
+            referenceSeriesIssueCount: 0,
+            benchmarkSeriesIssueCount: 0,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+            points: [
+              {
+                date: '2026-03-13',
+                totalBookValuePln: '2000.00',
+                totalCurrentValuePln: '2100.00',
+                netContributionsPln: '2000.00',
+                cashBalancePln: '400.00',
+                totalCurrentValueUsd: '500.00',
+                netContributionsUsd: '480.00',
+                cashBalanceUsd: '95.00',
+                totalCurrentValueAu: '1.10',
+                netContributionsAu: '1.00',
+                cashBalanceAu: '0.20',
+                equityCurrentValuePln: '1700.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '400.00',
+                equityAllocationPct: '80.95',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '19.05',
+                portfolioPerformanceIndex: '1.05',
+                equityBenchmarkIndex: '1.03',
+                inflationBenchmarkIndex: '1.01',
+                targetMixBenchmarkIndex: '1.02',
+                activeHoldingCount: 1,
+                valuedHoldingCount: 1,
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            periods: [
+              {
+                key: 'MAX',
+                label: 'MAX',
+                requestedFrom: '2026-01-01',
+                from: '2026-01-01',
+                until: '2026-03-13',
+                clippedToInception: false,
+                dayCount: 72,
+                nominalPln: {
+                  moneyWeightedReturn: '0.05',
+                  annualizedMoneyWeightedReturn: '0.05',
+                  timeWeightedReturn: '0.05',
+                  annualizedTimeWeightedReturn: '0.05',
+                },
+                nominalUsd: null,
+                realPln: {
+                  moneyWeightedReturn: '0.03',
+                  annualizedMoneyWeightedReturn: '0.03',
+                  timeWeightedReturn: '0.03',
+                  annualizedTimeWeightedReturn: '0.03',
+                },
+                inflationFrom: '2026-01',
+                inflationUntil: '2026-03',
+                inflationMultiplier: '1.02',
+                benchmarks: [
+                  {
+                    key: 'VWRA',
+                    label: 'VWRA benchmark',
+                    pinned: true,
+                    nominalPln: {
+                      moneyWeightedReturn: '0.04',
+                      annualizedMoneyWeightedReturn: '0.04',
+                      timeWeightedReturn: '0.04',
+                      annualizedTimeWeightedReturn: '0.04',
+                    },
+                    excessTimeWeightedReturn: '0.01',
+                    excessAnnualizedTimeWeightedReturn: '0.01',
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        )
       }
 
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments')) {

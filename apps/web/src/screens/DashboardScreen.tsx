@@ -4,6 +4,7 @@ import type { PortfolioDailyHistoryPoint } from '../api/read-model'
 import { MiniChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
 import { StatCard, Badge, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
+import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
@@ -18,6 +19,7 @@ export function DashboardScreen() {
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const allocationQuery = usePortfolioAllocation()
+  const dataQuality = usePortfolioDataQuality()
   const overview = overviewQuery.data
 
   const allPoints = historyQuery.data?.points ?? []
@@ -39,9 +41,6 @@ export function DashboardScreen() {
   const bondPct = overview && totalCurrentValue > 0 ? (Number(overview.bondCurrentValuePln) / totalCurrentValue) * 100 : 0
   const cashPct = overview && totalCurrentValue > 0 ? (Number(overview.cashCurrentValuePln) / totalCurrentValue) * 100 : 0
 
-  const openIssues = overview
-    ? overview.valuationIssueCount + overview.missingFxTransactions + overview.unsupportedCorrectionTransactions
-    : 0
   const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
   const breachedBuckets = configuredBuckets.filter((bucket) => !bucket.withinTolerance)
   const mostOffTargetBucket = useMemo(() => {
@@ -335,31 +334,26 @@ export function DashboardScreen() {
                 </Link>
               </div>
             )}
-
-            {/* Compact health footer */}
-            <HealthIndicator
-              valuedCount={overview.valuedHoldingCount}
-              totalCount={overview.activeHoldingCount}
-              issueCount={openIssues}
-            />
           </div>
 
-          {openIssues > 0 && (
+          {dataQuality.summary?.warningCount ? (
             <div className="rounded-xl border border-amber-500/20 bg-zinc-900 p-5">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-amber-400">{isPolish ? 'Problemy z danymi' : 'Data issues'}</h3>
-                <Badge variant="warning">{openIssues}</Badge>
+                <h3 className="text-sm font-medium text-amber-400">{isPolish ? 'Jakość danych' : 'Data quality'}</h3>
+                <Badge variant="warning">{dataQuality.summary.warningCount}</Badge>
               </div>
               <div className="space-y-3">
-                <IssueRow label={isPolish ? 'Luki wyceny' : 'Valuation gaps'} count={overview.valuationIssueCount} />
-                <IssueRow label={isPolish ? 'Brakujący FX' : 'Missing FX'} count={overview.missingFxTransactions} />
-                <IssueRow label={isPolish ? 'Nieobsługiwane korekty' : 'Unsupported corrections'} count={overview.unsupportedCorrectionTransactions} />
+                {dataQuality.summary.noticeMessages.map((message) => (
+                  <p key={message} className="text-sm text-zinc-300">
+                    {message}
+                  </p>
+                ))}
               </div>
-              <Link to="/settings#health" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
-                {isPolish ? 'Otwórz szczegóły stanu systemu' : 'Open health details'}
+              <Link to="/settings#data-quality" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
+                {isPolish ? 'Otwórz szczegóły jakości danych' : 'Open data quality details'}
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -379,15 +373,9 @@ export function DashboardScreen() {
           value={formatCurrencyPln(overview.cashBalancePln)}
         />
         <StatCard
-          label={isPolish ? 'Pokrycie wyceny' : 'Valuation Coverage'}
-          value={`${overview.valuedHoldingCount} / ${overview.activeHoldingCount}`}
-          subtitle={overview.unvaluedHoldingCount > 0
-            ? isPolish
-              ? `${overview.unvaluedHoldingCount} bez wyceny`
-              : `${overview.unvaluedHoldingCount} unvalued`
-            : isPolish
-              ? 'Pełne pokrycie'
-              : 'Full coverage'}
+          label={isPolish ? 'Jakość danych' : 'Data Quality'}
+          value={dashboardDataQualityValue(dataQuality.summary, isPolish, dataQuality.isLoading, Boolean(dataQuality.error))}
+          subtitle={dashboardDataQualitySubtitle(dataQuality.summary, isPolish, dataQuality.isLoading, Boolean(dataQuality.error))}
         />
       </div>
     </>
@@ -400,16 +388,6 @@ function AllocationLegend({ label, color, pct }: { label: string; color: string;
       <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
       {label} {formatPercent(pct)}
     </span>
-  )
-}
-
-function IssueRow({ label, count }: { label: string; count: number }) {
-  if (count === 0) return null
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-zinc-400">{label}</span>
-      <span className="font-medium tabular-nums text-amber-400">{count}</span>
-    </div>
   )
 }
 
@@ -488,38 +466,6 @@ function labelAllocationAction(action: string, isPolish: boolean) {
   }
 }
 
-function HealthIndicator({ valuedCount, totalCount, issueCount }: { valuedCount: number; totalCount: number; issueCount: number }) {
-  const { isPolish } = useI18n()
-  const fullCoverage = valuedCount === totalCount
-  const healthy = fullCoverage && issueCount === 0
-
-  return (
-    <div className="mt-4 flex items-center gap-2 border-t border-zinc-800/50 pt-3 text-xs">
-      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${healthy ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-      <span className="text-zinc-500">
-        {isPolish ? `${valuedCount}/${totalCount} wycenione` : `${valuedCount}/${totalCount} valued`}
-        {issueCount > 0 && (
-          <span className="text-amber-400">
-            {' · '}
-            {issueCount}
-            {' '}
-            {isPolish ? (issueCount === 1 ? 'problem' : 'problemy') : (issueCount === 1 ? 'issue' : 'issues')}
-          </span>
-        )}
-        {issueCount === 0 && fullCoverage && <span className="text-emerald-400/70"> · {isPolish ? 'Wszystko w porządku' : 'All clear'}</span>}
-        {issueCount === 0 && !fullCoverage && (
-          <span className="text-amber-400">
-            {' · '}
-            {totalCount - valuedCount}
-            {' '}
-            {isPolish ? 'bez wyceny' : 'unvalued'}
-          </span>
-        )}
-      </span>
-    </div>
-  )
-}
-
 function filterHistoryPoints(points: PortfolioDailyHistoryPoint[], range: DashboardRange) {
   if (range === 'MAX' || points.length === 0) return points
   const latestDate = new Date(points.at(-1)?.date ?? points[0].date)
@@ -527,4 +473,41 @@ function filterHistoryPoints(points: PortfolioDailyHistoryPoint[], range: Dashbo
   cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1)
   const cutoffString = cutoff.toISOString().slice(0, 10)
   return points.filter((p) => p.date >= cutoffString)
+}
+
+function dashboardDataQualityValue(
+  summary: ReturnType<typeof usePortfolioDataQuality>['summary'],
+  isPolish: boolean,
+  isLoading: boolean,
+  hasError: boolean,
+) {
+  if (isLoading) {
+    return isPolish ? 'Sprawdzanie...' : 'Checking...'
+  }
+  if (hasError || !summary) {
+    return isPolish ? 'Niedostępne' : 'Unavailable'
+  }
+  if (summary.warningCount > 0) {
+    return isPolish
+      ? `${summary.warningCount} ${summary.warningCount === 1 ? 'uwaga' : 'uwagi'}`
+      : `${summary.warningCount} ${summary.warningCount === 1 ? 'alert' : 'alerts'}`
+  }
+  return isPolish ? 'Zdrowe' : 'Healthy'
+}
+
+function dashboardDataQualitySubtitle(
+  summary: ReturnType<typeof usePortfolioDataQuality>['summary'],
+  isPolish: boolean,
+  isLoading: boolean,
+  hasError: boolean,
+) {
+  if (isLoading) {
+    return isPolish ? 'Łączenie sygnałów wyceny, benchmarków i CPI' : 'Combining valuation, benchmark and CPI signals'
+  }
+  if (hasError || !summary) {
+    return isPolish ? 'Otwórz szczegóły w Ustawieniach' : 'Open details in Settings'
+  }
+  return isPolish
+    ? `${summary.valuationCoverageLabel} wycenione · CPI do ${summary.cpiCoverageThroughLabel}`
+    : `${summary.valuationCoverageLabel} valued · CPI through ${summary.cpiCoverageThroughLabel}`
 }

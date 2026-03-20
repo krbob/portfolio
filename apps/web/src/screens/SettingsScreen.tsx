@@ -4,6 +4,7 @@ import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioBenchmarkSettingsSection } from '../components/PortfolioBenchmarkSettingsSection'
+import { PortfolioDataQualitySection } from '../components/PortfolioDataQualitySection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
@@ -13,6 +14,7 @@ import { useI18n } from '../lib/i18n'
 
 const SETTINGS_SECTIONS = [
   { id: 'health', label: 'Health' },
+  { id: 'data-quality', label: 'Data quality' },
   { id: 'setup', label: 'Setup' },
   { id: 'targets', label: 'Targets' },
   { id: 'benchmarks', label: 'Benchmarks' },
@@ -38,6 +40,7 @@ export function SettingsScreen() {
               {isPolish
                 ? ({
                     Health: 'Stan systemu',
+                    'Data quality': 'Jakość danych',
                     Setup: 'Konfiguracja',
                     Targets: 'Cele',
                     Benchmarks: 'Benchmarki',
@@ -55,6 +58,10 @@ export function SettingsScreen() {
       <div className="space-y-8">
         <section id="health">
           <SystemReadinessSection />
+        </section>
+
+        <section id="data-quality">
+          <PortfolioDataQualitySection />
         </section>
 
         <section id="setup" className="grid grid-cols-1 gap-8 lg:grid-cols-2">

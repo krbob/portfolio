@@ -129,7 +129,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - keep self-hosted installs fast on first open each day
 - make refresh cadence and last-successful-run visible in settings
 
-### 5.4 Data quality visibility (next)
+### 5.4 Data quality visibility (done)
 
 - expose freshness and degradation of market data, CPI, FX, gold, and benchmark coverage
 - distinguish clearly between runtime readiness and portfolio data quality
