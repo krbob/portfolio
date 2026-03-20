@@ -1,14 +1,33 @@
+import { useState } from 'react'
 import { useReadModelCacheSnapshots } from '../hooks/use-read-model'
+import { useInvalidateReadModelCache } from '../hooks/use-write-model'
 import { Card, SectionHeader } from './ui'
 import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
-import { badge, badgeVariants } from '../lib/styles'
+import { badge, badgeVariants, btnSecondary } from '../lib/styles'
 
 export function ReadModelCacheSection() {
   const { isPolish } = useI18n()
   const cacheQuery = useReadModelCacheSnapshots()
+  const invalidateCacheMutation = useInvalidateReadModelCache()
   const snapshots = cacheQuery.data ?? []
   const totalPayloadBytes = snapshots.reduce((sum, snapshot) => sum + snapshot.payloadSizeBytes, 0)
+  const [feedback, setFeedback] = useState<string | null>(null)
+
+  async function handleInvalidateClick() {
+    setFeedback(null)
+
+    try {
+      const result = await invalidateCacheMutation.mutateAsync()
+      setFeedback(
+        isPolish
+          ? `Wyczyszczono ${result.clearedSnapshotCount} snapshotów cache. Historia i zwroty odbudują się przy następnym odczycie.`
+          : `Cleared ${result.clearedSnapshotCount} cached snapshots. History and returns will rebuild on next access.`,
+      )
+    } catch {
+      // handled by mutation error rendering below
+    }
+  }
 
   return (
     <Card>
@@ -18,6 +37,22 @@ export function ReadModelCacheSection() {
         description={isPolish
           ? 'Historia i zwroty są cachowane jako odtwarzalne read modele, z metadanymi wyjaśniającymi kiedy i dlaczego dany snapshot powstał.'
           : 'History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened.'}
+        actions={(
+          <button
+            type="button"
+            className={btnSecondary}
+            onClick={handleInvalidateClick}
+            disabled={invalidateCacheMutation.isPending}
+          >
+            {invalidateCacheMutation.isPending
+              ? isPolish
+                ? 'Czyszczenie...'
+                : 'Clearing...'
+              : isPolish
+                ? 'Wyczyść cache'
+                : 'Clear cache'}
+          </button>
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
@@ -37,6 +72,10 @@ export function ReadModelCacheSection() {
 
       {cacheQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie snapshotów cache read modeli...' : 'Loading read-model cache snapshots...'}</p>}
       {cacheQuery.isError && <p className="text-sm text-red-400">{cacheQuery.error.message}</p>}
+      {feedback && <p className="mb-4 text-sm text-zinc-500">{feedback}</p>}
+      {invalidateCacheMutation.error && (
+        <p className="mb-4 text-sm text-red-400">{invalidateCacheMutation.error.message}</p>
+      )}
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length === 0 && (
         <p className="text-sm text-zinc-500">{isPolish ? 'Brak snapshotów read modeli. Otwórz historię lub zwroty, aby je wygenerować.' : 'No cached read models yet. Open history or returns to populate them.'}</p>
       )}

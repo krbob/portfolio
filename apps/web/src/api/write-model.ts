@@ -87,6 +87,10 @@ export type PortfolioTarget =
 export type ReplacePortfolioTargetsPayload =
   components['schemas']['ReplacePortfolioTargetsRequest']
 
+export interface ReadModelCacheInvalidationResult {
+  clearedSnapshotCount: number
+}
+
 export function listAccounts() {
   return requestJson<Account[]>('/api/v1/accounts')
 }
@@ -203,6 +207,12 @@ export function replacePortfolioTargets(payload: ReplacePortfolioTargetsPayload)
   return requestJson<PortfolioTarget[]>('/api/v1/portfolio/targets', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+export function invalidateReadModelCache() {
+  return requestJson<ReadModelCacheInvalidationResult>('/api/v1/portfolio/read-model-cache/invalidate', {
+    method: 'POST',
   })
 }
 

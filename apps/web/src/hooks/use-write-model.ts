@@ -8,6 +8,7 @@ import {
   deleteTransactionImportProfile,
   downloadPortfolioBackup,
   exportPortfolioState,
+  invalidateReadModelCache,
   importTransactionsCsv,
   importTransactions,
   importPortfolioState,
@@ -34,6 +35,7 @@ import {
   type ImportTransactionsPreviewResult,
   type PortfolioBackupRecord,
   type PortfolioTarget,
+  type ReadModelCacheInvalidationResult,
   type SaveTransactionImportProfilePayload,
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
@@ -231,6 +233,21 @@ export function useReplacePortfolioTargets() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+      ])
+    },
+  })
+}
+
+export function useInvalidateReadModelCache() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (): Promise<ReadModelCacheInvalidationResult> => invalidateReadModelCache(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
       ])
     },
   })
