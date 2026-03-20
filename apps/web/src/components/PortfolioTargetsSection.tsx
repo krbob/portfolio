@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { usePortfolioAllocation } from '../hooks/use-read-model'
 import { usePortfolioTargets, useReplacePortfolioTargets } from '../hooks/use-write-model'
-import { formatCurrencyPln, formatPercent } from '../lib/format'
+import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import {
   badge,
   badgeVariants,
@@ -206,7 +206,7 @@ export function PortfolioTargetsSection() {
                       <span className={`${badge} ${statusVariant(bucket.status)}`}>{bucket.status}</span>
                     </div>
 
-                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
                       <div>
                         <dt className="text-zinc-500">Current value</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.currentValuePln)}</dd>
@@ -219,6 +219,12 @@ export function PortfolioTargetsSection() {
                         <dt className="text-zinc-500">Drift</dt>
                         <dd className={driftColor(bucket.driftPctPoints)}>
                           {formatPercent(bucket.driftPctPoints, { signed: true, maximumFractionDigits: 2, suffix: ' pp' })}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Gap to target</dt>
+                        <dd className={gapColor(bucket.gapValuePln)}>
+                          {formatSignedCurrencyPln(bucket.gapValuePln)}
                         </dd>
                       </div>
                       <div>
@@ -273,6 +279,24 @@ function driftColor(value: string | null | undefined) {
   }
   if (numeric < 0) {
     return 'text-red-400'
+  }
+  return 'text-zinc-300'
+}
+
+function gapColor(value: string | null | undefined) {
+  if (value == null) {
+    return 'text-zinc-500'
+  }
+
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) {
+    return 'text-zinc-500'
+  }
+  if (numeric > 0) {
+    return 'text-amber-400'
+  }
+  if (numeric < 0) {
+    return 'text-sky-400'
   }
   return 'text-zinc-300'
 }

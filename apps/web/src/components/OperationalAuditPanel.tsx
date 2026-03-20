@@ -26,10 +26,13 @@ interface OperationalAuditPanelProps {
 }
 
 export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps) {
-  const eventsQuery = usePortfolioAuditEvents({ limit })
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL')
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('ALL')
   const [impactFilter, setImpactFilter] = useState<ImpactFilter>('ALL')
+  const eventsQuery = usePortfolioAuditEvents({
+    limit,
+    category: categoryFilter === 'ALL' ? undefined : categoryFilter,
+  })
 
   const events = eventsQuery.data ?? []
   const visibleEvents = events.filter((event) => {
@@ -56,7 +59,9 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
     <>
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">Events in window</span>
+          <span className="text-xs text-zinc-500">
+            {categoryFilter === 'ALL' ? 'Events in window' : `${categoryFilter} events`}
+          </span>
           <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
