@@ -58,6 +58,8 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   const logoutMutation = useLogout()
 
   const systemStatus = resolveStatus(metaQuery.isError, readinessQuery.isError, readinessQuery.data?.status)
+  const blockingChecks = countChecks(readinessQuery.data?.checks, 'FAIL')
+  const advisoryChecks = countChecks(readinessQuery.data?.checks, 'WARN') + countChecks(readinessQuery.data?.checks, 'INFO')
 
   return (
     <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`} aria-label="Primary navigation">
@@ -78,15 +80,27 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
       </div>
 
       <div className="border-t border-zinc-800 px-4 py-4">
-        <div className="flex items-center gap-2">
-          <StatusDot status={systemStatus.dot} />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <StatusDot status={systemStatus.dot} />
+            <span className="text-xs font-medium text-zinc-400">Runtime health</span>
+          </div>
           <span className="text-xs text-zinc-500">{systemStatus.label}</span>
         </div>
-        {metaQuery.data && (
-          <p className="mt-1 text-xs text-zinc-600">
-            {metaQuery.data.stack.database} · {metaQuery.data.stage}
-          </p>
-        )}
+        <p className="mt-1 text-xs text-zinc-600">
+          {readinessQuery.isLoading
+            ? 'Checking dependencies...'
+            : readinessQuery.isError
+              ? 'Could not reach readiness endpoint.'
+              : `${blockingChecks} blockers · ${advisoryChecks} notices`}
+        </p>
+        <NavLink
+          to="/settings#health"
+          onClick={onNavigate}
+          className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          Open health
+        </NavLink>
         {authSessionQuery.data?.authEnabled && (
           <button
             type="button"
@@ -116,4 +130,12 @@ function resolveStatus(
   if (readinessStatus === 'READY') return { dot: 'healthy', label: 'Healthy' }
   if (readinessStatus === 'DEGRADED') return { dot: 'warning', label: 'Degraded' }
   return { dot: 'error', label: 'Not ready' }
+}
+
+function countChecks(checks: Array<{ status: string }> | undefined, status: 'FAIL' | 'WARN' | 'INFO') {
+  if (!checks) {
+    return 0
+  }
+
+  return checks.filter((check) => check.status === status).length
 }

@@ -302,9 +302,11 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
 
-    // Sidebar system status
-    expect(await screen.findByText(/sqlite · dev/i)).toBeInTheDocument()
+    // Sidebar runtime status
+    expect(await screen.findByText(/runtime health/i)).toBeInTheDocument()
     expect(await screen.findByText(/healthy/i)).toBeInTheDocument()
+    expect(await screen.findByText(/0 blockers · 1 notices/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/settings#health')
 
     // Dashboard page header
     expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()
