@@ -218,6 +218,17 @@ fun appModule(
             instrumentRepository = get(),
             portfolioTargetRepository = get(),
             transactionRepository = get(),
+            marketDataCacheFingerprint = listOf(
+                marketDataConfig.enabled.toString(),
+                marketDataConfig.stockAnalystBaseUrl,
+                marketDataConfig.edoCalculatorBaseUrl,
+                marketDataConfig.goldApiBaseUrl,
+                marketDataConfig.goldApiKey.orEmpty(),
+                marketDataConfig.usdPlnSymbol,
+                marketDataConfig.goldBenchmarkSymbol,
+                marketDataConfig.equityBenchmarkSymbol,
+                marketDataConfig.bondBenchmarkSymbol
+            ).joinToString(separator = "|"),
             clock = get()
         )
     }
