@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { LineSeries, type IChartApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
+import { useI18n } from '../../lib/i18n'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface BenchmarkChartProps {
@@ -12,6 +13,7 @@ interface BenchmarkChartProps {
 const benchmarkPriceFormat = { type: 'price' as const, minMove: 0.01, precision: 2 }
 
 export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
+  const { isPolish } = useI18n()
   const onChart = useCallback(
     (chart: IChartApi) => {
       chart.addSeries(LineSeries, {
@@ -49,14 +51,14 @@ export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
   return (
     <ChartContainer
       height={height}
-      title="Benchmark Comparison"
-      subtitle="Indexed to 100 at the start of the selected period"
+      title={isPolish ? 'Porównanie benchmarków' : 'Benchmark Comparison'}
+      subtitle={isPolish ? 'Indeksowane do 100 na początku wybranego okresu' : 'Indexed to 100 at the start of the selected period'}
       legend={
         <>
           <ChartLegendItem color={chartPalette.portfolio} label="Portfolio" />
           <ChartLegendItem color={chartPalette.vwra} label="VWRA" dashed />
-          <ChartLegendItem color={chartPalette.inflation} label="Inflation" dashed />
-          <ChartLegendItem color={chartPalette.targetMix} label="Target mix" dashed />
+          <ChartLegendItem color={chartPalette.inflation} label={isPolish ? 'Inflacja' : 'Inflation'} dashed />
+          <ChartLegendItem color={chartPalette.targetMix} label={isPolish ? 'Miks docelowy' : 'Target mix'} dashed />
         </>
       }
       onChart={onChart}

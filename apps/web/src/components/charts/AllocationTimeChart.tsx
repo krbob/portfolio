@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { AreaSeries, type IChartApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
+import { useI18n } from '../../lib/i18n'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface AllocationTimeChartProps {
@@ -10,6 +11,7 @@ interface AllocationTimeChartProps {
 }
 
 export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChartProps) {
+  const { isPolish } = useI18n()
   const onChart = useCallback(
     (chart: IChartApi) => {
       const equitySeries = chart.addSeries(AreaSeries, {
@@ -42,13 +44,13 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
   return (
     <ChartContainer
       height={height}
-      title="Allocation History"
-      subtitle="Equities, bonds and cash as percentage of portfolio"
+      title={isPolish ? 'Historia alokacji' : 'Allocation History'}
+      subtitle={isPolish ? 'Akcje, obligacje i gotówka jako procent portfela' : 'Equities, bonds and cash as percentage of portfolio'}
       legend={
         <>
-          <ChartLegendItem color={chartPalette.equities} label="Equities" />
-          <ChartLegendItem color={chartPalette.bonds} label="Bonds" />
-          <ChartLegendItem color={chartPalette.cash} label="Cash" />
+          <ChartLegendItem color={chartPalette.equities} label={isPolish ? 'Akcje' : 'Equities'} />
+          <ChartLegendItem color={chartPalette.bonds} label={isPolish ? 'Obligacje' : 'Bonds'} />
+          <ChartLegendItem color={chartPalette.cash} label={isPolish ? 'Gotówka' : 'Cash'} />
         </>
       }
       onChart={onChart}

@@ -1,4 +1,5 @@
 import { Card } from './Card'
+import { useI18n } from '../../lib/i18n'
 
 interface LoadingStateProps {
   title?: string
@@ -9,12 +10,13 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({
-  title = 'Loading portfolio',
-  description = 'Fetching the latest holdings, valuation and portfolio read models.',
+  title,
+  description,
   blocks = 3,
   className = '',
   variant = 'card',
 }: LoadingStateProps) {
+  const { isPolish } = useI18n()
   const gridClassName =
     blocks === 4
       ? 'sm:grid-cols-2 lg:grid-cols-4'
@@ -29,9 +31,17 @@ export function LoadingState({
   return (
     <Card className={`${surfaceClassName} ${className}`}>
       <div className="mx-auto max-w-lg text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Loading</p>
-        <h3 className="mt-2 text-lg font-semibold text-zinc-100">{title}</h3>
-        <p className="mt-2 text-sm text-zinc-500">{description}</p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          {isPolish ? 'Ładowanie' : 'Loading'}
+        </p>
+        <h3 className="mt-2 text-lg font-semibold text-zinc-100">
+          {title ?? (isPolish ? 'Ładowanie portfela' : 'Loading portfolio')}
+        </h3>
+        <p className="mt-2 text-sm text-zinc-500">
+          {description ?? (isPolish
+            ? 'Pobieranie najnowszych pozycji, wyceny i modeli odczytowych portfela.'
+            : 'Fetching the latest holdings, valuation and portfolio read models.')}
+        </p>
       </div>
       <div className={`mt-8 grid gap-3 ${gridClassName}`}>
         {Array.from({ length: blocks }, (_, index) => (

@@ -5,6 +5,7 @@ import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, StatePanel, TabBar, SegmentedControl } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatPercent, formatYearMonth } from '../lib/format'
+import { useI18n } from '../lib/i18n'
 import { card, th, thRight, td, tdRight, tr } from '../lib/styles'
 
 type Period = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
@@ -18,6 +19,7 @@ const TABS = [
 ]
 
 export function PerformanceScreen() {
+  const { isPolish } = useI18n()
   const [tab, setTab] = useState<Tab>('charts')
   const [period, setPeriod] = useState<Period>('MAX')
   const [unit, setUnit] = useState<Unit>('PLN')
@@ -46,10 +48,12 @@ export function PerformanceScreen() {
   if (historyQuery.isLoading && returnsQuery.isLoading && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title="Performance" />
+        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
         <LoadingState
-          title="Loading performance"
-          description="Preparing history, returns and benchmark comparisons for the portfolio."
+          title={isPolish ? 'Ładowanie wyników' : 'Loading performance'}
+          description={isPolish
+            ? 'Przygotowywanie historii, zwrotów i porównań z benchmarkami dla portfela.'
+            : 'Preparing history, returns and benchmark comparisons for the portfolio.'}
           blocks={4}
         />
       </>
@@ -59,10 +63,12 @@ export function PerformanceScreen() {
   if (historyQuery.isError && returnsQuery.isError && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title="Performance" />
+        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
         <ErrorState
-          title="Performance unavailable"
-          description="History and return read models could not load. Retry now or inspect storage and market-data readiness."
+          title={isPolish ? 'Wyniki niedostępne' : 'Performance unavailable'}
+          description={isPolish
+            ? 'Nie udało się wczytać modeli historii i zwrotów. Spróbuj ponownie albo sprawdź storage i gotowość danych rynkowych.'
+            : 'History and return read models could not load. Retry now or inspect storage and market-data readiness.'}
           onRetry={handleRetry}
         />
       </>
@@ -72,11 +78,13 @@ export function PerformanceScreen() {
   if (!historyQuery.isLoading && !returnsQuery.isLoading && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title="Performance" />
+        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
         <EmptyState
-          title="No performance data yet"
-          description="Record transactions first so Portfolio can reconstruct daily history, returns and benchmarks."
-          action={{ label: 'Open Transactions', to: '/transactions' }}
+          title={isPolish ? 'Brak danych o wynikach' : 'No performance data yet'}
+          description={isPolish
+            ? 'Najpierw zapisz transakcje, aby Portfolio mogło odtworzyć historię dzienną, zwroty i benchmarki.'
+            : 'Record transactions first so Portfolio can reconstruct daily history, returns and benchmarks.'}
+          action={{ label: isPolish ? 'Otwórz transakcje' : 'Open Transactions', to: '/transactions' }}
         />
       </>
     )
@@ -84,13 +92,13 @@ export function PerformanceScreen() {
 
   return (
     <>
-      <PageHeader title="Performance" />
+      <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
 
       {/* Top stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Latest Value"
-          value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : 'N/A'}
+          label={isPolish ? 'Ostatnia wartość' : 'Latest Value'}
+          value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : (isPolish ? 'n/d' : 'N/A')}
         />
         <StatCard
           label="YTD MWRR"
@@ -103,14 +111,27 @@ export function PerformanceScreen() {
           change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn)}
         />
         <StatCard
-          label="Inception MWRR"
+          label={isPolish ? 'MWRR od początku' : 'Inception MWRR'}
           value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn)}
           change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn)}
         />
       </div>
 
       {/* Tab bar */}
-      <TabBar tabs={TABS} value={tab} onChange={setTab} ariaLabel="Performance workspace" idBase="performance-workspace" />
+      <TabBar
+        tabs={TABS.map((tabItem) => ({
+          ...tabItem,
+          label: isPolish
+            ? tabItem.value === 'charts'
+              ? 'Wykresy'
+              : 'Zwroty'
+            : tabItem.label,
+        }))}
+        value={tab}
+        onChange={setTab}
+        ariaLabel={isPolish ? 'Przestrzeń wyników' : 'Performance workspace'}
+        idBase="performance-workspace"
+      />
 
       <div className="mt-6">
         {tab === 'charts' ? (
@@ -162,11 +183,15 @@ function ChartsTab({
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
 }) {
+  const { isPolish } = useI18n()
+
   if (historyQuery.isLoading && points.length === 0) {
     return (
       <LoadingState
-        title="Loading portfolio history"
-        description="Preparing value, contributions and allocation history for the selected period."
+        title={isPolish ? 'Ładowanie historii portfela' : 'Loading portfolio history'}
+        description={isPolish
+          ? 'Przygotowywanie historii wartości, wpłat i alokacji dla wybranego okresu.'
+          : 'Preparing value, contributions and allocation history for the selected period.'}
       />
     )
   }
@@ -174,8 +199,10 @@ function ChartsTab({
   if (historyQuery.isError && points.length === 0) {
     return (
       <ErrorState
-        title="History unavailable"
-        description="Daily history could not load for the performance workspace."
+        title={isPolish ? 'Historia niedostępna' : 'History unavailable'}
+        description={isPolish
+          ? 'Nie udało się wczytać historii dziennej dla przestrzeni wyników.'
+          : 'Daily history could not load for the performance workspace.'}
         onRetry={() => void historyQuery.refetch()}
       />
     )
@@ -184,9 +211,11 @@ function ChartsTab({
   if (points.length === 0) {
     return (
       <StatePanel
-        eyebrow="History"
-        title="No history data available"
-        description="Portfolio has not accumulated enough transactions to render the historical charts yet."
+        eyebrow={isPolish ? 'Historia' : 'History'}
+        title={isPolish ? 'Brak danych historycznych' : 'No history data available'}
+        description={isPolish
+          ? 'Portfel nie zgromadził jeszcze wystarczającej liczby transakcji, aby narysować wykresy historyczne.'
+          : 'Portfolio has not accumulated enough transactions to render the historical charts yet.'}
       />
     )
   }
@@ -197,25 +226,25 @@ function ChartsTab({
       <div className={card}>
         <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-400">Range</span>
+            <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Zakres' : 'Range'}</span>
             <SegmentedControl
               options={PERIODS.map((value) => ({ value, label: value }))}
               value={period}
               onChange={(value) => onPeriodChange(value as Period)}
-              ariaLabel="Performance chart period"
+              ariaLabel={isPolish ? 'Zakres wykresu wyników' : 'Performance chart period'}
             />
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-400">Unit</span>
+            <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Jednostka' : 'Unit'}</span>
             <SegmentedControl
               options={[
                 { value: 'PLN', label: 'PLN' },
                 { value: 'USD', label: 'USD' },
-                { value: 'AU', label: 'Gold' },
+                { value: 'AU', label: isPolish ? 'Złoto' : 'Gold' },
               ]}
               value={unit}
               onChange={(value) => onUnitChange(value as Unit)}
-              ariaLabel="Performance chart unit"
+              ariaLabel={isPolish ? 'Jednostka wykresu wyników' : 'Performance chart unit'}
             />
           </div>
         </div>
@@ -225,7 +254,7 @@ function ChartsTab({
           contributionsKey={series.contributionsKey}
           unit={unit}
           height={360}
-          title={`Portfolio Value (${unit})`}
+          title={isPolish ? `Wartość portfela (${unit})` : `Portfolio Value (${unit})`}
         />
       </div>
 
@@ -245,13 +274,16 @@ function ChartsTab({
 // --- Returns Tab ---
 
 function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortfolioReturns> }) {
+  const { isPolish } = useI18n()
   const data = returnsQuery.data
 
   if (returnsQuery.isLoading) {
     return (
       <LoadingState
-        title="Loading returns"
-        description="Calculating money-weighted, time-weighted and benchmark-relative returns."
+        title={isPolish ? 'Ładowanie zwrotów' : 'Loading returns'}
+        description={isPolish
+          ? 'Wyliczanie MWRR, TWR i nadwyżki względem benchmarków.'
+          : 'Calculating money-weighted, time-weighted and benchmark-relative returns.'}
       />
     )
   }
@@ -259,8 +291,10 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
   if (returnsQuery.isError) {
     return (
       <ErrorState
-        title="Returns unavailable"
-        description="Return calculations could not be loaded for this workspace."
+        title={isPolish ? 'Zwroty niedostępne' : 'Returns unavailable'}
+        description={isPolish
+          ? 'Nie udało się wczytać wyliczeń zwrotów dla tego widoku.'
+          : 'Return calculations could not be loaded for this workspace.'}
         onRetry={() => void returnsQuery.refetch()}
       />
     )
@@ -269,9 +303,11 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
   if (!data || data.periods.length === 0) {
     return (
       <StatePanel
-        eyebrow="Returns"
-        title="No return periods calculated yet"
-        description="Return periods appear after Portfolio has enough history and external cash-flow data to evaluate."
+        eyebrow={isPolish ? 'Zwroty' : 'Returns'}
+        title={isPolish ? 'Brak wyliczonych okresów zwrotu' : 'No return periods calculated yet'}
+        description={isPolish
+          ? 'Okresy zwrotu pojawią się, gdy Portfolio będzie miało wystarczającą historię i przepływy zewnętrzne.'
+          : 'Return periods appear after Portfolio has enough history and external cash-flow data to evaluate.'}
       />
     )
   }
@@ -285,13 +321,13 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-800">
-              <th className={th}>Period</th>
+              <th className={th}>{isPolish ? 'Okres' : 'Period'}</th>
               <th className={thRight}>PLN MWRR</th>
               <th className={thRight}>PLN TWR</th>
-              <th className={thRight}>Real PLN</th>
+              <th className={thRight}>{isPolish ? 'Realny PLN' : 'Real PLN'}</th>
               <th className={thRight}>USD MWRR</th>
-              <th className={thRight}>Annualized</th>
-              <th className={thRight}>Days</th>
+              <th className={thRight}>{isPolish ? 'Rocznie' : 'Annualized'}</th>
+              <th className={thRight}>{isPolish ? 'Dni' : 'Days'}</th>
             </tr>
           </thead>
           <tbody>
@@ -303,7 +339,9 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
                 <td className={`${td} font-medium text-zinc-200`}>
                   {p.label}
                   {p.clippedToInception && (
-                    <span className="ml-1.5 text-xs text-zinc-600">(clipped)</span>
+                    <span className="ml-1.5 text-xs text-zinc-600">
+                      {isPolish ? '(ucięte do początku portfela)' : '(clipped)'}
+                    </span>
                   )}
                 </td>
                 <td className={tdRight}>
@@ -329,7 +367,9 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
       </div>
       {realCoverageUntil ? (
         <p className="text-xs text-zinc-500">
-          Real PLN uses CPI-covered full months only; current CPI coverage through {realCoverageUntil}.
+          {isPolish
+            ? `Realny PLN używa tylko pełnych miesięcy pokrytych CPI; bieżące pokrycie CPI do ${realCoverageUntil}.`
+            : `Real PLN uses CPI-covered full months only; current CPI coverage through ${realCoverageUntil}.`}
         </p>
       ) : null}
 
@@ -339,7 +379,7 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
         .map((p) => (
           <div key={p.key} className={card}>
             <h3 className="mb-3 text-sm font-semibold text-zinc-300">
-              {p.label} — Benchmarks
+              {p.label} — {isPolish ? 'Benchmarki' : 'Benchmarks'}
             </h3>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {p.benchmarks.map((b) => (
@@ -353,6 +393,7 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
 }
 
 function BenchmarkCard({ benchmark }: { benchmark: BenchmarkComparison }) {
+  const { isPolish } = useI18n()
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
       <p className="text-xs font-medium text-zinc-500">{benchmark.label}</p>
@@ -360,7 +401,7 @@ function BenchmarkCard({ benchmark }: { benchmark: BenchmarkComparison }) {
         {formatReturn(benchmark.excessTimeWeightedReturn)}
       </p>
       <p className="mt-0.5 text-xs text-zinc-600">
-        Bench TWR {formatReturn(benchmark.nominalPln?.timeWeightedReturn)}
+        {isPolish ? 'TWR benchmarku' : 'Bench TWR'} {formatReturn(benchmark.nominalPln?.timeWeightedReturn)}
       </p>
     </div>
   )

@@ -1,4 +1,5 @@
 import { StatePanel } from './StatePanel'
+import { useI18n } from '../../lib/i18n'
 
 interface ErrorStateProps {
   title?: string
@@ -9,17 +10,21 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = 'Something went wrong',
-  description = 'Portfolio could not load this data right now. Retry or check the system status in Settings.',
+  title,
+  description,
   onRetry,
-  retryLabel = 'Retry',
+  retryLabel,
   className,
 }: ErrorStateProps) {
+  const { isPolish } = useI18n()
+
   return (
     <StatePanel
-      eyebrow="Unavailable"
-      title={title}
-      description={description}
+      eyebrow={isPolish ? 'Niedostępne' : 'Unavailable'}
+      title={title ?? (isPolish ? 'Coś poszło nie tak' : 'Something went wrong')}
+      description={description ?? (isPolish
+        ? 'Portfolio nie może teraz wczytać tych danych. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.'
+        : 'Portfolio could not load this data right now. Retry or check the system status in Settings.')}
       tone="error"
       icon={
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor">
@@ -30,7 +35,7 @@ export function ErrorState({
           />
         </svg>
       }
-      action={onRetry ? { label: retryLabel, onClick: onRetry } : undefined}
+      action={onRetry ? { label: retryLabel ?? (isPolish ? 'Ponów' : 'Retry'), onClick: onRetry } : undefined}
       className={className}
     />
   )

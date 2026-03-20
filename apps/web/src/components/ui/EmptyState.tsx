@@ -1,4 +1,5 @@
 import { StatePanel } from './StatePanel'
+import { useI18n } from '../../lib/i18n'
 
 interface EmptyStateProps {
   title: string
@@ -7,9 +8,11 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
+  const { isPolish } = useI18n()
+
   return (
     <StatePanel
-      eyebrow="Empty"
+      eyebrow={isPolish ? 'Pusto' : 'Empty'}
       title={title}
       description={description}
       action={action}

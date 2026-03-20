@@ -1,36 +1,11 @@
-const LOCALE = 'pl-PL'
-
-const plnFormatter = new Intl.NumberFormat(LOCALE, {
-  style: 'currency',
-  currency: 'PLN',
-  maximumFractionDigits: 2,
-})
-
-const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  year: 'numeric',
-  month: 'short',
-  day: '2-digit',
-})
-
-const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
-  year: 'numeric',
-  month: 'short',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-})
-
-const monthFormatter = new Intl.DateTimeFormat(LOCALE, {
-  year: 'numeric',
-  month: 'long',
-  timeZone: 'UTC',
-})
-
-const numberFormatter = new Intl.NumberFormat(LOCALE, {
-  maximumFractionDigits: 2,
-})
+import { getActiveLocaleTag, getActiveUiLanguage } from './i18n'
 
 const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
+const numberFormatterCache = new Map<string, Intl.NumberFormat>()
+const fixedNumberFormatterCache = new Map<string, Intl.NumberFormat>()
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>()
+const dateTimeFormatterCache = new Map<string, Intl.DateTimeFormat>()
+const monthFormatterCache = new Map<string, Intl.DateTimeFormat>()
 
 function toNumber(value: string | number | null | undefined) {
   if (value == null || value === '') {
@@ -43,10 +18,10 @@ function toNumber(value: string | number | null | undefined) {
 export function formatCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return 'Unavailable'
+    return unavailableLabel()
   }
 
-  return plnFormatter.format(amount)
+  return formatterForCurrency('PLN').format(amount)
 }
 
 export function formatCurrency(
@@ -55,7 +30,7 @@ export function formatCurrency(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount) || !currency) {
-    return 'Unavailable'
+    return unavailableLabel()
   }
 
   return formatterForCurrency(currency).format(amount)
@@ -64,7 +39,7 @@ export function formatCurrency(
 export function formatSignedCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return 'Unavailable'
+    return unavailableLabel()
   }
 
   const formatted = formatCurrencyPln(amount)
@@ -77,16 +52,14 @@ export function formatNumber(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return 'Unavailable'
+    return unavailableLabel()
   }
 
   if (options.maximumFractionDigits != null) {
-    return new Intl.NumberFormat(LOCALE, {
-      maximumFractionDigits: options.maximumFractionDigits,
-    }).format(amount)
+    return fixedNumberFormatter(options.maximumFractionDigits).format(amount)
   }
 
-  return numberFormatter.format(amount)
+  return numberFormatter().format(amount)
 }
 
 export function formatPercent(
@@ -100,18 +73,19 @@ export function formatPercent(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return 'Unavailable'
+    return unavailableLabel()
   }
 
   const scaled = amount * (options.scale ?? 1)
   const digits = options.maximumFractionDigits ?? 2
   const suffix = options.suffix ?? '%'
+  const formatter = fixedNumberFormatter(digits)
 
   if (!options.signed) {
-    return `${scaled.toFixed(digits)}${suffix}`
+    return `${formatter.format(scaled)}${suffix}`
   }
 
-  const absolute = Math.abs(scaled).toFixed(digits)
+  const absolute = formatter.format(Math.abs(scaled))
   if (scaled > 0) {
     return `+${absolute}${suffix}`
   }
@@ -123,45 +97,45 @@ export function formatPercent(
 
 export function formatDateTime(value: string | number | Date | null | undefined) {
   if (value == null || value === '') {
-    return 'n/a'
+    return notAvailableLabel()
   }
 
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.valueOf())) {
-    return 'n/a'
+    return notAvailableLabel()
   }
-  return dateTimeFormatter.format(date)
+  return dateTimeFormatter().format(date)
 }
 
 export function formatDate(value: string | number | Date | null | undefined) {
   if (value == null || value === '') {
-    return 'n/a'
+    return notAvailableLabel()
   }
 
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.valueOf())) {
-    return 'n/a'
+    return notAvailableLabel()
   }
-  return dateFormatter.format(date)
+  return dateFormatter().format(date)
 }
 
 export function formatYearMonth(value: string | null | undefined) {
   if (!value) {
-    return 'n/a'
+    return notAvailableLabel()
   }
 
   const match = /^(\d{4})-(\d{2})$/.exec(value)
   if (!match) {
-    return 'n/a'
+    return notAvailableLabel()
   }
 
   const year = Number(match[1])
   const month = Number(match[2])
   if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
-    return 'n/a'
+    return notAvailableLabel()
   }
 
-  return monthFormatter.format(new Date(Date.UTC(year, month - 1, 1)))
+  return monthFormatter().format(new Date(Date.UTC(year, month - 1, 1)))
 }
 
 export function formatBytes(sizeBytes: number) {
@@ -175,10 +149,11 @@ export function formatBytes(sizeBytes: number) {
 }
 
 function formatterForCurrency(currency: string) {
-  if (!currencyFormatterCache.has(currency)) {
+  const cacheKey = `${getActiveLocaleTag()}::${currency}`
+  if (!currencyFormatterCache.has(cacheKey)) {
     currencyFormatterCache.set(
-      currency,
-      new Intl.NumberFormat(LOCALE, {
+      cacheKey,
+      new Intl.NumberFormat(getActiveLocaleTag(), {
         style: 'currency',
         currency,
         maximumFractionDigits: 2,
@@ -186,5 +161,87 @@ function formatterForCurrency(currency: string) {
     )
   }
 
-  return currencyFormatterCache.get(currency)!
+  return currencyFormatterCache.get(cacheKey)!
+}
+
+function numberFormatter() {
+  const locale = getActiveLocaleTag()
+  if (!numberFormatterCache.has(locale)) {
+    numberFormatterCache.set(
+      locale,
+      new Intl.NumberFormat(locale, {
+        maximumFractionDigits: 2,
+      }),
+    )
+  }
+  return numberFormatterCache.get(locale)!
+}
+
+function fixedNumberFormatter(maximumFractionDigits: number) {
+  const cacheKey = `${getActiveLocaleTag()}::${maximumFractionDigits}`
+  if (!fixedNumberFormatterCache.has(cacheKey)) {
+    fixedNumberFormatterCache.set(
+      cacheKey,
+      new Intl.NumberFormat(getActiveLocaleTag(), {
+        minimumFractionDigits: maximumFractionDigits,
+        maximumFractionDigits,
+      }),
+    )
+  }
+  return fixedNumberFormatterCache.get(cacheKey)!
+}
+
+function dateFormatter() {
+  const locale = getActiveLocaleTag()
+  if (!dateFormatterCache.has(locale)) {
+    dateFormatterCache.set(
+      locale,
+      new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+      }),
+    )
+  }
+  return dateFormatterCache.get(locale)!
+}
+
+function dateTimeFormatter() {
+  const locale = getActiveLocaleTag()
+  if (!dateTimeFormatterCache.has(locale)) {
+    dateTimeFormatterCache.set(
+      locale,
+      new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    )
+  }
+  return dateTimeFormatterCache.get(locale)!
+}
+
+function monthFormatter() {
+  const locale = getActiveLocaleTag()
+  if (!monthFormatterCache.has(locale)) {
+    monthFormatterCache.set(
+      locale,
+      new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      }),
+    )
+  }
+  return monthFormatterCache.get(locale)!
+}
+
+function unavailableLabel() {
+  return getActiveUiLanguage() === 'pl' ? 'Niedostępne' : 'Unavailable'
+}
+
+function notAvailableLabel() {
+  return getActiveUiLanguage() === 'pl' ? 'n/d' : 'n/a'
 }

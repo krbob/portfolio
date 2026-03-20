@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { API_UNAUTHORIZED_EVENT } from '../api/http'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession, useLogin } from '../hooks/use-auth-session'
+import { useI18n } from '../lib/i18n'
 import { SectionHeader } from './ui'
 import { btnPrimary, input } from '../lib/styles'
 
@@ -12,15 +13,18 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
+  const { isPolish } = useI18n()
   const queryClient = useQueryClient()
   const metaQuery = useAppMeta()
   const authSessionQuery = useAuthSession()
   const startupErrorMessage =
     metaQuery.error instanceof Error
-      ? metaQuery.error.message
+        ? metaQuery.error.message
       : authSessionQuery.error instanceof Error
         ? authSessionQuery.error.message
-        : 'The app could not load required startup state.'
+        : isPolish
+          ? 'Aplikacja nie mogła wczytać wymaganego stanu startowego.'
+          : 'The app could not load required startup state.'
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -37,9 +41,9 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <AuthLayout>
         <SectionHeader
-          eyebrow="Connecting"
-          title="Checking session"
-          description="Loading metadata and authentication state."
+          eyebrow={isPolish ? 'Łączenie' : 'Connecting'}
+          title={isPolish ? 'Sprawdzanie sesji' : 'Checking session'}
+          description={isPolish ? 'Ładowanie metadanych i stanu uwierzytelnienia.' : 'Loading metadata and authentication state.'}
         />
       </AuthLayout>
     )
@@ -49,8 +53,8 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <AuthLayout>
         <SectionHeader
-          eyebrow="Connection issue"
-          title="Portfolio is not reachable"
+          eyebrow={isPolish ? 'Problem z połączeniem' : 'Connection issue'}
+          title={isPolish ? 'Nie można połączyć się z Portfolio' : 'Portfolio is not reachable'}
           description={startupErrorMessage}
         />
       </AuthLayout>
@@ -58,7 +62,7 @@ export function AuthGate({ children }: AuthGateProps) {
   }
 
   if (authSessionQuery.data.authEnabled && !authSessionQuery.data.authenticated) {
-    return <LoginCard stage={metaQuery.data.stage} />
+    return <LoginCard stage={metaQuery.data.stage} isPolish={isPolish} />
   }
 
   return <>{children}</>
@@ -74,7 +78,7 @@ function AuthLayout({ children }: { children: ReactNode }) {
   )
 }
 
-function LoginCard({ stage }: { stage: string }) {
+function LoginCard({ stage, isPolish }: { stage: string; isPolish: boolean }) {
   const loginMutation = useLogin()
   const [password, setPassword] = useState('')
 
@@ -102,7 +106,7 @@ function LoginCard({ stage }: { stage: string }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              placeholder="Enter password"
+              placeholder={isPolish ? 'Wpisz hasło' : 'Enter password'}
             />
 
             <button
@@ -110,17 +114,17 @@ function LoginCard({ stage }: { stage: string }) {
               className={`${btnPrimary} mt-4 w-full`}
               disabled={loginMutation.isPending || password.trim().length === 0}
             >
-              {loginMutation.isPending ? 'Unlocking...' : 'Unlock'}
+              {loginMutation.isPending ? (isPolish ? 'Odblokowywanie...' : 'Unlocking...') : (isPolish ? 'Odblokuj' : 'Unlock')}
             </button>
           </form>
 
           {loginMutation.isError && (
             <p className="mt-3 text-sm text-red-400">
-              {loginMutation.error instanceof Error ? loginMutation.error.message : 'Login failed.'}
+              {loginMutation.error instanceof Error ? loginMutation.error.message : isPolish ? 'Logowanie nie powiodło się.' : 'Login failed.'}
             </p>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-zinc-600">Self-hosted portfolio tracker</p>
+        <p className="mt-4 text-center text-xs text-zinc-600">{isPolish ? 'Self-hosted tracker portfela' : 'Self-hosted portfolio tracker'}</p>
       </div>
     </div>
   )

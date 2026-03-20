@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthGate } from './components/AuthGate'
 import { Layout } from './components/layout'
+import { useI18n } from './lib/i18n'
 
 const DashboardScreen = lazy(async () => {
   const module = await import('./screens/DashboardScreen')
@@ -29,10 +30,12 @@ const SettingsScreen = lazy(async () => {
 })
 
 export function App() {
+  const { isPolish } = useI18n()
+
   return (
     <AuthGate>
       <Layout>
-        <Suspense fallback={<RouteLoadingState />}>
+        <Suspense fallback={<RouteLoadingState isPolish={isPolish} />}>
           <Routes>
             <Route path="/" element={<DashboardScreen />} />
             <Route path="/holdings" element={<HoldingsScreen />} />
@@ -51,12 +54,18 @@ export function App() {
   )
 }
 
-function RouteLoadingState() {
+function RouteLoadingState({ isPolish }: { isPolish: boolean }) {
   return (
     <div className="space-y-3 py-16 text-center">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Loading</p>
-      <h2 className="text-lg font-semibold text-zinc-300">Preparing workspace</h2>
-      <p className="text-sm text-zinc-500">Attaching the next screen and its portfolio data.</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        {isPolish ? 'Ładowanie' : 'Loading'}
+      </p>
+      <h2 className="text-lg font-semibold text-zinc-300">
+        {isPolish ? 'Przygotowywanie widoku' : 'Preparing workspace'}
+      </h2>
+      <p className="text-sm text-zinc-500">
+        {isPolish ? 'Podłączanie kolejnego ekranu i jego danych portfela.' : 'Attaching the next screen and its portfolio data.'}
+      </p>
     </div>
   )
 }
