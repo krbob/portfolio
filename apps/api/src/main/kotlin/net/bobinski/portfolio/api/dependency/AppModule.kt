@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.dependency
 
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
+import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
@@ -11,10 +12,12 @@ import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepository
 import net.bobinski.portfolio.api.domain.service.AccountService
+import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
+import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
@@ -44,6 +47,7 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
@@ -51,6 +55,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionReposi
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionImportProfileRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
@@ -122,6 +127,7 @@ fun appModule(
     if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
+        single<AppPreferenceRepository> { JdbcAppPreferenceRepository(dataSource = get()) }
         single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
         single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
         single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
@@ -130,6 +136,7 @@ fun appModule(
         single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
         single<TransactionImportProfileRepository> { JdbcTransactionImportProfileRepository(dataSource = get(), json = get()) }
     } else {
+        single<AppPreferenceRepository> { InMemoryAppPreferenceRepository() }
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
         single<InstrumentRepository> { InMemoryInstrumentRepository() }
@@ -139,6 +146,7 @@ fun appModule(
         single<TransactionImportProfileRepository> { InMemoryTransactionImportProfileRepository() }
     }
 
+    single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
     single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
@@ -175,6 +183,13 @@ fun appModule(
         )
     }
     single {
+        PortfolioBenchmarkSettingsService(
+            appPreferenceService = get(),
+            auditLogService = get(),
+            clock = get()
+        )
+    }
+    single {
         PortfolioReadModelService(
             accountRepository = get(),
             instrumentRepository = get(),
@@ -187,6 +202,7 @@ fun appModule(
     single {
         PortfolioReadModelCacheDescriptorService(
             accountRepository = get(),
+            appPreferenceRepository = get(),
             instrumentRepository = get(),
             portfolioTargetRepository = get(),
             transactionRepository = get(),
@@ -219,6 +235,7 @@ fun appModule(
             transactionFxConversionService = get(),
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
+            benchmarkSettingsService = get(),
             clock = get()
         )
     }

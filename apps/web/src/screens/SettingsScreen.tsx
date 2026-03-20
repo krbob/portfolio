@@ -3,6 +3,7 @@ import { InstrumentsSection } from '../components/InstrumentsSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
+import { PortfolioBenchmarkSettingsSection } from '../components/PortfolioBenchmarkSettingsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
@@ -14,6 +15,7 @@ const SETTINGS_SECTIONS = [
   { id: 'health', label: 'Health' },
   { id: 'setup', label: 'Setup' },
   { id: 'targets', label: 'Targets' },
+  { id: 'benchmarks', label: 'Benchmarks' },
   { id: 'transfer', label: 'Transfer' },
   { id: 'audit', label: 'Audit' },
   { id: 'backups', label: 'Backups' },
@@ -38,6 +40,7 @@ export function SettingsScreen() {
                     Health: 'Stan systemu',
                     Setup: 'Konfiguracja',
                     Targets: 'Cele',
+                    Benchmarks: 'Benchmarki',
                     Transfer: 'Transfer',
                     Audit: 'Audyt',
                     Backups: 'Kopie',
@@ -61,6 +64,10 @@ export function SettingsScreen() {
 
         <section id="targets">
           <PortfolioTargetsSection />
+        </section>
+
+        <section id="benchmarks">
+          <PortfolioBenchmarkSettingsSection />
         </section>
 
         <section id="transfer">

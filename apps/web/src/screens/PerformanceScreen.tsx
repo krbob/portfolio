@@ -396,7 +396,14 @@ function BenchmarkCard({ benchmark }: { benchmark: BenchmarkComparison }) {
   const { isPolish } = useI18n()
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
-      <p className="text-xs font-medium text-zinc-500">{benchmark.label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-zinc-500">{benchmark.label}</p>
+        {benchmark.pinned ? (
+          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-300">
+            {isPolish ? 'Przypięty' : 'Pinned'}
+          </span>
+        ) : null}
+      </div>
       <p className={`mt-1 text-lg font-bold tabular-nums ${returnColor(benchmark.excessTimeWeightedReturn)}`}>
         {formatReturn(benchmark.excessTimeWeightedReturn)}
       </p>

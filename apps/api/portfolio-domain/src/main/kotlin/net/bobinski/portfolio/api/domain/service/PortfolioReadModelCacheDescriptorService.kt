@@ -8,12 +8,14 @@ import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
+import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 
 class PortfolioReadModelCacheDescriptorService(
     private val accountRepository: AccountRepository,
+    private val appPreferenceRepository: AppPreferenceRepository,
     private val instrumentRepository: InstrumentRepository,
     private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
@@ -28,13 +30,15 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.returns",
         modelName = "RETURNS",
-        modelVersion = 4
+        modelVersion = 5,
+        preferenceUpdatedAt = appPreferenceRepository.get(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)?.updatedAt
     )
 
     private suspend fun descriptor(
         cacheKey: String,
         modelName: String,
-        modelVersion: Int
+        modelVersion: Int,
+        preferenceUpdatedAt: Instant? = null
     ): ReadModelCacheDescriptor {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
@@ -48,7 +52,7 @@ class PortfolioReadModelCacheDescriptorService(
             modelVersion = modelVersion,
             inputsFrom = transactions.minOfOrNull(Transaction::tradeDate) ?: today,
             inputsTo = today,
-            sourceUpdatedAt = maxUpdatedAt(accounts, instruments, targets, transactions)
+            sourceUpdatedAt = maxUpdatedAt(accounts, instruments, targets, transactions, preferenceUpdatedAt)
         )
     }
 
@@ -56,11 +60,13 @@ class PortfolioReadModelCacheDescriptorService(
         accounts: List<Account>,
         instruments: List<Instrument>,
         targets: List<PortfolioTarget>,
-        transactions: List<Transaction>
+        transactions: List<Transaction>,
+        preferenceUpdatedAt: Instant? = null
     ): Instant? = listOfNotNull(
         accounts.maxOfOrNull(Account::updatedAt),
         instruments.maxOfOrNull(Instrument::updatedAt),
         targets.maxOfOrNull(PortfolioTarget::updatedAt),
-        transactions.maxOfOrNull(Transaction::updatedAt)
+        transactions.maxOfOrNull(Transaction::updatedAt),
+        preferenceUpdatedAt
     ).maxOrNull()
 }

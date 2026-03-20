@@ -16,6 +16,7 @@ import net.bobinski.portfolio.api.marketdata.service.MonthlyInflationPoint
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
@@ -71,7 +72,7 @@ class PortfolioReturnsServiceTest {
         val oneYearNominalUsd = requireNotNull(oneYear.nominalUsd)
         val oneYearRealPln = requireNotNull(oneYear.realPln)
         val oneYearInflation = requireNotNull(oneYear.inflation)
-        val vwraBenchmark = oneYear.benchmarks.first()
+        val vwraBenchmark = oneYear.benchmarks.first { it.key == BenchmarkKey.VWRA }
         val vwraBenchmarkNominalPln = requireNotNull(vwraBenchmark.nominalPln)
 
         assertEquals(LocalDate.parse("2026-03-01"), returns.asOf)
@@ -151,6 +152,64 @@ class PortfolioReturnsServiceTest {
     }
 
     @Test
+    fun `returns respect benchmark settings and include custom benchmark`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.V80A, BenchmarkKey.CUSTOM),
+                pinnedKeys = listOf(BenchmarkKey.CUSTOM),
+                customLabel = "Europe 600",
+                customSymbol = "EXSA.DE"
+            )
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction(tradeDate = "2024-03-01"))
+        fixture.transactionRepository.save(interestTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "108.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["V80A.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "109.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["EXSA.DE"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "111.00")
+            )
+        )
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.02")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.02")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+
+        assertEquals(listOf(BenchmarkKey.CUSTOM, BenchmarkKey.V80A), oneYear.benchmarks.map { it.key })
+        assertEquals("Europe 600", oneYear.benchmarks.first().label)
+        assertTrue(oneYear.benchmarks.first().pinned)
+    }
+
+    @Test
     fun `real pln aligns to CPI-covered full months only`() = runBlocking {
         val fixture = returnsFixture(
             clock = Clock.fixed(Instant.parse("2026-03-19T12:00:00Z"), ZoneOffset.UTC)
@@ -199,11 +258,25 @@ class PortfolioReturnsServiceTest {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
         val portfolioTargetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val referenceProvider = FakeReferenceSeriesProvider()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
+        val auditLogService = AuditLogService(
+            auditEventRepository = net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository(),
+            clock = clock
+        )
+        val benchmarkSettingsService = PortfolioBenchmarkSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = net.bobinski.portfolio.api.config.AppJsonFactory.create(),
+                clock = clock
+            ),
+            auditLogService = auditLogService,
+            clock = clock
+        )
         val historyService = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -221,6 +294,7 @@ class PortfolioReturnsServiceTest {
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
+            benchmarkSettingsService = benchmarkSettingsService,
             clock = clock
         )
 
@@ -229,7 +303,8 @@ class PortfolioReturnsServiceTest {
             accountRepository = accountRepository,
             transactionRepository = transactionRepository,
             referenceProvider = referenceProvider,
-            inflationProvider = inflationProvider
+            inflationProvider = inflationProvider,
+            benchmarkSettingsService = benchmarkSettingsService
         )
     }
 
@@ -299,7 +374,8 @@ class PortfolioReturnsServiceTest {
         val accountRepository: InMemoryAccountRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val referenceProvider: FakeReferenceSeriesProvider,
-        val inflationProvider: FakeInflationAdjustmentProvider
+        val inflationProvider: FakeInflationAdjustmentProvider,
+        val benchmarkSettingsService: PortfolioBenchmarkSettingsService
     )
 
     private class FakeReferenceSeriesProvider : ReferenceSeriesProvider {

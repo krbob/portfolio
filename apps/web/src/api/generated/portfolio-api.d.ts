@@ -699,6 +699,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/benchmark-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SavePortfolioBenchmarkSettingsRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/backups": {
         parameters: {
             query?: never;
@@ -1549,6 +1605,7 @@ export interface components {
         BenchmarkComparisonResponse: {
             key: string;
             label: string;
+            pinned: boolean;
             nominalPln?: components["schemas"]["ReturnMetricResponse"] | null;
             excessTimeWeightedReturn?: string | null;
             excessAnnualizedTimeWeightedReturn?: string | null;
@@ -1643,6 +1700,31 @@ export interface components {
         /** net.bobinski.portfolio.api.route.ReplacePortfolioTargetsRequest */
         ReplacePortfolioTargetsRequest: {
             items: components["schemas"]["PortfolioTargetRequestItem"][];
+        };
+        /** net.bobinski.portfolio.api.route.BenchmarkOptionResponse */
+        BenchmarkOptionResponse: {
+            key: string;
+            label: string;
+            symbol?: string | null;
+            kind: string;
+            configurable: boolean;
+            defaultEnabled: boolean;
+            defaultPinned: boolean;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioBenchmarkSettingsResponse */
+        PortfolioBenchmarkSettingsResponse: {
+            enabledKeys: string[];
+            pinnedKeys: string[];
+            customLabel?: string | null;
+            customSymbol?: string | null;
+            options: components["schemas"]["BenchmarkOptionResponse"][];
+        };
+        /** net.bobinski.portfolio.api.route.SavePortfolioBenchmarkSettingsRequest */
+        SavePortfolioBenchmarkSettingsRequest: {
+            enabledKeys: string[];
+            pinnedKeys: string[];
+            customLabel?: string | null;
+            customSymbol?: string | null;
         };
         /** net.bobinski.portfolio.api.route.PortfolioBackupRecordResponse */
         PortfolioBackupRecordResponse: {

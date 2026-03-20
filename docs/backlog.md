@@ -108,6 +108,38 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 
 ## Phase 3: Product polish
 
+### 5.1 Configurable benchmarks (done)
+
+- let the user choose which benchmarks stay enabled in `Performance`
+- support pinned benchmarks that are surfaced first in cards and comparison lists
+- keep the default family tuned for long-term index investing: `VWRA`, `Inflation`, `Target mix`, `V80A`, `V60A`, `V40A`, `V20A`
+- support one custom benchmark symbol defined in settings
+- persist benchmark preferences in the canonical application state and invalidate cached returns when they change
+
+### 5.2 Drift and rebalancing workflow (next)
+
+- move target allocation from a hidden settings concern into a first-class portfolio decision aid
+- add tolerance bands and explicit `on target / outside band` status
+- separate `next contribution guidance` from `full rebalance gap`
+- make dashboard and settings agree on the same allocation narrative
+
+### 5.3 Scheduled read-model refresh (next)
+
+- warm `history`, `returns`, and benchmark read models in the background
+- keep self-hosted installs fast on first open each day
+- make refresh cadence and last-successful-run visible in settings
+
+### 5.4 Data quality visibility (next)
+
+- expose freshness and degradation of market data, CPI, FX, gold, and benchmark coverage
+- distinguish clearly between runtime readiness and portfolio data quality
+- show enough metadata on the dashboard to support trust without turning it into an admin screen
+
+### 5.5 PWA and mobile polish (later)
+
+- add installable web-app support for personal use on mobile devices
+- keep the investor screens comfortable on narrow viewports after the redesign
+
 ### 6. Async state clarity (done)
 
 - introduce explicit `loading`, `error`, `empty`, and `degraded` states instead of mixing onboarding with failures

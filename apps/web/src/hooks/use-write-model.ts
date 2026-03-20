@@ -13,8 +13,10 @@ import {
   importTransactions,
   importPortfolioState,
   listAccounts,
+  getPortfolioBenchmarkSettings,
   listInstruments,
   listPortfolioBackups,
+  savePortfolioBenchmarkSettings,
   listPortfolioTargets,
   listTransactionImportProfiles,
   listTransactions,
@@ -33,10 +35,12 @@ import {
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type ImportTransactionsPreviewResult,
+  type PortfolioBenchmarkSettings,
   type PortfolioBackupRecord,
   type PortfolioTarget,
   type ReadModelCacheInvalidationResult,
   type SaveTransactionImportProfilePayload,
+  type SavePortfolioBenchmarkSettingsPayload,
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
   type PortfolioStateSnapshot,
@@ -214,10 +218,33 @@ export function usePortfolioBackups() {
   })
 }
 
+export function usePortfolioBenchmarkSettings() {
+  return useQuery({
+    queryKey: ['portfolio-benchmark-settings'],
+    queryFn: getPortfolioBenchmarkSettings,
+  })
+}
+
 export function usePortfolioTargets() {
   return useQuery({
     queryKey: ['portfolio-targets'],
     queryFn: listPortfolioTargets,
+  })
+}
+
+export function useSavePortfolioBenchmarkSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: SavePortfolioBenchmarkSettingsPayload): Promise<PortfolioBenchmarkSettings> =>
+      savePortfolioBenchmarkSettings(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-benchmark-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
   })
 }
 

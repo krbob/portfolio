@@ -27,6 +27,7 @@ class PortfolioReturnsService(
     private val transactionFxConversionService: TransactionFxConversionService,
     private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val inflationAdjustmentProvider: InflationAdjustmentProvider,
+    private val benchmarkSettingsService: PortfolioBenchmarkSettingsService,
     private val clock: Clock
 ) {
     suspend fun returns(): PortfolioReturns {
@@ -53,7 +54,12 @@ class PortfolioReturnsService(
             )
         }
         val inception = history.from
-        val referenceBenchmarks = loadReferenceBenchmarks(from = history.from, to = history.until)
+        val benchmarkSettings = benchmarkSettingsService.settings()
+        val referenceBenchmarks = loadReferenceBenchmarks(
+            from = history.from,
+            to = history.until,
+            settings = benchmarkSettings
+        )
 
         val periods = coroutineScope {
             ReturnPeriodDefinition.entries
@@ -67,7 +73,8 @@ class PortfolioReturnsService(
                             effectiveFrom = effectiveFrom,
                             history = history,
                             externalCashFlows = externalCashFlows,
-                            referenceBenchmarks = referenceBenchmarks
+                            referenceBenchmarks = referenceBenchmarks,
+                            benchmarkSettings = benchmarkSettings
                         )
                     }
                 }
@@ -86,7 +93,8 @@ class PortfolioReturnsService(
         effectiveFrom: LocalDate,
         history: PortfolioDailyHistory,
         externalCashFlows: List<ExternalCashFlow>,
-        referenceBenchmarks: List<ReferenceBenchmarkSeries>
+        referenceBenchmarks: List<ReferenceBenchmarkSeries>,
+        benchmarkSettings: PortfolioBenchmarkSettings
     ): PortfolioReturnPeriod {
         val nominalPln = calculateMetric(
             start = effectiveFrom,
@@ -116,6 +124,7 @@ class PortfolioReturnsService(
                 start = effectiveFrom,
                 end = history.until,
                 portfolioMetric = nominalPln,
+                pinned = benchmarkSettings.isPinned(BenchmarkKey.VWRA),
                 values = history.points.mapNotNull { point ->
                     point.equityBenchmarkIndex?.let { value ->
                         ValuationPoint(date = point.date, value = value)
@@ -128,6 +137,7 @@ class PortfolioReturnsService(
                 start = effectiveFrom,
                 end = history.until,
                 portfolioMetric = nominalPln,
+                pinned = benchmarkSettings.isPinned(BenchmarkKey.INFLATION),
                 values = history.points.mapNotNull { point ->
                     point.inflationBenchmarkIndex?.let { value ->
                         ValuationPoint(date = point.date, value = value)
@@ -140,6 +150,7 @@ class PortfolioReturnsService(
                 start = effectiveFrom,
                 end = history.until,
                 portfolioMetric = nominalPln,
+                pinned = benchmarkSettings.isPinned(BenchmarkKey.TARGET_MIX),
                 values = history.points.mapNotNull { point ->
                     point.targetMixBenchmarkIndex?.let { value ->
                         ValuationPoint(date = point.date, value = value)
@@ -153,10 +164,12 @@ class PortfolioReturnsService(
                     start = effectiveFrom,
                     end = history.until,
                     portfolioMetric = nominalPln,
+                    pinned = benchmarkSettings.isPinned(benchmark.key),
                     values = benchmark.values
                 )?.let(::add)
             }
-        }
+        }.filter { benchmarkSettings.isEnabled(it.key) }
+            .sortedWith(compareByDescending<BenchmarkComparison> { it.pinned }.thenBy(BenchmarkComparison::label))
         val realPlnAdjustment = loadRealPlnAdjustment(
             effectiveFrom = effectiveFrom,
             end = history.until,
@@ -188,6 +201,7 @@ class PortfolioReturnsService(
         start: LocalDate,
         end: LocalDate,
         portfolioMetric: ReturnMetric?,
+        pinned: Boolean,
         values: List<ValuationPoint>
     ): BenchmarkComparison? {
         val metric = calculateBenchmarkMetric(start = start, end = end, values = values) ?: return null
@@ -195,6 +209,7 @@ class PortfolioReturnsService(
         return BenchmarkComparison(
             key = key,
             label = label,
+            pinned = pinned,
             nominalPln = metric,
             excessTimeWeightedReturn = subtractRates(
                 portfolioMetric?.timeWeightedReturn,
@@ -254,9 +269,10 @@ class PortfolioReturnsService(
 
     private suspend fun loadReferenceBenchmarks(
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        settings: PortfolioBenchmarkSettings
     ): List<ReferenceBenchmarkSeries> = coroutineScope {
-        PRODUCT_REFERENCE_BENCHMARKS.map { definition ->
+        settings.activeReferenceBenchmarks().map { definition ->
             async {
                 definition to referenceSeriesProvider.benchmarkPln(
                     symbol = definition.symbol,
@@ -672,12 +688,6 @@ class PortfolioReturnsService(
         val value: BigDecimal
     )
 
-    private data class ReferenceBenchmarkDefinition(
-        val key: BenchmarkKey,
-        val label: String,
-        val symbol: String
-    )
-
     private data class ReferenceBenchmarkSeries(
         val key: BenchmarkKey,
         val label: String,
@@ -713,30 +723,7 @@ class PortfolioReturnsService(
         }
     }
 
-    private companion object {
-        val PRODUCT_REFERENCE_BENCHMARKS: List<ReferenceBenchmarkDefinition> = listOf(
-            ReferenceBenchmarkDefinition(
-                key = BenchmarkKey.V80A,
-                label = "V80A 80/20 benchmark",
-                symbol = "V80A.DE"
-            ),
-            ReferenceBenchmarkDefinition(
-                key = BenchmarkKey.V60A,
-                label = "V60A 60/40 benchmark",
-                symbol = "V60A.DE"
-            ),
-            ReferenceBenchmarkDefinition(
-                key = BenchmarkKey.V40A,
-                label = "V40A 40/60 benchmark",
-                symbol = "V40A.DE"
-            ),
-            ReferenceBenchmarkDefinition(
-                key = BenchmarkKey.V20A,
-                label = "V20A 20/80 benchmark",
-                symbol = "V20A.DE"
-            )
-        )
-    }
+    private companion object
 }
 
 data class PortfolioReturns(
@@ -775,6 +762,7 @@ data class InflationWindow(
 data class BenchmarkComparison(
     val key: BenchmarkKey,
     val label: String,
+    val pinned: Boolean,
     val nominalPln: ReturnMetric?,
     val excessTimeWeightedReturn: BigDecimal?,
     val excessAnnualizedTimeWeightedReturn: BigDecimal?
@@ -794,6 +782,7 @@ enum class BenchmarkKey {
     V60A,
     V40A,
     V20A,
+    CUSTOM,
     INFLATION,
     TARGET_MIX
 }

@@ -234,6 +234,36 @@ class PortfolioReadModelRouteTest {
         assertTrue(body.contains("\"status\": \"UNDERWEIGHT\""))
     }
 
+    @Test
+    fun `benchmark settings can be saved and read back`() = testApplication {
+        application {
+            module()
+        }
+
+        val saveResponse = client.post("/v1/portfolio/benchmark-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "enabledKeys": ["VWRA", "CUSTOM"],
+                  "pinnedKeys": ["CUSTOM"],
+                  "customLabel": "Europe 600",
+                  "customSymbol": "EXSA.DE"
+                }
+                """.trimIndent()
+            )
+        }
+        val listResponse = client.get("/v1/portfolio/benchmark-settings")
+        val body = listResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, saveResponse.status)
+        assertEquals(HttpStatusCode.OK, listResponse.status)
+        assertTrue(body.contains("\"enabledKeys\": ["))
+        assertTrue(body.contains("\"CUSTOM\""))
+        assertTrue(body.contains("\"customLabel\": \"Europe 600\""))
+        assertTrue(body.contains("\"customSymbol\": \"EXSA.DE\""))
+    }
+
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(
         baseCurrency: String = "PLN"
     ): String {

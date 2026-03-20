@@ -87,6 +87,15 @@ export type PortfolioTarget =
 export type ReplacePortfolioTargetsPayload =
   components['schemas']['ReplacePortfolioTargetsRequest']
 
+export type PortfolioBenchmarkSettings =
+  components['schemas']['PortfolioBenchmarkSettingsResponse']
+
+export type BenchmarkOption =
+  components['schemas']['BenchmarkOptionResponse']
+
+export type SavePortfolioBenchmarkSettingsPayload =
+  components['schemas']['SavePortfolioBenchmarkSettingsRequest']
+
 export interface ReadModelCacheInvalidationResult {
   clearedSnapshotCount: number
 }
@@ -205,6 +214,17 @@ export function listPortfolioTargets() {
 
 export function replacePortfolioTargets(payload: ReplacePortfolioTargetsPayload) {
   return requestJson<PortfolioTarget[]>('/api/v1/portfolio/targets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getPortfolioBenchmarkSettings() {
+  return requestJson<PortfolioBenchmarkSettings>('/api/v1/portfolio/benchmark-settings')
+}
+
+export function savePortfolioBenchmarkSettings(payload: SavePortfolioBenchmarkSettingsPayload) {
+  return requestJson<PortfolioBenchmarkSettings>('/api/v1/portfolio/benchmark-settings', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

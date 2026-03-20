@@ -35,9 +35,12 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescript
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
+import net.bobinski.portfolio.api.domain.service.BenchmarkKey
+import net.bobinski.portfolio.api.domain.service.BenchmarkOptionKind
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportPreview
 import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
@@ -47,6 +50,7 @@ import net.bobinski.portfolio.api.domain.service.ImportMode
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
+import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
@@ -56,6 +60,7 @@ fun Route.portfolioRoute() {
     val portfolioAllocationService: PortfolioAllocationService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
+    val portfolioBenchmarkSettingsService: PortfolioBenchmarkSettingsService by inject()
     val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
@@ -133,6 +138,15 @@ fun Route.portfolioRoute() {
         post("/targets") {
             val request = call.receive<ReplacePortfolioTargetsRequest>()
             call.respond(portfolioTargetService.replace(request.toDomain()).map { it.toResponse() })
+        }
+
+        get("/benchmark-settings") {
+            call.respond(portfolioBenchmarkSettingsService.settings().toResponse())
+        }
+
+        post("/benchmark-settings") {
+            val request = call.receive<SavePortfolioBenchmarkSettingsRequest>()
+            call.respond(portfolioBenchmarkSettingsService.update(request.toDomain()).toResponse())
         }
 
         get("/backups") {
@@ -359,9 +373,38 @@ data class ReturnMetricResponse(
 data class BenchmarkComparisonResponse(
     val key: String,
     val label: String,
+    val pinned: Boolean,
     val nominalPln: ReturnMetricResponse?,
     val excessTimeWeightedReturn: String?,
     val excessAnnualizedTimeWeightedReturn: String?
+)
+
+@Serializable
+data class PortfolioBenchmarkSettingsResponse(
+    val enabledKeys: List<String>,
+    val pinnedKeys: List<String>,
+    val customLabel: String?,
+    val customSymbol: String?,
+    val options: List<BenchmarkOptionResponse>
+)
+
+@Serializable
+data class BenchmarkOptionResponse(
+    val key: String,
+    val label: String,
+    val symbol: String?,
+    val kind: String,
+    val configurable: Boolean,
+    val defaultEnabled: Boolean,
+    val defaultPinned: Boolean
+)
+
+@Serializable
+data class SavePortfolioBenchmarkSettingsRequest(
+    val enabledKeys: List<String>,
+    val pinnedKeys: List<String>,
+    val customLabel: String? = null,
+    val customSymbol: String? = null
 )
 
 @Serializable
@@ -720,10 +763,44 @@ private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricRespon
 private fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(
     key = key.name,
     label = label,
+    pinned = pinned,
     nominalPln = nominalPln?.toResponse(),
     excessTimeWeightedReturn = excessTimeWeightedReturn?.toPlainString(),
     excessAnnualizedTimeWeightedReturn = excessAnnualizedTimeWeightedReturn?.toPlainString()
 )
+
+private fun net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettings.toResponse(): PortfolioBenchmarkSettingsResponse =
+    PortfolioBenchmarkSettingsResponse(
+        enabledKeys = enabledKeys.map(BenchmarkKey::name),
+        pinnedKeys = pinnedKeys.map(BenchmarkKey::name),
+        customLabel = customLabel,
+        customSymbol = customSymbol,
+        options = options.map { option ->
+            BenchmarkOptionResponse(
+                key = option.key.name,
+                label = option.label,
+                symbol = option.symbol,
+                kind = option.kind.name,
+                configurable = option.configurable,
+                defaultEnabled = option.defaultEnabled,
+                defaultPinned = option.defaultPinned
+            )
+        }
+    )
+
+private fun SavePortfolioBenchmarkSettingsRequest.toDomain(): SavePortfolioBenchmarkSettingsCommand =
+    SavePortfolioBenchmarkSettingsCommand(
+        enabledKeys = enabledKeys.map(::parseBenchmarkKey),
+        pinnedKeys = pinnedKeys.map(::parseBenchmarkKey),
+        customLabel = customLabel,
+        customSymbol = customSymbol
+    )
+
+private fun parseBenchmarkKey(value: String): BenchmarkKey = try {
+    BenchmarkKey.valueOf(value.uppercase())
+} catch (_: IllegalArgumentException) {
+    throw IllegalArgumentException("Unsupported benchmark key: $value")
+}
 
 private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(
     schemaVersion = schemaVersion,
