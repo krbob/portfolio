@@ -5,6 +5,7 @@ import java.time.Instant
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
+import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
@@ -135,6 +136,7 @@ class ReadModelRefreshService(
             auditLogService.record(
                 category = AuditEventCategory.SYSTEM,
                 action = "READ_MODEL_REFRESH_FAILED",
+                outcome = AuditEventOutcome.FAILURE,
                 entityType = "READ_MODEL_REFRESH",
                 message = "Read-model refresh failed.",
                 metadata = mapOf(
