@@ -74,6 +74,8 @@ class PortfolioHistoryServiceTest {
         assertEquals(BigDecimal("2045.00"), history.points[1].totalCurrentValuePln)
         assertEquals(BigDecimal("2095.00"), history.points[2].totalCurrentValuePln)
         assertEquals(BigDecimal("2000.00"), history.points[2].netContributionsPln)
+        assertEquals(BigDecimal("500"), history.points[2].netContributionsUsd)
+        assertEquals(BigDecimal("0.16666667"), history.points[2].netContributionsAu)
         assertEquals(BigDecimal("52.51"), history.points[2].equityAllocationPct)
         assertEquals(1, history.points[2].valuedHoldingCount)
         assertEquals(BigDecimal("510.97560976"), history.points[2].totalCurrentValueUsd)

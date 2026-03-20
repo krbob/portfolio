@@ -79,6 +79,8 @@ class PortfolioHistoryService(
 
         var cashBalancePln = BigDecimal.ZERO
         var netContributionsPln = BigDecimal.ZERO
+        var netContributionsUsd = BigDecimal.ZERO
+        var netContributionsAu = BigDecimal.ZERO
         var missingFxTransactions = 0
         var unsupportedCorrectionTransactions = 0
         val points = mutableListOf<PortfolioDailyHistoryPoint>()
@@ -146,11 +148,31 @@ class PortfolioHistoryService(
                     TransactionType.DEPOSIT -> {
                         cashBalancePln = cashBalancePln.add(converted.grossPln, MONEY_CONTEXT)
                         netContributionsPln = netContributionsPln.add(converted.grossPln, MONEY_CONTEXT)
+                        netContributionsUsd = netContributionsUsd.addReferenceUnits(
+                            amountPln = converted.grossPln,
+                            lookup = referenceLoads.usdPln,
+                            date = transaction.tradeDate
+                        )
+                        netContributionsAu = netContributionsAu.addReferenceUnits(
+                            amountPln = converted.grossPln,
+                            lookup = referenceLoads.goldPln,
+                            date = transaction.tradeDate
+                        )
                     }
 
                     TransactionType.WITHDRAWAL -> {
                         cashBalancePln = cashBalancePln.subtract(converted.grossPln, MONEY_CONTEXT)
                         netContributionsPln = netContributionsPln.subtract(converted.grossPln, MONEY_CONTEXT)
+                        netContributionsUsd = netContributionsUsd.subtractReferenceUnits(
+                            amountPln = converted.grossPln,
+                            lookup = referenceLoads.usdPln,
+                            date = transaction.tradeDate
+                        )
+                        netContributionsAu = netContributionsAu.subtractReferenceUnits(
+                            amountPln = converted.grossPln,
+                            lookup = referenceLoads.goldPln,
+                            date = transaction.tradeDate
+                        )
                     }
 
                     TransactionType.FEE,
@@ -192,10 +214,10 @@ class PortfolioHistoryService(
                 netContributionsPln = netContributionsPln.money(),
                 cashBalancePln = cashCurrentValuePln,
                 totalCurrentValueUsd = totalCurrentValuePln.divideBy(referenceLoads.usdPln, date),
-                netContributionsUsd = netContributionsPln.money().divideBy(referenceLoads.usdPln, date),
+                netContributionsUsd = netContributionsUsd.referenceUnits(),
                 cashBalanceUsd = cashCurrentValuePln.divideBy(referenceLoads.usdPln, date),
                 totalCurrentValueAu = totalCurrentValuePln.divideBy(referenceLoads.goldPln, date),
-                netContributionsAu = netContributionsPln.money().divideBy(referenceLoads.goldPln, date),
+                netContributionsAu = netContributionsAu.referenceUnits(),
                 cashBalanceAu = cashCurrentValuePln.divideBy(referenceLoads.goldPln, date),
                 equityCurrentValuePln = equityCurrentValuePln.money(),
                 bondCurrentValuePln = bondCurrentValuePln.money(),
@@ -653,12 +675,45 @@ class PortfolioHistoryService(
         lookup: TreeMap<LocalDate, BigDecimal>,
         date: LocalDate
     ): BigDecimal? {
-        val divisor = lookup.floorEntry(date)?.value
+        val divisor = lookup.referencePriceOn(date)
         if (divisor == null || divisor.signum() == 0) {
             return null
         }
-        return divide(divisor, 8, RoundingMode.HALF_UP).setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
+        return divide(divisor, 8, RoundingMode.HALF_UP).scaledReferenceUnits()
     }
+
+    private fun BigDecimal.addReferenceUnits(
+        amountPln: BigDecimal,
+        lookup: TreeMap<LocalDate, BigDecimal>,
+        date: LocalDate
+    ): BigDecimal {
+        val units = amountPln.divideBy(lookup, date) ?: return this
+        return add(units, MONEY_CONTEXT)
+    }
+
+    private fun BigDecimal.subtractReferenceUnits(
+        amountPln: BigDecimal,
+        lookup: TreeMap<LocalDate, BigDecimal>,
+        date: LocalDate
+    ): BigDecimal {
+        val units = amountPln.divideBy(lookup, date) ?: return this
+        return subtract(units, MONEY_CONTEXT)
+    }
+
+    private fun BigDecimal.referenceUnits(): BigDecimal =
+        scaledReferenceUnits()
+
+    private fun BigDecimal.scaledReferenceUnits(): BigDecimal {
+        val normalized = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
+        return if (normalized.scale() < 0) {
+            normalized.setScale(0)
+        } else {
+            normalized
+        }
+    }
+
+    private fun TreeMap<LocalDate, BigDecimal>.referencePriceOn(date: LocalDate): BigDecimal? =
+        floorEntry(date)?.value ?: ceilingEntry(date)?.value
 
     private fun BigDecimal.ratioOf(part: BigDecimal): BigDecimal =
         if (signum() <= 0 || part.signum() <= 0) {
