@@ -5,10 +5,12 @@ import { resolveRouteTitle } from './navigation'
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
+  const mainRef = useRef<HTMLElement | null>(null)
   const [isMobileNavMounted, setIsMobileNavMounted] = useState(false)
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false)
   const isMobileNavMountedRef = useRef(false)
   const openAnimationFrameRef = useRef<number | null>(null)
+  const previousPathRef = useRef(location.pathname)
   const currentTitle = resolveRouteTitle(location.pathname)
 
   function openMobileNav() {
@@ -27,6 +29,46 @@ export function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     closeMobileNav()
   }, [location.pathname])
+
+  useEffect(() => {
+    const hash = location.hash.startsWith('#') ? decodeURIComponent(location.hash.slice(1)) : ''
+
+    if (hash === '') {
+      if (previousPathRef.current !== location.pathname) {
+        mainRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+      }
+      previousPathRef.current = location.pathname
+      return undefined
+    }
+
+    let attempts = 0
+    let timeoutId: number | null = null
+
+    const scrollToHashTarget = () => {
+      const target = document.getElementById(hash)
+      if (target) {
+        target.scrollIntoView({ block: 'start', behavior: 'auto' })
+        previousPathRef.current = location.pathname
+        return
+      }
+
+      if (attempts >= 10) {
+        previousPathRef.current = location.pathname
+        return
+      }
+
+      attempts += 1
+      timeoutId = window.setTimeout(scrollToHashTarget, 50)
+    }
+
+    scrollToHashTarget()
+
+    return () => {
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [location.pathname, location.hash])
 
   useEffect(() => {
     isMobileNavMountedRef.current = isMobileNavMounted
@@ -109,7 +151,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-7xl p-4 sm:p-5 lg:p-8">{children}</div>
         </main>
       </div>

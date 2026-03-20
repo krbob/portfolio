@@ -585,4 +585,145 @@ describe('App', () => {
       expect(screen.queryByRole('dialog', { name: /navigation/i })).not.toBeInTheDocument()
     })
   })
+
+  it('scrolls to hash targets inside settings', async () => {
+    const scrollIntoViewMock = vi.fn()
+    const originalScrollIntoView = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = scrollIntoViewMock
+
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/allocation')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            valuationState: 'MARK_TO_MARKET',
+            configured: true,
+            targetWeightSumPct: '100.00',
+            totalCurrentValuePln: '2000.00',
+            availableCashPln: '400.00',
+            buckets: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/targets')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/state/export')) {
+        return new Response(
+          JSON.stringify({
+            schemaVersion: 1,
+            exportedAt: '2026-03-13T12:00:00Z',
+            accounts: [],
+            instruments: [],
+            targets: [],
+            transactions: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/backups')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            directory: '/srv/portfolio/backups',
+            intervalMinutes: 1440,
+            retentionCount: 30,
+            running: false,
+            lastRunAt: null,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            backups: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-cache')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      return new Response(JSON.stringify({ message: 'Not found' }), { status: 404 })
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/settings#targets']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /settings/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled()
+    })
+
+    Element.prototype.scrollIntoView = originalScrollIntoView
+  })
 })
