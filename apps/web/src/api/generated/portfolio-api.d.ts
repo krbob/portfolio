@@ -1615,6 +1615,7 @@ export interface components {
             schemaVersion?: number | null;
             accountCount?: number | null;
             instrumentCount?: number | null;
+            targetCount?: number | null;
             transactionCount?: number | null;
             isReadable: boolean;
             errorMessage?: string | null;
@@ -1644,6 +1645,7 @@ export interface components {
             mode: string;
             accountCount: number;
             instrumentCount: number;
+            targetCount: number;
             transactionCount: number;
             safetyBackupFileName?: string | null;
         };
@@ -1680,6 +1682,14 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
+        /** net.bobinski.portfolio.api.route.PortfolioTargetSnapshotResponse */
+        PortfolioTargetSnapshotResponse: {
+            id: string;
+            assetClass: string;
+            targetWeight: string;
+            createdAt: string;
+            updatedAt: string;
+        };
         /** net.bobinski.portfolio.api.route.TransactionSnapshotResponse */
         TransactionSnapshotResponse: {
             id: string;
@@ -1705,6 +1715,7 @@ export interface components {
             exportedAt: string;
             accounts: components["schemas"]["AccountSnapshotResponse"][];
             instruments: components["schemas"]["InstrumentSnapshotResponse"][];
+            targets?: components["schemas"]["PortfolioTargetSnapshotResponse"][];
             transactions: components["schemas"]["TransactionSnapshotResponse"][];
         };
         /** net.bobinski.portfolio.api.route.ImportPortfolioStateRequest */
@@ -1726,12 +1737,15 @@ export interface components {
             isValid: boolean;
             snapshotAccountCount: number;
             snapshotInstrumentCount: number;
+            snapshotTargetCount: number;
             snapshotTransactionCount: number;
             existingAccountCount: number;
             existingInstrumentCount: number;
+            existingTargetCount: number;
             existingTransactionCount: number;
             matchingAccountCount: number;
             matchingInstrumentCount: number;
+            matchingTargetCount: number;
             matchingTransactionCount: number;
             blockingIssueCount: number;
             warningCount: number;
@@ -1742,6 +1756,7 @@ export interface components {
             mode: string;
             accountCount: number;
             instrumentCount: number;
+            targetCount: number;
             transactionCount: number;
             safetyBackupFileName?: string | null;
         };

@@ -29,7 +29,9 @@ export function PortfolioBackupsSection() {
 
     try {
       const result = await runBackupMutation.mutateAsync()
-      setFeedback(`Created backup ${result.fileName}.`)
+      setFeedback(
+        `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions.`,
+      )
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Backup run failed.')
     }
@@ -46,7 +48,7 @@ export function PortfolioBackupsSection() {
         confirmation: restoreMode === 'REPLACE' ? restoreConfirmation : undefined,
       })
       setFeedback(
-        `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.transactionCount} transactions.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+        `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setRestoreConfirmation('')
     } catch (error) {
@@ -76,7 +78,7 @@ export function PortfolioBackupsSection() {
       <SectionHeader
         eyebrow="Backups"
         title="Server snapshots"
-        description="Keep canonical JSON backups on the server, trigger them on demand, and restore a known-good state without downloading files first."
+        description="Keep canonical JSON backups on the server, including target allocation, trigger them on demand, and restore a known-good state without downloading files first."
       />
 
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
@@ -168,7 +170,7 @@ export function PortfolioBackupsSection() {
                 </span>
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-5">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-6">
                 <div>
                   <dt className="text-zinc-500">Accounts</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? 'n/a'}</dd>
@@ -176,6 +178,10 @@ export function PortfolioBackupsSection() {
                 <div>
                   <dt className="text-zinc-500">Instruments</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? 'n/a'}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Targets</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? 'n/a'}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">Transactions</dt>

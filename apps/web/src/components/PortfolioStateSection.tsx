@@ -5,6 +5,7 @@ import {
   useExportPortfolioState,
   useImportPortfolioState,
   useInstruments,
+  usePortfolioTargets,
   usePreviewPortfolioStateImport,
   useTransactions,
 } from '../hooks/use-write-model'
@@ -14,6 +15,7 @@ import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVaria
 export function PortfolioStateSection() {
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
+  const targetsQuery = usePortfolioTargets()
   const transactionsQuery = useTransactions()
   const exportMutation = useExportPortfolioState()
   const previewMutation = usePreviewPortfolioStateImport()
@@ -35,7 +37,7 @@ export function PortfolioStateSection() {
       const snapshot = await exportMutation.mutateAsync()
       downloadSnapshot(snapshot)
       setImportFeedback(
-        `Exported ${snapshot.accounts.length} accounts, ${snapshot.instruments.length} instruments and ${snapshot.transactions.length} transactions.`,
+        `Exported ${snapshot.accounts.length} accounts, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets and ${snapshot.transactions.length} transactions.`,
       )
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Export failed.')
@@ -115,7 +117,7 @@ export function PortfolioStateSection() {
       })
       setPreviewResult(null)
       setImportFeedback(
-        `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+        `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setReplaceConfirmation('')
     } catch (error) {
@@ -131,7 +133,7 @@ export function PortfolioStateSection() {
         description="Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode."
       />
 
-      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">Accounts</span>
           <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
@@ -139,6 +141,10 @@ export function PortfolioStateSection() {
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">Instruments</span>
           <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">Targets</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{targetsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">Transactions</span>
@@ -152,7 +158,7 @@ export function PortfolioStateSection() {
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Export</p>
             <h4 className="mt-1 text-base font-semibold text-zinc-100">Download snapshot</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              Generates a canonical JSON snapshot that includes accounts, instruments and transactions with original ids and timestamps.
+              Generates a canonical JSON snapshot that includes accounts, instruments, targets and transactions with original ids and timestamps.
             </p>
           </div>
 
@@ -168,7 +174,7 @@ export function PortfolioStateSection() {
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Import</p>
             <h4 className="mt-1 text-base font-semibold text-zinc-100">Restore snapshot</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              `MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot.
+              `MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot, including target allocation.
             </p>
             <p className="mt-1 text-sm text-zinc-500">`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.</p>
           </div>
@@ -229,7 +235,7 @@ export function PortfolioStateSection() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetricCard
                   label="Accounts"
                   snapshotCount={previewResult.snapshotAccountCount}
@@ -243,6 +249,12 @@ export function PortfolioStateSection() {
                   matchingCount={previewResult.matchingInstrumentCount}
                 />
                 <PreviewMetricCard
+                  label="Targets"
+                  snapshotCount={previewResult.snapshotTargetCount}
+                  existingCount={previewResult.existingTargetCount}
+                  matchingCount={previewResult.matchingTargetCount}
+                />
+                <PreviewMetricCard
                   label="Transactions"
                   snapshotCount={previewResult.snapshotTransactionCount}
                   existingCount={previewResult.existingTransactionCount}
@@ -252,8 +264,8 @@ export function PortfolioStateSection() {
 
               <p className="text-sm text-zinc-500 mt-3">
                 {previewResult.mode === 'REPLACE'
-                  ? `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments and ${previewResult.existingTransactionCount} transactions.`
-                  : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments and ${previewResult.matchingTransactionCount} transactions by id.`}
+                  ? `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets and ${previewResult.existingTransactionCount} transactions.`
+                  : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets and ${previewResult.matchingTransactionCount} transactions by id.`}
               </p>
 
               {previewResult.issues.length > 0 && (
