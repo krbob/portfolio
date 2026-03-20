@@ -62,8 +62,7 @@ class RemoteReferenceSeriesProvider(
         to: LocalDate
     ): ReferenceSeriesResult = try {
         ReferenceSeriesResult.Success(
-            prices = stockAnalystClient.history(symbol = symbol, currency = currency)
-                .filter { it.date >= from && it.date <= to }
+            prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
         )
     } catch (exception: MarketDataClientException) {
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
@@ -82,7 +81,9 @@ class RemoteReferenceSeriesProvider(
         )
         val usdPlnLookup = stockAnalystClient.history(
             symbol = config.usdPlnSymbol,
-            currency = null
+            currency = null,
+            from = from,
+            to = to
         ).associateTo(TreeMap()) { it.date to it.closePricePln }
 
         val prices = goldUsdHistory.mapNotNull { point ->

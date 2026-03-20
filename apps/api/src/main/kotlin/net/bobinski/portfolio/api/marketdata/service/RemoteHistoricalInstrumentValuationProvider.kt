@@ -58,8 +58,7 @@ class RemoteHistoricalInstrumentValuationProvider(
                 type = InstrumentValuationFailureType.UNSUPPORTED,
                 reason = "Instrument does not define a market symbol."
             )
-        val history = stockAnalystClient.historyInPln(symbol)
-            .filter { it.date >= from && it.date <= to }
+        val history = stockAnalystClient.historyInPln(symbol, from = from, to = to)
             .map { HistoricalPricePoint(date = it.date, closePricePln = it.closePricePln) }
 
         return HistoricalInstrumentValuationResult.Success(prices = history)

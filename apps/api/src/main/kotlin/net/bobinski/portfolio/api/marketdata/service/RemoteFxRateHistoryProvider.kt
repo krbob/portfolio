@@ -24,8 +24,7 @@ class RemoteFxRateHistoryProvider(
 
         return try {
             FxRateHistoryResult.Success(
-                prices = stockAnalystClient.history(symbol = symbolFor(currency))
-                    .filter { it.date >= from && it.date <= to }
+                prices = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to)
             )
         } catch (exception: MarketDataClientException) {
             FxRateHistoryResult.Failure(exception.message ?: "FX history request failed.")
