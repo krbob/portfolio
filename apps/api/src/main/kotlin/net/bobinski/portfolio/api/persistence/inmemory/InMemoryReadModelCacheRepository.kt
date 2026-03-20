@@ -14,4 +14,9 @@ class InMemoryReadModelCacheRepository : ReadModelCacheRepository {
     override suspend fun save(snapshot: ReadModelCacheSnapshot) {
         state.updateAndGet { current -> current + (snapshot.cacheKey to snapshot) }
     }
+
+    override suspend fun clearAll(): Int {
+        val previous = state.getAndSet(emptyMap())
+        return previous.size
+    }
 }

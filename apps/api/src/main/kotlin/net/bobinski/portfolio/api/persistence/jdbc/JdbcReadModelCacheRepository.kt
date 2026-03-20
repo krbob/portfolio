@@ -81,6 +81,17 @@ class JdbcReadModelCacheRepository(
         }
     }
 
+    override suspend fun clearAll(): Int =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                delete from read_model_snapshots
+                """.trimIndent()
+            ).use { statement ->
+                statement.executeUpdate()
+            }
+        }
+
     private fun java.sql.ResultSet.toReadModelCacheSnapshot(): ReadModelCacheSnapshot = ReadModelCacheSnapshot(
         cacheKey = getString("cache_key"),
         modelName = getString("model_name"),

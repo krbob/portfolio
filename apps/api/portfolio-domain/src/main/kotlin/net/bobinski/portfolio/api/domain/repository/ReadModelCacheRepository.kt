@@ -6,4 +6,5 @@ interface ReadModelCacheRepository {
     suspend fun get(cacheKey: String): ReadModelCacheSnapshot?
     suspend fun list(): List<ReadModelCacheSnapshot>
     suspend fun save(snapshot: ReadModelCacheSnapshot)
+    suspend fun clearAll(): Int
 }

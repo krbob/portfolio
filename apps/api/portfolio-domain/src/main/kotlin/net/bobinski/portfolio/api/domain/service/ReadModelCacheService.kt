@@ -42,6 +42,8 @@ class ReadModelCacheService(
     suspend fun list(): List<ReadModelCacheSnapshot> = repository.list()
         .sortedByDescending(ReadModelCacheSnapshot::generatedAt)
 
+    suspend fun clearAll(): Int = repository.clearAll()
+
     private suspend fun <T> rebuild(
         descriptor: ReadModelCacheDescriptor,
         serializer: KSerializer<T>,

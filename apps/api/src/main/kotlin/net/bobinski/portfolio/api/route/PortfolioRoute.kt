@@ -102,6 +102,24 @@ fun Route.portfolioRoute() {
             call.respond(readModelCacheService.list().map(ReadModelCacheSnapshot::toResponse))
         }
 
+        post("/read-model-cache/invalidate") {
+            val clearedSnapshotCount = readModelCacheService.clearAll()
+            auditLogService.record(
+                category = AuditEventCategory.SYSTEM,
+                action = "READ_MODEL_CACHE_INVALIDATED",
+                entityType = "READ_MODEL_CACHE",
+                message = "Invalidated read-model cache snapshots.",
+                metadata = mapOf(
+                    "clearedSnapshotCount" to clearedSnapshotCount.toString()
+                )
+            )
+            call.respond(
+                ReadModelCacheInvalidationResponse(
+                    clearedSnapshotCount = clearedSnapshotCount
+                )
+            )
+        }
+
         get("/audit/events") {
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 12
             val category = call.request.queryParameters["category"]?.let(::parseAuditEventCategory)
@@ -505,6 +523,11 @@ data class ReadModelCacheSnapshotResponse(
     val generatedAt: String,
     val invalidationReason: String,
     val payloadSizeBytes: Int
+)
+
+@Serializable
+data class ReadModelCacheInvalidationResponse(
+    val clearedSnapshotCount: Int
 )
 
 @Serializable
