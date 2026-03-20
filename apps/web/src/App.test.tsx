@@ -269,6 +269,25 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            intervalMinutes: 720,
+            runOnStart: true,
+            running: false,
+            lastRunAt: '2026-03-13T12:00:00Z',
+            lastSuccessAt: '2026-03-13T12:00:00Z',
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            lastTrigger: 'MANUAL',
+            lastDurationMs: 420,
+            modelNames: ['DAILY_HISTORY', 'RETURNS'],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/audit/events')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -694,6 +713,25 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(
+          JSON.stringify({
+            schedulerEnabled: false,
+            intervalMinutes: 720,
+            runOnStart: true,
+            running: false,
+            lastRunAt: '2026-03-13T12:00:00Z',
+            lastSuccessAt: '2026-03-13T12:00:00Z',
+            lastFailureAt: null,
+            lastFailureMessage: null,
+            lastTrigger: 'MANUAL',
+            lastDurationMs: 420,
+            modelNames: ['DAILY_HISTORY', 'RETURNS'],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/targets')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -761,7 +799,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /settings|ustawienia/i })).toBeInTheDocument()
+    expect(await screen.findByText(/target allocation|alokacja docelowa/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(scrollIntoViewMock).toHaveBeenCalled()
     })

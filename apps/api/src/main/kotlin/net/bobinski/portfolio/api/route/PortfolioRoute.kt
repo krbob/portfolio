@@ -56,6 +56,9 @@ import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioRebalancingSettingsCommand
+import net.bobinski.portfolio.api.readmodel.ReadModelRefreshRunResult
+import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
+import net.bobinski.portfolio.api.readmodel.ReadModelRefreshStatus
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
@@ -70,6 +73,7 @@ fun Route.portfolioRoute() {
     val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
+    val readModelRefreshService: ReadModelRefreshService by inject()
     val auditLogService: AuditLogService by inject()
 
     route("/v1/portfolio") {
@@ -111,6 +115,14 @@ fun Route.portfolioRoute() {
 
         get("/read-model-cache") {
             call.respond(readModelCacheService.list().map(ReadModelCacheSnapshot::toResponse))
+        }
+
+        get("/read-model-refresh") {
+            call.respond(readModelRefreshService.status().toResponse())
+        }
+
+        post("/read-model-refresh/run") {
+            call.respond(readModelRefreshService.runManualRefresh().toResponse())
         }
 
         post("/read-model-cache/invalidate") {
@@ -616,6 +628,30 @@ data class ReadModelCacheInvalidationResponse(
 )
 
 @Serializable
+data class ReadModelRefreshStatusResponse(
+    val schedulerEnabled: Boolean,
+    val intervalMinutes: Long,
+    val runOnStart: Boolean,
+    val running: Boolean,
+    val lastRunAt: String?,
+    val lastSuccessAt: String?,
+    val lastFailureAt: String?,
+    val lastFailureMessage: String?,
+    val lastTrigger: String?,
+    val lastDurationMs: Long?,
+    val modelNames: List<String>
+)
+
+@Serializable
+data class ReadModelRefreshRunResponse(
+    val trigger: String,
+    val completedAt: String,
+    val durationMs: Long,
+    val refreshedModelCount: Int,
+    val modelNames: List<String>
+)
+
+@Serializable
 data class PortfolioBackupRecordResponse(
     val fileName: String,
     val createdAt: String,
@@ -1109,6 +1145,28 @@ private fun ReadModelCacheSnapshot.toResponse(): ReadModelCacheSnapshotResponse 
     generatedAt = generatedAt.toString(),
     invalidationReason = invalidationReason.name,
     payloadSizeBytes = payloadSizeBytes
+)
+
+private fun ReadModelRefreshStatus.toResponse(): ReadModelRefreshStatusResponse = ReadModelRefreshStatusResponse(
+    schedulerEnabled = schedulerEnabled,
+    intervalMinutes = intervalMinutes,
+    runOnStart = runOnStart,
+    running = running,
+    lastRunAt = lastRunAt?.toString(),
+    lastSuccessAt = lastSuccessAt?.toString(),
+    lastFailureAt = lastFailureAt?.toString(),
+    lastFailureMessage = lastFailureMessage,
+    lastTrigger = lastTrigger?.name,
+    lastDurationMs = lastDurationMs,
+    modelNames = modelNames
+)
+
+private fun ReadModelRefreshRunResult.toResponse(): ReadModelRefreshRunResponse = ReadModelRefreshRunResponse(
+    trigger = trigger.name,
+    completedAt = completedAt.toString(),
+    durationMs = durationMs,
+    refreshedModelCount = refreshedModelCount,
+    modelNames = modelNames
 )
 
 private fun RestorePortfolioBackupRequest.toDomain(): PortfolioBackupRestoreRequest = PortfolioBackupRestoreRequest(

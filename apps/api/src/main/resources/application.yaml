@@ -20,6 +20,10 @@ portfolio:
     directory: "./data/backups"
     intervalMinutes: 1440
     retentionCount: 30
+  readModelRefresh:
+    enabled: false
+    intervalMinutes: 720
+    runOnStart: true
   auth:
     enabled: false
     password: ""

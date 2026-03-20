@@ -102,6 +102,12 @@ export type PortfolioRebalancingSettings =
 export type SavePortfolioRebalancingSettingsPayload =
   components['schemas']['SavePortfolioRebalancingSettingsRequest']
 
+export type ReadModelRefreshStatus =
+  components['schemas']['ReadModelRefreshStatusResponse']
+
+export type ReadModelRefreshRunResult =
+  components['schemas']['ReadModelRefreshRunResponse']
+
 export interface ReadModelCacheInvalidationResult {
   clearedSnapshotCount: number
 }
@@ -249,6 +255,16 @@ export function savePortfolioRebalancingSettings(payload: SavePortfolioRebalanci
 
 export function invalidateReadModelCache() {
   return requestJson<ReadModelCacheInvalidationResult>('/api/v1/portfolio/read-model-cache/invalidate', {
+    method: 'POST',
+  })
+}
+
+export function getReadModelRefreshStatus() {
+  return requestJson<ReadModelRefreshStatus>('/api/v1/portfolio/read-model-refresh')
+}
+
+export function runReadModelRefresh() {
+  return requestJson<ReadModelRefreshRunResult>('/api/v1/portfolio/read-model-refresh/run', {
     method: 'POST',
   })
 }

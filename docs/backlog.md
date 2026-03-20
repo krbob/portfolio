@@ -123,7 +123,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - separate `next contribution guidance` from `full rebalance gap`
 - make dashboard and settings agree on the same allocation narrative
 
-### 5.3 Scheduled read-model refresh (next)
+### 5.3 Scheduled read-model refresh (done)
 
 - warm `history`, `returns`, and benchmark read models in the background
 - keep self-hosted installs fast on first open each day

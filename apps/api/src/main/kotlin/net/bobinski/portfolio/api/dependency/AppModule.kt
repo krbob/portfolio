@@ -46,6 +46,8 @@ import net.bobinski.portfolio.api.marketdata.service.RemoteInflationAdjustmentPr
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
+import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
+import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
@@ -73,6 +75,7 @@ fun appModule(
     config: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
     backupConfig: BackupConfig,
+    readModelRefreshConfig: ReadModelRefreshConfig,
     authConfig: AuthConfig,
     repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
 ) = module {
@@ -80,6 +83,7 @@ fun appModule(
     single { config }
     single { marketDataConfig }
     single { backupConfig }
+    single { readModelRefreshConfig }
     single { authConfig }
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
@@ -264,6 +268,17 @@ fun appModule(
             transferService = get(),
             auditLogService = get(),
             json = get(),
+            clock = get()
+        )
+    }
+    single {
+        ReadModelRefreshService(
+            config = get(),
+            readModelCacheService = get(),
+            descriptorService = get(),
+            portfolioHistoryService = get(),
+            portfolioReturnsService = get(),
+            auditLogService = get(),
             clock = get()
         )
     }

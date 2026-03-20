@@ -66,6 +66,36 @@ class ReadModelCacheServiceTest {
         assertEquals(ReadModelCacheInvalidationReason.CANONICAL_STATE_CHANGED, snapshot.invalidationReason)
     }
 
+    @Test
+    fun `force refresh rebuilds snapshot even when descriptor is unchanged`() {
+        val service = ReadModelCacheService(
+            repository = InMemoryReadModelCacheRepository(),
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val descriptor = descriptor(sourceUpdatedAt = Instant.parse("2026-03-14T00:00:00Z"))
+        var computeCount = 0
+
+        runBlocking {
+            service.getOrCompute(descriptor, CachedPayload.serializer()) {
+                computeCount += 1
+                CachedPayload(value = "first")
+            }
+        }
+
+        val refreshed = runBlocking {
+            service.forceRefresh(descriptor, CachedPayload.serializer()) {
+                computeCount += 1
+                CachedPayload(value = "second")
+            }
+        }
+        val snapshot = runBlocking { service.list().first() }
+
+        assertEquals(CachedPayload("second"), refreshed)
+        assertEquals(2, computeCount)
+        assertEquals(ReadModelCacheInvalidationReason.EXPLICIT_REFRESH, snapshot.invalidationReason)
+    }
+
     private fun descriptor(sourceUpdatedAt: Instant) = ReadModelCacheDescriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",

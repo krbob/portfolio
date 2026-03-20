@@ -44,6 +44,9 @@ PORTFOLIO_API_BASE_URL="$API_BASE_URL" sh "$PROJECT_ROOT/scripts/import-demo-por
 overview=$(curl -sSf "$API_BASE_URL/v1/portfolio/overview")
 holdings=$(curl -sSf "$API_BASE_URL/v1/portfolio/holdings")
 transactions=$(curl -sSf "$API_BASE_URL/v1/transactions")
+read_model_refresh_status=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-refresh")
+read_model_refresh_run=$(curl -sSf -X POST "$API_BASE_URL/v1/portfolio/read-model-refresh/run")
+read_model_cache=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-cache")
 
 printf '%s' "$overview" | grep -F '"totalBookValuePln": "104736.00"' >/dev/null
 printf '%s' "$overview" | grep -F '"activeHoldingCount": 7' >/dev/null
@@ -51,6 +54,9 @@ printf '%s' "$overview" | grep -F '"missingFxTransactions": 0' >/dev/null
 printf '%s' "$holdings" | grep -F '"instrumentName": "Vanguard FTSE All-World UCITS ETF"' >/dev/null
 printf '%s' "$holdings" | grep -F '"kind": "BOND_EDO"' >/dev/null
 printf '%s' "$transactions" | grep -F '"fxRateToPln": "3.99000000"' >/dev/null
+printf '%s' "$read_model_refresh_status" | grep -F '"schedulerEnabled": false' >/dev/null
+printf '%s' "$read_model_refresh_run" | grep -F '"refreshedModelCount": 2' >/dev/null
+printf '%s' "$read_model_cache" | grep -F '"invalidationReason": "EXPLICIT_REFRESH"' >/dev/null
 
 curl -sSf -X POST "$API_BASE_URL/v1/portfolio/backups/run" >/dev/null
 

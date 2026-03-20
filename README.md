@@ -53,6 +53,7 @@ portfolio/
 - destructive `REPLACE` import and restore flows now require explicit confirmation and create safety backups automatically
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
+- optional background refresh can warm cached history and returns on startup and on a fixed interval
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 - optional single-user password auth is available through signed session cookies and a login gate in the web UI
 
@@ -122,6 +123,7 @@ The Compose API profile enables server backups by default and stores them on a s
 Market data is disabled in this default container profile; override the relevant env vars if you want live valuations there.
 The web UI is exposed on `http://127.0.0.1:4174`.
 You can override published ports with `PORTFOLIO_API_PORT` and `PORTFOLIO_WEB_PORT`.
+Read-model background refresh stays disabled by default; enable it explicitly if you want warm history and returns on first open.
 
 To run the full stack with live market data without persisting provider URLs in the repo:
 
@@ -240,6 +242,47 @@ For destructive `REPLACE` operations:
 
 Both flows create a safety backup automatically before applying destructive changes.
 
+## Read-model refresh
+
+The API can proactively warm cached `history` and `returns` read models so the first open each day does not rebuild them synchronously.
+
+Configuration keys:
+
+- `portfolio.readModelRefresh.enabled`
+- `portfolio.readModelRefresh.intervalMinutes`
+- `portfolio.readModelRefresh.runOnStart`
+
+Environment overrides:
+
+- `PORTFOLIO_READ_MODEL_REFRESH_ENABLED`
+- `PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES`
+- `PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START`
+
+Default values:
+
+- scheduler disabled
+- interval `720` minutes
+- run-on-start enabled
+
+Available API endpoints:
+
+- `GET /v1/portfolio/read-model-refresh`
+- `POST /v1/portfolio/read-model-refresh/run`
+
+Behavior:
+
+- the scheduler is opt-in and keeps using rebuildable read-model cache snapshots
+- `Refresh now` in `Settings -> Cache` forces a rebuild of cached `history` and `returns`
+- successful and failed refresh attempts are recorded in the system audit log
+
+Minimal local example:
+
+```bash
+PORTFOLIO_READ_MODEL_REFRESH_ENABLED=true \
+PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES=360 \
+./gradlew run
+```
+
 ## Demo data
 
 For a ready-made demo portfolio with multiple `VWRA.L` purchases and several `EDO` lots over roughly two years:
@@ -270,7 +313,7 @@ The smoke test:
 - starts an isolated Compose project on alternate ports
 - boots a fresh SQLite database
 - imports the demo portfolio
-- verifies overview, holdings and backups
+- verifies overview, holdings, read-model refresh and backups
 - restarts the API container
 - confirms data durability after restart
 - tears the smoke stack down again

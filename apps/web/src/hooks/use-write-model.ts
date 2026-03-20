@@ -9,6 +9,7 @@ import {
   downloadPortfolioBackup,
   exportPortfolioState,
   invalidateReadModelCache,
+  getReadModelRefreshStatus,
   importTransactionsCsv,
   importTransactions,
   importPortfolioState,
@@ -27,6 +28,7 @@ import {
   previewPortfolioStateImport,
   replacePortfolioTargets,
   restorePortfolioBackup,
+  runReadModelRefresh,
   runPortfolioBackup,
   updateTransactionImportProfile,
   updateTransaction,
@@ -48,6 +50,7 @@ import {
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
   type PortfolioStateSnapshot,
+  type ReadModelRefreshRunResult,
   type RestorePortfolioBackupPayload,
   type RestorePortfolioBackupResult,
   type TransactionImportProfile,
@@ -302,6 +305,29 @@ export function useInvalidateReadModelCache() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+      ])
+    },
+  })
+}
+
+export function useReadModelRefreshStatus() {
+  return useQuery({
+    queryKey: ['read-model-refresh-status'],
+    queryFn: getReadModelRefreshStatus,
+  })
+}
+
+export function useRunReadModelRefresh() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (): Promise<ReadModelRefreshRunResult> => runReadModelRefresh(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['read-model-refresh-status'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })

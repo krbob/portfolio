@@ -8,11 +8,13 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
+import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 
 internal fun validateStartupConfiguration(
     persistenceConfig: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
     backupConfig: BackupConfig,
+    readModelRefreshConfig: ReadModelRefreshConfig,
     authConfig: AuthConfig
 ) {
     require(persistenceConfig.databasePath.isNotBlank()) {
@@ -65,6 +67,12 @@ internal fun validateStartupConfiguration(
             backupDirectory = backupConfig.directory,
             databasePath = databasePath
         )
+    }
+
+    if (readModelRefreshConfig.enabled) {
+        require(readModelRefreshConfig.intervalMinutes > 0) {
+            "Read-model refresh requires a positive interval."
+        }
     }
 
     if (authConfig.enabled) {

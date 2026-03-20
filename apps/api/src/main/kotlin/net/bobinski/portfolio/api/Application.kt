@@ -7,6 +7,7 @@ import net.bobinski.portfolio.api.plugins.configureAuthentication
 import net.bobinski.portfolio.api.plugins.configureDependencyInjection
 import net.bobinski.portfolio.api.plugins.configureMonitoring
 import net.bobinski.portfolio.api.plugins.configurePersistenceLifecycle
+import net.bobinski.portfolio.api.plugins.configureReadModelRefreshLifecycle
 import net.bobinski.portfolio.api.plugins.configureRouting
 import net.bobinski.portfolio.api.plugins.configureSerialization
 import net.bobinski.portfolio.api.plugins.configureStatusPages
@@ -27,6 +28,7 @@ internal fun Application.runtimeModule(
         configurePersistenceLifecycle()
     }
     configureBackupLifecycle()
+    configureReadModelRefreshLifecycle()
     configureAuthentication()
     configureMonitoring()
     configureStatusPages()

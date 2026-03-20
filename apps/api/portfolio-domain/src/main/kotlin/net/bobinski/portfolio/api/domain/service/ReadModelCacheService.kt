@@ -39,6 +39,17 @@ class ReadModelCacheService(
         )
     }
 
+    suspend fun <T> forceRefresh(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        compute: suspend () -> T
+    ): T = rebuild(
+        descriptor = descriptor,
+        serializer = serializer,
+        invalidationReason = ReadModelCacheInvalidationReason.EXPLICIT_REFRESH,
+        compute = compute
+    )
+
     suspend fun list(): List<ReadModelCacheSnapshot> = repository.list()
         .sortedByDescending(ReadModelCacheSnapshot::generatedAt)
 
@@ -107,5 +118,6 @@ enum class ReadModelCacheInvalidationReason {
     MODEL_VERSION_CHANGED,
     INPUT_WINDOW_CHANGED,
     CANONICAL_STATE_CHANGED,
-    PAYLOAD_DECODE_FAILED
+    PAYLOAD_DECODE_FAILED,
+    EXPLICIT_REFRESH
 }

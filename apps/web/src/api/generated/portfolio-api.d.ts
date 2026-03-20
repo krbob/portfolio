@@ -606,6 +606,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/read-model-refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReadModelRefreshStatusResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolio/read-model-refresh/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReadModelRefreshRunResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/audit/events": {
         parameters: {
             query?: never;
@@ -1740,6 +1808,28 @@ export interface components {
         /** net.bobinski.portfolio.api.route.ReadModelCacheInvalidationResponse */
         ReadModelCacheInvalidationResponse: {
             clearedSnapshotCount: number;
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
+        ReadModelRefreshStatusResponse: {
+            schedulerEnabled: boolean;
+            intervalMinutes: number;
+            runOnStart: boolean;
+            running: boolean;
+            lastRunAt?: string | null;
+            lastSuccessAt?: string | null;
+            lastFailureAt?: string | null;
+            lastFailureMessage?: string | null;
+            lastTrigger?: string | null;
+            lastDurationMs?: number | null;
+            modelNames: string[];
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelRefreshRunResponse */
+        ReadModelRefreshRunResponse: {
+            trigger: string;
+            completedAt: string;
+            durationMs: number;
+            refreshedModelCount: number;
+            modelNames: string[];
         };
         /** net.bobinski.portfolio.api.route.AuditEventResponse */
         AuditEventResponse: {

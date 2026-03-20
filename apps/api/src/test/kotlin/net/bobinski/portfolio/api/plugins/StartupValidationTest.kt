@@ -7,6 +7,7 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
+import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -22,6 +23,7 @@ class StartupValidationTest {
                 ),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -34,6 +36,7 @@ class StartupValidationTest {
                 persistenceConfig = validSqlitePersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -46,6 +49,7 @@ class StartupValidationTest {
                 persistenceConfig = validSqlitePersistenceConfig().copy(journalMode = JournalMode.MEMORY),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -55,6 +59,7 @@ class StartupValidationTest {
                 persistenceConfig = validSqlitePersistenceConfig().copy(synchronousMode = SynchronousMode.OFF),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -67,6 +72,7 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig().copy(stockAnalystBaseUrl = "stock.local"),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -79,6 +85,7 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig().copy(bondBenchmarkSymbol = ""),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -91,6 +98,7 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = ""),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -103,6 +111,7 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -119,6 +128,7 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig().copy(databasePath = databasePath.toString()),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = backupPath.toString()),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -137,6 +147,20 @@ class StartupValidationTest {
                 persistenceConfig = validPersistenceConfig().copy(databasePath = databasePath.toString()),
                 marketDataConfig = validMarketDataConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = databasePath.toString()),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation rejects non-positive read-model refresh interval when scheduler is enabled`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig(),
+                backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig().copy(enabled = true, intervalMinutes = 0),
                 authConfig = validAuthConfig()
             )
         }
@@ -155,7 +179,7 @@ class StartupValidationTest {
         usdPlnSymbol = "USDPLN=X",
         goldBenchmarkSymbol = "XAUUSD=X",
         equityBenchmarkSymbol = "VWRA.L",
-        bondBenchmarkSymbol = "VAGF.DE"
+        bondBenchmarkSymbol = "ETFBTBSP.WA"
     )
 
     private fun validBackupConfig() = BackupConfig(
@@ -163,6 +187,12 @@ class StartupValidationTest {
         directory = "./data/backups",
         intervalMinutes = 1440,
         retentionCount = 30
+    )
+
+    private fun validReadModelRefreshConfig() = ReadModelRefreshConfig(
+        enabled = false,
+        intervalMinutes = 720,
+        runOnStart = true
     )
 
     private fun validAuthConfig() = AuthConfig(
