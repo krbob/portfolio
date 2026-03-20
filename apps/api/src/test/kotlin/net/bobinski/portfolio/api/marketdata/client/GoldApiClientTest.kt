@@ -19,8 +19,8 @@ class GoldApiClientTest {
         val apiKeyHeader = AtomicReference<String?>()
         val responseBody = """
             [
-              {"day":"2026-03-19","avg_price":3025.15},
-              {"day":"2026-03-20","avg_price":3031.40}
+              {"day":"2026-03-19 00:00:00","avg_price":3025.15},
+              {"day":"2026-03-20T00:00:00Z","avg_price":3031.40}
             ]
         """.trimIndent()
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)

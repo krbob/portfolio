@@ -45,7 +45,7 @@ class GoldApiClient(
             val day = point["day"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
             val avgPrice = point["avg_price"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
             GoldApiHistoryPoint(
-                date = LocalDate.parse(day),
+                date = parseHistoryDay(day),
                 closePriceUsd = BigDecimal(avgPrice)
             )
         }
@@ -71,6 +71,11 @@ class GoldApiClient(
             append("&endTimestamp=")
             append(endTimestamp)
         }
+    }
+
+    private fun parseHistoryDay(day: String): LocalDate {
+        val normalized = day.substringBefore('T').substringBefore(' ')
+        return LocalDate.parse(normalized)
     }
 }
 
