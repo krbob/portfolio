@@ -290,6 +290,13 @@ export function DashboardScreen() {
                 </Link>
               </div>
             )}
+
+            {/* Compact health footer */}
+            <HealthIndicator
+              valuedCount={overview.valuedHoldingCount}
+              totalCount={overview.activeHoldingCount}
+              issueCount={openIssues}
+            />
           </div>
 
           {openIssues > 0 && (
@@ -396,6 +403,23 @@ function gapTone(value: string | null | undefined) {
     return 'text-zinc-100'
   }
   return numeric > 0 ? 'text-amber-400' : 'text-sky-400'
+}
+
+function HealthIndicator({ valuedCount, totalCount, issueCount }: { valuedCount: number; totalCount: number; issueCount: number }) {
+  const fullCoverage = valuedCount === totalCount
+  const healthy = fullCoverage && issueCount === 0
+
+  return (
+    <div className="mt-4 flex items-center gap-2 border-t border-zinc-800/50 pt-3 text-xs">
+      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${healthy ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+      <span className="text-zinc-500">
+        {valuedCount}/{totalCount} valued
+        {issueCount > 0 && <span className="text-amber-400"> · {issueCount} {issueCount === 1 ? 'issue' : 'issues'}</span>}
+        {issueCount === 0 && fullCoverage && <span className="text-emerald-400/70"> · All clear</span>}
+        {issueCount === 0 && !fullCoverage && <span className="text-amber-400"> · {totalCount - valuedCount} unvalued</span>}
+      </span>
+    </div>
+  )
 }
 
 function filterHistoryPoints(points: PortfolioDailyHistoryPoint[], range: DashboardRange) {
