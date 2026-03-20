@@ -150,6 +150,8 @@ class StartupValidationTest {
         enabled = true,
         stockAnalystBaseUrl = "http://127.0.0.1:18080",
         edoCalculatorBaseUrl = "http://127.0.0.1:18081",
+        goldApiBaseUrl = "https://api.gold-api.com",
+        goldApiKey = null,
         usdPlnSymbol = "USDPLN=X",
         goldBenchmarkSymbol = "XAUUSD=X",
         equityBenchmarkSymbol = "VWRA.L",

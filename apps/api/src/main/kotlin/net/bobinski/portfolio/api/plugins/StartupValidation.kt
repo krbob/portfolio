@@ -40,6 +40,9 @@ internal fun validateStartupConfiguration(
         require(marketDataConfig.edoCalculatorBaseUrl.isHttpUrl()) {
             "Market data requires a valid EDO calculator HTTP base URL."
         }
+        require(marketDataConfig.goldApiKey == null || marketDataConfig.goldApiBaseUrl.isHttpUrl()) {
+            "Gold API integration requires a valid HTTP base URL."
+        }
         require(marketDataConfig.usdPlnSymbol.isNotBlank()) {
             "Market data requires a non-blank USD/PLN symbol."
         }

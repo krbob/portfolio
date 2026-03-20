@@ -7,6 +7,8 @@ data class MarketDataConfig(
     val enabled: Boolean,
     val stockAnalystBaseUrl: String,
     val edoCalculatorBaseUrl: String,
+    val goldApiBaseUrl: String,
+    val goldApiKey: String?,
     val usdPlnSymbol: String,
     val goldBenchmarkSymbol: String,
     val equityBenchmarkSymbol: String,
@@ -27,6 +29,16 @@ data class MarketDataConfig(
                 config,
                 "portfolio.marketData.edoCalculatorBaseUrl"
             ) ?: "http://127.0.0.1:18081",
+            goldApiBaseUrl = readSetting(
+                "PORTFOLIO_GOLD_API_BASE_URL",
+                config,
+                "portfolio.marketData.goldApiBaseUrl"
+            ) ?: "https://api.gold-api.com",
+            goldApiKey = readSetting(
+                "PORTFOLIO_GOLD_API_KEY",
+                config,
+                "portfolio.marketData.goldApiKey"
+            ),
             usdPlnSymbol = readSetting(
                 "PORTFOLIO_USDPLN_SYMBOL",
                 config,

@@ -27,6 +27,7 @@ import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
 import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
+import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
@@ -77,6 +78,7 @@ fun appModule(
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
     single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystBaseUrl) }
+    single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiBaseUrl) }
     single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorBaseUrl) }
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
@@ -95,7 +97,8 @@ fun appModule(
     single<ReferenceSeriesProvider> {
         RemoteReferenceSeriesProvider(
             config = get(),
-            stockAnalystClient = get()
+            stockAnalystClient = get(),
+            goldApiClient = get()
         )
     }
     single<FxRateHistoryProvider> {

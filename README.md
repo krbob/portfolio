@@ -36,6 +36,7 @@ portfolio/
 - benchmark-relative performance including TWR, VWRA, inflation, multi-asset ETF benchmarks and target-mix comparisons
 - daily history rebuilt from transactions and market data
 - ETF pricing and benchmark series via `stock-analyst`
+- spot gold history via `gold-api` when `PORTFOLIO_GOLD_API_KEY` is configured
 - EDO valuation and inflation via `edo-calculator`
 
 ## Current implementation status
@@ -128,8 +129,11 @@ To run the full stack with live market data without persisting provider URLs in 
 PORTFOLIO_MARKET_DATA_ENABLED=true \
 PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst-host/api \
 PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator-host \
+PORTFOLIO_GOLD_API_KEY=your-gold-api-key \
 docker compose --profile app up -d --build
 ```
+
+`gold-api` is optional but recommended if you want the `Gold` unit in performance charts to use spot `XAU` history instead of a fallback benchmark symbol.
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current product backlog and post-migration priorities.
