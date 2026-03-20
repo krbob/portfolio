@@ -10,7 +10,7 @@ import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
-import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
+import net.bobinski.portfolio.api.marketdata.service.InflationSeriesResult
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import java.math.BigDecimal
@@ -298,28 +298,16 @@ class PortfolioReturnsService(
         cashFlows: List<MoneyWeightedCashFlow>
     ): RealPlnAdjustment? {
         val realFromMonth = alignedRealStartMonth(effectiveFrom)
-        val baseInflation = when (val result = inflationAdjustmentProvider.cumulativeSince(realFromMonth)) {
-            is InflationAdjustmentResult.Success -> result
-            is InflationAdjustmentResult.Failure -> return null
-        }
-        val realUntilExclusive = minOf(baseInflation.until, latestCompletePortfolioMonthExclusive(end))
+        val requestedUntilExclusive = latestCompletePortfolioMonthExclusive(end)
+        val inflationSeries = loadMonthlyInflationSeriesWithFallback(realFromMonth, requestedUntilExclusive) ?: return null
+        val realUntilExclusive = inflationSeries.until
         if (!realFromMonth.isBefore(realUntilExclusive)) {
             return null
         }
 
-        val multiplier = when {
-            baseInflation.until == realUntilExclusive -> baseInflation.multiplier
-            else -> {
-                val trimResult = when (val result = inflationAdjustmentProvider.cumulativeSince(realUntilExclusive)) {
-                    is InflationAdjustmentResult.Success -> result
-                    is InflationAdjustmentResult.Failure -> return null
-                }
-                if (trimResult.until != baseInflation.until || trimResult.multiplier.signum() <= 0) {
-                    return null
-                }
-                baseInflation.multiplier.divide(trimResult.multiplier, 12, RoundingMode.HALF_UP).stripTrailingZeros()
-            }
-        }
+        val multiplier = inflationSeries.points.fold(BigDecimal.ONE) { total, point ->
+            total.multiply(point.multiplier).setScale(12, RoundingMode.HALF_UP)
+        }.stripTrailingZeros()
         if (multiplier.signum() <= 0) {
             return null
         }
@@ -345,6 +333,20 @@ class PortfolioReturnsService(
             ) ?: return null,
             inflationWindow = inflationWindow
         )
+    }
+
+    private suspend fun loadMonthlyInflationSeriesWithFallback(
+        from: YearMonth,
+        requestedUntil: YearMonth
+    ): InflationSeriesResult.Success? {
+        var candidateUntil = requestedUntil
+        while (candidateUntil > from) {
+            when (val result = inflationAdjustmentProvider.monthlySeries(from, candidateUntil)) {
+                is InflationSeriesResult.Success -> return result
+                is InflationSeriesResult.Failure -> candidateUntil = candidateUntil.minusMonths(1)
+            }
+        }
+        return null
     }
 
     private fun calculateMetric(

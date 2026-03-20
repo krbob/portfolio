@@ -90,6 +90,33 @@ class EdoCalculatorClient(
         )
     }
 
+    suspend fun monthlyInflation(from: YearMonth, untilExclusive: YearMonth): MonthlyInflationSeries = withContext(Dispatchers.IO) {
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(buildMonthlyInflationUrl(from = from, untilExclusive = untilExclusive)))
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() !in 200..299) {
+            throw MarketDataClientException(
+                "edo-calculator monthly inflation returned HTTP ${response.statusCode()} for $from..$untilExclusive."
+            )
+        }
+
+        val payload = json.decodeFromString<EdoMonthlyInflationResponse>(response.body())
+        MonthlyInflationSeries(
+            from = YearMonth.parse(payload.from),
+            until = YearMonth.parse(payload.until),
+            points = payload.points.map { point ->
+                MonthlyInflationPoint(
+                    month = YearMonth.parse(point.month),
+                    multiplier = point.multiplier.toBigDecimal()
+                )
+            }
+        )
+    }
+
     private fun buildUrl(terms: EdoTerms, asOf: LocalDate?): String {
         val path = if (asOf == null) "/edo/value" else "/edo/value/at"
         val params = linkedMapOf(
@@ -137,6 +164,11 @@ class EdoCalculatorClient(
     private fun buildInflationSinceUrl(from: YearMonth): String =
         "${baseUrl.trimEnd('/')}/inflation/since?year=${from.year}&month=${from.monthValue}"
 
+    private fun buildMonthlyInflationUrl(from: YearMonth, untilExclusive: YearMonth): String =
+        "${baseUrl.trimEnd('/')}/inflation/monthly" +
+            "?startYear=${from.year}&startMonth=${from.monthValue}" +
+            "&endYear=${untilExclusive.year}&endMonth=${untilExclusive.monthValue}"
+
     private fun Int.toDecimalRate(): String =
         BigDecimal(this).divide(BigDecimal(100)).stripTrailingZeros().toPlainString()
 }
@@ -149,6 +181,17 @@ data class EdoUnitValue(
 data class InflationWindow(
     val from: YearMonth,
     val until: YearMonth,
+    val multiplier: BigDecimal
+)
+
+data class MonthlyInflationSeries(
+    val from: YearMonth,
+    val until: YearMonth,
+    val points: List<MonthlyInflationPoint>
+)
+
+data class MonthlyInflationPoint(
+    val month: YearMonth,
     val multiplier: BigDecimal
 )
 
@@ -178,5 +221,18 @@ private data class EdoHistoryPointResponse(
 private data class EdoInflationResponse(
     val from: String,
     val until: String,
+    val multiplier: String
+)
+
+@Serializable
+private data class EdoMonthlyInflationResponse(
+    val from: String,
+    val until: String,
+    val points: List<EdoMonthlyInflationPointResponse>
+)
+
+@Serializable
+private data class EdoMonthlyInflationPointResponse(
+    val month: String,
     val multiplier: String
 )

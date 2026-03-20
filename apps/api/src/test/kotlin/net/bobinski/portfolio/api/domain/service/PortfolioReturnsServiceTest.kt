@@ -11,6 +11,8 @@ import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuati
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
+import net.bobinski.portfolio.api.marketdata.service.InflationSeriesResult
+import net.bobinski.portfolio.api.marketdata.service.MonthlyInflationPoint
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
@@ -54,6 +56,11 @@ class PortfolioReturnsServiceTest {
             from = YearMonth.parse("2025-03"),
             until = YearMonth.parse("2026-03"),
             multiplier = BigDecimal("1.05")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.05")
         )
 
         val returns = fixture.service.returns()
@@ -127,6 +134,11 @@ class PortfolioReturnsServiceTest {
             until = YearMonth.parse("2026-03"),
             multiplier = BigDecimal("1.02")
         )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.02")
+        )
 
         val returns = fixture.service.returns()
         val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
@@ -163,6 +175,11 @@ class PortfolioReturnsServiceTest {
             from = YearMonth.parse("2025-04"),
             until = YearMonth.parse("2026-03"),
             multiplier = BigDecimal("1.05")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-04"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.05")
         )
 
         val returns = fixture.service.returns()
@@ -322,8 +339,32 @@ class PortfolioReturnsServiceTest {
 
     private class FakeInflationAdjustmentProvider : InflationAdjustmentProvider {
         var result: InflationAdjustmentResult = InflationAdjustmentResult.Failure("Inflation not set.")
+        var monthlySeries: InflationSeriesResult = InflationSeriesResult.Failure("Monthly inflation not set.")
 
         override suspend fun cumulativeSince(from: YearMonth): InflationAdjustmentResult = result
+
+        override suspend fun monthlySeries(from: YearMonth, untilExclusive: YearMonth): InflationSeriesResult = monthlySeries
+    }
+
+    private fun fixedMonthlySeries(
+        from: YearMonth,
+        until: YearMonth,
+        firstMultiplier: BigDecimal
+    ): InflationSeriesResult.Success {
+        val months = generateSequence(from) { current -> current.plusMonths(1) }
+            .takeWhile { month -> month.isBefore(until) }
+            .toList()
+        val points = months.mapIndexed { index, month ->
+            MonthlyInflationPoint(
+                month = month,
+                multiplier = if (index == 0) firstMultiplier else BigDecimal.ONE
+            )
+        }
+        return InflationSeriesResult.Success(
+            from = from,
+            until = until,
+            points = points
+        )
     }
 
     private companion object {

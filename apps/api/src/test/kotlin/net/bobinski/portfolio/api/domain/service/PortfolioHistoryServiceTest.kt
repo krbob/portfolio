@@ -17,7 +17,9 @@ import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuati
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentResult
+import net.bobinski.portfolio.api.marketdata.service.InflationSeriesResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
+import net.bobinski.portfolio.api.marketdata.service.MonthlyInflationPoint
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
@@ -445,9 +447,43 @@ class PortfolioHistoryServiceTest {
 
     private class FakeInflationAdjustmentProvider : InflationAdjustmentProvider {
         var resultByMonth: Map<YearMonth, InflationAdjustmentResult> = emptyMap()
+        var monthlySeriesByRange: Map<Pair<YearMonth, YearMonth>, InflationSeriesResult> = emptyMap()
 
         override suspend fun cumulativeSince(from: YearMonth): InflationAdjustmentResult =
             resultByMonth[from] ?: InflationAdjustmentResult.Failure("No fake inflation window for $from.")
+
+        override suspend fun monthlySeries(from: YearMonth, untilExclusive: YearMonth): InflationSeriesResult {
+            monthlySeriesByRange[from to untilExclusive]?.let { return it }
+
+            val months = generateSequence(from) { current -> current.plusMonths(1) }
+                .takeWhile { month -> month.isBefore(untilExclusive) }
+                .toList()
+            if (months.isEmpty()) {
+                return InflationSeriesResult.Success(from = from, until = untilExclusive, points = emptyList())
+            }
+
+            val cumulative = months.associateWith { month ->
+                resultByMonth[month] as? InflationAdjustmentResult.Success
+                    ?: return InflationSeriesResult.Failure("No fake monthly inflation for $month.")
+            }
+
+            val points = months.mapIndexed { index, month ->
+                val current = cumulative.getValue(month)
+                val multiplier = if (index == months.lastIndex) {
+                    current.multiplier
+                } else {
+                    val next = cumulative.getValue(months[index + 1])
+                    current.multiplier.divide(next.multiplier, 12, java.math.RoundingMode.HALF_UP)
+                }
+                MonthlyInflationPoint(month = month, multiplier = multiplier)
+            }
+
+            return InflationSeriesResult.Success(
+                from = from,
+                until = untilExclusive,
+                points = points
+            )
+        }
     }
 
     private companion object {
