@@ -7,6 +7,12 @@ import { I18nProvider } from './lib/i18n'
 import { queryClient } from './lib/query-client'
 import './app.css'
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js')
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

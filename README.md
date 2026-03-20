@@ -55,6 +55,7 @@ portfolio/
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
 - optional background refresh can warm cached history and returns on startup and on a fixed interval
 - dashboard and settings expose a dedicated data-quality view for valuation coverage, benchmark coverage, CPI coverage and read-model freshness
+- the web app can be installed as a lightweight PWA with a cached shell for mobile use
 - core domain models, repository interfaces and portfolio calculation services now live in the extracted `portfolio-domain` Gradle module
 - optional single-user password auth is available through signed session cookies and a login gate in the web UI
 
@@ -283,6 +284,23 @@ PORTFOLIO_READ_MODEL_REFRESH_ENABLED=true \
 PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES=360 \
 ./gradlew run
 ```
+
+## Mobile app / PWA
+
+The web UI includes a lightweight PWA setup intended for personal self-hosted use on phones and tablets.
+
+What it does:
+
+- exposes a manifest and install metadata
+- registers a service worker in production builds
+- caches the app shell, manifest and icons after the first successful visit
+- keeps API requests live; portfolio data is not mirrored into offline storage
+
+In the UI:
+
+- `Settings -> Mobile app` explains installation paths for supported browsers
+- browsers with `beforeinstallprompt` support can install directly from the settings screen
+- iPhone/iPad users can still use the system `Add to Home Screen` flow
 
 ## Demo data
 

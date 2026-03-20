@@ -135,7 +135,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - distinguish clearly between runtime readiness and portfolio data quality
 - show enough metadata on the dashboard to support trust without turning it into an admin screen
 
-### 5.5 PWA and mobile polish (later)
+### 5.5 PWA and mobile polish (done)
 
 - add installable web-app support for personal use on mobile devices
 - keep the investor screens comfortable on narrow viewports after the redesign

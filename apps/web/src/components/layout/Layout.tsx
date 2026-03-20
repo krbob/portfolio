@@ -132,7 +132,14 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur lg:hidden">
-          <div className="flex items-center gap-3 px-4 py-3">
+          <div
+            className="flex items-center gap-3 px-4 py-3"
+            style={{
+              paddingTop: 'max(0.75rem, var(--safe-top))',
+              paddingLeft: 'max(1rem, var(--safe-left))',
+              paddingRight: 'max(1rem, var(--safe-right))',
+            }}
+          >
             <button
               type="button"
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
@@ -154,7 +161,15 @@ export function Layout({ children }: { children: ReactNode }) {
         </header>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl p-4 sm:p-5 lg:p-8">{children}</div>
+          <div
+            style={{
+              paddingLeft: 'var(--safe-left)',
+              paddingRight: 'var(--safe-right)',
+              paddingBottom: 'var(--safe-bottom)',
+            }}
+          >
+            <div className="mx-auto max-w-7xl p-4 sm:p-5 lg:p-8">{children}</div>
+          </div>
         </main>
       </div>
 
@@ -173,6 +188,10 @@ export function Layout({ children }: { children: ReactNode }) {
             className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden ${
               isMobileNavVisible ? 'translate-x-0' : '-translate-x-full'
             }`}
+            style={{
+              paddingTop: 'var(--safe-top)',
+              paddingBottom: 'var(--safe-bottom)',
+            }}
             role="dialog"
             aria-modal="true"
             aria-label={isPolish ? 'Nawigacja' : 'Navigation'}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react'
 
 export type UiLanguage = 'pl' | 'en'
 
@@ -30,6 +30,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       isPolish: activeLanguage === 'pl',
     }
   }, [])
+
+  useEffect(() => {
+    document.documentElement.lang = value.language
+  }, [value.language])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

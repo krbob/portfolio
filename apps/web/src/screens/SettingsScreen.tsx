@@ -1,5 +1,6 @@
 import { AccountsSection } from '../components/AccountsSection'
 import { InstrumentsSection } from '../components/InstrumentsSection'
+import { MobileAppSection } from '../components/MobileAppSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
@@ -18,6 +19,7 @@ const SETTINGS_SECTIONS = [
   { id: 'setup', label: 'Setup' },
   { id: 'targets', label: 'Targets' },
   { id: 'benchmarks', label: 'Benchmarks' },
+  { id: 'mobile-app', label: 'Mobile app' },
   { id: 'transfer', label: 'Transfer' },
   { id: 'audit', label: 'Audit' },
   { id: 'backups', label: 'Backups' },
@@ -44,6 +46,7 @@ export function SettingsScreen() {
                     Setup: 'Konfiguracja',
                     Targets: 'Cele',
                     Benchmarks: 'Benchmarki',
+                    'Mobile app': 'Aplikacja mobilna',
                     Transfer: 'Transfer',
                     Audit: 'Audyt',
                     Backups: 'Kopie',
@@ -75,6 +78,10 @@ export function SettingsScreen() {
 
         <section id="benchmarks">
           <PortfolioBenchmarkSettingsSection />
+        </section>
+
+        <section id="mobile-app">
+          <MobileAppSection />
         </section>
 
         <section id="transfer">
