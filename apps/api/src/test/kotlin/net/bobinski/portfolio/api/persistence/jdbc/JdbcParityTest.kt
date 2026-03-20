@@ -21,14 +21,17 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
+import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
+import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
@@ -41,10 +44,12 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -66,6 +71,7 @@ class JdbcParityTest {
 
     private fun inMemoryHarness(): Harness = Harness(
         accountRepository = InMemoryAccountRepository(),
+        appPreferenceRepository = InMemoryAppPreferenceRepository(),
         instrumentRepository = InMemoryInstrumentRepository(),
         transactionRepository = InMemoryTransactionRepository(),
         portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
@@ -87,10 +93,11 @@ class JdbcParityTest {
 
         return Harness(
             accountRepository = JdbcAccountRepository(resources.dataSource),
+            appPreferenceRepository = JdbcAppPreferenceRepository(resources.dataSource),
             instrumentRepository = JdbcInstrumentRepository(resources.dataSource),
             transactionRepository = JdbcTransactionRepository(resources.dataSource),
             portfolioTargetRepository = JdbcPortfolioTargetRepository(resources.dataSource),
-            auditEventRepository = JdbcAuditEventRepository(resources.dataSource, kotlinx.serialization.json.Json.Default),
+            auditEventRepository = JdbcAuditEventRepository(resources.dataSource, Json.Default),
             closeAction = {
                 resources.close()
                 (directory / "portfolio.db").deleteIfExists()
@@ -103,6 +110,7 @@ class JdbcParityTest {
 
     private inner class Harness(
         private val accountRepository: AccountRepository,
+        private val appPreferenceRepository: AppPreferenceRepository,
         private val instrumentRepository: InstrumentRepository,
         private val transactionRepository: TransactionRepository,
         private val portfolioTargetRepository: PortfolioTargetRepository,
@@ -111,6 +119,15 @@ class JdbcParityTest {
     ) : AutoCloseable {
         private val clock = Clock.fixed(Instant.parse("2026-03-15T12:00:00Z"), ZoneOffset.UTC)
         private val auditLogService = AuditLogService(auditEventRepository = auditEventRepository, clock = clock)
+        private val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = clock
+            ),
+            auditLogService = auditLogService,
+            clock = clock
+        )
         private val readModelService = PortfolioReadModelService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -121,7 +138,8 @@ class JdbcParityTest {
         )
         private val allocationService = PortfolioAllocationService(
             portfolioTargetRepository = portfolioTargetRepository,
-            portfolioReadModelService = readModelService
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
         )
         private val transferService = PortfolioTransferService(
             accountRepository = accountRepository,

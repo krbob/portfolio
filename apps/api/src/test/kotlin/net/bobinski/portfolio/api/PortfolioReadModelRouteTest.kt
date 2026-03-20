@@ -229,8 +229,12 @@ class PortfolioReadModelRouteTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"configured\": true"))
+        assertTrue(body.contains("\"toleranceBandPctPoints\": \"5.00\""))
+        assertTrue(body.contains("\"rebalancingMode\": \"CONTRIBUTIONS_ONLY\""))
+        assertTrue(body.contains("\"recommendedAction\": \"DEPLOY_EXISTING_CASH\""))
         assertTrue(body.contains("\"targetWeightSumPct\": \"100.00\""))
         assertTrue(body.contains("\"suggestedContributionPln\": \"2000.00\""))
+        assertTrue(body.contains("\"rebalanceAction\": \"BUY\""))
         assertTrue(body.contains("\"status\": \"UNDERWEIGHT\""))
     }
 
@@ -262,6 +266,32 @@ class PortfolioReadModelRouteTest {
         assertTrue(body.contains("\"CUSTOM\""))
         assertTrue(body.contains("\"customLabel\": \"Europe 600\""))
         assertTrue(body.contains("\"customSymbol\": \"EXSA.DE\""))
+    }
+
+    @Test
+    fun `rebalancing settings can be saved and read back`() = testApplication {
+        application {
+            module()
+        }
+
+        val saveResponse = client.post("/v1/portfolio/rebalancing-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "toleranceBandPctPoints": "3.50",
+                  "mode": "ALLOW_TRIMS"
+                }
+                """.trimIndent()
+            )
+        }
+        val listResponse = client.get("/v1/portfolio/rebalancing-settings")
+        val body = listResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, saveResponse.status)
+        assertEquals(HttpStatusCode.OK, listResponse.status)
+        assertTrue(body.contains("\"toleranceBandPctPoints\": \"3.50\""))
+        assertTrue(body.contains("\"mode\": \"ALLOW_TRIMS\""))
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(

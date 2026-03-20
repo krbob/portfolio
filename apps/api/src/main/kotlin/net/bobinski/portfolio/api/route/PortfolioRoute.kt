@@ -32,15 +32,19 @@ import net.bobinski.portfolio.api.domain.service.PortfolioImportIssue
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
+import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
+import net.bobinski.portfolio.api.domain.service.AllocationBucketAction
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.BenchmarkKey
 import net.bobinski.portfolio.api.domain.service.BenchmarkOptionKind
+import net.bobinski.portfolio.api.domain.service.PortfolioAllocationAction
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
+import net.bobinski.portfolio.api.domain.service.RebalancingMode
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportPreview
 import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
@@ -51,6 +55,7 @@ import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
+import net.bobinski.portfolio.api.domain.service.SavePortfolioRebalancingSettingsCommand
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
@@ -61,6 +66,7 @@ fun Route.portfolioRoute() {
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
     val portfolioBenchmarkSettingsService: PortfolioBenchmarkSettingsService by inject()
+    val portfolioRebalancingSettingsService: PortfolioRebalancingSettingsService by inject()
     val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
@@ -147,6 +153,15 @@ fun Route.portfolioRoute() {
         post("/benchmark-settings") {
             val request = call.receive<SavePortfolioBenchmarkSettingsRequest>()
             call.respond(portfolioBenchmarkSettingsService.update(request.toDomain()).toResponse())
+        }
+
+        get("/rebalancing-settings") {
+            call.respond(portfolioRebalancingSettingsService.settings().toResponse())
+        }
+
+        post("/rebalancing-settings") {
+            val request = call.receive<SavePortfolioRebalancingSettingsRequest>()
+            call.respond(portfolioRebalancingSettingsService.update(request.toDomain()).toResponse())
         }
 
         get("/backups") {
@@ -324,9 +339,20 @@ data class PortfolioAllocationResponse(
     val asOf: String,
     val valuationState: String,
     val configured: Boolean,
+    val toleranceBandPctPoints: String,
+    val rebalancingMode: String,
     val targetWeightSumPct: String,
     val totalCurrentValuePln: String,
     val availableCashPln: String,
+    val breachedBucketCount: Int,
+    val largestBandBreachPctPoints: String?,
+    val recommendedAction: String,
+    val recommendedAssetClass: String?,
+    val recommendedContributionPln: String,
+    val remainingContributionGapPln: String,
+    val fullRebalanceBuyAmountPln: String,
+    val fullRebalanceSellAmountPln: String,
+    val requiresSelling: Boolean,
     val buckets: List<PortfolioAllocationBucketResponse>
 )
 
@@ -339,7 +365,11 @@ data class PortfolioAllocationBucketResponse(
     val targetValuePln: String?,
     val driftPctPoints: String?,
     val gapValuePln: String?,
+    val toleranceLowerPct: String?,
+    val toleranceUpperPct: String?,
+    val withinTolerance: Boolean,
     val suggestedContributionPln: String,
+    val rebalanceAction: String,
     val status: String
 )
 
@@ -405,6 +435,18 @@ data class SavePortfolioBenchmarkSettingsRequest(
     val pinnedKeys: List<String>,
     val customLabel: String? = null,
     val customSymbol: String? = null
+)
+
+@Serializable
+data class PortfolioRebalancingSettingsResponse(
+    val toleranceBandPctPoints: String,
+    val mode: String
+)
+
+@Serializable
+data class SavePortfolioRebalancingSettingsRequest(
+    val toleranceBandPctPoints: String,
+    val mode: String
 )
 
 @Serializable
@@ -718,9 +760,20 @@ private fun PortfolioAllocationSummary.toResponse(): PortfolioAllocationResponse
     asOf = asOf.toString(),
     valuationState = valuationState.name,
     configured = configured,
+    toleranceBandPctPoints = toleranceBandPctPoints.toPlainString(),
+    rebalancingMode = rebalancingMode.name,
     targetWeightSumPct = targetWeightSumPct.toPlainString(),
     totalCurrentValuePln = totalCurrentValuePln.toPlainString(),
     availableCashPln = availableCashPln.toPlainString(),
+    breachedBucketCount = breachedBucketCount,
+    largestBandBreachPctPoints = largestBandBreachPctPoints?.toPlainString(),
+    recommendedAction = recommendedAction.name,
+    recommendedAssetClass = recommendedAssetClass?.name,
+    recommendedContributionPln = recommendedContributionPln.toPlainString(),
+    remainingContributionGapPln = remainingContributionGapPln.toPlainString(),
+    fullRebalanceBuyAmountPln = fullRebalanceBuyAmountPln.toPlainString(),
+    fullRebalanceSellAmountPln = fullRebalanceSellAmountPln.toPlainString(),
+    requiresSelling = requiresSelling,
     buckets = buckets.map { it.toResponse() }
 )
 
@@ -732,7 +785,11 @@ private fun PortfolioAllocationBucket.toResponse(): PortfolioAllocationBucketRes
     targetValuePln = targetValuePln?.toPlainString(),
     driftPctPoints = driftPctPoints?.toPlainString(),
     gapValuePln = gapValuePln?.toPlainString(),
+    toleranceLowerPct = toleranceLowerPct?.toPlainString(),
+    toleranceUpperPct = toleranceUpperPct?.toPlainString(),
+    withinTolerance = withinTolerance,
     suggestedContributionPln = suggestedContributionPln.toPlainString(),
+    rebalanceAction = rebalanceAction.name,
     status = status.name
 )
 
@@ -788,6 +845,18 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettings
         }
     )
 
+private fun net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettings.toResponse(): PortfolioRebalancingSettingsResponse =
+    PortfolioRebalancingSettingsResponse(
+        toleranceBandPctPoints = toleranceBandPctPoints.toPlainString(),
+        mode = mode.name
+    )
+
+private fun SavePortfolioRebalancingSettingsRequest.toDomain(): SavePortfolioRebalancingSettingsCommand =
+    SavePortfolioRebalancingSettingsCommand(
+        toleranceBandPctPoints = toleranceBandPctPoints.toBigDecimal(),
+        mode = parseRebalancingMode(mode)
+    )
+
 private fun SavePortfolioBenchmarkSettingsRequest.toDomain(): SavePortfolioBenchmarkSettingsCommand =
     SavePortfolioBenchmarkSettingsCommand(
         enabledKeys = enabledKeys.map(::parseBenchmarkKey),
@@ -800,6 +869,12 @@ private fun parseBenchmarkKey(value: String): BenchmarkKey = try {
     BenchmarkKey.valueOf(value.uppercase())
 } catch (_: IllegalArgumentException) {
     throw IllegalArgumentException("Unsupported benchmark key: $value")
+}
+
+private fun parseRebalancingMode(value: String): RebalancingMode = try {
+    RebalancingMode.valueOf(value.uppercase())
+} catch (_: IllegalArgumentException) {
+    throw IllegalArgumentException("Unsupported rebalancing mode: $value")
 }
 
 private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(

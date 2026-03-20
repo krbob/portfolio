@@ -96,6 +96,12 @@ export type BenchmarkOption =
 export type SavePortfolioBenchmarkSettingsPayload =
   components['schemas']['SavePortfolioBenchmarkSettingsRequest']
 
+export type PortfolioRebalancingSettings =
+  components['schemas']['PortfolioRebalancingSettingsResponse']
+
+export type SavePortfolioRebalancingSettingsPayload =
+  components['schemas']['SavePortfolioRebalancingSettingsRequest']
+
 export interface ReadModelCacheInvalidationResult {
   clearedSnapshotCount: number
 }
@@ -225,6 +231,17 @@ export function getPortfolioBenchmarkSettings() {
 
 export function savePortfolioBenchmarkSettings(payload: SavePortfolioBenchmarkSettingsPayload) {
   return requestJson<PortfolioBenchmarkSettings>('/api/v1/portfolio/benchmark-settings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getPortfolioRebalancingSettings() {
+  return requestJson<PortfolioRebalancingSettings>('/api/v1/portfolio/rebalancing-settings')
+}
+
+export function savePortfolioRebalancingSettings(payload: SavePortfolioRebalancingSettingsPayload) {
+  return requestJson<PortfolioRebalancingSettings>('/api/v1/portfolio/rebalancing-settings', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

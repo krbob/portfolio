@@ -239,10 +239,31 @@ describe('App', () => {
             asOf: '2026-03-13',
             valuationState: 'MARK_TO_MARKET',
             configured: true,
+            toleranceBandPctPoints: '5.00',
+            rebalancingMode: 'CONTRIBUTIONS_ONLY',
             targetWeightSumPct: '100.00',
             totalCurrentValuePln: '2095.00',
             availableCashPln: '995.00',
+            breachedBucketCount: 1,
+            largestBandBreachPctPoints: '3.40',
+            recommendedAction: 'DEPLOY_EXISTING_CASH',
+            recommendedAssetClass: 'BONDS',
+            recommendedContributionPln: '995.00',
+            remainingContributionGapPln: '105.00',
+            fullRebalanceBuyAmountPln: '1100.00',
+            fullRebalanceSellAmountPln: '1100.00',
+            requiresSelling: true,
             buckets: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
+        return new Response(
+          JSON.stringify({
+            toleranceBandPctPoints: '5.00',
+            mode: 'CONTRIBUTIONS_ONLY',
           }),
           { status: 200 },
         )
@@ -643,10 +664,31 @@ describe('App', () => {
             asOf: '2026-03-13',
             valuationState: 'MARK_TO_MARKET',
             configured: true,
+            toleranceBandPctPoints: '5.00',
+            rebalancingMode: 'CONTRIBUTIONS_ONLY',
             targetWeightSumPct: '100.00',
             totalCurrentValuePln: '2000.00',
             availableCashPln: '400.00',
+            breachedBucketCount: 1,
+            largestBandBreachPctPoints: '2.50',
+            recommendedAction: 'DEPLOY_EXISTING_CASH',
+            recommendedAssetClass: 'BONDS',
+            recommendedContributionPln: '400.00',
+            remainingContributionGapPln: '100.00',
+            fullRebalanceBuyAmountPln: '500.00',
+            fullRebalanceSellAmountPln: '500.00',
+            requiresSelling: true,
             buckets: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
+        return new Response(
+          JSON.stringify({
+            toleranceBandPctPoints: '5.00',
+            mode: 'CONTRIBUTIONS_ONLY',
           }),
           { status: 200 },
         )

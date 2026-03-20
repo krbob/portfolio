@@ -21,6 +21,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsServi
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
+import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
@@ -190,6 +191,13 @@ fun appModule(
         )
     }
     single {
+        PortfolioRebalancingSettingsService(
+            appPreferenceService = get(),
+            auditLogService = get(),
+            clock = get()
+        )
+    }
+    single {
         PortfolioReadModelService(
             accountRepository = get(),
             instrumentRepository = get(),
@@ -212,7 +220,8 @@ fun appModule(
     single {
         PortfolioAllocationService(
             portfolioTargetRepository = get(),
-            portfolioReadModelService = get()
+            portfolioReadModelService = get(),
+            rebalancingSettingsService = get()
         )
     }
     single {

@@ -116,7 +116,7 @@ See [ui-revamp-plan.md](/Users/bob/stock/portfolio/docs/ui-revamp-plan.md) for t
 - support one custom benchmark symbol defined in settings
 - persist benchmark preferences in the canonical application state and invalidate cached returns when they change
 
-### 5.2 Drift and rebalancing workflow (next)
+### 5.2 Drift and rebalancing workflow (done)
 
 - move target allocation from a hidden settings concern into a first-class portfolio decision aid
 - add tolerance bands and explicit `on target / outside band` status

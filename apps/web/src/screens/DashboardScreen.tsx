@@ -43,8 +43,9 @@ export function DashboardScreen() {
     ? overview.valuationIssueCount + overview.missingFxTransactions + overview.unsupportedCorrectionTransactions
     : 0
   const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
+  const breachedBuckets = configuredBuckets.filter((bucket) => !bucket.withinTolerance)
   const mostOffTargetBucket = useMemo(() => {
-    return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
+    return breachedBuckets.reduce<typeof breachedBuckets[number] | null>((current, bucket) => {
       if (!bucket.driftPctPoints) {
         return current
       }
@@ -53,10 +54,10 @@ export function DashboardScreen() {
       }
       return current
     }, null)
-  }, [configuredBuckets])
+  }, [breachedBuckets])
   const rebalanceBucket = useMemo(() => {
     return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
-      if (!bucket.gapValuePln || Number(bucket.gapValuePln) <= 0) {
+      if (bucket.rebalanceAction !== 'BUY' || !bucket.gapValuePln || Number(bucket.gapValuePln) <= 0) {
         return current
       }
       if (current == null || Number(bucket.gapValuePln) > Number(current.gapValuePln ?? 0)) {
@@ -65,7 +66,6 @@ export function DashboardScreen() {
       return current
     }, null)
   }, [configuredBuckets])
-  const allTargetsOnTrack = configuredBuckets.length > 0 && configuredBuckets.every((bucket) => bucket.status === 'ON_TARGET')
 
   function handleRetry() {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
@@ -239,10 +239,8 @@ export function DashboardScreen() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Odchylenie od celu' : 'Target drift'}</h3>
               {allocationQuery.data?.configured ? (
-                <Badge variant={allTargetsOnTrack ? 'success' : 'warning'}>
-                  {allTargetsOnTrack
-                    ? (isPolish ? 'Zgodnie z celem' : 'On target')
-                    : (isPolish ? 'Wymaga uwagi' : 'Needs attention')}
+                <Badge variant={allocationActionVariant(allocationQuery.data.recommendedAction)}>
+                  {labelAllocationAction(allocationQuery.data.recommendedAction, isPolish)}
                 </Badge>
               ) : (
                 <Badge variant="default">{isPolish ? 'Brak konfiguracji' : 'Not configured'}</Badge>
@@ -299,9 +297,15 @@ export function DashboardScreen() {
                         ? 'Koszyki są zgodne ze skonfigurowaną alokacją.'
                         : 'Target buckets are aligned with the configured mix.'}
                   </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {isPolish ? 'Pasmo tolerancji' : 'Tolerance band'} ±{formatPercent(allocationQuery.data.toleranceBandPctPoints, {
+                      maximumFractionDigits: 2,
+                      suffix: ' pp',
+                    })} · {allocationQuery.data.breachedBucketCount} {isPolish ? 'poza pasmem' : 'outside band'}
+                  </p>
                 </div>
 
-                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                   <div>
                     <dt className="text-zinc-500">{isPolish ? 'Największa luka' : 'Largest gap'}</dt>
                     <dd className={`mt-1 font-medium ${gapTone(rebalanceBucket?.gapValuePln)}`}>
@@ -311,11 +315,17 @@ export function DashboardScreen() {
                   <div>
                     <dt className="text-zinc-500">{isPolish ? 'Kolejna wpłata' : 'Next contribution'}</dt>
                     <dd className="mt-1 font-medium text-zinc-100">
-                      {rebalanceBucket && Number(rebalanceBucket.suggestedContributionPln) > 0
-                        ? `${formatCurrencyPln(rebalanceBucket.suggestedContributionPln)} -> ${labelAssetClass(rebalanceBucket.assetClass)}`
+                      {allocationQuery.data.recommendedAssetClass && Number(allocationQuery.data.recommendedContributionPln) > 0
+                        ? `${formatCurrencyPln(allocationQuery.data.recommendedContributionPln)} -> ${labelAssetClass(allocationQuery.data.recommendedAssetClass)}`
                         : isPolish
                           ? 'Brak potrzeby rebalansowania przez wpłatę'
                           : 'No rebalance contribution needed'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">{isPolish ? 'Pełny rebalance' : 'Full rebalance'}</dt>
+                    <dd className="mt-1 font-medium text-zinc-100">
+                      {formatCurrencyPln(allocationQuery.data.fullRebalanceBuyAmountPln)} / {formatCurrencyPln(allocationQuery.data.fullRebalanceSellAmountPln)}
                     </dd>
                   </div>
                 </dl>
@@ -431,6 +441,51 @@ function gapTone(value: string | null | undefined) {
     return 'text-zinc-100'
   }
   return numeric > 0 ? 'text-amber-400' : 'text-sky-400'
+}
+
+function allocationActionVariant(action: string) {
+  switch (action) {
+    case 'WITHIN_TOLERANCE':
+      return 'success' as const
+    case 'DEPLOY_EXISTING_CASH':
+      return 'info' as const
+    case 'WAIT_FOR_NEXT_CONTRIBUTION':
+      return 'warning' as const
+    case 'FULL_REBALANCE':
+      return 'error' as const
+    default:
+      return 'default' as const
+  }
+}
+
+function labelAllocationAction(action: string, isPolish: boolean) {
+  if (isPolish) {
+    switch (action) {
+      case 'WITHIN_TOLERANCE':
+        return 'W paśmie'
+      case 'DEPLOY_EXISTING_CASH':
+        return 'Przekieruj gotówkę'
+      case 'WAIT_FOR_NEXT_CONTRIBUTION':
+        return 'Poczekaj na wpłatę'
+      case 'FULL_REBALANCE':
+        return 'Pełny rebalance'
+      default:
+        return 'Brak konfiguracji'
+    }
+  }
+
+  switch (action) {
+    case 'WITHIN_TOLERANCE':
+      return 'Within tolerance'
+    case 'DEPLOY_EXISTING_CASH':
+      return 'Deploy cash'
+    case 'WAIT_FOR_NEXT_CONTRIBUTION':
+      return 'Wait for contribution'
+    case 'FULL_REBALANCE':
+      return 'Full rebalance'
+    default:
+      return 'Not configured'
+  }
 }
 
 function HealthIndicator({ valuedCount, totalCount, issueCount }: { valuedCount: number; totalCount: number; issueCount: number }) {

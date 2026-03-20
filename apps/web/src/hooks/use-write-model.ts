@@ -14,9 +14,11 @@ import {
   importPortfolioState,
   listAccounts,
   getPortfolioBenchmarkSettings,
+  getPortfolioRebalancingSettings,
   listInstruments,
   listPortfolioBackups,
   savePortfolioBenchmarkSettings,
+  savePortfolioRebalancingSettings,
   listPortfolioTargets,
   listTransactionImportProfiles,
   listTransactions,
@@ -37,10 +39,12 @@ import {
   type ImportTransactionsPreviewResult,
   type PortfolioBenchmarkSettings,
   type PortfolioBackupRecord,
+  type PortfolioRebalancingSettings,
   type PortfolioTarget,
   type ReadModelCacheInvalidationResult,
   type SaveTransactionImportProfilePayload,
   type SavePortfolioBenchmarkSettingsPayload,
+  type SavePortfolioRebalancingSettingsPayload,
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
   type PortfolioStateSnapshot,
@@ -225,6 +229,13 @@ export function usePortfolioBenchmarkSettings() {
   })
 }
 
+export function usePortfolioRebalancingSettings() {
+  return useQuery({
+    queryKey: ['portfolio-rebalancing-settings'],
+    queryFn: getPortfolioRebalancingSettings,
+  })
+}
+
 export function usePortfolioTargets() {
   return useQuery({
     queryKey: ['portfolio-targets'],
@@ -260,6 +271,22 @@ export function useReplacePortfolioTargets() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+      ])
+    },
+  })
+}
+
+export function useSavePortfolioRebalancingSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      payload: SavePortfolioRebalancingSettingsPayload,
+    ): Promise<PortfolioRebalancingSettings> => savePortfolioRebalancingSettings(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-rebalancing-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })

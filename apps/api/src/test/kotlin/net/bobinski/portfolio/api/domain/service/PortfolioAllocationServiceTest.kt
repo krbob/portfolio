@@ -21,11 +21,14 @@ import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import kotlinx.serialization.json.Json
 
 class PortfolioAllocationServiceTest {
 
@@ -35,6 +38,20 @@ class PortfolioAllocationServiceTest {
         val instrumentRepository = InMemoryInstrumentRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
         val readModelService = PortfolioReadModelService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -49,7 +66,8 @@ class PortfolioAllocationServiceTest {
         )
         val allocationService = PortfolioAllocationService(
             portfolioTargetRepository = targetRepository,
-            portfolioReadModelService = readModelService
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
         )
 
         accountRepository.save(account())
@@ -74,18 +92,128 @@ class PortfolioAllocationServiceTest {
         val cash = summary.buckets.first { it.assetClass == AssetClass.CASH }
 
         assertEquals(true, summary.configured)
+        assertEquals(BigDecimal("5.00"), summary.toleranceBandPctPoints)
+        assertEquals(RebalancingMode.CONTRIBUTIONS_ONLY, summary.rebalancingMode)
         assertEquals(BigDecimal("100.00"), summary.targetWeightSumPct)
         assertEquals(BigDecimal("2000.00"), summary.availableCashPln)
+        assertEquals(2, summary.breachedBucketCount)
+        assertEquals(PortfolioAllocationAction.DEPLOY_EXISTING_CASH, summary.recommendedAction)
+        assertEquals(AssetClass.EQUITIES, summary.recommendedAssetClass)
+        assertEquals(BigDecimal("2000.00"), summary.recommendedContributionPln)
+        assertEquals(BigDecimal("0.00"), summary.remainingContributionGapPln)
+        assertEquals(BigDecimal("2000.00"), summary.fullRebalanceBuyAmountPln)
+        assertEquals(BigDecimal("2000.00"), summary.fullRebalanceSellAmountPln)
+        assertEquals(false, summary.requiresSelling)
         assertEquals(AllocationBucketStatus.UNDERWEIGHT, equities.status)
+        assertEquals(false, equities.withinTolerance)
+        assertEquals(AllocationBucketAction.BUY, equities.rebalanceAction)
+        assertEquals(BigDecimal("75.00"), equities.toleranceLowerPct)
+        assertEquals(BigDecimal("85.00"), equities.toleranceUpperPct)
         assertEquals(BigDecimal("60.00"), equities.currentWeightPct)
         assertEquals(BigDecimal("80.00"), equities.targetWeightPct)
         assertEquals(BigDecimal("-20.00"), equities.driftPctPoints)
         assertEquals(BigDecimal("2000.00"), equities.gapValuePln)
         assertEquals(BigDecimal("2000.00"), equities.suggestedContributionPln)
         assertEquals(AllocationBucketStatus.ON_TARGET, bonds.status)
+        assertEquals(true, bonds.withinTolerance)
         assertEquals(BigDecimal("0.00"), bonds.gapValuePln)
         assertEquals(AllocationBucketStatus.OVERWEIGHT, cash.status)
         assertEquals(BigDecimal("-2000.00"), cash.gapValuePln)
+    }
+
+    @Test
+    fun `summary recommends full rebalance when trims are allowed and no cash can be deployed`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        rebalancingSettingsService.update(
+            SavePortfolioRebalancingSettingsCommand(
+                toleranceBandPctPoints = BigDecimal("3.00"),
+                mode = RebalancingMode.ALLOW_TRIMS
+            )
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "8000.00", "80"))
+        transactionRepository.save(buyTransaction(BOND_ID, "2000.00", "20", tradeDate = LocalDate.parse("2026-03-03")))
+        transactionRepository.save(
+            transaction(
+                id = UUID.fromString("cccccccc-cccc-cccc-cccc-ccccccccccc1"),
+                accountId = ACCOUNT_ID,
+                instrumentId = EQUITY_ID,
+                type = TransactionType.SELL,
+                tradeDate = LocalDate.parse("2026-03-04"),
+                quantity = BigDecimal("20"),
+                unitPrice = BigDecimal("100.00"),
+                grossAmount = BigDecimal("2000.00")
+            )
+        )
+        transactionRepository.save(
+            transaction(
+                id = UUID.fromString("dddddddd-dddd-dddd-dddd-ddddddddddd1"),
+                accountId = ACCOUNT_ID,
+                instrumentId = BOND_ID,
+                type = TransactionType.BUY,
+                tradeDate = LocalDate.parse("2026-03-05"),
+                quantity = BigDecimal("20"),
+                unitPrice = BigDecimal("100.00"),
+                grossAmount = BigDecimal("2000.00")
+            )
+        )
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val summary = allocationService.summary()
+
+        assertEquals(BigDecimal("3.00"), summary.toleranceBandPctPoints)
+        assertEquals(RebalancingMode.ALLOW_TRIMS, summary.rebalancingMode)
+        assertEquals(PortfolioAllocationAction.FULL_REBALANCE, summary.recommendedAction)
+        assertEquals(BigDecimal("2000.00"), summary.fullRebalanceBuyAmountPln)
+        assertEquals(BigDecimal("2000.00"), summary.fullRebalanceSellAmountPln)
+        assertEquals(BigDecimal("0.00"), summary.recommendedContributionPln)
+        assertEquals(BigDecimal("2000.00"), summary.remainingContributionGapPln)
     }
 
     private fun account(): Account = Account(
@@ -166,6 +294,35 @@ class PortfolioAllocationServiceTest {
         quantity = BigDecimal(quantity),
         unitPrice = BigDecimal("100.00"),
         grossAmount = BigDecimal(grossAmount),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal.ZERO,
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "",
+        createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),
+        updatedAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong())
+    )
+
+    private fun transaction(
+        id: UUID,
+        accountId: UUID,
+        instrumentId: UUID?,
+        type: TransactionType,
+        tradeDate: LocalDate,
+        quantity: BigDecimal?,
+        unitPrice: BigDecimal?,
+        grossAmount: BigDecimal,
+        settlementDate: LocalDate = tradeDate
+    ): Transaction = Transaction(
+        id = id,
+        accountId = accountId,
+        instrumentId = instrumentId,
+        type = type,
+        tradeDate = tradeDate,
+        settlementDate = settlementDate,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        grossAmount = grossAmount,
         feeAmount = BigDecimal.ZERO,
         taxAmount = BigDecimal.ZERO,
         currency = "PLN",

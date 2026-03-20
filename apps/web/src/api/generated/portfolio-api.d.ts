@@ -755,6 +755,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/rebalancing-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SavePortfolioRebalancingSettingsRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/backups": {
         parameters: {
             query?: never;
@@ -1641,7 +1697,11 @@ export interface components {
             targetValuePln?: string | null;
             driftPctPoints?: string | null;
             gapValuePln?: string | null;
+            toleranceLowerPct?: string | null;
+            toleranceUpperPct?: string | null;
+            withinTolerance: boolean;
             suggestedContributionPln: string;
+            rebalanceAction: string;
             status: string;
         };
         /** net.bobinski.portfolio.api.route.PortfolioAllocationResponse */
@@ -1649,9 +1709,20 @@ export interface components {
             asOf: string;
             valuationState: string;
             configured: boolean;
+            toleranceBandPctPoints: string;
+            rebalancingMode: string;
             targetWeightSumPct: string;
             totalCurrentValuePln: string;
             availableCashPln: string;
+            breachedBucketCount: number;
+            largestBandBreachPctPoints?: string | null;
+            recommendedAction: string;
+            recommendedAssetClass?: string | null;
+            recommendedContributionPln: string;
+            remainingContributionGapPln: string;
+            fullRebalanceBuyAmountPln: string;
+            fullRebalanceSellAmountPln: string;
+            requiresSelling: boolean;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
         };
         /** net.bobinski.portfolio.api.route.ReadModelCacheSnapshotResponse */
@@ -1725,6 +1796,16 @@ export interface components {
             pinnedKeys: string[];
             customLabel?: string | null;
             customSymbol?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioRebalancingSettingsResponse */
+        PortfolioRebalancingSettingsResponse: {
+            toleranceBandPctPoints: string;
+            mode: string;
+        };
+        /** net.bobinski.portfolio.api.route.SavePortfolioRebalancingSettingsRequest */
+        SavePortfolioRebalancingSettingsRequest: {
+            toleranceBandPctPoints: string;
+            mode: string;
         };
         /** net.bobinski.portfolio.api.route.PortfolioBackupRecordResponse */
         PortfolioBackupRecordResponse: {
