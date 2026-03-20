@@ -21,8 +21,10 @@ import {
   useCreateTransactionImportProfile,
   useDeleteTransaction,
   useDeleteTransactionImportProfile,
+  useImportTransactions,
   useImportTransactionsCsv,
   useInstruments,
+  usePreviewTransactionsImport,
   usePreviewTransactionsCsvImport,
   useTransactionImportProfiles,
   useTransactions,
@@ -30,6 +32,7 @@ import {
   useUpdateTransactionImportProfile,
 } from '../hooks/use-write-model'
 import type {
+  ImportTransactionsPayload,
   ImportTransactionsPreviewResult,
   SaveTransactionImportProfilePayload,
   Transaction,
@@ -39,6 +42,23 @@ import type {
 const today = new Date().toISOString().slice(0, 10)
 const transactionTypes = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'] as const
 const NEW_IMPORT_PROFILE_ID = '__new_import_profile__'
+const STRUCTURED_IMPORT_TEMPLATE = `[
+  {
+    "accountId": "00000000-0000-0000-0000-000000000001",
+    "instrumentId": "00000000-0000-0000-0000-000000000002",
+    "type": "BUY",
+    "tradeDate": "2026-03-18",
+    "settlementDate": "2026-03-20",
+    "quantity": "2",
+    "unitPrice": "123.45",
+    "grossAmount": "246.90",
+    "feeAmount": "1.20",
+    "taxAmount": "0",
+    "currency": "EUR",
+    "fxRateToPln": "4.2711",
+    "notes": "Canonical JSON import"
+  }
+]`
 
 const initialForm = {
   accountId: '',
@@ -103,6 +123,7 @@ interface JournalRow {
 }
 
 type TransactionsWorkspace = 'journal' | 'import' | 'profiles'
+type ImportBatchMode = 'csv' | 'structured'
 type ImportPreviewStatusFilter =
   | 'ALL'
   | 'IMPORTABLE'
@@ -145,12 +166,15 @@ export function TransactionsSection() {
   const deleteImportProfileMutation = useDeleteTransactionImportProfile()
   const previewTransactionsCsvImportMutation = usePreviewTransactionsCsvImport()
   const importTransactionsCsvMutation = useImportTransactionsCsv()
+  const previewTransactionsImportMutation = usePreviewTransactionsImport()
+  const importTransactionsMutation = useImportTransactions()
   const [form, setForm] = useState(initialForm)
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
   const [selectedImportProfileId, setSelectedImportProfileId] = useState<string | null>(null)
   const [pendingSavedImportProfile, setPendingSavedImportProfile] = useState<TransactionImportProfile | null>(null)
   const [importProfileForm, setImportProfileForm] = useState<ImportProfileFormState>(createInitialImportProfileForm)
   const [importCsv, setImportCsv] = useState('')
+  const [importBatchMode, setImportBatchMode] = useState<ImportBatchMode>('csv')
   const [importSkipDuplicates, setImportSkipDuplicates] = useState(true)
   const [importSourceFileName, setImportSourceFileName] = useState('')
   const [importSourceLabel, setImportSourceLabel] = useState('')
@@ -158,6 +182,13 @@ export function TransactionsSection() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importPreview, setImportPreview] = useState<ImportTransactionsPreviewResult | null>(null)
   const [importPreviewStatusFilter, setImportPreviewStatusFilter] =
+    useState<ImportPreviewStatusFilter>('ALL')
+  const [structuredImportJson, setStructuredImportJson] = useState('')
+  const [structuredImportSkipDuplicates, setStructuredImportSkipDuplicates] = useState(true)
+  const [structuredImportFeedback, setStructuredImportFeedback] = useState<string | null>(null)
+  const [structuredImportError, setStructuredImportError] = useState<string | null>(null)
+  const [structuredImportPreview, setStructuredImportPreview] = useState<ImportTransactionsPreviewResult | null>(null)
+  const [structuredImportPreviewStatusFilter, setStructuredImportPreviewStatusFilter] =
     useState<ImportPreviewStatusFilter>('ALL')
   const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
   const [pendingDeleteImportProfileId, setPendingDeleteImportProfileId] = useState<string | null>(null)
@@ -316,6 +347,11 @@ export function TransactionsSection() {
     importPreview &&
       (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),
   )
+  const structuredImportBlockedByPreview = Boolean(
+    structuredImportPreview &&
+      (structuredImportPreview.invalidRowCount > 0 ||
+        (!structuredImportSkipDuplicates && structuredImportPreview.duplicateRowCount > 0)),
+  )
   const importEvents = importEventsQuery.data ?? []
   const latestImportEvent = importEvents[0] ?? null
   const visibleImportPreviewRows = useMemo(() => {
@@ -387,6 +423,13 @@ export function TransactionsSection() {
     selectedImportProfileId,
     importProfileDirty,
   ])
+
+  useEffect(() => {
+    setStructuredImportFeedback(null)
+    setStructuredImportError(null)
+    setStructuredImportPreview(null)
+    setStructuredImportPreviewStatusFilter('ALL')
+  }, [structuredImportJson, structuredImportSkipDuplicates])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -635,6 +678,51 @@ export function TransactionsSection() {
         },
       },
     )
+  }
+
+  function handleStructuredImportPreview() {
+    setStructuredImportFeedback(null)
+    setStructuredImportError(null)
+
+    try {
+      const payload = parseStructuredImportPayload(structuredImportJson, structuredImportSkipDuplicates)
+      previewTransactionsImportMutation.mutate(payload, {
+        onSuccess: (result) => {
+          setStructuredImportPreview(result)
+        },
+        onError: (error) => {
+          setStructuredImportPreview(null)
+          setStructuredImportError(error.message)
+        },
+      })
+    } catch (error) {
+      setStructuredImportPreview(null)
+      setStructuredImportError(error instanceof Error ? error.message : 'Preview failed.')
+    }
+  }
+
+  function handleStructuredImportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setStructuredImportFeedback(null)
+    setStructuredImportError(null)
+
+    try {
+      const payload = parseStructuredImportPayload(structuredImportJson, structuredImportSkipDuplicates)
+      importTransactionsMutation.mutate(payload, {
+        onSuccess: (result) => {
+          setStructuredImportFeedback(
+            buildImportResultMessage(result.createdCount, result.skippedDuplicateCount),
+          )
+          setStructuredImportJson('')
+          setStructuredImportPreview(null)
+        },
+        onError: (error) => {
+          setStructuredImportError(error.message)
+        },
+      })
+    } catch (error) {
+      setStructuredImportError(error instanceof Error ? error.message : 'Import failed.')
+    }
   }
 
   function handleRetryWorkspace() {
@@ -1166,177 +1254,224 @@ export function TransactionsSection() {
       )}
 
       {activeWorkspace === 'import' && (
-        <form
+        <section
           className={card}
-          onSubmit={handleImportSubmit}
           role="tabpanel"
           id="transactions-workspace-panel-import"
           aria-labelledby="transactions-workspace-tab-import"
         >
           <div className="mb-4">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Batch import</p>
-            <h4 className="mt-1 text-lg font-semibold text-zinc-100">Preview and import broker CSV</h4>
+            <h4 className="mt-1 text-lg font-semibold text-zinc-100">Preview and import transaction batches</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              Paste the raw broker export and let the server parse it with the selected profile. Account names and
-              instruments are resolved on the backend, so the preview matches the final import.
+              Use saved CSV profiles for broker exports or post canonical JSON batches directly against the transaction import endpoint.
             </p>
           </div>
 
-          <div className="mb-4">
-            <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-              {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
-            </span>
-            {importProfileBlockingReason && <p className="text-sm text-zinc-500 mt-1">{importProfileBlockingReason}</p>}
+          <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Import batch mode">
+            {([
+              ['csv', 'CSV with profile'],
+              ['structured', 'Structured JSON'],
+            ] as const).map(([mode, modeLabel]) => (
+              <button
+                key={mode}
+                id={`transactions-import-mode-tab-${mode}`}
+                type="button"
+                role="tab"
+                aria-selected={mode === importBatchMode}
+                aria-controls={`transactions-import-mode-panel-${mode}`}
+                tabIndex={mode === importBatchMode ? 0 : -1}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${mode === importBatchMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
+                onClick={() => setImportBatchMode(mode)}
+              >
+                {modeLabel}
+              </button>
+            ))}
           </div>
 
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <label className="flex-1 min-w-[200px]">
-              <span className={labelClass}>Source file</span>
-              <input
-                className={filterInput}
-                value={importSourceFileName}
-                onChange={(event) => setImportSourceFileName(event.target.value)}
-                placeholder="ibkr-activity-2026-03.csv"
-              />
-            </label>
-            <label className="flex-1 min-w-[200px]">
-              <span className={labelClass}>Source label</span>
-              <input
-                className={filterInput}
-                value={importSourceLabel}
-                onChange={(event) => setImportSourceLabel(event.target.value)}
-                placeholder="IBKR March 2026 export"
-              />
-            </label>
-          </div>
-
-          <textarea
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 font-mono placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[200px]"
-            value={importCsv}
-            onChange={(event) => setImportCsv(event.target.value)}
-            placeholder={importProfileTemplate}
-          />
-
-          <label className="flex items-center gap-2 text-sm text-zinc-300 mt-3">
-            <input
-              type="checkbox"
-              className="accent-blue-500"
-              checked={importSkipDuplicates}
-              onChange={(event) => setImportSkipDuplicates(event.target.checked)}
-              disabled={selectedImportProfile == null}
-            />
-            <span>Skip duplicate rows during import</span>
-          </label>
-
-          <div className="flex items-center gap-3 mt-4">
-            <button
-              type="button"
-              className={btnSecondary}
-              onClick={handleImportPreview}
-              disabled={
-                previewTransactionsCsvImportMutation.isPending ||
-                importCsv.trim() === '' ||
-                importProfileBlockingReason !== null
-              }
+          {importBatchMode === 'csv' && (
+            <form
+              className="space-y-4"
+              onSubmit={handleImportSubmit}
+              role="tabpanel"
+              id="transactions-import-mode-panel-csv"
+              aria-labelledby="transactions-import-mode-tab-csv"
             >
-              {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
-            </button>
-            <button
-              className={btnPrimary}
-              type="submit"
-              disabled={
-                importTransactionsCsvMutation.isPending ||
-                previewTransactionsCsvImportMutation.isPending ||
-                importCsv.trim() === '' ||
-                importBlockedByPreview ||
-                importProfileBlockingReason !== null
-              }
-            >
-              {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
-            </button>
-          </div>
-
-          {importPreview && (
-            <div className="mt-6">
-              <div className="grid grid-cols-2 gap-3 mb-3 lg:grid-cols-5">
-                <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <span className="text-xs text-zinc-500">Total rows</span>
-                  <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importPreview.totalRowCount}</strong>
-                </article>
-                <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <span className="text-xs text-zinc-500">Importable</span>
-                  <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importPreview.importableRowCount}</strong>
-                </article>
-                <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <span className="text-xs text-zinc-500">Existing duplicates</span>
-                  <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importPreview.duplicateExistingCount}</strong>
-                </article>
-                <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <span className="text-xs text-zinc-500">Batch duplicates</span>
-                  <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importPreview.duplicateBatchCount}</strong>
-                </article>
-                <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <span className="text-xs text-zinc-500">Invalid</span>
-                  <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importPreview.invalidRowCount}</strong>
-                </article>
+              <div>
+                <span className={`${badge} bg-zinc-800 text-zinc-400`}>
+                  {selectedImportProfile ? selectedImportProfile.name : 'No saved profile selected'}
+                </span>
+                {importProfileBlockingReason && <p className="text-sm text-zinc-500 mt-1">{importProfileBlockingReason}</p>}
               </div>
 
-              <p className="text-sm text-zinc-500 mb-4">
-                {buildImportPreviewSummary(importPreview, importSkipDuplicates)}
-              </p>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label="Import preview rows">
-                  {(
-                    [
-                      ['ALL', `All (${importPreview.totalRowCount})`],
-                      ['IMPORTABLE', `Importable (${importPreview.importableRowCount})`],
-                      ['DUPLICATE_EXISTING', `Existing (${importPreview.duplicateExistingCount})`],
-                      ['DUPLICATE_BATCH', `Batch (${importPreview.duplicateBatchCount})`],
-                      ['INVALID', `Invalid (${importPreview.invalidRowCount})`],
-                    ] as const
-                  ).map(([status, statusLabel]) => (
-                    <button
-                      key={status}
-                      type="button"
-                      aria-pressed={status === importPreviewStatusFilter}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${status === importPreviewStatusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
-                      onClick={() => setImportPreviewStatusFilter(status)}
-                    >
-                      {statusLabel}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex-1 min-w-[200px]">
+                  <span className={labelClass}>Source file</span>
+                  <input
+                    className={filterInput}
+                    value={importSourceFileName}
+                    onChange={(event) => setImportSourceFileName(event.target.value)}
+                    placeholder="ibkr-activity-2026-03.csv"
+                  />
+                </label>
+                <label className="flex-1 min-w-[200px]">
+                  <span className={labelClass}>Source label</span>
+                  <input
+                    className={filterInput}
+                    value={importSourceLabel}
+                    onChange={(event) => setImportSourceLabel(event.target.value)}
+                    placeholder="IBKR March 2026 export"
+                  />
+                </label>
               </div>
 
-              <div className="space-y-2">
-                {visibleImportPreviewRows.map((row) => (
-                  <article className="flex items-center justify-between rounded-lg border border-zinc-800/50 px-4 py-3" key={`${row.rowNumber}-${row.status}`}>
-                    <div>
-                      <strong className="text-sm font-medium text-zinc-100">Row {row.rowNumber}</strong>
-                      <p className="text-sm text-zinc-500">{row.message}</p>
-                    </div>
-                    <span className={`${badge} ${importPreviewBadgeVariant(row.status)}`}>
-                      {formatImportRowStatus(row.status)}
-                    </span>
-                  </article>
-                ))}
-                {visibleImportPreviewRows.length === 0 && (
-                  <p className="text-sm text-zinc-500">No preview rows match the selected status.</p>
-                )}
+              <textarea
+                className="min-h-[200px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                value={importCsv}
+                onChange={(event) => setImportCsv(event.target.value)}
+                placeholder={importProfileTemplate}
+              />
+
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  className="accent-blue-500"
+                  checked={importSkipDuplicates}
+                  onChange={(event) => setImportSkipDuplicates(event.target.checked)}
+                  disabled={selectedImportProfile == null}
+                />
+                <span>Skip duplicate rows during import</span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className={btnSecondary}
+                  onClick={handleImportPreview}
+                  disabled={
+                    previewTransactionsCsvImportMutation.isPending ||
+                    importCsv.trim() === '' ||
+                    importProfileBlockingReason !== null
+                  }
+                >
+                  {previewTransactionsCsvImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                </button>
+                <button
+                  className={btnPrimary}
+                  type="submit"
+                  disabled={
+                    importTransactionsCsvMutation.isPending ||
+                    previewTransactionsCsvImportMutation.isPending ||
+                    importCsv.trim() === '' ||
+                    importBlockedByPreview ||
+                    importProfileBlockingReason !== null
+                  }
+                >
+                  {importTransactionsCsvMutation.isPending ? 'Importing...' : 'Import CSV'}
+                </button>
               </div>
-            </div>
+
+              {importPreview && (
+                <ImportPreviewPanel
+                  preview={importPreview}
+                  skipDuplicates={importSkipDuplicates}
+                  statusFilter={importPreviewStatusFilter}
+                  onStatusFilterChange={setImportPreviewStatusFilter}
+                  rows={visibleImportPreviewRows}
+                />
+              )}
+
+              {importFeedback && <p className="text-sm text-zinc-500">{importFeedback}</p>}
+              {(importError || previewTransactionsCsvImportMutation.error || importTransactionsCsvMutation.error) && (
+                <p className="text-sm text-red-400">
+                  {importError ??
+                    previewTransactionsCsvImportMutation.error?.message ??
+                    importTransactionsCsvMutation.error?.message}
+                </p>
+              )}
+            </form>
           )}
 
-          {importFeedback && <p className="text-sm text-zinc-500 mt-4">{importFeedback}</p>}
-          {(importError || previewTransactionsCsvImportMutation.error || importTransactionsCsvMutation.error) && (
-            <p className="text-sm text-red-400 mt-4">
-              {importError ??
-                previewTransactionsCsvImportMutation.error?.message ??
-                importTransactionsCsvMutation.error?.message}
-            </p>
+          {importBatchMode === 'structured' && (
+            <form
+              className="space-y-4"
+              onSubmit={handleStructuredImportSubmit}
+              role="tabpanel"
+              id="transactions-import-mode-panel-structured"
+              aria-labelledby="transactions-import-mode-tab-structured"
+            >
+              <div className="space-y-1">
+                <p className="text-sm text-zinc-500">
+                  Paste either a canonical JSON array of transaction rows or a full import payload with `rows`.
+                </p>
+                <p className="text-sm text-zinc-500">
+                  This path calls `/v1/transactions/import` directly and bypasses CSV parsing profiles.
+                </p>
+              </div>
+
+              <textarea
+                className="min-h-[220px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                value={structuredImportJson}
+                onChange={(event) => setStructuredImportJson(event.target.value)}
+                placeholder={STRUCTURED_IMPORT_TEMPLATE}
+              />
+
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input
+                  type="checkbox"
+                  className="accent-blue-500"
+                  checked={structuredImportSkipDuplicates}
+                  onChange={(event) => setStructuredImportSkipDuplicates(event.target.checked)}
+                />
+                <span>Skip duplicate rows during import</span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className={btnSecondary}
+                  onClick={handleStructuredImportPreview}
+                  disabled={previewTransactionsImportMutation.isPending || structuredImportJson.trim() === ''}
+                >
+                  {previewTransactionsImportMutation.isPending ? 'Previewing...' : 'Preview import'}
+                </button>
+                <button
+                  className={btnPrimary}
+                  type="submit"
+                  disabled={
+                    importTransactionsMutation.isPending ||
+                    previewTransactionsImportMutation.isPending ||
+                    structuredImportJson.trim() === '' ||
+                    structuredImportBlockedByPreview
+                  }
+                >
+                  {importTransactionsMutation.isPending ? 'Importing...' : 'Import JSON batch'}
+                </button>
+              </div>
+
+              {structuredImportPreview && (
+                <ImportPreviewPanel
+                  preview={structuredImportPreview}
+                  skipDuplicates={structuredImportSkipDuplicates}
+                  statusFilter={structuredImportPreviewStatusFilter}
+                  onStatusFilterChange={setStructuredImportPreviewStatusFilter}
+                  rows={structuredImportPreviewStatusFilter === 'ALL'
+                    ? structuredImportPreview.rows
+                    : structuredImportPreview.rows.filter((row) => row.status === structuredImportPreviewStatusFilter)}
+                />
+              )}
+
+              {structuredImportFeedback && <p className="text-sm text-zinc-500">{structuredImportFeedback}</p>}
+              {(structuredImportError || previewTransactionsImportMutation.error || importTransactionsMutation.error) && (
+                <p className="text-sm text-red-400">
+                  {structuredImportError ??
+                    previewTransactionsImportMutation.error?.message ??
+                    importTransactionsMutation.error?.message}
+                </p>
+              )}
+            </form>
           )}
-        </form>
+        </section>
       )}
 
       {activeWorkspace === 'journal' && (
@@ -1627,6 +1762,92 @@ function createInitialImportProfileForm(): ImportProfileFormState {
   }
 }
 
+function ImportPreviewPanel({
+  preview,
+  skipDuplicates,
+  statusFilter,
+  onStatusFilterChange,
+  rows,
+}: {
+  preview: ImportTransactionsPreviewResult
+  skipDuplicates: boolean
+  statusFilter: ImportPreviewStatusFilter
+  onStatusFilterChange: (status: ImportPreviewStatusFilter) => void
+  rows: ImportTransactionsPreviewResult['rows']
+}) {
+  return (
+    <div className="mt-6">
+      <div className="grid grid-cols-2 gap-3 mb-3 lg:grid-cols-5">
+        <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <span className="text-xs text-zinc-500">Total rows</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.totalRowCount}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <span className="text-xs text-zinc-500">Importable</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.importableRowCount}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <span className="text-xs text-zinc-500">Existing duplicates</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateExistingCount}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <span className="text-xs text-zinc-500">Batch duplicates</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateBatchCount}</strong>
+        </article>
+        <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <span className="text-xs text-zinc-500">Invalid</span>
+          <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.invalidRowCount}</strong>
+        </article>
+      </div>
+
+      <p className="text-sm text-zinc-500 mb-4">
+        {buildImportPreviewSummary(preview, skipDuplicates)}
+      </p>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label="Import preview rows">
+          {(
+            [
+              ['ALL', `All (${preview.totalRowCount})`],
+              ['IMPORTABLE', `Importable (${preview.importableRowCount})`],
+              ['DUPLICATE_EXISTING', `Existing (${preview.duplicateExistingCount})`],
+              ['DUPLICATE_BATCH', `Batch (${preview.duplicateBatchCount})`],
+              ['INVALID', `Invalid (${preview.invalidRowCount})`],
+            ] as const
+          ).map(([status, statusLabel]) => (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={status === statusFilter}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${status === statusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'}`}
+              onClick={() => onStatusFilterChange(status)}
+            >
+              {statusLabel}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <article className="flex items-center justify-between rounded-lg border border-zinc-800/50 px-4 py-3" key={`${row.rowNumber}-${row.status}`}>
+            <div>
+              <strong className="text-sm font-medium text-zinc-100">Row {row.rowNumber}</strong>
+              <p className="text-sm text-zinc-500">{row.message}</p>
+            </div>
+            <span className={`${badge} ${importPreviewBadgeVariant(row.status)}`}>
+              {formatImportRowStatus(row.status)}
+            </span>
+          </article>
+        ))}
+        {rows.length === 0 && (
+          <p className="text-sm text-zinc-500">No preview rows match the selected status.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function importProfileToForm(profile: TransactionImportProfile): ImportProfileFormState {
   return {
     name: profile.name,
@@ -1685,6 +1906,41 @@ function buildImportProfilePayload(form: ImportProfileFormState): SaveTransactio
       currency: normalizeOptionalValue(form.defaults.currency)?.toUpperCase() ?? null,
     },
   }
+}
+
+function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): ImportTransactionsPayload {
+  const trimmed = raw.trim()
+  if (trimmed === '') {
+    throw new Error('Paste a JSON array of transaction rows or a full import payload first.')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    throw new Error('Structured import must contain valid JSON.')
+  }
+
+  if (Array.isArray(parsed)) {
+    return {
+      skipDuplicates,
+      rows: parsed as ImportTransactionsPayload['rows'],
+    }
+  }
+
+  if (typeof parsed === 'object' && parsed !== null && 'rows' in parsed) {
+    const rows = (parsed as { rows?: unknown }).rows
+    if (!Array.isArray(rows)) {
+      throw new Error('Structured import payload must expose a "rows" array.')
+    }
+
+    return {
+      skipDuplicates,
+      rows: rows as ImportTransactionsPayload['rows'],
+    }
+  }
+
+  throw new Error('Structured import expects either a JSON array of rows or an object with a "rows" array.')
 }
 
 function normalizeOptionalValue(value: string): string | null {
