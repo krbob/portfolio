@@ -18,6 +18,7 @@ services:
       PORTFOLIO_READ_MODEL_REFRESH_ENABLED: "true"
       PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES: 720
       PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START: "true"
+      PORTFOLIO_OPENAPI_UI_ENABLED: "false"
       PORTFOLIO_AUTH_ENABLED: ${PORTFOLIO_AUTH_ENABLED:-false}
       PORTFOLIO_AUTH_PASSWORD: ${PORTFOLIO_AUTH_PASSWORD:-}
       PORTFOLIO_AUTH_SESSION_SECRET: ${PORTFOLIO_AUTH_SESSION_SECRET:-}
@@ -37,8 +38,7 @@ services:
     depends_on:
       - portfolio-api
     environment:
-      VITE_API_PROXY_TARGET: http://portfolio-api:18082
-      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
+      PORTFOLIO_API_UPSTREAM: http://portfolio-api:18082
     ports:
       - "4174:4174"
     restart: unless-stopped

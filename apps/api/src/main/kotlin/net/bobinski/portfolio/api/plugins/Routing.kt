@@ -66,10 +66,12 @@ fun Application.configureRouting() {
 }
 
 private fun Application.openApiUiEnabled(): Boolean =
-    environment.config
-        .propertyOrNull("portfolio.openapi.uiEnabled")
-        ?.getString()
+    System.getenv("PORTFOLIO_OPENAPI_UI_ENABLED")
         ?.toBooleanStrictOrNull()
+        ?: environment.config
+            .propertyOrNull("portfolio.openapi.uiEnabled")
+            ?.getString()
+            ?.toBooleanStrictOrNull()
         ?: (
             environment.config
                 .propertyOrNull("portfolio.stage")

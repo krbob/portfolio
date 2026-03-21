@@ -21,6 +21,7 @@ services:
       PORTFOLIO_READ_MODEL_REFRESH_ENABLED: "${PORTFOLIO_READ_MODEL_REFRESH_ENABLED:-false}"
       PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES: "${PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES:-720}"
       PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START: "${PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START:-true}"
+      PORTFOLIO_OPENAPI_UI_ENABLED: "${PORTFOLIO_OPENAPI_UI_ENABLED:-false}"
     ports:
       - "${PORTFOLIO_API_PORT:-18082}:18082"
     volumes:
@@ -34,8 +35,7 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     environment:
-      VITE_API_PROXY_TARGET: "${PORTFOLIO_WEB_API_PROXY_TARGET:-http://portfolio-api:18082}"
-      VITE_ALLOWED_HOSTS: "${VITE_ALLOWED_HOSTS:-}"
+      PORTFOLIO_API_UPSTREAM: "${PORTFOLIO_WEB_API_UPSTREAM:-http://portfolio-api:18082}"
     depends_on:
       - portfolio-api
     ports:

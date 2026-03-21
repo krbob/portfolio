@@ -19,7 +19,7 @@ It is designed around a simple product stance:
 - benchmark configuration, including `VWRA`, inflation, target mix, multi-asset ETF benchmarks, and one custom benchmark
 - EDO valuation and inflation via `edo-calculator`
 - ETF, FX, and benchmark history via `stock-analyst`
-- optional spot gold history via `gold-api`, with `GC=F` fallback when no gold API key is configured
+- optional spot gold history via `gold-api`, with `GC=F` fallback when no gold API key is configured or spot history is temporarily unavailable
 - server backups, restore, canonical export/import, audit trail, and read-model cache diagnostics
 - optional single-user password auth
 - background refresh for heavy read models
@@ -82,6 +82,7 @@ This starts:
 - `edo-calculator`
 
 The example uses published images for all services, so it is a better fit for a real self-hosted deployment than the local dev compose.
+The web container serves the built SPA through `nginx` and proxies `/api` internally to `portfolio-api`, so the browser stays on one origin.
 
 ## Full stack example
 
@@ -101,12 +102,11 @@ If you want spot gold history, create a `.env` file next to the compose file and
 
 ```dotenv
 PORTFOLIO_GOLD_API_KEY=your-gold-api-key
-VITE_ALLOWED_HOSTS=portfolio.example.com
 ```
 
 Without that key the app falls back to `GC=F`, which is a futures proxy rather than spot gold.
 
-If `portfolio-web` sits behind a reverse proxy with a custom hostname, set `VITE_ALLOWED_HOSTS` to the public host (or a comma-separated list of hosts) so `vite preview` accepts that `Host` header.
+The production web image does not use `vite preview`. It serves static files through `nginx` and proxies `/api` to `portfolio-api`, so a reverse proxy such as Traefik only needs to publish the web container.
 
 ## Runtime model
 
@@ -157,6 +157,10 @@ The API fails fast on invalid SQLite pathing and unsafe durability settings.
 - `PORTFOLIO_READ_MODEL_REFRESH_ENABLED`
 - `PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES`
 - `PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START`
+
+### Docs UI
+
+- `PORTFOLIO_OPENAPI_UI_ENABLED`
 
 ### Optional auth
 
@@ -233,6 +237,8 @@ cd apps/web
 npm install
 npm run dev
 ```
+
+`npm run preview` remains available for local preview of a production build, but the Docker image serves the built SPA through `nginx` rather than using Vite as a runtime server.
 
 ### Verification
 

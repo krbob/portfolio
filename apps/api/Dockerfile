@@ -10,7 +10,7 @@ COPY gradle gradle
 COPY portfolio-domain portfolio-domain
 COPY src src
 
-RUN gradle --no-daemon installDist
+RUN ./gradlew --no-daemon installDist
 
 FROM eclipse-temurin:25.0.2_10-jre
 
