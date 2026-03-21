@@ -26,9 +26,19 @@ export function DashboardScreen() {
   const chartPoints = useMemo(() => filterHistoryPoints(allPoints, range), [allPoints, range])
   const latestPoint = chartPoints.at(-1) ?? allPoints.at(-1)
   const previousPoint = chartPoints.at(-2) ?? allPoints.at(-2)
+  const valuationState = overview?.valuationState ?? 'MARK_TO_MARKET'
+  const historyValuationState = historyQuery.data?.valuationState ?? valuationState
+  const usesBookBasisOnly = valuationState === 'BOOK_ONLY'
+  const hasFullCurrentValuation = valuationState === 'MARK_TO_MARKET'
+  const hasFullHistoryValuation =
+    historyValuationState === 'MARK_TO_MARKET' &&
+    Boolean(latestPoint) &&
+    Boolean(previousPoint) &&
+    latestPoint!.activeHoldingCount === latestPoint!.valuedHoldingCount &&
+    previousPoint!.activeHoldingCount === previousPoint!.valuedHoldingCount
 
   const dailyChange =
-    latestPoint && previousPoint
+    hasFullHistoryValuation && latestPoint && previousPoint
       ? Number(latestPoint.totalCurrentValuePln) - Number(previousPoint.totalCurrentValuePln)
       : null
   const dailyChangePct =
@@ -36,10 +46,30 @@ export function DashboardScreen() {
       ? (dailyChange / Number(previousPoint.totalCurrentValuePln)) * 100
       : null
 
-  const totalCurrentValue = overview ? Number(overview.totalCurrentValuePln) : 0
-  const equityPct = overview && totalCurrentValue > 0 ? (Number(overview.equityCurrentValuePln) / totalCurrentValue) * 100 : 0
-  const bondPct = overview && totalCurrentValue > 0 ? (Number(overview.bondCurrentValuePln) / totalCurrentValue) * 100 : 0
-  const cashPct = overview && totalCurrentValue > 0 ? (Number(overview.cashCurrentValuePln) / totalCurrentValue) * 100 : 0
+  const displayedTotalValuePln = overview
+    ? usesBookBasisOnly
+      ? overview.totalBookValuePln
+      : overview.totalCurrentValuePln
+    : '0'
+  const displayedEquityValuePln = overview
+    ? usesBookBasisOnly
+      ? overview.equityBookValuePln
+      : overview.equityCurrentValuePln
+    : '0'
+  const displayedBondValuePln = overview
+    ? usesBookBasisOnly
+      ? overview.bondBookValuePln
+      : overview.bondCurrentValuePln
+    : '0'
+  const displayedCashValuePln = overview
+    ? usesBookBasisOnly
+      ? overview.cashBookValuePln
+      : overview.cashCurrentValuePln
+    : '0'
+  const totalCurrentValue = overview ? Number(displayedTotalValuePln) : 0
+  const equityPct = overview && totalCurrentValue > 0 ? (Number(displayedEquityValuePln) / totalCurrentValue) * 100 : 0
+  const bondPct = overview && totalCurrentValue > 0 ? (Number(displayedBondValuePln) / totalCurrentValue) * 100 : 0
+  const cashPct = overview && totalCurrentValue > 0 ? (Number(displayedCashValuePln) / totalCurrentValue) * 100 : 0
 
   const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
   const breachedBuckets = configuredBuckets.filter((bucket) => !bucket.withinTolerance)
@@ -120,7 +150,7 @@ export function DashboardScreen() {
       <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'}>
         {latestPoint && (
           <span className="text-xs text-zinc-500">
-            {isPolish ? 'Stan na' : 'As of'} {latestPoint.date}
+            {isPolish ? 'Stan na' : 'As of'} {latestPoint.date} · {labelValuationBasis(valuationState, isPolish)}
           </span>
         )}
       </PageHeader>
@@ -128,11 +158,9 @@ export function DashboardScreen() {
       {/* Hero stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label={isPolish ? 'Wartość portfela' : 'Total Value'}
-          value={formatCurrencyPln(overview.totalCurrentValuePln)}
-          subtitle={isPolish
-            ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji`
-            : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings`}
+          label={labelPrimaryValueMetric(valuationState, isPolish)}
+          value={formatCurrencyPln(displayedTotalValuePln)}
+          subtitle={primaryValueSubtitle(overview, valuationState, isPolish)}
           hero
         />
         <StatCard
@@ -140,21 +168,25 @@ export function DashboardScreen() {
           value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : (isPolish ? 'b/d' : 'N/A')}
           subtitle={dailyChangePct != null
             ? formatPercent(dailyChangePct, { signed: true })
-            : isPolish
-              ? 'Oczekiwanie na dane'
-              : 'Waiting for data'}
+            : hasFullCurrentValuation
+              ? isPolish
+                ? 'Oczekiwanie na dane'
+                : 'Waiting for data'
+              : isPolish
+                ? 'Wymaga pełnej wyceny rynkowej'
+                : 'Requires full market valuation'}
           change={dailyChange != null ? (dailyChange > 0 ? 'positive' : dailyChange < 0 ? 'negative' : 'neutral') : undefined}
         />
         <StatCard
           label={isPolish ? 'Akcje' : 'Equities'}
-          value={formatCurrencyPln(overview.equityCurrentValuePln)}
-          subtitle={isPolish ? `${formatPercent(equityPct)} portfela` : `${formatPercent(equityPct)} of portfolio`}
+          value={formatCurrencyPln(displayedEquityValuePln)}
+          subtitle={assetSliceSubtitle(equityPct, valuationState, isPolish)}
           dot="equity"
         />
         <StatCard
           label={isPolish ? 'Obligacje' : 'Bonds'}
-          value={formatCurrencyPln(overview.bondCurrentValuePln)}
-          subtitle={isPolish ? `${formatPercent(bondPct)} portfela` : `${formatPercent(bondPct)} of portfolio`}
+          value={formatCurrencyPln(displayedBondValuePln)}
+          subtitle={assetSliceSubtitle(bondPct, valuationState, isPolish)}
           dot="bond"
         />
       </div>
@@ -181,7 +213,20 @@ export function DashboardScreen() {
         {/* Mini portfolio chart */}
         <div className={`${card} lg:col-span-2`}>
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Wartość portfela' : 'Portfolio Value'}</h3>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryValueMetric(historyValuationState, isPolish)}</h3>
+              {historyValuationState !== 'MARK_TO_MARKET' ? (
+                <p className="mt-1 text-xs text-zinc-500">
+                  {historyValuationState === 'BOOK_ONLY'
+                    ? isPolish
+                      ? 'Wykres używa kosztu księgowego, bo bieżące wyceny rynkowe są niedostępne.'
+                      : 'This chart uses book basis because live market valuations are unavailable.'
+                    : isPolish
+                      ? 'Wykres łączy wyceny rynkowe z kosztem księgowym dla niewycenionych pozycji.'
+                      : 'This chart mixes market valuations with book basis for holdings that are still unvalued.'}
+                </p>
+              ) : null}
+            </div>
             <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-0.5">
               {(['1Y', 'MAX'] as const).map((value) => (
                 <button
@@ -315,7 +360,11 @@ export function DashboardScreen() {
                     <dt className="text-zinc-500">{isPolish ? 'Kolejna wpłata' : 'Next contribution'}</dt>
                     <dd className="mt-1 font-medium text-zinc-100">
                       {allocationQuery.data.recommendedAssetClass && Number(allocationQuery.data.recommendedContributionPln) > 0
-                        ? `${formatCurrencyPln(allocationQuery.data.recommendedContributionPln)} -> ${labelAssetClass(allocationQuery.data.recommendedAssetClass)}`
+                        ? allocationQuery.data.recommendedAction === 'DEPLOY_EXISTING_CASH'
+                          ? isPolish
+                            ? `${formatCurrencyPln(allocationQuery.data.recommendedContributionPln)} gotówki -> ${labelAssetClass(allocationQuery.data.recommendedAssetClass)}`
+                            : `${formatCurrencyPln(allocationQuery.data.recommendedContributionPln)} cash -> ${labelAssetClass(allocationQuery.data.recommendedAssetClass)}`
+                          : `${formatCurrencyPln(allocationQuery.data.recommendedContributionPln)} -> ${labelAssetClass(allocationQuery.data.recommendedAssetClass)}`
                         : isPolish
                           ? 'Brak potrzeby rebalansowania przez wpłatę'
                           : 'No rebalance contribution needed'}
@@ -361,8 +410,19 @@ export function DashboardScreen() {
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
-          value={formatSignedCurrencyPln(overview.totalUnrealizedGainPln)}
-          change={Number(overview.totalUnrealizedGainPln) > 0 ? 'positive' : Number(overview.totalUnrealizedGainPln) < 0 ? 'negative' : 'neutral'}
+          value={hasFullCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : (isPolish ? 'b/d' : 'N/A')}
+          subtitle={hasFullCurrentValuation
+            ? undefined
+            : isPolish
+              ? 'Wymaga pełnej wyceny rynkowej'
+              : 'Requires full market valuation'}
+          change={hasFullCurrentValuation
+            ? Number(overview.totalUnrealizedGainPln) > 0
+              ? 'positive'
+              : Number(overview.totalUnrealizedGainPln) < 0
+                ? 'negative'
+                : 'neutral'
+            : undefined}
         />
         <StatCard
           label={isPolish ? 'Wpłaty netto' : 'Net Contributions'}
@@ -373,9 +433,9 @@ export function DashboardScreen() {
           value={formatCurrencyPln(overview.cashBalancePln)}
         />
         <StatCard
-          label={isPolish ? 'Jakość danych' : 'Data Quality'}
-          value={dashboardDataQualityValue(dataQuality.summary, isPolish, dataQuality.isLoading, Boolean(dataQuality.error))}
-          subtitle={dashboardDataQualitySubtitle(dataQuality.summary, isPolish, dataQuality.isLoading, Boolean(dataQuality.error))}
+          label={isPolish ? 'Podstawa wyceny' : 'Valuation basis'}
+          value={labelValuationBasis(valuationState, isPolish)}
+          subtitle={valuationBasisSubtitle(overview, isPolish)}
         />
       </div>
     </>
@@ -475,39 +535,71 @@ function filterHistoryPoints(points: PortfolioDailyHistoryPoint[], range: Dashbo
   return points.filter((p) => p.date >= cutoffString)
 }
 
-function dashboardDataQualityValue(
-  summary: ReturnType<typeof usePortfolioDataQuality>['summary'],
-  isPolish: boolean,
-  isLoading: boolean,
-  hasError: boolean,
-) {
-  if (isLoading) {
-    return isPolish ? 'Sprawdzanie...' : 'Checking...'
+function labelPrimaryValueMetric(valuationState: string, isPolish: boolean) {
+  if (valuationState === 'BOOK_ONLY') {
+    return isPolish ? 'Wartość księgowa' : 'Book Value'
   }
-  if (hasError || !summary) {
-    return isPolish ? 'Niedostępne' : 'Unavailable'
+  if (valuationState === 'PARTIALLY_VALUED') {
+    return isPolish ? 'Wartość szacunkowa' : 'Estimated Value'
   }
-  if (summary.warningCount > 0) {
-    return isPolish
-      ? `${summary.warningCount} ${summary.warningCount === 1 ? 'uwaga' : 'uwagi'}`
-      : `${summary.warningCount} ${summary.warningCount === 1 ? 'alert' : 'alerts'}`
-  }
-  return isPolish ? 'Zdrowe' : 'Healthy'
+  return isPolish ? 'Wartość portfela' : 'Portfolio Value'
 }
 
-function dashboardDataQualitySubtitle(
-  summary: ReturnType<typeof usePortfolioDataQuality>['summary'],
+function labelValuationBasis(valuationState: string, isPolish: boolean) {
+  if (valuationState === 'BOOK_ONLY') {
+    return isPolish ? 'Księgowa' : 'Book basis'
+  }
+  if (valuationState === 'PARTIALLY_VALUED') {
+    return isPolish ? 'Częściowa' : 'Partial'
+  }
+  return isPolish ? 'Rynkowa' : 'Market'
+}
+
+function primaryValueSubtitle(
+  overview: NonNullable<ReturnType<typeof usePortfolioOverview>['data']>,
+  valuationState: string,
   isPolish: boolean,
-  isLoading: boolean,
-  hasError: boolean,
 ) {
-  if (isLoading) {
-    return isPolish ? 'Łączenie sygnałów wyceny, benchmarków i CPI' : 'Combining valuation, benchmark and CPI signals'
+  if (valuationState === 'BOOK_ONLY') {
+    return isPolish
+      ? `${overview.accountCount} kont · koszt księgowy dla ${overview.activeHoldingCount} pozycji`
+      : `${overview.accountCount} accounts · book basis for ${overview.activeHoldingCount} holdings`
   }
-  if (hasError || !summary) {
-    return isPolish ? 'Otwórz szczegóły w Ustawieniach' : 'Open details in Settings'
+
+  if (valuationState === 'PARTIALLY_VALUED') {
+    return isPolish
+      ? `${overview.accountCount} kont · ${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji wycenionych`
+      : `${overview.accountCount} accounts · ${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings valued`
   }
+
   return isPolish
-    ? `${summary.valuationCoverageLabel} wycenione · CPI do ${summary.cpiCoverageThroughLabel}`
-    : `${summary.valuationCoverageLabel} valued · CPI through ${summary.cpiCoverageThroughLabel}`
+    ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji`
+    : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings`
+}
+
+function assetSliceSubtitle(pct: number, valuationState: string, isPolish: boolean) {
+  const base = isPolish ? `${formatPercent(pct)} portfela` : `${formatPercent(pct)} of portfolio`
+
+  if (valuationState === 'BOOK_ONLY') {
+    return isPolish ? `${base} · koszt księgowy` : `${base} · book basis`
+  }
+
+  if (valuationState === 'PARTIALLY_VALUED') {
+    return isPolish ? `${base} · częściowa wycena` : `${base} · partial valuation`
+  }
+
+  return base
+}
+
+function valuationBasisSubtitle(
+  overview: NonNullable<ReturnType<typeof usePortfolioOverview>['data']>,
+  isPolish: boolean,
+) {
+  if (overview.activeHoldingCount === 0) {
+    return isPolish ? 'Brak aktywnych pozycji do wyceny' : 'No active holdings to value'
+  }
+
+  return isPolish
+    ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma bieżącą wycenę`
+    : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have current valuations`
 }

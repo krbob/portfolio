@@ -135,8 +135,8 @@ describe('App', () => {
           JSON.stringify({
             from: '2026-03-01',
             until: '2026-03-03',
-            valuationState: 'MARK_TO_MARKET',
-            instrumentHistoryIssueCount: 0,
+            valuationState: 'BOOK_ONLY',
+            instrumentHistoryIssueCount: 1,
             referenceSeriesIssueCount: 0,
             benchmarkSeriesIssueCount: 0,
             missingFxTransactions: 0,
@@ -170,7 +170,7 @@ describe('App', () => {
               {
                 date: '2026-03-02',
                 totalBookValuePln: '2000.00',
-                totalCurrentValuePln: '2045.00',
+                totalCurrentValuePln: '2000.00',
                 netContributionsPln: '2000.00',
                 cashBalancePln: '995.00',
                 totalCurrentValueUsd: '511.25',
@@ -179,23 +179,23 @@ describe('App', () => {
                 totalCurrentValueAu: '0.168313',
                 netContributionsAu: '0.164609',
                 cashBalanceAu: '0.081893',
-                equityCurrentValuePln: '1050.00',
+                equityCurrentValuePln: '1005.00',
                 bondCurrentValuePln: '0.00',
                 cashCurrentValuePln: '995.00',
-                equityAllocationPct: '51.34',
+                equityAllocationPct: '50.25',
                 bondAllocationPct: '0.00',
-                cashAllocationPct: '48.66',
-                portfolioPerformanceIndex: '102.25',
+                cashAllocationPct: '49.75',
+                portfolioPerformanceIndex: '100.00',
                 equityBenchmarkIndex: '101.30',
                 inflationBenchmarkIndex: '100.20',
                 targetMixBenchmarkIndex: '101.08',
                 activeHoldingCount: 1,
-                valuedHoldingCount: 1,
+                valuedHoldingCount: 0,
               },
               {
                 date: '2026-03-03',
                 totalBookValuePln: '2000.00',
-                totalCurrentValuePln: '2095.00',
+                totalCurrentValuePln: '2000.00',
                 netContributionsPln: '2000.00',
                 cashBalancePln: '995.00',
                 totalCurrentValueUsd: '510.98',
@@ -204,18 +204,18 @@ describe('App', () => {
                 totalCurrentValueAu: '0.173140',
                 netContributionsAu: '0.165289',
                 cashBalanceAu: '0.082231',
-                equityCurrentValuePln: '1100.00',
+                equityCurrentValuePln: '1005.00',
                 bondCurrentValuePln: '0.00',
                 cashCurrentValuePln: '995.00',
-                equityAllocationPct: '52.51',
+                equityAllocationPct: '50.25',
                 bondAllocationPct: '0.00',
-                cashAllocationPct: '47.49',
-                portfolioPerformanceIndex: '104.75',
+                cashAllocationPct: '49.75',
+                portfolioPerformanceIndex: '100.00',
                 equityBenchmarkIndex: '102.40',
                 inflationBenchmarkIndex: '100.40',
                 targetMixBenchmarkIndex: '101.96',
                 activeHoldingCount: 1,
-                valuedHoldingCount: 1,
+                valuedHoldingCount: 0,
               },
             ],
           }),
@@ -352,8 +352,10 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()
 
     // Dashboard stat cards
-    expect(await screen.findByText(/total value/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/book value/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/daily change/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/requires full market valuation/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/valuation basis/i)).toBeInTheDocument()
   })
 
   it('shows the login gate when password auth is enabled', async () => {
