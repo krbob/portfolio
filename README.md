@@ -101,9 +101,12 @@ If you want spot gold history, create a `.env` file next to the compose file and
 
 ```dotenv
 PORTFOLIO_GOLD_API_KEY=your-gold-api-key
+VITE_ALLOWED_HOSTS=portfolio.example.com
 ```
 
 Without that key the app falls back to `GC=F`, which is a futures proxy rather than spot gold.
+
+If `portfolio-web` sits behind a reverse proxy with a custom hostname, set `VITE_ALLOWED_HOSTS` to the public host (or a comma-separated list of hosts) so `vite preview` accepts that `Host` header.
 
 ## Runtime model
 

@@ -38,6 +38,7 @@ services:
       - portfolio-api
     environment:
       VITE_API_PROXY_TARGET: http://portfolio-api:18082
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
     ports:
       - "4174:4174"
     restart: unless-stopped

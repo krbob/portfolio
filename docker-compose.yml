@@ -35,6 +35,7 @@ services:
       dockerfile: Dockerfile
     environment:
       VITE_API_PROXY_TARGET: "${PORTFOLIO_WEB_API_PROXY_TARGET:-http://portfolio-api:18082}"
+      VITE_ALLOWED_HOSTS: "${VITE_ALLOWED_HOSTS:-}"
     depends_on:
       - portfolio-api
     ports:
