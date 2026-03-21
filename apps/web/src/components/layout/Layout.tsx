@@ -37,7 +37,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
     if (hash === '') {
       if (previousPathRef.current !== location.pathname) {
-        mainRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+        if (typeof mainRef.current?.scrollTo === 'function') {
+          mainRef.current.scrollTo({ top: 0, behavior: 'auto' })
+        } else if (mainRef.current) {
+          mainRef.current.scrollTop = 0
+        }
       }
       previousPathRef.current = location.pathname
       return undefined

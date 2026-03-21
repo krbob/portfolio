@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PortfolioDailyHistoryPoint, BenchmarkComparison, PortfolioReturnPeriod } from '../api/read-model'
 import { PortfolioValueChart, AllocationTimeChart, BenchmarkChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
@@ -313,6 +313,24 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
   }
 
   const realCoverageUntil = findRealPlnCoverageMonth(data.periods)
+  const benchmarkPeriods = data.periods.filter((period) => period.benchmarks.length > 0)
+  const [selectedBenchmarkPeriodKey, setSelectedBenchmarkPeriodKey] = useState<string | null>(benchmarkPeriods[0]?.key ?? null)
+
+  useEffect(() => {
+    if (benchmarkPeriods.length === 0) {
+      if (selectedBenchmarkPeriodKey != null) {
+        setSelectedBenchmarkPeriodKey(null)
+      }
+      return
+    }
+
+    if (!selectedBenchmarkPeriodKey || !benchmarkPeriods.some((period) => period.key === selectedBenchmarkPeriodKey)) {
+      setSelectedBenchmarkPeriodKey(benchmarkPeriods[0].key)
+    }
+  }, [benchmarkPeriods, selectedBenchmarkPeriodKey])
+
+  const selectedBenchmarkPeriod =
+    benchmarkPeriods.find((period) => period.key === selectedBenchmarkPeriodKey) ?? benchmarkPeriods[0] ?? null
 
   return (
     <div className="space-y-4">
@@ -334,7 +352,7 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
             {data.periods.map((p) => (
               <tr
                 key={p.key}
-                className={`${tr} ${p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
+                className={`${tr} ${p.key === selectedBenchmarkPeriod?.key ? 'bg-zinc-800/30' : p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
               >
                 <td className={`${td} font-medium text-zinc-200`}>
                   {p.label}
@@ -373,21 +391,39 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
         </p>
       ) : null}
 
-      {/* Benchmark comparisons per period */}
-      {data.periods
-        .filter((p) => p.benchmarks.length > 0)
-        .map((p) => (
-          <div key={p.key} className={card}>
-            <h3 className="mb-3 text-sm font-semibold text-zinc-300">
-              {p.label} — {isPolish ? 'Benchmarki' : 'Benchmarks'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {p.benchmarks.map((b) => (
-                <BenchmarkCard key={b.key} benchmark={b} />
-              ))}
+      {/* Benchmark comparisons */}
+      {selectedBenchmarkPeriod ? (
+        <div className={card}>
+          <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-200">
+                {isPolish ? 'Benchmarki' : 'Benchmarks'}
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500">
+                {isPolish
+                  ? `Nadwyżka TWR względem wybranego okresu. Szczegóły poniżej dla ${selectedBenchmarkPeriod.label}.`
+                  : `Time-weighted excess return versus the selected period. Details below for ${selectedBenchmarkPeriod.label}.`}
+              </p>
             </div>
+            {benchmarkPeriods.length > 1 ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Okres' : 'Period'}</span>
+                <SegmentedControl
+                  options={benchmarkPeriods.map((period) => ({ value: period.key, label: period.label }))}
+                  value={selectedBenchmarkPeriod.key}
+                  onChange={setSelectedBenchmarkPeriodKey}
+                  ariaLabel={isPolish ? 'Okres benchmarków' : 'Benchmark period'}
+                />
+              </div>
+            ) : null}
           </div>
-        ))}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {selectedBenchmarkPeriod.benchmarks.map((benchmark) => (
+              <BenchmarkCard key={`${selectedBenchmarkPeriod.key}:${benchmark.key}`} benchmark={benchmark} />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
