@@ -281,7 +281,20 @@ export function DashboardScreen() {
         <div className="space-y-4">
           <div className={card}>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Odchylenie od celu' : 'Target drift'}</h3>
+              <div>
+                <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Odchylenie od celu' : 'Target drift'}</h3>
+                {allocationQuery.data?.valuationState !== 'MARK_TO_MARKET' ? (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {allocationQuery.data?.valuationState === 'BOOK_ONLY'
+                      ? isPolish
+                        ? 'Diagnostyka alokacji używa kosztu księgowego, bo bieżące wyceny rynkowe są niedostępne.'
+                        : 'Allocation diagnostics use book basis because live market valuations are unavailable.'
+                      : isPolish
+                        ? 'Diagnostyka alokacji łączy wyceny rynkowe z kosztem księgowym dla niewycenionych pozycji.'
+                        : 'Allocation diagnostics mix market valuations with book basis for holdings that are still unvalued.'}
+                  </p>
+                ) : null}
+              </div>
               {allocationQuery.data?.configured ? (
                 <Badge variant={allocationActionVariant(allocationQuery.data.recommendedAction)}>
                   {labelAllocationAction(allocationQuery.data.recommendedAction, isPolish)}
