@@ -24,7 +24,7 @@ class RemoteReferenceSeriesProvider(
 
     override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         if (!config.goldApiKey.isNullOrBlank()) {
-            loadGoldSpotSeriesInPln(from = from, to = to)
+            loadGoldSpotSeriesInPlnWithFallback(from = from, to = to)
         } else {
             benchmarkPln(
                 symbol = config.goldBenchmarkSymbol,
@@ -107,5 +107,32 @@ class RemoteReferenceSeriesProvider(
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: Exception) {
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected gold spot history error.")
+    }
+
+    private suspend fun loadGoldSpotSeriesInPlnWithFallback(
+        from: LocalDate,
+        to: LocalDate
+    ): ReferenceSeriesResult {
+        val spotResult = loadGoldSpotSeriesInPln(from = from, to = to)
+        if (spotResult is ReferenceSeriesResult.Success) {
+            return spotResult
+        }
+
+        val fallbackResult = benchmarkPln(
+            symbol = config.goldBenchmarkSymbol,
+            from = from,
+            to = to
+        )
+        if (fallbackResult is ReferenceSeriesResult.Success) {
+            return fallbackResult
+        }
+
+        val spotFailureMessage = (spotResult as? ReferenceSeriesResult.Failure)?.reason
+            ?: "Gold spot history unavailable."
+        val fallbackFailureMessage = (fallbackResult as? ReferenceSeriesResult.Failure)?.reason
+            ?: "Fallback gold benchmark unavailable."
+        return ReferenceSeriesResult.Failure(
+            "$spotFailureMessage Fallback benchmark ${config.goldBenchmarkSymbol} also failed: $fallbackFailureMessage"
+        )
     }
 }

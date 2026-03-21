@@ -30,7 +30,7 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
-        modelVersion = 7
+        modelVersion = 8
     )
 
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
