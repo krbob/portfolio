@@ -219,11 +219,11 @@ export function DashboardScreen() {
                 <p className="mt-1 text-xs text-zinc-500">
                   {historyValuationState === 'BOOK_ONLY'
                     ? isPolish
-                      ? 'Wykres używa kosztu księgowego, bo bieżące wyceny rynkowe są niedostępne.'
-                      : 'This chart uses book basis because live market valuations are unavailable.'
+                      ? 'Wykres opiera się na koszcie księgowym.'
+                      : 'This chart is based on book basis.'
                     : isPolish
-                      ? 'Wykres łączy wyceny rynkowe z kosztem księgowym dla niewycenionych pozycji.'
-                      : 'This chart mixes market valuations with book basis for holdings that are still unvalued.'}
+                      ? 'Wykres łączy ceny rynkowe z kosztem księgowym.'
+                      : 'This chart mixes market prices with book basis.'}
                 </p>
               ) : null}
             </div>
@@ -287,11 +287,11 @@ export function DashboardScreen() {
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocationQuery.data?.valuationState === 'BOOK_ONLY'
                       ? isPolish
-                        ? 'Diagnostyka alokacji używa kosztu księgowego, bo bieżące wyceny rynkowe są niedostępne.'
-                        : 'Allocation diagnostics use book basis because live market valuations are unavailable.'
+                        ? 'Sygnał alokacji opiera się na koszcie księgowym.'
+                        : 'Allocation signal is based on book basis.'
                       : isPolish
-                        ? 'Diagnostyka alokacji łączy wyceny rynkowe z kosztem księgowym dla niewycenionych pozycji.'
-                        : 'Allocation diagnostics mix market valuations with book basis for holdings that are still unvalued.'}
+                        ? 'Sygnał alokacji łączy ceny rynkowe z kosztem księgowym.'
+                        : 'Allocation signal mixes market prices with book basis.'}
                   </p>
                 ) : null}
               </div>
@@ -348,8 +348,8 @@ export function DashboardScreen() {
                   <p className="mt-1 text-sm text-zinc-500">
                     {mostOffTargetBucket
                       ? isPolish
-                        ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od wagi docelowej.`
-                        : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from its target weight.`
+                        ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu.`
+                        : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target.`
                       : isPolish
                         ? 'Koszyki są zgodne ze skonfigurowaną alokacją.'
                         : 'Target buckets are aligned with the configured mix.'}
@@ -358,7 +358,7 @@ export function DashboardScreen() {
                     {isPolish ? 'Pasmo tolerancji' : 'Tolerance band'} ±{formatPercent(allocationQuery.data.toleranceBandPctPoints, {
                       maximumFractionDigits: 2,
                       suffix: ' pp',
-                    })} · {allocationQuery.data.breachedBucketCount} {isPolish ? 'poza pasmem' : 'outside band'}
+                    })} · {allocationQuery.data.breachedBucketCount} {isPolish ? 'poza zakresem' : 'outside band'}
                   </p>
                 </div>
 
@@ -370,7 +370,11 @@ export function DashboardScreen() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">{isPolish ? 'Kolejna wpłata' : 'Next contribution'}</dt>
+                    <dt className="text-zinc-500">
+                      {allocationQuery.data.recommendedAction === 'DEPLOY_EXISTING_CASH'
+                        ? (isPolish ? 'Dostępna gotówka' : 'Available cash')
+                        : (isPolish ? 'Kolejna wpłata' : 'Next contribution')}
+                    </dt>
                     <dd className="mt-1 font-medium text-zinc-100">
                       {allocationQuery.data.recommendedAssetClass && Number(allocationQuery.data.recommendedContributionPln) > 0
                         ? allocationQuery.data.recommendedAction === 'DEPLOY_EXISTING_CASH'
@@ -575,14 +579,14 @@ function primaryValueSubtitle(
 ) {
   if (valuationState === 'BOOK_ONLY') {
     return isPolish
-      ? `${overview.accountCount} kont · koszt księgowy dla ${overview.activeHoldingCount} pozycji`
-      : `${overview.accountCount} accounts · book basis for ${overview.activeHoldingCount} holdings`
+      ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji · wycena księgowa`
+      : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings · book basis`
   }
 
   if (valuationState === 'PARTIALLY_VALUED') {
     return isPolish
-      ? `${overview.accountCount} kont · ${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji wycenionych`
-      : `${overview.accountCount} accounts · ${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings valued`
+      ? `${overview.accountCount} kont · ${overview.valuedHoldingCount}/${overview.activeHoldingCount} pozycji wycenionych`
+      : `${overview.accountCount} accounts · ${overview.valuedHoldingCount}/${overview.activeHoldingCount} holdings valued`
   }
 
   return isPolish
@@ -594,11 +598,11 @@ function assetSliceSubtitle(pct: number, valuationState: string, isPolish: boole
   const base = isPolish ? `${formatPercent(pct)} portfela` : `${formatPercent(pct)} of portfolio`
 
   if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? `${base} · koszt księgowy` : `${base} · book basis`
+    return isPolish ? `${base} · księgowo` : `${base} · book basis`
   }
 
   if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? `${base} · częściowa wycena` : `${base} · partial valuation`
+    return isPolish ? `${base} · częściowo wycenione` : `${base} · partially valued`
   }
 
   return base

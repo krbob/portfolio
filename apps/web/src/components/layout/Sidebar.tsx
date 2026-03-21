@@ -61,9 +61,16 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   const authSessionQuery = useAuthSession()
   const logoutMutation = useLogout()
 
-  const systemStatus = resolveStatus(metaQuery.isError, readinessQuery.isError, readinessQuery.data?.status, isPolish)
   const blockingChecks = countChecks(readinessQuery.data?.checks, 'FAIL')
   const advisoryChecks = countChecks(readinessQuery.data?.checks, 'WARN') + countChecks(readinessQuery.data?.checks, 'INFO')
+  const systemStatus = resolveStatus({
+    metaError: metaQuery.isError,
+    readinessError: readinessQuery.isError,
+    readinessStatus: readinessQuery.data?.status,
+    blockingChecks,
+    advisoryChecks,
+    isPolish,
+  })
 
   return (
     <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`} aria-label="Primary navigation">
@@ -132,16 +139,33 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   )
 }
 
-function resolveStatus(
-  metaError: boolean,
-  readinessError: boolean,
-  readinessStatus: string | undefined,
-  isPolish: boolean,
-): { dot: 'healthy' | 'warning' | 'error' | 'unknown'; label: string } {
-  if (metaError || readinessError) return { dot: 'error', label: isPolish ? 'Ograniczony' : 'Degraded' }
+function resolveStatus({
+  metaError,
+  readinessError,
+  readinessStatus,
+  blockingChecks,
+  advisoryChecks,
+  isPolish,
+}: {
+  metaError: boolean
+  readinessError: boolean
+  readinessStatus: string | undefined
+  blockingChecks: number
+  advisoryChecks: number
+  isPolish: boolean
+}): { dot: 'healthy' | 'warning' | 'error' | 'unknown'; label: string } {
+  if (metaError || readinessError) return { dot: 'error', label: isPolish ? 'Błąd' : 'Error' }
   if (!readinessStatus) return { dot: 'unknown', label: isPolish ? 'Łączenie' : 'Connecting' }
   if (readinessStatus === 'READY') return { dot: 'healthy', label: isPolish ? 'Gotowy' : 'Healthy' }
-  if (readinessStatus === 'DEGRADED') return { dot: 'warning', label: isPolish ? 'Ograniczony' : 'Degraded' }
+  if (readinessStatus === 'DEGRADED') {
+    if (blockingChecks > 0) {
+      return { dot: 'warning', label: isPolish ? 'Ograniczony' : 'Degraded' }
+    }
+    if (advisoryChecks > 0) {
+      return { dot: 'warning', label: isPolish ? 'Uwagi' : 'Advisory' }
+    }
+    return { dot: 'warning', label: isPolish ? 'Ograniczony' : 'Degraded' }
+  }
   return { dot: 'error', label: isPolish ? 'Niegotowy' : 'Not ready' }
 }
 
