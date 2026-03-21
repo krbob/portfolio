@@ -360,6 +360,11 @@ export function useRestorePortfolioBackup() {
     onSuccess: async () => {
       await Promise.all([
         invalidateTransactionRelatedQueries(queryClient),
+        queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-benchmark-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-rebalancing-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['read-model-refresh-status'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
@@ -379,7 +384,15 @@ export function useImportPortfolioState() {
   return useMutation({
     mutationFn: (payload: ImportPortfolioStatePayload) => importPortfolioState(payload),
     onSuccess: async () => {
-      await invalidateTransactionRelatedQueries(queryClient)
+      await Promise.all([
+        invalidateTransactionRelatedQueries(queryClient),
+        queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-benchmark-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-rebalancing-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['read-model-refresh-status'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+      ])
     },
   })
 }

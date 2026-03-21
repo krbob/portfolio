@@ -90,6 +90,8 @@ class PortfolioBackupService(
                 message = "Created ${trigger.name.lowercase()} backup ${backup.fileName}.",
                 metadata = mapOf(
                     "trigger" to trigger.name,
+                    "appPreferenceCount" to (backup.appPreferenceCount?.toString() ?: "n/a"),
+                    "importProfileCount" to (backup.importProfileCount?.toString() ?: "n/a"),
                     "targetCount" to (backup.targetCount?.toString() ?: "n/a"),
                     "transactionCount" to (backup.transactionCount?.toString() ?: "n/a"),
                     "sizeBytes" to backup.sizeBytes.toString()
@@ -153,9 +155,11 @@ class PortfolioBackupService(
                 fileName = request.fileName,
                 mode = result.mode,
                 accountCount = result.accountCount,
+                appPreferenceCount = result.appPreferenceCount,
                 instrumentCount = result.instrumentCount,
                 targetCount = result.targetCount,
                 transactionCount = result.transactionCount,
+                importProfileCount = result.importProfileCount,
                 safetyBackupFileName = safetyBackup?.fileName
             )
             auditLogService.record(
@@ -167,9 +171,11 @@ class PortfolioBackupService(
                 metadata = mapOf(
                     "mode" to restoreResult.mode.name,
                     "accountCount" to restoreResult.accountCount.toString(),
+                    "appPreferenceCount" to restoreResult.appPreferenceCount.toString(),
                     "instrumentCount" to restoreResult.instrumentCount.toString(),
                     "targetCount" to restoreResult.targetCount.toString(),
                     "transactionCount" to restoreResult.transactionCount.toString(),
+                    "importProfileCount" to restoreResult.importProfileCount.toString(),
                     "safetyBackupFileName" to (restoreResult.safetyBackupFileName ?: "none")
                 )
             )
@@ -240,9 +246,11 @@ class PortfolioBackupService(
                 sizeBytes = sizeBytes,
                 schemaVersion = snapshot.schemaVersion,
                 accountCount = snapshot.accounts.size,
+                appPreferenceCount = snapshot.appPreferences.size,
                 instrumentCount = snapshot.instruments.size,
                 targetCount = snapshot.targets.size,
                 transactionCount = snapshot.transactions.size,
+                importProfileCount = snapshot.importProfiles.size,
                 isReadable = true,
                 errorMessage = null
             )
@@ -254,9 +262,11 @@ class PortfolioBackupService(
                 sizeBytes = sizeBytes,
                 schemaVersion = null,
                 accountCount = null,
+                appPreferenceCount = null,
                 instrumentCount = null,
                 targetCount = null,
                 transactionCount = null,
+                importProfileCount = null,
                 isReadable = false,
                 errorMessage = exception.message ?: "Failed to read backup."
             )
@@ -318,9 +328,11 @@ data class PortfolioBackupRecord(
     val sizeBytes: Long,
     val schemaVersion: Int?,
     val accountCount: Int?,
+    val appPreferenceCount: Int?,
     val instrumentCount: Int?,
     val targetCount: Int?,
     val transactionCount: Int?,
+    val importProfileCount: Int?,
     val isReadable: Boolean,
     val errorMessage: String?
 )
@@ -334,9 +346,11 @@ data class PortfolioBackupRestoreResult(
     val fileName: String,
     val mode: ImportMode,
     val accountCount: Int,
+    val appPreferenceCount: Int,
     val instrumentCount: Int,
     val targetCount: Int,
     val transactionCount: Int,
+    val importProfileCount: Int,
     val safetyBackupFileName: String? = null
 )
 
@@ -357,8 +371,10 @@ private data class StoredPortfolioSnapshot(
     val schemaVersion: Int,
     val exportedAt: String,
     val accounts: List<AccountSnapshot>,
+    val appPreferences: List<AppPreferenceSnapshot> = emptyList(),
     val instruments: List<InstrumentSnapshot>,
     val targets: List<PortfolioTargetSnapshot> = emptyList(),
+    val importProfiles: List<TransactionImportProfileSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
 
@@ -366,8 +382,10 @@ private fun PortfolioSnapshot.toStored(): StoredPortfolioSnapshot = StoredPortfo
     schemaVersion = schemaVersion,
     exportedAt = exportedAt.toString(),
     accounts = accounts,
+    appPreferences = appPreferences,
     instruments = instruments,
     targets = targets,
+    importProfiles = importProfiles,
     transactions = transactions
 )
 
@@ -375,7 +393,9 @@ private fun StoredPortfolioSnapshot.toDomain(): PortfolioSnapshot = PortfolioSna
     schemaVersion = schemaVersion,
     exportedAt = Instant.parse(exportedAt),
     accounts = accounts,
+    appPreferences = appPreferences,
     instruments = instruments,
     targets = targets,
+    importProfiles = importProfiles,
     transactions = transactions
 )

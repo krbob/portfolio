@@ -1905,9 +1905,11 @@ export interface components {
             sizeBytes: number;
             schemaVersion?: number | null;
             accountCount?: number | null;
+            appPreferenceCount?: number | null;
             instrumentCount?: number | null;
             targetCount?: number | null;
             transactionCount?: number | null;
+            importProfileCount?: number | null;
             isReadable: boolean;
             errorMessage?: string | null;
         };
@@ -1935,9 +1937,11 @@ export interface components {
             fileName: string;
             mode: string;
             accountCount: number;
+            appPreferenceCount: number;
             instrumentCount: number;
             targetCount: number;
             transactionCount: number;
+            importProfileCount: number;
             safetyBackupFileName?: string | null;
         };
         /** net.bobinski.portfolio.api.route.AccountSnapshotResponse */
@@ -1949,6 +1953,12 @@ export interface components {
             baseCurrency: string;
             isActive: boolean;
             createdAt: string;
+            updatedAt: string;
+        };
+        /** net.bobinski.portfolio.api.route.AppPreferenceSnapshotResponse */
+        AppPreferenceSnapshotResponse: {
+            key: string;
+            valueJson: string;
             updatedAt: string;
         };
         /** net.bobinski.portfolio.api.route.EdoTermsSnapshotResponse */
@@ -1981,6 +1991,41 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
+        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsResponse */
+        TransactionImportHeaderMappingsResponse: {
+            account?: string | null;
+            type?: string | null;
+            tradeDate?: string | null;
+            settlementDate?: string | null;
+            instrument?: string | null;
+            quantity?: string | null;
+            unitPrice?: string | null;
+            grossAmount?: string | null;
+            feeAmount?: string | null;
+            taxAmount?: string | null;
+            currency?: string | null;
+            fxRateToPln?: string | null;
+            notes?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsResponse */
+        TransactionImportDefaultsResponse: {
+            accountId?: string | null;
+            currency?: string | null;
+        };
+        /** net.bobinski.portfolio.api.route.TransactionImportProfileSnapshotResponse */
+        TransactionImportProfileSnapshotResponse: {
+            id: string;
+            name: string;
+            description: string;
+            delimiter: string;
+            dateFormat: string;
+            decimalSeparator: string;
+            skipDuplicatesByDefault: boolean;
+            headerMappings: components["schemas"]["TransactionImportHeaderMappingsResponse"];
+            defaults: components["schemas"]["TransactionImportDefaultsResponse"];
+            createdAt: string;
+            updatedAt: string;
+        };
         /** net.bobinski.portfolio.api.route.TransactionSnapshotResponse */
         TransactionSnapshotResponse: {
             id: string;
@@ -2005,8 +2050,10 @@ export interface components {
             schemaVersion: number;
             exportedAt: string;
             accounts: components["schemas"]["AccountSnapshotResponse"][];
+            appPreferences?: components["schemas"]["AppPreferenceSnapshotResponse"][];
             instruments: components["schemas"]["InstrumentSnapshotResponse"][];
             targets?: components["schemas"]["PortfolioTargetSnapshotResponse"][];
+            importProfiles?: components["schemas"]["TransactionImportProfileSnapshotResponse"][];
             transactions: components["schemas"]["TransactionSnapshotResponse"][];
         };
         /** net.bobinski.portfolio.api.route.ImportPortfolioStateRequest */
@@ -2027,17 +2074,23 @@ export interface components {
             schemaVersion: number;
             isValid: boolean;
             snapshotAccountCount: number;
+            snapshotAppPreferenceCount: number;
             snapshotInstrumentCount: number;
             snapshotTargetCount: number;
             snapshotTransactionCount: number;
+            snapshotImportProfileCount: number;
             existingAccountCount: number;
+            existingAppPreferenceCount: number;
             existingInstrumentCount: number;
             existingTargetCount: number;
             existingTransactionCount: number;
+            existingImportProfileCount: number;
             matchingAccountCount: number;
+            matchingAppPreferenceCount: number;
             matchingInstrumentCount: number;
             matchingTargetCount: number;
             matchingTransactionCount: number;
+            matchingImportProfileCount: number;
             blockingIssueCount: number;
             warningCount: number;
             issues: components["schemas"]["PortfolioImportIssueResponse"][];
@@ -2046,31 +2099,12 @@ export interface components {
         PortfolioImportResultResponse: {
             mode: string;
             accountCount: number;
+            appPreferenceCount: number;
             instrumentCount: number;
             targetCount: number;
             transactionCount: number;
+            importProfileCount: number;
             safetyBackupFileName?: string | null;
-        };
-        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsResponse */
-        TransactionImportHeaderMappingsResponse: {
-            account?: string | null;
-            type?: string | null;
-            tradeDate?: string | null;
-            settlementDate?: string | null;
-            instrument?: string | null;
-            quantity?: string | null;
-            unitPrice?: string | null;
-            grossAmount?: string | null;
-            feeAmount?: string | null;
-            taxAmount?: string | null;
-            currency?: string | null;
-            fxRateToPln?: string | null;
-            notes?: string | null;
-        };
-        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsResponse */
-        TransactionImportDefaultsResponse: {
-            accountId?: string | null;
-            currency?: string | null;
         };
         /** net.bobinski.portfolio.api.route.TransactionImportProfileResponse */
         TransactionImportProfileResponse: {

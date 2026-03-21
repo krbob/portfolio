@@ -7,6 +7,7 @@ import {
   useInstruments,
   usePortfolioTargets,
   usePreviewPortfolioStateImport,
+  useTransactionImportProfiles,
   useTransactions,
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
@@ -18,6 +19,7 @@ export function PortfolioStateSection() {
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const targetsQuery = usePortfolioTargets()
+  const importProfilesQuery = useTransactionImportProfiles()
   const transactionsQuery = useTransactions()
   const exportMutation = useExportPortfolioState()
   const previewMutation = usePreviewPortfolioStateImport()
@@ -40,8 +42,8 @@ export function PortfolioStateSection() {
       downloadSnapshot(snapshot)
       setImportFeedback(
         isPolish
-          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} targetów i ${snapshot.transactions.length} transakcji.`
-          : `Exported ${snapshot.accounts.length} accounts, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets and ${snapshot.transactions.length} transactions.`,
+          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.appPreferences?.length ?? 0} ustawień aplikacji, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} targetów, ${snapshot.transactions.length} transakcji i ${snapshot.importProfiles?.length ?? 0} profili importu.`
+          : `Exported ${snapshot.accounts.length} accounts, ${snapshot.appPreferences?.length ?? 0} app settings, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets, ${snapshot.transactions.length} transactions and ${snapshot.importProfiles?.length ?? 0} import profiles.`,
       )
     } catch (error) {
       setImportError(error instanceof Error ? error.message : isPolish ? 'Eksport nie powiódł się.' : 'Export failed.')
@@ -130,8 +132,8 @@ export function PortfolioStateSection() {
       setPreviewResult(null)
       setImportFeedback(
         isPolish
-          ? `Zaimportowano ${result.accountCount} kont, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów i ${result.transactionCount} transakcji w trybie ${result.mode}.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
-          : `Imported ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+          ? `Zaimportowano ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu w trybie ${result.mode}.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
+          : `Imported ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setReplaceConfirmation('')
     } catch (error) {
@@ -151,7 +153,7 @@ export function PortfolioStateSection() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
@@ -168,6 +170,10 @@ export function PortfolioStateSection() {
           <span className="text-xs text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{transactionsQuery.data?.length ?? '...'}</strong>
         </article>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{importProfilesQuery.data?.length ?? '...'}</strong>
+        </article>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -177,8 +183,8 @@ export function PortfolioStateSection() {
             <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Pobierz snapshot' : 'Download snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? 'Generuje kanoniczny snapshot JSON zawierający konta, instrumenty, targety i transakcje z oryginalnymi identyfikatorami i timestampami.'
-                : 'Generates a canonical JSON snapshot that includes accounts, instruments, targets and transactions with original ids and timestamps.'}
+                ? 'Generuje kanoniczny snapshot JSON zawierający ledger, ustawienia aplikacji i profile importu z oryginalnymi identyfikatorami i timestampami.'
+                : 'Generates a canonical JSON snapshot that includes the ledger, app settings and import profiles with original ids and timestamps.'}
             </p>
           </div>
 
@@ -201,8 +207,8 @@ export function PortfolioStateSection() {
             <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Odtwórz snapshot' : 'Restore snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? '`MERGE` wykonuje upsert po id. `REPLACE` czyści bieżący write model przed załadowaniem snapshotu, łącznie z alokacją targetów.'
-                : '`MERGE` upserts by id. `REPLACE` clears the current write model before loading the snapshot, including target allocation.'}
+                ? '`MERGE` wykonuje upsert po id/kluczu. `REPLACE` czyści bieżący write model, ustawienia aplikacji i profile importu przed załadowaniem snapshotu.'
+                : '`MERGE` upserts by id/key. `REPLACE` clears the current write model, app settings and import profiles before loading the snapshot.'}
             </p>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
@@ -279,12 +285,18 @@ export function PortfolioStateSection() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 <PreviewMetricCard
                   label={isPolish ? 'Konta' : 'Accounts'}
                   snapshotCount={previewResult.snapshotAccountCount}
                   existingCount={previewResult.existingAccountCount}
                   matchingCount={previewResult.matchingAccountCount}
+                />
+                <PreviewMetricCard
+                  label={isPolish ? 'Ustawienia' : 'App settings'}
+                  snapshotCount={previewResult.snapshotAppPreferenceCount}
+                  existingCount={previewResult.existingAppPreferenceCount}
+                  matchingCount={previewResult.matchingAppPreferenceCount}
                 />
                 <PreviewMetricCard
                   label={isPolish ? 'Instrumenty' : 'Instruments'}
@@ -304,16 +316,22 @@ export function PortfolioStateSection() {
                   existingCount={previewResult.existingTransactionCount}
                   matchingCount={previewResult.matchingTransactionCount}
                 />
+                <PreviewMetricCard
+                  label={isPolish ? 'Profile importu' : 'Import profiles'}
+                  snapshotCount={previewResult.snapshotImportProfileCount}
+                  existingCount={previewResult.existingImportProfileCount}
+                  matchingCount={previewResult.matchingImportProfileCount}
+                />
               </div>
 
               <p className="text-sm text-zinc-500 mt-3">
                 {previewResult.mode === 'REPLACE'
                   ? isPolish
-                    ? `REPLACE najpierw wyczyści bieżący write model: ${previewResult.existingAccountCount} kont, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} targetów i ${previewResult.existingTransactionCount} transakcji.`
-                    : `REPLACE will clear the current write model first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets and ${previewResult.existingTransactionCount} transactions.`
+                    ? `REPLACE najpierw wyczyści bieżący stan: ${previewResult.existingAccountCount} kont, ${previewResult.existingAppPreferenceCount} ustawień aplikacji, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} targetów, ${previewResult.existingTransactionCount} transakcji i ${previewResult.existingImportProfileCount} profili importu.`
+                    : `REPLACE will clear the current state first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingAppPreferenceCount} app settings, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets, ${previewResult.existingTransactionCount} transactions and ${previewResult.existingImportProfileCount} import profiles.`
                   : isPolish
-                    ? `MERGE wykona upsert po id dla ${previewResult.matchingAccountCount} kont, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} targetów i ${previewResult.matchingTransactionCount} transakcji.`
-                    : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets and ${previewResult.matchingTransactionCount} transactions by id.`}
+                    ? `MERGE wykona upsert po id/kluczu dla ${previewResult.matchingAccountCount} kont, ${previewResult.matchingAppPreferenceCount} ustawień aplikacji, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} targetów, ${previewResult.matchingTransactionCount} transakcji i ${previewResult.matchingImportProfileCount} profili importu.`
+                    : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingAppPreferenceCount} app settings, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets, ${previewResult.matchingTransactionCount} transactions and ${previewResult.matchingImportProfileCount} import profiles by id/key.`}
               </p>
 
               {previewResult.issues.length > 0 && (

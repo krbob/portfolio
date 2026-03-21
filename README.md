@@ -45,12 +45,13 @@ portfolio/
 - domain model and initial relational schema are defined
 - runtime storage is SQLite
 - tests still use lightweight in-memory repositories where isolation matters, but that path is no longer a runtime mode
-- server-side JSON backups can be created, listed, retained, and restored
+- server-side JSON backups can be created, listed, retained, downloaded, and restored
 - optional backup scheduling is available in the API process
 - benchmark overlays and benchmark-relative return comparisons are available in the web UI
 - transaction CSV import now supports preview, validation, name-based mapping, and duplicate skipping
 - append-only audit events are available for recent write-model, import, and backup activity
 - destructive `REPLACE` import and restore flows now require explicit confirmation and create safety backups automatically
+- canonical exports and server backups now include app preferences and reusable import profiles alongside the ledger
 - the backups UI exposes retention-related audit activity, restore history, and recent backup failures
 - history and returns are persisted as rebuildable read-model cache snapshots with metadata and a small diagnostics view in the web app
 - optional background refresh can warm cached history and returns on startup and on a fixed interval
@@ -205,7 +206,7 @@ The current web app already uses generated OpenAPI types in the read-model layer
 
 ## Server backups
 
-The API can maintain server-side JSON backups of the canonical write model.
+The API can maintain server-side JSON backups of the canonical application state.
 
 Configuration keys:
 
@@ -243,6 +244,15 @@ For destructive `REPLACE` operations:
 - `POST /v1/portfolio/state/import` requires `confirmation: "REPLACE"`
 
 Both flows create a safety backup automatically before applying destructive changes.
+
+Canonical state export and backup currently include:
+
+- accounts
+- instruments
+- targets
+- transactions
+- app preferences, including benchmark and rebalancing settings
+- reusable transaction import profiles
 
 ## Read-model refresh
 

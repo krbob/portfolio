@@ -37,6 +37,9 @@ class PortfolioBackupRouteTest {
 
         try {
             val accountId = createAccount(name = "Primary")
+            saveBenchmarkSettings()
+            saveRebalancingSettings()
+            createImportProfile(accountId)
             createTransaction(
                 """
                 {
@@ -73,14 +76,20 @@ class PortfolioBackupRouteTest {
 
             assertEquals(HttpStatusCode.OK, runResponse.status)
             assertTrue(runResponse.bodyAsText().contains("\"isReadable\": true"))
+            assertTrue(runResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))
+            assertTrue(runResponse.bodyAsText().contains("\"importProfileCount\": 1"))
             assertEquals(HttpStatusCode.OK, listResponse.status)
             assertTrue(listResponse.bodyAsText().contains("\"schedulerEnabled\": false"))
             assertTrue(listResponse.bodyAsText().contains(backupFileName))
             assertEquals(HttpStatusCode.OK, downloadResponse.status)
-            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 1"))
+            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 2"))
+            assertTrue(downloadResponse.bodyAsText().contains("\"appPreferences\": ["))
+            assertTrue(downloadResponse.bodyAsText().contains("\"importProfiles\": ["))
             assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)
             assertEquals(HttpStatusCode.OK, restoreResponse.status)
             assertTrue(restoreResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
+            assertTrue(restoreResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))
+            assertTrue(restoreResponse.bodyAsText().contains("\"importProfileCount\": 1"))
             assertTrue(restoreResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
             assertTrue(accountsResponse.bodyAsText().contains("\"name\": \"Primary\""))
             assertFalse(accountsResponse.bodyAsText().contains("\"name\": \"Secondary\""))
@@ -164,6 +173,61 @@ class PortfolioBackupRouteTest {
         val response = client.post("/v1/transactions") {
             contentType(ContentType.Application.Json)
             setBody(body)
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.saveBenchmarkSettings() {
+        val response = client.post("/v1/portfolio/benchmark-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM"],
+                  "pinnedKeys": ["VWRA", "CUSTOM"],
+                  "customLabel": "Europe 600",
+                  "customSymbol": "EXSA.DE"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.saveRebalancingSettings() {
+        val response = client.post("/v1/portfolio/rebalancing-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "toleranceBandPctPoints": "3.50",
+                  "mode": "ALLOW_TRIMS"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createImportProfile(accountId: String) {
+        val response = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Interactive Brokers CSV",
+                  "description": "Primary import profile",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
         }
         assertEquals(HttpStatusCode.Created, response.status)
     }

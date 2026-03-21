@@ -466,8 +466,10 @@ data class PortfolioSnapshotResponse(
     val schemaVersion: Int,
     val exportedAt: String,
     val accounts: List<AccountSnapshotResponse>,
+    val appPreferences: List<AppPreferenceSnapshotResponse> = emptyList(),
     val instruments: List<InstrumentSnapshotResponse>,
     val targets: List<PortfolioTargetSnapshotResponse> = emptyList(),
+    val importProfiles: List<TransactionImportProfileSnapshotResponse> = emptyList(),
     val transactions: List<TransactionSnapshotResponse>
 )
 
@@ -537,6 +539,28 @@ data class PortfolioTargetSnapshotResponse(
 )
 
 @Serializable
+data class AppPreferenceSnapshotResponse(
+    val key: String,
+    val valueJson: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class TransactionImportProfileSnapshotResponse(
+    val id: String,
+    val name: String,
+    val description: String,
+    val delimiter: String,
+    val dateFormat: String,
+    val decimalSeparator: String,
+    val skipDuplicatesByDefault: Boolean,
+    val headerMappings: TransactionImportHeaderMappingsResponse,
+    val defaults: TransactionImportDefaultsResponse,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
 data class ImportPortfolioStateRequest(
     val mode: String = "MERGE",
     val confirmation: String? = null,
@@ -547,9 +571,11 @@ data class ImportPortfolioStateRequest(
 data class PortfolioImportResultResponse(
     val mode: String,
     val accountCount: Int,
+    val appPreferenceCount: Int,
     val instrumentCount: Int,
     val targetCount: Int,
     val transactionCount: Int,
+    val importProfileCount: Int,
     val safetyBackupFileName: String? = null
 )
 
@@ -559,17 +585,23 @@ data class PortfolioImportPreviewResponse(
     val schemaVersion: Int,
     val isValid: Boolean,
     val snapshotAccountCount: Int,
+    val snapshotAppPreferenceCount: Int,
     val snapshotInstrumentCount: Int,
     val snapshotTargetCount: Int,
     val snapshotTransactionCount: Int,
+    val snapshotImportProfileCount: Int,
     val existingAccountCount: Int,
+    val existingAppPreferenceCount: Int,
     val existingInstrumentCount: Int,
     val existingTargetCount: Int,
     val existingTransactionCount: Int,
+    val existingImportProfileCount: Int,
     val matchingAccountCount: Int,
+    val matchingAppPreferenceCount: Int,
     val matchingInstrumentCount: Int,
     val matchingTargetCount: Int,
     val matchingTransactionCount: Int,
+    val matchingImportProfileCount: Int,
     val blockingIssueCount: Int,
     val warningCount: Int,
     val issues: List<PortfolioImportIssueResponse>
@@ -659,9 +691,11 @@ data class PortfolioBackupRecordResponse(
     val sizeBytes: Long,
     val schemaVersion: Int?,
     val accountCount: Int?,
+    val appPreferenceCount: Int?,
     val instrumentCount: Int?,
     val targetCount: Int?,
     val transactionCount: Int?,
+    val importProfileCount: Int?,
     val isReadable: Boolean,
     val errorMessage: String?
 )
@@ -678,9 +712,11 @@ data class PortfolioBackupRestoreResultResponse(
     val fileName: String,
     val mode: String,
     val accountCount: Int,
+    val appPreferenceCount: Int,
     val instrumentCount: Int,
     val targetCount: Int,
     val transactionCount: Int,
+    val importProfileCount: Int,
     val safetyBackupFileName: String? = null
 )
 
@@ -928,6 +964,13 @@ private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfoli
             updatedAt = snapshot.updatedAt
         )
     },
+    appPreferences = appPreferences.map { snapshot ->
+        AppPreferenceSnapshotResponse(
+            key = snapshot.key,
+            valueJson = snapshot.valueJson,
+            updatedAt = snapshot.updatedAt
+        )
+    },
     instruments = instruments.map { snapshot ->
         InstrumentSnapshotResponse(
             id = snapshot.id,
@@ -956,6 +999,38 @@ private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfoli
             id = snapshot.id,
             assetClass = snapshot.assetClass,
             targetWeight = snapshot.targetWeight,
+            createdAt = snapshot.createdAt,
+            updatedAt = snapshot.updatedAt
+        )
+    },
+    importProfiles = importProfiles.map { snapshot ->
+        TransactionImportProfileSnapshotResponse(
+            id = snapshot.id,
+            name = snapshot.name,
+            description = snapshot.description,
+            delimiter = snapshot.delimiter,
+            dateFormat = snapshot.dateFormat,
+            decimalSeparator = snapshot.decimalSeparator,
+            skipDuplicatesByDefault = snapshot.skipDuplicatesByDefault,
+            headerMappings = TransactionImportHeaderMappingsResponse(
+                account = snapshot.headerMappings.account,
+                type = snapshot.headerMappings.type,
+                tradeDate = snapshot.headerMappings.tradeDate,
+                settlementDate = snapshot.headerMappings.settlementDate,
+                instrument = snapshot.headerMappings.instrument,
+                quantity = snapshot.headerMappings.quantity,
+                unitPrice = snapshot.headerMappings.unitPrice,
+                grossAmount = snapshot.headerMappings.grossAmount,
+                feeAmount = snapshot.headerMappings.feeAmount,
+                taxAmount = snapshot.headerMappings.taxAmount,
+                currency = snapshot.headerMappings.currency,
+                fxRateToPln = snapshot.headerMappings.fxRateToPln,
+                notes = snapshot.headerMappings.notes
+            ),
+            defaults = TransactionImportDefaultsResponse(
+                accountId = snapshot.defaults.accountId,
+                currency = snapshot.defaults.currency
+            ),
             createdAt = snapshot.createdAt,
             updatedAt = snapshot.updatedAt
         )
@@ -1003,6 +1078,13 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
                 updatedAt = account.updatedAt
             )
         },
+        appPreferences = snapshot.appPreferences.map { preference ->
+            net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot(
+                key = preference.key,
+                valueJson = preference.valueJson,
+                updatedAt = preference.updatedAt
+            )
+        },
         instruments = snapshot.instruments.map { instrument ->
             net.bobinski.portfolio.api.domain.service.InstrumentSnapshot(
                 id = instrument.id,
@@ -1035,6 +1117,38 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
                 updatedAt = target.updatedAt
             )
         },
+        importProfiles = snapshot.importProfiles.map { profile ->
+            net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot(
+                id = profile.id,
+                name = profile.name,
+                description = profile.description,
+                delimiter = profile.delimiter,
+                dateFormat = profile.dateFormat,
+                decimalSeparator = profile.decimalSeparator,
+                skipDuplicatesByDefault = profile.skipDuplicatesByDefault,
+                headerMappings = net.bobinski.portfolio.api.domain.model.TransactionImportHeaderMappings(
+                    account = profile.headerMappings.account,
+                    type = profile.headerMappings.type,
+                    tradeDate = profile.headerMappings.tradeDate,
+                    settlementDate = profile.headerMappings.settlementDate,
+                    instrument = profile.headerMappings.instrument,
+                    quantity = profile.headerMappings.quantity,
+                    unitPrice = profile.headerMappings.unitPrice,
+                    grossAmount = profile.headerMappings.grossAmount,
+                    feeAmount = profile.headerMappings.feeAmount,
+                    taxAmount = profile.headerMappings.taxAmount,
+                    currency = profile.headerMappings.currency,
+                    fxRateToPln = profile.headerMappings.fxRateToPln,
+                    notes = profile.headerMappings.notes
+                ),
+                defaults = net.bobinski.portfolio.api.domain.model.TransactionImportDefaults(
+                    accountId = profile.defaults.accountId,
+                    currency = profile.defaults.currency
+                ),
+                createdAt = profile.createdAt,
+                updatedAt = profile.updatedAt
+            )
+        },
         transactions = snapshot.transactions.map { transaction ->
             net.bobinski.portfolio.api.domain.service.TransactionSnapshot(
                 id = transaction.id,
@@ -1062,9 +1176,11 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toRe
     PortfolioImportResultResponse(
         mode = mode.name,
         accountCount = accountCount,
+        appPreferenceCount = appPreferenceCount,
         instrumentCount = instrumentCount,
         targetCount = targetCount,
         transactionCount = transactionCount,
+        importProfileCount = importProfileCount,
         safetyBackupFileName = safetyBackupFileName
     )
 
@@ -1074,17 +1190,23 @@ private fun PortfolioImportPreview.toResponse(): PortfolioImportPreviewResponse 
         schemaVersion = schemaVersion,
         isValid = isValid,
         snapshotAccountCount = snapshotAccountCount,
+        snapshotAppPreferenceCount = snapshotAppPreferenceCount,
         snapshotInstrumentCount = snapshotInstrumentCount,
         snapshotTargetCount = snapshotTargetCount,
         snapshotTransactionCount = snapshotTransactionCount,
+        snapshotImportProfileCount = snapshotImportProfileCount,
         existingAccountCount = existingAccountCount,
+        existingAppPreferenceCount = existingAppPreferenceCount,
         existingInstrumentCount = existingInstrumentCount,
         existingTargetCount = existingTargetCount,
         existingTransactionCount = existingTransactionCount,
+        existingImportProfileCount = existingImportProfileCount,
         matchingAccountCount = matchingAccountCount,
+        matchingAppPreferenceCount = matchingAppPreferenceCount,
         matchingInstrumentCount = matchingInstrumentCount,
         matchingTargetCount = matchingTargetCount,
         matchingTransactionCount = matchingTransactionCount,
+        matchingImportProfileCount = matchingImportProfileCount,
         blockingIssueCount = blockingIssueCount,
         warningCount = warningCount,
         issues = issues.map(PortfolioImportIssue::toResponse)
@@ -1116,9 +1238,11 @@ private fun PortfolioBackupRecord.toResponse(): PortfolioBackupRecordResponse = 
     sizeBytes = sizeBytes,
     schemaVersion = schemaVersion,
     accountCount = accountCount,
+    appPreferenceCount = appPreferenceCount,
     instrumentCount = instrumentCount,
     targetCount = targetCount,
     transactionCount = transactionCount,
+    importProfileCount = importProfileCount,
     isReadable = isReadable,
     errorMessage = errorMessage
 )
@@ -1183,9 +1307,11 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBackupRestoreResu
         fileName = fileName,
         mode = mode.name,
         accountCount = accountCount,
+        appPreferenceCount = appPreferenceCount,
         instrumentCount = instrumentCount,
         targetCount = targetCount,
         transactionCount = transactionCount,
+        importProfileCount = importProfileCount,
         safetyBackupFileName = safetyBackupFileName
     )
 

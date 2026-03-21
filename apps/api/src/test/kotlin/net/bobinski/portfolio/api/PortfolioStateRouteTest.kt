@@ -61,6 +61,9 @@ class PortfolioStateRouteTest {
             }
             """.trimIndent()
         )
+        saveBenchmarkSettings()
+        saveRebalancingSettings()
+        createImportProfile(accountId)
 
         val exportResponse = client.get("/v1/portfolio/state/export")
         val previewResponse = client.post("/v1/portfolio/state/preview") {
@@ -78,10 +81,14 @@ class PortfolioStateRouteTest {
 
         assertEquals(HttpStatusCode.OK, previewResponse.status)
         assertTrue(previewResponse.bodyAsText().contains("\"isValid\": true"))
+        assertTrue(previewResponse.bodyAsText().contains("\"snapshotAppPreferenceCount\": 2"))
+        assertTrue(previewResponse.bodyAsText().contains("\"existingAppPreferenceCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"snapshotTargetCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"existingTargetCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"snapshotTransactionCount\": 2"))
         assertTrue(previewResponse.bodyAsText().contains("\"existingTransactionCount\": 2"))
+        assertTrue(previewResponse.bodyAsText().contains("\"snapshotImportProfileCount\": 1"))
+        assertTrue(previewResponse.bodyAsText().contains("\"existingImportProfileCount\": 1"))
     }
 
     @Test
@@ -129,6 +136,9 @@ class PortfolioStateRouteTest {
             }
             """.trimIndent()
         )
+        saveBenchmarkSettings()
+        saveRebalancingSettings()
+        createImportProfile(accountId)
 
         val exportResponse = client.get("/v1/portfolio/state/export")
         val importResponse = client.post("/v1/portfolio/state/import") {
@@ -144,17 +154,27 @@ class PortfolioStateRouteTest {
             )
         }
         val transactionsResponse = client.get("/v1/transactions")
+        val benchmarkSettingsResponse = client.get("/v1/portfolio/benchmark-settings")
+        val rebalancingSettingsResponse = client.get("/v1/portfolio/rebalancing-settings")
+        val importProfilesResponse = client.get("/v1/transactions/import/profiles")
 
         assertEquals(HttpStatusCode.OK, exportResponse.status)
-        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 1"))
+        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 2"))
+        assertTrue(exportResponse.bodyAsText().contains("\"appPreferences\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"targets\": ["))
+        assertTrue(exportResponse.bodyAsText().contains("\"importProfiles\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"name\": \"Primary\""))
         assertEquals(HttpStatusCode.OK, importResponse.status)
         assertTrue(importResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
+        assertTrue(importResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))
         assertTrue(importResponse.bodyAsText().contains("\"targetCount\": 2"))
         assertTrue(importResponse.bodyAsText().contains("\"transactionCount\": 2"))
+        assertTrue(importResponse.bodyAsText().contains("\"importProfileCount\": 1"))
         assertTrue(importResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
         assertTrue(transactionsResponse.bodyAsText().contains("\"type\": \"BUY\""))
+        assertTrue(benchmarkSettingsResponse.bodyAsText().contains("\"customSymbol\": \"EXSA.DE\""))
+        assertTrue(rebalancingSettingsResponse.bodyAsText().contains("\"mode\": \"ALLOW_TRIMS\""))
+        assertTrue(importProfilesResponse.bodyAsText().contains("\"name\": \"Interactive Brokers CSV\""))
     }
 
     @Test
@@ -282,7 +302,10 @@ class PortfolioStateRouteTest {
                     "schemaVersion": 1,
                     "exportedAt": "2026-03-13T18:00:00Z",
                     "accounts": [],
+                    "appPreferences": [],
                     "instruments": [],
+                    "targets": [],
+                    "importProfiles": [],
                     "transactions": [
                       {
                         "id": "11111111-1111-1111-1111-111111111111",
@@ -369,5 +392,60 @@ class PortfolioStateRouteTest {
             setBody(body)
         }
         assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.saveBenchmarkSettings() {
+        val response = client.post("/v1/portfolio/benchmark-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM"],
+                  "pinnedKeys": ["VWRA", "CUSTOM"],
+                  "customLabel": "Europe 600",
+                  "customSymbol": "EXSA.DE"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.saveRebalancingSettings() {
+        val response = client.post("/v1/portfolio/rebalancing-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "toleranceBandPctPoints": "3.50",
+                  "mode": "ALLOW_TRIMS"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createImportProfile(accountId: String) {
+        val response = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Interactive Brokers CSV",
+                  "description": "Primary import profile",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
     }
 }

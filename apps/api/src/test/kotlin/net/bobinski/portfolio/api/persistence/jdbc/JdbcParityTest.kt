@@ -26,6 +26,7 @@ import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepository
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
@@ -49,6 +50,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionImportProfileRepository
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -74,6 +76,7 @@ class JdbcParityTest {
         appPreferenceRepository = InMemoryAppPreferenceRepository(),
         instrumentRepository = InMemoryInstrumentRepository(),
         transactionRepository = InMemoryTransactionRepository(),
+        transactionImportProfileRepository = InMemoryTransactionImportProfileRepository(),
         portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
         auditEventRepository = InMemoryAuditEventRepository(),
         closeAction = {}
@@ -96,6 +99,7 @@ class JdbcParityTest {
             appPreferenceRepository = JdbcAppPreferenceRepository(resources.dataSource),
             instrumentRepository = JdbcInstrumentRepository(resources.dataSource),
             transactionRepository = JdbcTransactionRepository(resources.dataSource),
+            transactionImportProfileRepository = JdbcTransactionImportProfileRepository(resources.dataSource, Json.Default),
             portfolioTargetRepository = JdbcPortfolioTargetRepository(resources.dataSource),
             auditEventRepository = JdbcAuditEventRepository(resources.dataSource, Json.Default),
             closeAction = {
@@ -113,6 +117,7 @@ class JdbcParityTest {
         private val appPreferenceRepository: AppPreferenceRepository,
         private val instrumentRepository: InstrumentRepository,
         private val transactionRepository: TransactionRepository,
+        private val transactionImportProfileRepository: TransactionImportProfileRepository,
         private val portfolioTargetRepository: PortfolioTargetRepository,
         private val auditEventRepository: AuditEventRepository,
         private val closeAction: () -> Unit
@@ -143,9 +148,11 @@ class JdbcParityTest {
         )
         private val transferService = PortfolioTransferService(
             accountRepository = accountRepository,
+            appPreferenceRepository = appPreferenceRepository,
             instrumentRepository = instrumentRepository,
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
+            transactionImportProfileRepository = transactionImportProfileRepository,
             auditLogService = auditLogService,
             clock = clock
         )

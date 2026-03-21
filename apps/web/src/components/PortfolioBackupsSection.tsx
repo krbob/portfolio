@@ -34,8 +34,8 @@ export function PortfolioBackupsSection() {
       const result = await runBackupMutation.mutateAsync()
       setFeedback(
         isPolish
-          ? `Utworzono backup ${result.fileName} z ${result.accountCount} kontami, ${result.instrumentCount} instrumentami, ${result.targetCount} targetami i ${result.transactionCount} transakcjami.`
-          : `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions.`,
+          ? `Utworzono backup ${result.fileName} z ${result.accountCount} kontami, ${result.appPreferenceCount} ustawieniami aplikacji, ${result.instrumentCount} instrumentami, ${result.targetCount} targetami, ${result.transactionCount} transakcjami i ${result.importProfileCount} profilami importu.`
+          : `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.`,
       )
     } catch (error) {
       setActionError(error instanceof Error ? error.message : isPolish ? 'Uruchomienie backupu nie powiodło się.' : 'Backup run failed.')
@@ -54,8 +54,8 @@ export function PortfolioBackupsSection() {
       })
       setFeedback(
         isPolish
-          ? `Odtworzono ${result.fileName} w trybie ${result.mode}: ${result.accountCount} kont, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów i ${result.transactionCount} transakcji.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
-          : `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.instrumentCount} instruments, ${result.targetCount} targets and ${result.transactionCount} transactions.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+          ? `Odtworzono ${result.fileName} w trybie ${result.mode}: ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
+          : `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setRestoreConfirmation('')
     } catch (error) {
@@ -87,8 +87,8 @@ export function PortfolioBackupsSection() {
         title={isPolish ? 'Snapshoty serwera' : 'Server snapshots'}
         description={
           isPolish
-            ? 'Przechowuj kanoniczne backupy JSON na serwerze, łącznie z alokacją targetów, uruchamiaj je na żądanie i odtwarzaj znany dobry stan bez pobierania plików.'
-            : 'Keep canonical JSON backups on the server, including target allocation, trigger them on demand, and restore a known-good state without downloading files first.'
+            ? 'Przechowuj kanoniczne backupy JSON na serwerze, łącznie z targetami, ustawieniami aplikacji i profilami importu, uruchamiaj je na żądanie i odtwarzaj znany dobry stan bez pobierania plików.'
+            : 'Keep canonical JSON backups on the server, including targets, app settings and import profiles, trigger them on demand, and restore a known-good state without downloading files first.'
         }
       />
 
@@ -191,10 +191,14 @@ export function PortfolioBackupsSection() {
                 </span>
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-6">
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? 'n/a'}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">{isPolish ? 'Ustawienia' : 'App settings'}</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? 'n/a'}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Instrumenty' : 'Instruments'}</dt>
@@ -207,6 +211,10 @@ export function PortfolioBackupsSection() {
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? 'n/a'}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</dt>
+                  <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? 'n/a'}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Schemat' : 'Schema'}</dt>
