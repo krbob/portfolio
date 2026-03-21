@@ -70,10 +70,16 @@ export function buildPortfolioDataQualitySummary({
   const cpiCoverageThroughMonth = findCpiCoverageThroughMonth(returns)
   const historySnapshot = cacheSnapshots.find((snapshot) => snapshot.cacheKey === 'portfolio.daily-history')
   const returnsSnapshot = cacheSnapshots.find((snapshot) => snapshot.cacheKey === 'portfolio.returns')
-  const lastRefreshAt = [refreshStatus.lastSuccessAt, historySnapshot?.generatedAt, returnsSnapshot?.generatedAt]
-    .filter((value): value is string => Boolean(value))
-    .sort()
-    .at(-1) ?? null
+  const lastSuccessfulRefreshAt = latestTimestamp([
+    refreshStatus.lastSuccessAt,
+    historySnapshot?.generatedAt,
+    returnsSnapshot?.generatedAt,
+  ])
+  const lastRefreshAt = latestTimestamp([
+    refreshStatus.lastRunAt,
+    refreshStatus.lastFailureAt,
+    lastSuccessfulRefreshAt,
+  ])
 
   const checks: PortfolioDataQualityCheck[] = [
     buildValuationCheck(overview, isPolish),
@@ -286,14 +292,35 @@ function buildRefreshCheck({
   refreshStatus: ReadModelRefreshStatus
   isPolish: boolean
 }): PortfolioDataQualityCheck {
-  if (historyRefreshAt || returnsRefreshAt || refreshStatus.lastSuccessAt) {
+  const lastSuccessfulRefreshAt = latestTimestamp([
+    refreshStatus.lastSuccessAt,
+    historyRefreshAt,
+    returnsRefreshAt,
+  ])
+
+  if (
+    refreshStatus.lastFailureAt &&
+    (!lastSuccessfulRefreshAt || compareTimestamps(refreshStatus.lastFailureAt, lastSuccessfulRefreshAt) > 0)
+  ) {
+    const failureMessage = refreshStatus.lastFailureMessage ?? (isPolish ? 'Ostatni refresh zakończył się błędem.' : 'The latest refresh failed.')
+    return {
+      key: 'refresh',
+      label: isPolish ? 'Odświeżanie read modeli' : 'Read-model refresh',
+      status: 'WARN',
+      message: isPolish
+        ? `Ostatni refresh nie powiódł się ${refreshStatus.lastFailureAt}: ${failureMessage}`
+        : `The latest refresh failed at ${refreshStatus.lastFailureAt}: ${failureMessage}`,
+    }
+  }
+
+  if (lastSuccessfulRefreshAt) {
     return {
       key: 'refresh',
       label: isPolish ? 'Odświeżanie read modeli' : 'Read-model refresh',
       status: 'PASS',
       message: isPolish
-        ? `Ostatnie udane odświeżenie: ${refreshStatus.lastSuccessAt ?? historyRefreshAt ?? returnsRefreshAt}.`
-        : `Last successful refresh: ${refreshStatus.lastSuccessAt ?? historyRefreshAt ?? returnsRefreshAt}.`,
+        ? `Ostatnie udane odświeżenie: ${lastSuccessfulRefreshAt}.`
+        : `Last successful refresh: ${lastSuccessfulRefreshAt}.`,
     }
   }
 
@@ -333,4 +360,15 @@ function findCpiCoverageThroughMonth(returns: PortfolioReturns): string | null {
 
 function notAvailableLabel(isPolish: boolean) {
   return isPolish ? 'b/d' : 'N/A'
+}
+
+function latestTimestamp(values: Array<string | null | undefined>): string | null {
+  return values
+    .filter((value): value is string => Boolean(value))
+    .sort(compareTimestamps)
+    .at(-1) ?? null
+}
+
+function compareTimestamps(left: string, right: string) {
+  return Date.parse(left) - Date.parse(right)
 }

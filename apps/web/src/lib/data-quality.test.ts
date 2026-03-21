@@ -22,6 +22,31 @@ describe('buildPortfolioDataQualitySummary', () => {
     expect(summary?.warningCount).toBe(2)
     expect(summary?.noticeMessages.some((message) => message.includes('gold reference view'))).toBe(true)
   })
+
+  it('marks data quality as degraded when the latest refresh failed after the last success', () => {
+    const summary = buildPortfolioDataQualitySummary({
+      overview: overview(),
+      history: history(),
+      returns: returns(),
+      cacheSnapshots: cacheSnapshots(),
+      refreshStatus: {
+        ...refreshStatus(),
+        lastRunAt: '2026-03-20T13:05:00Z',
+        lastSuccessAt: '2026-03-20T12:02:00Z',
+        lastFailureAt: '2026-03-20T13:05:00Z',
+        lastFailureMessage: 'benchmark refresh timed out',
+      },
+      isPolish: false,
+    })
+
+    expect(summary).not.toBeNull()
+    expect(summary?.overallStatus).toBe('WARN')
+    expect(summary?.lastRefreshAt).toBe('2026-03-20T13:05:00Z')
+
+    const refreshCheck = summary?.checks.find((check) => check.key === 'refresh')
+    expect(refreshCheck?.status).toBe('WARN')
+    expect(refreshCheck?.message).toContain('benchmark refresh timed out')
+  })
 })
 
 function overview(): PortfolioOverview {
