@@ -91,7 +91,8 @@ class ApplicationTest {
         environment {
             config = MapApplicationConfig(
                 "portfolio.stage" to "test",
-                "portfolio.openapi.uiEnabled" to "false"
+                "portfolio.openapi.uiEnabled" to "false",
+                "portfolio.marketData.enabled" to "false"
             )
         }
 

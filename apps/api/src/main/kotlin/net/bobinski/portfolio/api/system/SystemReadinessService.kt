@@ -5,9 +5,15 @@ import java.nio.file.Path
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
 import javax.sql.DataSource
+import kotlinx.coroutines.withTimeout
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
+import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
+import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
+import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 
@@ -17,9 +23,12 @@ class SystemReadinessService(
     private val marketDataConfig: MarketDataConfig,
     private val authConfig: AuthConfig,
     private val clock: Clock,
-    private val dataSource: DataSource? = null
+    private val dataSource: DataSource? = null,
+    private val stockAnalystClient: StockAnalystClient? = null,
+    private val edoCalculatorClient: EdoCalculatorClient? = null,
+    private val goldApiClient: GoldApiClient? = null
 ) {
-    fun current(): SystemReadiness {
+    suspend fun current(): SystemReadiness {
         val checks = checks()
         return SystemReadiness(
             status = readinessStatus(checks),
@@ -28,11 +37,11 @@ class SystemReadinessService(
         )
     }
 
-    private fun checks(): List<SystemReadinessCheck> = buildList {
+    private suspend fun checks(): List<SystemReadinessCheck> = buildList {
         add(databasePathCheck())
         add(databaseConnectionCheck())
         add(backupDirectoryCheck())
-        add(marketDataCheck())
+        addAll(marketDataChecks())
         add(authCheck())
     }
 
@@ -145,22 +154,118 @@ class SystemReadinessService(
         }
     }
 
-    private fun marketDataCheck(): SystemReadinessCheck =
+    private suspend fun marketDataChecks(): List<SystemReadinessCheck> =
         if (!marketDataConfig.enabled) {
-            SystemReadinessCheck(
-                key = "market-data",
-                label = "Market data",
-                status = ReadinessCheckStatus.INFO,
-                message = "Live market data is disabled."
+            listOf(
+                SystemReadinessCheck(
+                    key = "market-data",
+                    label = "Market data",
+                    status = ReadinessCheckStatus.INFO,
+                    message = "Live market data is disabled."
+                )
             )
         } else {
-            SystemReadinessCheck(
-                key = "market-data",
-                label = "Market data",
-                status = ReadinessCheckStatus.PASS,
-                message = "Using ${marketDataConfig.stockAnalystBaseUrl} and ${marketDataConfig.edoCalculatorBaseUrl}."
+            buildList {
+                add(stockAnalystProbeCheck())
+                add(edoCalculatorProbeCheck())
+                add(goldProbeCheck())
+            }
+        }
+
+    private suspend fun stockAnalystProbeCheck(): SystemReadinessCheck = probeCheck(
+        key = "stock-analyst",
+        label = "Stock Analyst",
+        clientBound = stockAnalystClient != null,
+        unavailableMessage = "Stock Analyst client is not bound in this application mode."
+    ) {
+        val history = stockAnalystClient!!.history(
+            symbol = marketDataConfig.usdPlnSymbol,
+            from = MARKET_DATA_PROBE_FROM,
+            to = MARKET_DATA_PROBE_TO
+        )
+        require(history.isNotEmpty()) {
+            "Stock Analyst returned no history points for ${marketDataConfig.usdPlnSymbol}."
+        }
+        "Responded with ${history.size} history points for ${marketDataConfig.usdPlnSymbol}."
+    }
+
+    private suspend fun edoCalculatorProbeCheck(): SystemReadinessCheck = probeCheck(
+        key = "edo-calculator",
+        label = "EDO Calculator",
+        clientBound = edoCalculatorClient != null,
+        unavailableMessage = "EDO Calculator client is not bound in this application mode."
+    ) {
+        val inflation = edoCalculatorClient!!.monthlyInflation(
+            from = CPI_PROBE_FROM,
+            untilExclusive = CPI_PROBE_UNTIL_EXCLUSIVE
+        )
+        require(inflation.points.isNotEmpty()) {
+            "EDO Calculator returned no CPI points for $CPI_PROBE_FROM..$CPI_PROBE_UNTIL_EXCLUSIVE."
+        }
+        "Responded with ${inflation.points.size} CPI points for $CPI_PROBE_FROM..$CPI_PROBE_UNTIL_EXCLUSIVE."
+    }
+
+    private suspend fun goldProbeCheck(): SystemReadinessCheck {
+        if (marketDataConfig.goldApiKey.isNullOrBlank()) {
+            return SystemReadinessCheck(
+                key = "gold-market-data",
+                label = "Gold data",
+                status = ReadinessCheckStatus.INFO,
+                message = "Spot gold API key is not configured; using fallback benchmark ${marketDataConfig.goldBenchmarkSymbol}."
             )
         }
+
+        return probeCheck(
+            key = "gold-market-data",
+            label = "Gold data",
+            clientBound = goldApiClient != null,
+            unavailableMessage = "Gold API client is not bound in this application mode."
+        ) {
+            val history = goldApiClient!!.historyUsd(
+                apiKey = marketDataConfig.goldApiKey,
+                from = GOLD_PROBE_FROM,
+                to = GOLD_PROBE_TO
+            )
+            require(history.isNotEmpty()) {
+                "Gold API returned no spot XAU points."
+            }
+            "Responded with ${history.size} spot XAU points."
+        }
+    }
+
+    private suspend fun probeCheck(
+        key: String,
+        label: String,
+        clientBound: Boolean,
+        unavailableMessage: String,
+        probe: suspend () -> String
+    ): SystemReadinessCheck {
+        return if (!clientBound) {
+            SystemReadinessCheck(
+                key = key,
+                label = label,
+                status = ReadinessCheckStatus.INFO,
+                message = unavailableMessage
+            )
+        } else {
+            runCatching {
+                val message = withTimeout(MARKET_DATA_PROBE_TIMEOUT_MS) { probe() }
+                SystemReadinessCheck(
+                    key = key,
+                    label = label,
+                    status = ReadinessCheckStatus.PASS,
+                    message = message
+                )
+            }.getOrElse { exception ->
+                SystemReadinessCheck(
+                    key = key,
+                    label = label,
+                    status = ReadinessCheckStatus.WARN,
+                    message = exception.message ?: "$label probe failed."
+                )
+            }
+        }
+    }
 
     private fun authCheck(): SystemReadinessCheck =
         if (!authConfig.enabled) {
@@ -183,6 +288,16 @@ class SystemReadinessService(
         checks.any { it.status == ReadinessCheckStatus.FAIL } -> SystemReadinessStatus.NOT_READY
         checks.any { it.status == ReadinessCheckStatus.WARN } -> SystemReadinessStatus.DEGRADED
         else -> SystemReadinessStatus.READY
+    }
+
+    private companion object {
+        const val MARKET_DATA_PROBE_TIMEOUT_MS = 2_500L
+        val MARKET_DATA_PROBE_FROM: LocalDate = LocalDate.of(2025, 1, 2)
+        val MARKET_DATA_PROBE_TO: LocalDate = LocalDate.of(2025, 1, 10)
+        val CPI_PROBE_FROM: YearMonth = YearMonth.of(2025, 1)
+        val CPI_PROBE_UNTIL_EXCLUSIVE: YearMonth = YearMonth.of(2025, 3)
+        val GOLD_PROBE_FROM: LocalDate = LocalDate.of(2025, 1, 2)
+        val GOLD_PROBE_TO: LocalDate = LocalDate.of(2025, 1, 5)
     }
 }
 

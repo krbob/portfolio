@@ -302,7 +302,10 @@ fun appModule(
             marketDataConfig = get(),
             authConfig = get(),
             clock = get(),
-            dataSource = if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) get<DataSource>() else null
+            dataSource = if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) get<DataSource>() else null,
+            stockAnalystClient = get(),
+            edoCalculatorClient = get(),
+            goldApiClient = get()
         )
     }
 }
