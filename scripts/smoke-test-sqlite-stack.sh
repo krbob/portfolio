@@ -12,6 +12,7 @@ export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/smoke-test.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/smoke-test
 
 API_BASE_URL=${PORTFOLIO_API_BASE_URL:-http://127.0.0.1:${PORTFOLIO_API_PORT}}
+WEB_BASE_URL=${PORTFOLIO_WEB_BASE_URL:-http://127.0.0.1:${PORTFOLIO_WEB_PORT}}
 
 cleanup() {
   cd "$PROJECT_ROOT"
@@ -31,6 +32,19 @@ wait_for_health() {
   return 1
 }
 
+wait_for_web() {
+  attempt=0
+  while [ "$attempt" -lt 60 ]; do
+    if curl -sSf "$WEB_BASE_URL/" >/dev/null 2>&1; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+  done
+  printf 'Timed out waiting for %s/\n' "$WEB_BASE_URL" >&2
+  return 1
+}
+
 trap cleanup EXIT
 
 cd "$PROJECT_ROOT"
@@ -38,6 +52,7 @@ cleanup
 docker compose --profile app up -d --build
 
 wait_for_health
+wait_for_web
 
 PORTFOLIO_API_BASE_URL="$API_BASE_URL" sh "$PROJECT_ROOT/scripts/import-demo-portfolio.sh" >/dev/null
 
@@ -47,6 +62,7 @@ transactions=$(curl -sSf "$API_BASE_URL/v1/transactions")
 read_model_refresh_status=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-refresh")
 read_model_refresh_run=$(curl -sSf -X POST "$API_BASE_URL/v1/portfolio/read-model-refresh/run")
 read_model_cache=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-cache")
+meta_via_web=$(curl -sSf "$WEB_BASE_URL/api/v1/meta")
 
 printf '%s' "$overview" | grep -F '"totalBookValuePln": "104736.00"' >/dev/null
 printf '%s' "$overview" | grep -F '"activeHoldingCount": 7' >/dev/null
@@ -57,6 +73,7 @@ printf '%s' "$transactions" | grep -F '"fxRateToPln": "3.99000000"' >/dev/null
 printf '%s' "$read_model_refresh_status" | grep -F '"schedulerEnabled": false' >/dev/null
 printf '%s' "$read_model_refresh_run" | grep -F '"refreshedModelCount": 2' >/dev/null
 printf '%s' "$read_model_cache" | grep -F '"invalidationReason": "EXPLICIT_REFRESH"' >/dev/null
+printf '%s' "$meta_via_web" | grep -F '"name": "Portfolio"' >/dev/null
 
 curl -sSf -X POST "$API_BASE_URL/v1/portfolio/backups/run" >/dev/null
 
@@ -66,14 +83,17 @@ printf '%s' "$backups" | grep -F '"fileName":' >/dev/null
 docker compose --profile app restart portfolio-api >/dev/null
 
 wait_for_health
+wait_for_web
 
 overview_after_restart=$(curl -sSf "$API_BASE_URL/v1/portfolio/overview")
 meta_after_restart=$(curl -sSf "$API_BASE_URL/v1/meta")
+meta_via_web_after_restart=$(curl -sSf "$WEB_BASE_URL/api/v1/meta")
 transactions_after_restart=$(curl -sSf "$API_BASE_URL/v1/transactions")
 
 printf '%s' "$overview_after_restart" | grep -F '"totalBookValuePln": "104736.00"' >/dev/null
 printf '%s' "$overview_after_restart" | grep -F '"missingFxTransactions": 0' >/dev/null
 printf '%s' "$meta_after_restart" | grep -F '"persistenceMode": "SQLITE"' >/dev/null
+printf '%s' "$meta_via_web_after_restart" | grep -F '"persistenceMode": "SQLITE"' >/dev/null
 printf '%s' "$transactions_after_restart" | grep -F '"fxRateToPln": "3.95500000"' >/dev/null
 
 printf 'SQLite smoke test passed on %s\n' "$API_BASE_URL"
