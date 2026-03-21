@@ -418,6 +418,107 @@ describe('App', () => {
     expect(screen.getByText(/self-hosted portfolio tracker/i)).toBeInTheDocument()
   })
 
+  it('shows holdings in book-basis mode without alarming status spam', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWCE',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'EUR',
+              quantity: '6',
+              averageCostPerUnitPln: '100.50',
+              costBasisPln: '603.00',
+              bookValuePln: '603.00',
+              currentPricePln: null,
+              currentValuePln: null,
+              unrealizedGainPln: null,
+              valuedAt: null,
+              valuationStatus: 'UNAVAILABLE',
+              valuationIssue: 'Quote service unavailable.',
+              transactionCount: 2,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in holdings valuation test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/holdings']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(await screen.findByText(/valuation mode/i)).toBeInTheDocument()
+    expect(await screen.findByText(/this view currently relies on book basis/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^no valuation$/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
+  })
+
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)

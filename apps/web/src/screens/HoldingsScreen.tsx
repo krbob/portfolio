@@ -4,12 +4,11 @@ import { PageHeader } from '../components/layout'
 import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatSignedCurrencyPln } from '../lib/format'
-import { useI18n } from '../lib/i18n'
-import { labelAssetClass, labelInstrumentKind, labelValuationStatus } from '../lib/labels'
+import { getActiveUiLanguage, useI18n } from '../lib/i18n'
+import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
 import {
   card, cardFlush, th, thRight, td, tdRight, tr,
-  filterInput, label as labelClass,
-  valuationBadgeVariants,
+  filterInput, label as labelClass, badge, badgeVariants,
 } from '../lib/styles'
 
 type SortField =
@@ -78,6 +77,13 @@ export function HoldingsScreen() {
     (sum, h) => sum + asNumber(h.currentValuePln ?? h.bookValuePln ?? '0'),
     0,
   )
+  const valuedCount = filteredHoldings.filter((h) => normalizedValuationStatus(h.valuationStatus) === 'VALUED').length
+  const degradedCount = filteredHoldings.length - valuedCount
+  const fxIssueCount = filteredHoldings.filter((h) => normalizedValuationStatus(h.valuationStatus) === 'MISSING_FX').length
+  const marketIssueCount = filteredHoldings.filter((h) => {
+    const status = normalizedValuationStatus(h.valuationStatus)
+    return status === 'UNAVAILABLE' || status === 'MISSING_MARKET_DATA'
+  }).length
 
   function clearFilters() {
     setAccountFilter('ALL')
@@ -134,9 +140,49 @@ export function HoldingsScreen() {
   return (
     <>
       <PageHeader title={isPolish ? 'Pozycje' : 'Holdings'}>
-        <Badge variant="default">{holdings.length} {isPolish ? 'pozycji' : 'positions'}</Badge>
+        <Badge variant="default">
+          {activeFilterCount > 0
+            ? isPolish
+              ? `${filteredHoldings.length} z ${holdings.length} pozycji`
+              : `${filteredHoldings.length} of ${holdings.length} positions`
+            : `${holdings.length} ${isPolish ? 'pozycji' : 'positions'}`}
+        </Badge>
         <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValue)}</span>
       </PageHeader>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <HoldingSummaryTile
+          label={isPolish ? 'Widoczne pozycje' : 'Visible holdings'}
+          value={String(filteredHoldings.length)}
+          detail={formatCurrencyPln(totalValue)}
+        />
+        <HoldingSummaryTile
+          label={isPolish ? 'Rynkowo wycenione' : 'Market valued'}
+          value={String(valuedCount)}
+          detail={filteredHoldings.length > 0 ? `${formatPercentOf(valuedCount, filteredHoldings.length)} ${isPolish ? 'widoku' : 'of view'}` : undefined}
+          tone={valuedCount === filteredHoldings.length ? 'success' : 'default'}
+        />
+        <HoldingSummaryTile
+          label={isPolish ? 'Księgowe / częściowe' : 'Book basis / partial'}
+          value={String(degradedCount)}
+          detail={degradedCount > 0
+            ? isPolish
+              ? 'Brak pełnej wyceny rynkowej'
+              : 'Full market valuation unavailable'
+            : isPolish
+              ? 'Pełna wycena rynkowa'
+              : 'Full market valuation'}
+          tone={degradedCount > 0 ? 'warning' : 'default'}
+        />
+        <HoldingSummaryTile
+          label={isPolish ? 'Problemy danych' : 'Data issues'}
+          value={String(marketIssueCount + fxIssueCount)}
+          detail={isPolish
+            ? `${marketIssueCount} cen · ${fxIssueCount} FX`
+            : `${marketIssueCount} quotes · ${fxIssueCount} FX`}
+          tone={marketIssueCount + fxIssueCount > 0 ? 'warning' : 'default'}
+        />
+      </div>
 
       {/* Filters */}
       {holdings.length > 5 && (
@@ -166,7 +212,7 @@ export function HoldingsScreen() {
           <FilterSelect
             label={isPolish ? 'Status' : 'Status'}
             value={statusFilter}
-            options={filterOptions.statuses.map((status) => ({ value: status, label: labelValuationStatus(status) }))}
+            options={filterOptions.statuses.map((status) => ({ value: status, label: valuationStatusFilterLabel(status, isPolish) }))}
             allLabel={isPolish ? 'Wszystkie statusy' : 'All statuses'}
             onChange={setStatusFilter}
           />
@@ -182,6 +228,16 @@ export function HoldingsScreen() {
           </div>
         </FilterBar>
       )}
+
+      {filteredHoldings.length > 0 && degradedCount > 0 ? (
+        <HoldingsValuationBanner
+          totalCount={filteredHoldings.length}
+          valuedCount={valuedCount}
+          marketIssueCount={marketIssueCount}
+          fxIssueCount={fxIssueCount}
+          isPolish={isPolish}
+        />
+      ) : null}
 
       {/* Table */}
       {filteredHoldings.length === 0 ? (
@@ -212,9 +268,10 @@ export function HoldingsScreen() {
               <tbody>
                 {filteredHoldings.map((holding) => {
                   const key = holdingKey(holding)
-                  const status = holding.valuationStatus ?? 'UNAVAILABLE'
+                  const status = normalizedValuationStatus(holding.valuationStatus)
                   const isSelected = key === selectedHoldingKey
                   const gainPln = holding.unrealizedGainPln
+                  const statusPresentation = holdingStatusPresentation(status, isPolish)
 
                   return (
                     <tr
@@ -247,11 +304,13 @@ export function HoldingsScreen() {
                         {formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}
                       </td>
                       <td className={`${tdRight} font-medium ${gainColor(gainPln)}`}>
-                        {formatSignedCurrencyPln(gainPln)}
+                        {gainPln == null
+                          ? (isPolish ? 'b/d' : 'N/A')
+                          : formatSignedCurrencyPln(gainPln)}
                       </td>
                       <td className={td}>
-                        <span className={valuationBadgeVariants[status] ?? valuationBadgeVariants.UNAVAILABLE}>
-                          {labelValuationStatus(status)}
+                        <span className={`${badge} ${statusPresentation.className}`}>
+                          {statusPresentation.label}
                         </span>
                       </td>
                     </tr>
@@ -283,8 +342,8 @@ export function HoldingsScreen() {
                 {selectedHolding.accountName} · {labelInstrumentKind(selectedHolding.kind)} · {assetClassLabel(selectedHolding.assetClass)}
               </p>
             </div>
-            <span className={valuationBadgeVariants[selectedHolding.valuationStatus] ?? valuationBadgeVariants.UNAVAILABLE}>
-              {labelValuationStatus(selectedHolding.valuationStatus)}
+            <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).className}`}>
+              {holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).label}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -295,7 +354,9 @@ export function HoldingsScreen() {
             <DetailStat label={isPolish ? 'Wartość księgowa' : 'Book Value'} value={formatCurrencyPln(selectedHolding.bookValuePln)} />
             <DetailStat
               label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
-              value={formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
+              value={selectedHolding.unrealizedGainPln == null
+                ? (isPolish ? 'b/d' : 'N/A')
+                : formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
               className={gainColor(selectedHolding.unrealizedGainPln)}
             />
           </div>
@@ -310,7 +371,7 @@ export function HoldingsScreen() {
               : ''}
           </div>
           {selectedHolding.valuationIssue && (
-            <p className="mt-2 text-sm text-red-400">{selectedHolding.valuationIssue}</p>
+            <p className={`mt-2 text-sm ${issueToneClass(normalizedValuationStatus(selectedHolding.valuationStatus))}`}>{selectedHolding.valuationIssue}</p>
           )}
         </div>
       )}
@@ -325,6 +386,86 @@ function DetailStat({ label, value, className }: { label: string; value: string;
     <div>
       <p className="text-xs font-medium text-zinc-500">{label}</p>
       <p className={`mt-0.5 text-sm font-medium tabular-nums ${className ?? 'text-zinc-100'}`}>{value}</p>
+    </div>
+  )
+}
+
+function HoldingSummaryTile({
+  label,
+  value,
+  detail,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  detail?: string
+  tone?: 'default' | 'success' | 'warning'
+}) {
+  const toneClass = tone === 'success'
+    ? 'text-emerald-400'
+    : tone === 'warning'
+      ? 'text-amber-400'
+      : 'text-zinc-100'
+
+  return (
+    <div className={card}>
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <p className={`mt-2 text-3xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
+      {detail ? <p className="mt-1 text-sm text-zinc-500">{detail}</p> : null}
+    </div>
+  )
+}
+
+function HoldingsValuationBanner({
+  totalCount,
+  valuedCount,
+  marketIssueCount,
+  fxIssueCount,
+  isPolish,
+}: {
+  totalCount: number
+  valuedCount: number
+  marketIssueCount: number
+  fxIssueCount: number
+  isPolish: boolean
+}) {
+  const fullyBookBased = valuedCount === 0
+
+  return (
+    <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-amber-300/80">
+            {isPolish ? 'Tryb wyceny' : 'Valuation mode'}
+          </p>
+          <h2 className="mt-1 text-sm font-semibold text-zinc-100">
+            {fullyBookBased
+              ? (isPolish ? 'Widok opiera się obecnie na wartości księgowej.' : 'This view currently relies on book basis.')
+              : (isPolish ? 'Widok miesza wyceny rynkowe z wartością księgową.' : 'This view mixes market prices with book basis.')}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            {fullyBookBased
+              ? (isPolish
+                  ? 'Bieżący P/L wróci po odzyskaniu cen rynkowych i przeliczeń FX.'
+                  : 'Live P/L returns once market quotes and FX coverage are back.')
+              : (isPolish
+                  ? `${valuedCount} z ${totalCount} pozycji ma bieżącą cenę rynkową.`
+                  : `${valuedCount} of ${totalCount} holdings have live market valuation.`)}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {marketIssueCount > 0 ? (
+            <span className={`${badge} ${badgeVariants.warning}`}>
+              {isPolish ? `${marketIssueCount} bez ceny` : `${marketIssueCount} without quote`}
+            </span>
+          ) : null}
+          {fxIssueCount > 0 ? (
+            <span className={`${badge} ${badgeVariants.warning}`}>
+              {isPolish ? `${fxIssueCount} bez FX` : `${fxIssueCount} missing FX`}
+            </span>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
@@ -402,7 +543,7 @@ function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortSta
     case 'instrumentName': return f * a.instrumentName.localeCompare(b.instrumentName)
     case 'accountName': return f * a.accountName.localeCompare(b.accountName)
     case 'assetClass': return f * assetClassLabel(a.assetClass).localeCompare(assetClassLabel(b.assetClass))
-    case 'valuationStatus': return f * labelValuationStatus(a.valuationStatus).localeCompare(labelValuationStatus(b.valuationStatus))
+    case 'valuationStatus': return f * valuationStatusFilterLabel(a.valuationStatus, getActiveUiLanguage() === 'pl').localeCompare(valuationStatusFilterLabel(b.valuationStatus, getActiveUiLanguage() === 'pl'))
     case 'quantity': return f * (asNumber(a.quantity) - asNumber(b.quantity))
     case 'unrealizedGainPln': return f * (asNumber(a.unrealizedGainPln) - asNumber(b.unrealizedGainPln))
     case 'currentValuePln': return f * (asNumber(a.currentValuePln ?? a.bookValuePln) - asNumber(b.currentValuePln ?? b.bookValuePln))
@@ -441,4 +582,67 @@ function gainColor(v: string | null | undefined) {
   if (n > 0) return 'text-emerald-400'
   if (n < 0) return 'text-red-400'
   return 'text-zinc-400'
+}
+
+function formatPercentOf(part: number, total: number) {
+  if (total <= 0) {
+    return '0%'
+  }
+  return `${Math.round((part / total) * 100)}%`
+}
+
+function normalizedValuationStatus(value: string | null | undefined) {
+  return value ?? 'UNAVAILABLE'
+}
+
+function valuationStatusFilterLabel(value: string | null | undefined, isPolish: boolean) {
+  switch (normalizedValuationStatus(value)) {
+    case 'VALUED':
+      return isPolish ? 'Rynkowa' : 'Market valued'
+    case 'BOOK_ONLY':
+      return isPolish ? 'Księgowa' : 'Book basis'
+    case 'MISSING_MARKET_DATA':
+      return isPolish ? 'Brak ceny' : 'Missing quote'
+    case 'MISSING_FX':
+      return isPolish ? 'Brak FX' : 'Missing FX'
+    case 'UNSUPPORTED_CORRECTIONS':
+      return isPolish ? 'Korekty' : 'Corrections'
+    case 'UNAVAILABLE':
+      return isPolish ? 'Brak wyceny' : 'No valuation'
+    default:
+      return value ?? (isPolish ? 'Brak wyceny' : 'No valuation')
+  }
+}
+
+function holdingStatusPresentation(value: string | null | undefined, isPolish: boolean) {
+  switch (normalizedValuationStatus(value)) {
+    case 'VALUED':
+      return { label: isPolish ? 'Rynkowa' : 'Market', className: badgeVariants.success }
+    case 'BOOK_ONLY':
+      return { label: isPolish ? 'Księgowa' : 'Book basis', className: badgeVariants.warning }
+    case 'MISSING_MARKET_DATA':
+      return { label: isPolish ? 'Brak ceny' : 'No quote', className: badgeVariants.default }
+    case 'MISSING_FX':
+      return { label: isPolish ? 'Brak FX' : 'Missing FX', className: badgeVariants.warning }
+    case 'UNSUPPORTED_CORRECTIONS':
+      return { label: isPolish ? 'Korekty' : 'Corrections', className: badgeVariants.error }
+    case 'UNAVAILABLE':
+      return { label: isPolish ? 'Brak wyceny' : 'No valuation', className: badgeVariants.default }
+    default:
+      return { label: valuationStatusFilterLabel(value, isPolish), className: badgeVariants.default }
+  }
+}
+
+function issueToneClass(value: string | null | undefined) {
+  switch (normalizedValuationStatus(value)) {
+    case 'UNSUPPORTED_CORRECTIONS':
+      return 'text-red-400'
+    case 'MISSING_FX':
+    case 'MISSING_MARKET_DATA':
+    case 'UNAVAILABLE':
+    case 'BOOK_ONLY':
+      return 'text-amber-300'
+    default:
+      return 'text-zinc-500'
+  }
 }
