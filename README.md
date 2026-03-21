@@ -85,7 +85,7 @@ The example uses published images for all services, so it is a better fit for a 
 
 ## Full stack example
 
-The repository includes [docker-compose.full-stack.example.yml](/Users/bob/stock/portfolio/docker-compose.full-stack.example.yml).
+The repository includes [docker-compose.full-stack.example.yml](./docker-compose.full-stack.example.yml).
 
 It wires `portfolio` to:
 
@@ -247,8 +247,8 @@ cd ../..
 
 ## Related services
 
-- [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md)
-- [docs/domain-model.md](/Users/bob/stock/portfolio/docs/domain-model.md)
-- [docs/roadmap.md](/Users/bob/stock/portfolio/docs/roadmap.md)
+- [docs/architecture.md](./docs/architecture.md)
+- [docs/domain-model.md](./docs/domain-model.md)
+- [docs/roadmap.md](./docs/roadmap.md)
 - [stock-analyst](https://github.com/krbob/stock-analyst)
 - [edo-calculator](https://github.com/krbob/edo-calculator)
