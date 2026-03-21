@@ -47,17 +47,19 @@ The product is optimized for:
 - optional signed-cookie auth spans the SPA and API, but should stay thin and operational rather than becoming a full identity system
 - target self-hosted persistence is a single local SQLite database plus JSON backups
 
-## Current milestones
+## Delivered milestones
 
 1. Bootstrap project structure and toolchain.
 2. Add app shell, health endpoints, and configuration surfaces.
-3. Define core domain model and persistence schema.
-4. Implement the first write-model API for accounts, instruments, and transactions.
-5. Support relational persistence for the write model.
-6. Add portfolio overview, holdings, and timeline reconstruction.
-7. Rebuild historical daily snapshots from transactions and external market data.
-8. Replace PostgreSQL with a SQLite-native runtime and remove transitional persistence code.
-9. Keep the SQLite deployment path and smoke coverage production-grade.
-10. Rebuild the web UI into a calmer, more mature investor product.
+3. Define the core domain model, persistence schema, and extracted `portfolio-domain`.
+4. Implement write-model APIs for accounts, instruments, targets, transactions, import profiles, and application settings.
+5. Rebuild overview, holdings, daily history, returns, benchmarks, drift, and read-model cache on top of canonical transactions.
+6. Replace PostgreSQL with a SQLite-native runtime and keep the Docker/self-hosted path production-grade.
+7. Rebuild the web UI into a calmer investor product with responsive navigation, localized copy, and PWA support.
 
-See `docs/backlog.md` and `docs/ui-revamp-plan.md` for the current phased execution order beyond the initial bootstrap milestones.
+## Current focus
+
+- Keep the SQLite self-hosted path reliable and well-documented.
+- Prefer incremental product work over broad architectural refactors.
+- Keep `docs/architecture.md`, `docs/domain-model.md`, and `docs/roadmap.md` short and current.
+- Do not keep historical backlog or superseded redesign plans in active docs; rely on Git history instead.

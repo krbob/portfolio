@@ -28,8 +28,12 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - React 19
 - TypeScript
 - Vite
-- Custom CSS with design tokens for now
+- Tailwind v4 via `app.css`, with a small shared primitive layer on top
+- React Router and TanStack Query
+- browser-driven `pl` / `en` localization in the SPA
+- lightweight PWA shell for self-hosted mobile use
 - Vitest + Testing Library
+- OpenAPI-generated TypeScript contract definitions consumed by the web client
 
 ### Backend
 
@@ -72,3 +76,4 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`
 - keep `health`, `meta`, and auth session bootstrap routes public while protecting the rest of the API surface when auth is enabled
 - keep the SQLite deployment path simple: one app stack, one DB volume, one backup volume
+- keep background refresh and data-quality diagnostics explicit rather than hiding stale/degraded data behind silently cached reads

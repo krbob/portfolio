@@ -67,11 +67,20 @@ Snapshots are rebuildable and must never become canonical state.
 - dedicated `edo_terms` table instead of JSON blob
 - numeric columns sized for portfolio accounting rather than broker-grade tick storage
 
-## Immediate next step
+## Current extension points
 
-Build repositories and write-model endpoints on top of:
+The canonical ledger is already implemented. The main areas expected to evolve further are:
 
-- `accounts`
-- `instruments`
-- `edo_terms`
-- `transactions`
+- application configuration:
+  - benchmark preferences
+  - rebalancing preferences
+  - import profiles
+- rebuildable analytical read models:
+  - history
+  - returns
+  - allocation / drift
+  - refresh metadata
+- state portability and recoverability:
+  - canonical export/import
+  - server backups
+  - restore audit trail
