@@ -71,7 +71,7 @@ class SystemReadinessServiceTest {
             assertEquals(ReadinessCheckStatus.PASS, readiness.check("stock-analyst").status)
             assertEquals(ReadinessCheckStatus.PASS, readiness.check("edo-calculator").status)
             assertEquals(ReadinessCheckStatus.INFO, readiness.check("gold-market-data").status)
-            assertTrue(readiness.check("stock-analyst").message.contains("USDPLN=X"))
+            assertTrue(readiness.check("stock-analyst").message.contains("PLN=X"))
             assertTrue(readiness.check("edo-calculator").message.contains("2025-01..2025-03"))
         } finally {
             server.close()
@@ -98,7 +98,7 @@ class SystemReadinessServiceTest {
         edoCalculatorBaseUrl = baseUrl,
         goldApiBaseUrl = baseUrl,
         goldApiKey = null,
-        usdPlnSymbol = "USDPLN=X",
+        usdPlnSymbol = "PLN=X",
         goldBenchmarkSymbol = "GC=F",
         equityBenchmarkSymbol = "VWRA.L",
         bondBenchmarkSymbol = "ETFBTBSP.WA"
@@ -159,7 +159,7 @@ private class FakeMarketDataServer : AutoCloseable {
         override fun handle(exchange: HttpExchange) {
             val path = exchange.requestURI.path
             val body = when {
-                path.contains("/history/USDPLN%3DX") || path.contains("/history/USDPLN=X") ->
+                path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
                     """{"prices":[{"date":"2025-01-02","close":4.0123},{"date":"2025-01-03","close":4.0088}]}"""
 
                 else -> """{"prices":[]}"""

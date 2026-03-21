@@ -5,6 +5,7 @@ import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import org.slf4j.LoggerFactory
 import java.time.LocalDate
 import java.math.RoundingMode
 import java.util.TreeMap
@@ -65,8 +66,24 @@ class RemoteReferenceSeriesProvider(
             prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
         )
     } catch (exception: MarketDataClientException) {
+        logger.warn(
+            "Reference series failed for symbol {} (currency={}) in {}..{}: {}",
+            symbol,
+            currency,
+            from,
+            to,
+            exception.message
+        )
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
     } catch (exception: Exception) {
+        logger.warn(
+            "Unexpected reference series error for symbol {} (currency={}) in {}..{}",
+            symbol,
+            currency,
+            from,
+            to,
+            exception
+        )
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected reference market data error.")
     }
 
@@ -99,13 +116,16 @@ class RemoteReferenceSeriesProvider(
         }
 
         if (prices.isEmpty()) {
+            logger.warn("Gold spot series returned no usable PLN points in {}..{}", from, to)
             ReferenceSeriesResult.Failure("gold-api returned no usable gold history in PLN.")
         } else {
             ReferenceSeriesResult.Success(prices = prices)
         }
     } catch (exception: MarketDataClientException) {
+        logger.warn("Gold spot series failed in {}..{}: {}", from, to, exception.message)
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: Exception) {
+        logger.warn("Unexpected gold spot series error in {}..{}", from, to, exception)
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected gold spot history error.")
     }
 
@@ -134,5 +154,9 @@ class RemoteReferenceSeriesProvider(
         return ReferenceSeriesResult.Failure(
             "$spotFailureMessage Fallback benchmark ${config.goldBenchmarkSymbol} also failed: $fallbackFailureMessage"
         )
+    }
+
+    private companion object {
+        private val logger = LoggerFactory.getLogger(RemoteReferenceSeriesProvider::class.java)
     }
 }

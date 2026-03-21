@@ -7,6 +7,7 @@ import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import org.slf4j.LoggerFactory
 import java.time.LocalDate
 
 class RemoteHistoricalInstrumentValuationProvider(
@@ -36,11 +37,31 @@ class RemoteHistoricalInstrumentValuationProvider(
                 )
             }
         } catch (exception: MarketDataClientException) {
+            logger.warn(
+                "Historical valuation failed for instrument {} ({}, source={}, symbol={}) in {}..{}: {}",
+                instrument.name,
+                instrument.id,
+                instrument.valuationSource,
+                instrument.symbol,
+                from,
+                to,
+                exception.message
+            )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            logger.warn(
+                "Unexpected historical valuation error for instrument {} ({}, source={}, symbol={}) in {}..{}",
+                instrument.name,
+                instrument.id,
+                instrument.valuationSource,
+                instrument.symbol,
+                from,
+                to,
+                exception
+            )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
@@ -82,5 +103,9 @@ class RemoteHistoricalInstrumentValuationProvider(
         return HistoricalInstrumentValuationResult.Success(
             prices = edoCalculatorClient.historyInPln(terms = terms, from = start, to = to)
         )
+    }
+
+    private companion object {
+        private val logger = LoggerFactory.getLogger(RemoteHistoricalInstrumentValuationProvider::class.java)
     }
 }

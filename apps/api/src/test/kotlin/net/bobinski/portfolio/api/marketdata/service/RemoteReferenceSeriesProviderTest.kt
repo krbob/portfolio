@@ -31,7 +31,7 @@ class RemoteReferenceSeriesProviderTest {
                     edoCalculatorBaseUrl = "http://127.0.0.1:9",
                     goldApiBaseUrl = server.baseUrl,
                     goldApiKey = "gold-key",
-                    usdPlnSymbol = "USDPLN=X",
+                    usdPlnSymbol = "PLN=X",
                     goldBenchmarkSymbol = "GC=F",
                     equityBenchmarkSymbol = "VWRA.L",
                     bondBenchmarkSymbol = "ETFBTBSP.WA"
@@ -92,7 +92,7 @@ private class FakeReferenceSeriesServer : AutoCloseable {
                 exchange.requestURI.path.contains("/history/GC%3DF") || exchange.requestURI.path.contains("/history/GC=F") ->
                     """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}"""
 
-                exchange.requestURI.path.contains("/history/USDPLN%3DX") || exchange.requestURI.path.contains("/history/USDPLN=X") ->
+                exchange.requestURI.path.contains("/history/PLN%3DX") || exchange.requestURI.path.contains("/history/PLN=X") ->
                     """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}"""
 
                 else -> """{"prices":[]}"""

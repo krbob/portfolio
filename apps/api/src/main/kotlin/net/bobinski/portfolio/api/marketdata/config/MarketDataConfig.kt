@@ -43,7 +43,7 @@ data class MarketDataConfig(
                 "PORTFOLIO_USDPLN_SYMBOL",
                 config,
                 "portfolio.marketData.usdPlnSymbol"
-            ) ?: "USDPLN=X",
+            ) ?: "PLN=X",
             goldBenchmarkSymbol = readSetting(
                 "PORTFOLIO_GOLD_BENCHMARK_SYMBOL",
                 config,

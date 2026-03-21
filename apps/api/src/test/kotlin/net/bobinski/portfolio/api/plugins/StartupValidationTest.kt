@@ -176,7 +176,7 @@ class StartupValidationTest {
         edoCalculatorBaseUrl = "http://127.0.0.1:18081",
         goldApiBaseUrl = "https://api.gold-api.com",
         goldApiKey = null,
-        usdPlnSymbol = "USDPLN=X",
+        usdPlnSymbol = "PLN=X",
         goldBenchmarkSymbol = "GC=F",
         equityBenchmarkSymbol = "VWRA.L",
         bondBenchmarkSymbol = "ETFBTBSP.WA"
