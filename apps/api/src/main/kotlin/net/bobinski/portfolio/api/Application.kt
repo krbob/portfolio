@@ -4,6 +4,7 @@ import io.ktor.server.application.Application
 import net.bobinski.portfolio.api.dependency.RepositoryBindingMode
 import net.bobinski.portfolio.api.plugins.configureBackupLifecycle
 import net.bobinski.portfolio.api.plugins.configureAuthentication
+import net.bobinski.portfolio.api.plugins.configureApiResponseCaching
 import net.bobinski.portfolio.api.plugins.configureDependencyInjection
 import net.bobinski.portfolio.api.plugins.configureMonitoring
 import net.bobinski.portfolio.api.plugins.configurePersistenceLifecycle
@@ -33,5 +34,6 @@ internal fun Application.runtimeModule(
     configureMonitoring()
     configureStatusPages()
     configureSerialization()
+    configureApiResponseCaching()
     configureRouting()
 }

@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api
 
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -49,6 +50,18 @@ class ApplicationTest {
         assertTrue(body.contains("\"persistenceMode\": \"SQLITE\""))
         assertTrue(body.contains("\"mode\": \"DISABLED\""))
         assertTrue(body.contains("Server-side backup snapshots"))
+    }
+
+    @Test
+    fun `api endpoints disable http caching`() = testApplication {
+        configurePortfolioTestApplication()
+
+        val response = client.get("/v1/meta")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+        assertEquals("no-cache", response.headers[HttpHeaders.Pragma])
+        assertEquals("0", response.headers[HttpHeaders.Expires])
     }
 
     @Test
