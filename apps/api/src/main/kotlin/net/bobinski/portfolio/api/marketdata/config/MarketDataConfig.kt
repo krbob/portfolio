@@ -48,7 +48,7 @@ data class MarketDataConfig(
                 "PORTFOLIO_GOLD_BENCHMARK_SYMBOL",
                 config,
                 "portfolio.marketData.goldBenchmarkSymbol"
-            ) ?: "XAUUSD=X",
+            ) ?: "GC=F",
             equityBenchmarkSymbol = readSetting(
                 "PORTFOLIO_EQUITY_BENCHMARK_SYMBOL",
                 config,

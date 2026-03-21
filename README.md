@@ -138,7 +138,7 @@ PORTFOLIO_GOLD_API_KEY=your-gold-api-key \
 docker compose --profile app up -d --build
 ```
 
-`gold-api` is optional but recommended if you want the `Gold` unit in performance charts to use spot `XAU` history instead of a fallback benchmark symbol.
+`gold-api` is optional but recommended if you want the `Gold` unit in performance charts to use spot `XAU` history instead of the fallback `GC=F` futures proxy.
 
 See [docs/architecture.md](/Users/bob/stock/portfolio/docs/architecture.md) for the current architecture sketch.
 See [docs/backlog.md](/Users/bob/stock/portfolio/docs/backlog.md) for the current product backlog and post-migration priorities.

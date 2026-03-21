@@ -177,7 +177,7 @@ class StartupValidationTest {
         goldApiBaseUrl = "https://api.gold-api.com",
         goldApiKey = null,
         usdPlnSymbol = "USDPLN=X",
-        goldBenchmarkSymbol = "XAUUSD=X",
+        goldBenchmarkSymbol = "GC=F",
         equityBenchmarkSymbol = "VWRA.L",
         bondBenchmarkSymbol = "ETFBTBSP.WA"
     )

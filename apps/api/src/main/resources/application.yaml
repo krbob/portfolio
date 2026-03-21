@@ -36,6 +36,6 @@ portfolio:
     stockAnalystBaseUrl: "http://127.0.0.1:18080"
     edoCalculatorBaseUrl: "http://127.0.0.1:18081"
     usdPlnSymbol: "USDPLN=X"
-    goldBenchmarkSymbol: "XAUUSD=X"
+    goldBenchmarkSymbol: "GC=F"
     equityBenchmarkSymbol: "VWRA.L"
     bondBenchmarkSymbol: "ETFBTBSP.WA"
