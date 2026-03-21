@@ -519,6 +519,150 @@ describe('App', () => {
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
   })
 
+  it('keeps the transaction journal in focus until the composer is opened explicitly', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'acc-1',
+              name: 'Primary',
+              kind: 'BROKERAGE',
+              currency: 'PLN',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-1',
+              name: 'VWRA',
+              symbol: 'VWRA.L',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/transactions/import/profiles')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/transactions')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'tx-1',
+              accountId: 'acc-1',
+              instrumentId: 'ins-1',
+              type: 'BUY',
+              tradeDate: '2026-03-10',
+              settlementDate: '2026-03-12',
+              quantity: '4',
+              unitPrice: '100.00',
+              grossAmount: '400.00',
+              feeAmount: '0',
+              taxAmount: '0',
+              currency: 'USD',
+              fxRateToPln: '3.95',
+              notes: 'Initial buy',
+              createdAt: '2026-03-10T12:00:00Z',
+              updatedAt: '2026-03-10T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in transactions journal test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/transactions']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^transactions$/i })).toBeInTheDocument()
+    expect(await screen.findByText(/canonical transaction journal/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/gross amount/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /new transaction/i }))
+
+    expect(await screen.findByLabelText(/gross amount/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /close composer/i }).length).toBeGreaterThan(0)
+  })
+
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)

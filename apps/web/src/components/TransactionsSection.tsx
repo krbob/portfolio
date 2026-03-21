@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
-import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
+import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAuditOutcome, labelImportRowStatus, labelTransactionType } from '../lib/labels'
 import {
   badge,
+  btnGhost,
   btnDanger,
   btnPrimary,
   btnSecondary,
@@ -199,6 +200,7 @@ export function TransactionsSection() {
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
   const [currentPage, setCurrentPage] = useState(1)
   const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
+  const [showComposer, setShowComposer] = useState(false)
 
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
   const accountOptions = accountsQuery.data ?? []
@@ -338,6 +340,38 @@ export function TransactionsSection() {
     const start = (currentPage - 1) * pageSize
     return sortedRows.slice(start, start + pageSize)
   }, [currentPage, pageSize, sortedRows])
+  const hasActiveJournalFilters = useMemo(
+    () =>
+      journalFilters.search !== initialJournalFilters.search ||
+      journalFilters.accountId !== initialJournalFilters.accountId ||
+      journalFilters.instrumentId !== initialJournalFilters.instrumentId ||
+      journalFilters.type !== initialJournalFilters.type ||
+      journalFilters.currency !== initialJournalFilters.currency ||
+      journalFilters.sort !== initialJournalFilters.sort,
+    [journalFilters],
+  )
+  const accountsInFilteredJournal = useMemo(
+    () => new Set(filteredRows.map((row) => row.transaction.accountId)).size,
+    [filteredRows],
+  )
+  const instrumentsInFilteredJournal = useMemo(
+    () =>
+      new Set(
+        filteredRows
+          .map((row) => row.transaction.instrumentId)
+          .filter((instrumentId): instrumentId is string => instrumentId != null),
+      ).size,
+    [filteredRows],
+  )
+  const latestTradeDateInFilteredJournal = useMemo(
+    () =>
+      filteredRows.reduce<string | null>(
+        (latest, row) =>
+          latest == null || row.transaction.tradeDate > latest ? row.transaction.tradeDate : latest,
+        null,
+      ),
+    [filteredRows],
+  )
 
   const importProfileBlockingReason =
     selectedImportProfileId == null
@@ -471,7 +505,7 @@ export function TransactionsSection() {
           ...payload,
         },
         {
-          onSuccess: () => resetForm(),
+          onSuccess: () => closeComposer(),
         },
       )
       return
@@ -489,6 +523,7 @@ export function TransactionsSection() {
 
   function startEditing(transaction: Transaction) {
     setActiveWorkspace('journal')
+    setShowComposer(true)
     setPendingDeleteTransactionId(null)
     setEditingTransactionId(transaction.id)
     setForm({
@@ -513,11 +548,29 @@ export function TransactionsSection() {
     setForm(initialForm)
   }
 
+  function openComposerForCreate() {
+    setActiveWorkspace('journal')
+    setPendingDeleteTransactionId(null)
+    setEditingTransactionId(null)
+    setForm(initialForm)
+    setShowComposer(true)
+  }
+
+  function closeComposer() {
+    resetForm()
+    setShowComposer(false)
+  }
+
   function updateJournalFilter(name: keyof typeof initialJournalFilters, value: string) {
     setJournalFilters((current) => ({
       ...current,
       [name]: value,
     }))
+  }
+
+  function resetJournalFilters() {
+    setJournalFilters(initialJournalFilters)
+    setCurrentPage(1)
   }
 
   function updateImportProfileField(name: keyof Omit<ImportProfileFormState, 'headerMappings' | 'defaults'>, value: string | boolean) {
@@ -884,208 +937,318 @@ export function TransactionsSection() {
 
       {activeWorkspace === 'journal' && (
         <div
-          className={card}
+          className="space-y-4"
           role="tabpanel"
           id="transactions-workspace-panel-journal"
           aria-labelledby="transactions-workspace-tab-journal"
         >
-          <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={handleSubmit}>
-            <label>
-              <span className={labelClass}>{isPolish ? 'Konto' : 'Account'}</span>
-              <select
-                className={input}
-                value={form.accountId}
-                onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
-                required
-              >
-                <option value="">{isPolish ? 'Wybierz konto' : 'Select account'}</option>
-                {accountOptions.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
-              <select
-                className={input}
-                value={form.type}
-                onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
-              >
-                {transactionTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {labelTransactionType(type)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Data transakcji' : 'Trade date'}</span>
-              <input
-                className={input}
-                type="date"
-                value={form.tradeDate}
-                onChange={(event) => setForm((current) => ({ ...current, tradeDate: event.target.value }))}
-                required
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Data rozliczenia' : 'Settlement date'}</span>
-              <input
-                className={input}
-                type="date"
-                value={form.settlementDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, settlementDate: event.target.value }))
+          <Card as="section" className="space-y-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <SectionHeader
+                eyebrow={isPolish ? 'Dziennik' : 'Journal'}
+                title={isPolish ? 'Kanoniczny dziennik transakcji' : 'Canonical transaction journal'}
+                description={
+                  isPolish
+                    ? 'Najpierw przeglądaj i filtruj zdarzenia, a formularz otwieraj dopiero wtedy, gdy chcesz dodać lub poprawić konkretny wiersz.'
+                    : 'Review and filter events first, then open the composer only when you need to add or correct a row.'
                 }
+                className="mb-0"
               />
-            </label>
 
-            <label>
-              <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
-              <select
-                className={input}
-                value={form.instrumentId}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, instrumentId: event.target.value }))
-                }
-                disabled={!requiresInstrument}
-              >
-                <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
-                {instrumentOptions.map((instrument) => (
-                  <option key={instrument.id} value={instrument.id}>
-                    {instrument.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
-              <input
-                className={input}
-                value={form.quantity}
-                onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
-                placeholder="10"
-                disabled={!requiresInstrument}
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
-              <input
-                className={input}
-                value={form.unitPrice}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, unitPrice: event.target.value }))
-                }
-                placeholder="123.45"
-                disabled={!requiresInstrument}
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Kwota brutto' : 'Gross amount'}</span>
-              <input
-                className={input}
-                value={form.grossAmount}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, grossAmount: event.target.value }))
-                }
-                required
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Prowizja' : 'Fee amount'}</span>
-              <input
-                className={input}
-                value={form.feeAmount}
-                onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Podatek' : 'Tax amount'}</span>
-              <input
-                className={input}
-                value={form.taxAmount}
-                onChange={(event) => setForm((current) => ({ ...current, taxAmount: event.target.value }))}
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
-              <input
-                className={input}
-                value={form.currency}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-                }
-                maxLength={3}
-                required
-              />
-            </label>
-
-            <label>
-              <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
-              <input
-                className={input}
-                value={form.fxRateToPln}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
-                }
-                placeholder="4.0321"
-              />
-            </label>
-
-            <label className="col-span-2">
-              <span className={labelClass}>{isPolish ? 'Notatki' : 'Notes'}</span>
-              <input
-                className={input}
-                value={form.notes}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                placeholder={isPolish ? 'Opcjonalna notatka audytowa' : 'Optional audit note'}
-              />
-            </label>
-
-            <div className="col-span-full flex items-center gap-3">
-              <button
-                className={btnPrimary}
-                type="submit"
-                disabled={
-                  !canSubmit || createTransactionMutation.isPending || updateTransactionMutation.isPending
-                }
-              >
-                {createTransactionMutation.isPending || updateTransactionMutation.isPending
-                  ? isPolish
-                    ? 'Zapisywanie...'
-                    : 'Saving...'
-                  : editingTransactionId
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={showComposer || editingTransactionId ? btnSecondary : btnPrimary}
+                  onClick={() => {
+                    if (showComposer || editingTransactionId) {
+                      closeComposer()
+                    } else {
+                      openComposerForCreate()
+                    }
+                  }}
+                >
+                  {showComposer || editingTransactionId
                     ? isPolish
-                      ? 'Zapisz zmiany'
-                      : 'Save changes'
+                      ? 'Zamknij formularz'
+                      : 'Close composer'
                     : isPolish
-                      ? 'Dodaj transakcję'
-                      : 'Add transaction'}
-              </button>
-
-              {editingTransactionId && (
-                <button type="button" className={btnSecondary} onClick={resetForm}>
-                  {isPolish ? 'Anuluj edycję' : 'Cancel edit'}
+                      ? 'Nowa transakcja'
+                      : 'New transaction'}
                 </button>
-              )}
+                {hasActiveJournalFilters && (
+                  <button type="button" className={btnGhost} onClick={resetJournalFilters}>
+                    {isPolish ? 'Wyczyść filtry' : 'Clear filters'}
+                  </button>
+                )}
+              </div>
             </div>
-            {(createTransactionMutation.error || updateTransactionMutation.error) && (
-              <p className="col-span-full text-sm text-red-400">
-                {createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message}
-              </p>
-            )}
-          </form>
+
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <JournalSummaryTile
+                label={isPolish ? 'Wiersze w widoku' : 'Rows in view'}
+                value={sortedRows.length.toString()}
+                hint={isPolish ? `${journalRows.length} łącznie` : `${journalRows.length} total`}
+              />
+              <JournalSummaryTile
+                label={isPolish ? 'Konta w widoku' : 'Accounts in view'}
+                value={accountsInFilteredJournal.toString()}
+                hint={isPolish ? `${pagedRows.length} na tej stronie` : `${pagedRows.length} on this page`}
+              />
+              <JournalSummaryTile
+                label={isPolish ? 'Instrumenty w widoku' : 'Instruments in view'}
+                value={instrumentsInFilteredJournal.toString()}
+                hint={
+                  hasActiveJournalFilters
+                    ? isPolish
+                      ? 'po aktywnych filtrach'
+                      : 'after filters'
+                    : isPolish
+                      ? 'bez zawężeń'
+                      : 'no filters'
+                }
+              />
+              <JournalSummaryTile
+                label={isPolish ? 'Ostatnia data transakcji' : 'Latest trade date'}
+                value={
+                  latestTradeDateInFilteredJournal
+                    ? formatDate(latestTradeDateInFilteredJournal)
+                    : isPolish
+                      ? 'b/d'
+                      : 'n/a'
+                }
+                hint={isPolish ? `Strona ${currentPage} / ${totalPages}` : `Page ${currentPage} / ${totalPages}`}
+              />
+            </div>
+          </Card>
+
+          {(showComposer || editingTransactionId) && (
+            <Card as="section" className="space-y-5">
+              <SectionHeader
+                eyebrow={isPolish ? 'Edytor' : 'Composer'}
+                title={
+                  editingTransactionId
+                    ? isPolish
+                      ? 'Edytuj wybraną transakcję'
+                      : 'Edit selected transaction'
+                    : isPolish
+                      ? 'Dodaj nowe zdarzenie'
+                      : 'Record a new event'
+                }
+                description={
+                  editingTransactionId
+                    ? isPolish
+                      ? 'Zapis od razu zaktualizuje dziennik, wycenę, historię, alokację i zwroty.'
+                      : 'Saving will immediately update the journal, valuation, history, allocation and returns.'
+                    : isPolish
+                      ? 'Uzupełnij tylko pola potrzebne dla wybranego typu. Instrument i ilość są wymagane wyłącznie dla kupna lub sprzedaży.'
+                      : 'Fill only the fields needed for the selected type. Instrument and quantity are required only for buys or sells.'
+                }
+                className="mb-0"
+              />
+
+              <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={handleSubmit}>
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Konto' : 'Account'}</span>
+                  <select
+                    className={input}
+                    value={form.accountId}
+                    onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
+                    required
+                  >
+                    <option value="">{isPolish ? 'Wybierz konto' : 'Select account'}</option>
+                    {accountOptions.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
+                  <select
+                    className={input}
+                    value={form.type}
+                    onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+                  >
+                    {transactionTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {labelTransactionType(type)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Data transakcji' : 'Trade date'}</span>
+                  <input
+                    className={input}
+                    type="date"
+                    value={form.tradeDate}
+                    onChange={(event) => setForm((current) => ({ ...current, tradeDate: event.target.value }))}
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Data rozliczenia' : 'Settlement date'}</span>
+                  <input
+                    className={input}
+                    type="date"
+                    value={form.settlementDate}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, settlementDate: event.target.value }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
+                  <select
+                    className={input}
+                    value={form.instrumentId}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, instrumentId: event.target.value }))
+                    }
+                    disabled={!requiresInstrument}
+                  >
+                    <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
+                    {instrumentOptions.map((instrument) => (
+                      <option key={instrument.id} value={instrument.id}>
+                        {instrument.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
+                  <input
+                    className={input}
+                    value={form.quantity}
+                    onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
+                    placeholder="10"
+                    disabled={!requiresInstrument}
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
+                  <input
+                    className={input}
+                    value={form.unitPrice}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, unitPrice: event.target.value }))
+                    }
+                    placeholder="123.45"
+                    disabled={!requiresInstrument}
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Kwota brutto' : 'Gross amount'}</span>
+                  <input
+                    className={input}
+                    value={form.grossAmount}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, grossAmount: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Prowizja' : 'Fee amount'}</span>
+                  <input
+                    className={input}
+                    value={form.feeAmount}
+                    onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Podatek' : 'Tax amount'}</span>
+                  <input
+                    className={input}
+                    value={form.taxAmount}
+                    onChange={(event) => setForm((current) => ({ ...current, taxAmount: event.target.value }))}
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
+                  <input
+                    className={input}
+                    value={form.currency}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
+                    }
+                    maxLength={3}
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
+                  <input
+                    className={input}
+                    value={form.fxRateToPln}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
+                    }
+                    placeholder="4.0321"
+                  />
+                </label>
+
+                <label className="col-span-2">
+                  <span className={labelClass}>{isPolish ? 'Notatki' : 'Notes'}</span>
+                  <input
+                    className={input}
+                    value={form.notes}
+                    onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                    placeholder={isPolish ? 'Opcjonalna notatka audytowa' : 'Optional audit note'}
+                  />
+                </label>
+
+                <div className="col-span-full flex flex-wrap items-center gap-3">
+                  <button
+                    className={btnPrimary}
+                    type="submit"
+                    disabled={
+                      !canSubmit || createTransactionMutation.isPending || updateTransactionMutation.isPending
+                    }
+                  >
+                    {createTransactionMutation.isPending || updateTransactionMutation.isPending
+                      ? isPolish
+                        ? 'Zapisywanie...'
+                        : 'Saving...'
+                      : editingTransactionId
+                        ? isPolish
+                          ? 'Zapisz zmiany'
+                          : 'Save changes'
+                        : isPolish
+                          ? 'Dodaj transakcję'
+                          : 'Add transaction'}
+                  </button>
+
+                  <button type="button" className={btnSecondary} onClick={closeComposer}>
+                    {editingTransactionId
+                      ? isPolish
+                        ? 'Anuluj edycję'
+                        : 'Cancel edit'
+                      : isPolish
+                        ? 'Zamknij formularz'
+                        : 'Close composer'}
+                  </button>
+                </div>
+                {(createTransactionMutation.error || updateTransactionMutation.error) && (
+                  <p className="col-span-full text-sm text-red-400">
+                    {createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message}
+                  </p>
+                )}
+              </form>
+            </Card>
+          )}
         </div>
       )}
 
@@ -1604,15 +1767,16 @@ export function TransactionsSection() {
 
       {activeWorkspace === 'journal' && (
         <section className={card}>
-          <div className="mb-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Dziennik' : 'Journal'}</p>
-            <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Dziennik transakcji' : 'Transaction journal'}</h4>
-            <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? 'Filtruj i sortuj kanoniczny strumień zdarzeń, zanim przejdziesz do edycji albo usuwania wierszy.'
-                : 'Filter and sort the canonical event stream before editing or deleting rows.'}
-            </p>
-          </div>
+          <SectionHeader
+            eyebrow={isPolish ? 'Przegląd' : 'Review'}
+            title={isPolish ? 'Aktywny widok dziennika' : 'Active journal view'}
+            description={
+              isPolish
+                ? 'Zawęź zdarzenia filtrami, a potem pracuj na pojedynczych wierszach bez rozpraszania całym formularzem.'
+                : 'Narrow the event stream with filters, then work row by row without keeping the full composer open.'
+            }
+            className="mb-4"
+          />
 
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <label className="flex-1 min-w-[200px]">
@@ -1705,6 +1869,12 @@ export function TransactionsSection() {
                 <option value="createdAt-desc">{isPolish ? 'Ostatnio utworzone' : 'Recently created'}</option>
               </select>
             </label>
+
+            {hasActiveJournalFilters && (
+              <button type="button" className={btnGhost} onClick={resetJournalFilters}>
+                {isPolish ? 'Resetuj filtry' : 'Reset filters'}
+              </button>
+            )}
           </div>
 
           <div className="flex items-center justify-between text-sm text-zinc-500 mb-4">
@@ -1758,9 +1928,33 @@ export function TransactionsSection() {
           {transactionsQuery.isError && (
             <p className="text-sm text-red-400">{transactionsQuery.error.message}</p>
           )}
-          {transactionsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze transakcji.' : 'No transactions yet.'}</p>}
+          {transactionsQuery.data?.length === 0 && (
+            <EmptyState
+              title={isPolish ? 'Brak jeszcze transakcji' : 'No transactions yet'}
+              description={
+                isPolish
+                  ? 'Zacznij od pierwszego zdarzenia w ledgerze. Formularz otworzysz dopiero wtedy, gdy będziesz gotowy.'
+                  : 'Start with the first ledger event. Open the composer only when you are ready.'
+              }
+              action={{
+                label: isPolish ? 'Dodaj transakcję' : 'Add transaction',
+                onClick: openComposerForCreate,
+              }}
+            />
+          )}
           {transactionsQuery.data?.length !== 0 && pagedRows.length === 0 && (
-            <p className="text-sm text-zinc-500">{isPolish ? 'Żaden wiersz dziennika nie pasuje do bieżących filtrów.' : 'No journal rows match the current filters.'}</p>
+            <EmptyState
+              title={isPolish ? 'Brak dopasowań w dzienniku' : 'No journal matches'}
+              description={
+                isPolish
+                  ? 'Żaden wiersz nie pasuje do bieżących filtrów. Wyczyść zawężenia albo poszerz wyszukiwanie.'
+                  : 'No rows match the current filters. Clear the constraints or broaden the search.'
+              }
+              action={{
+                label: isPolish ? 'Resetuj filtry' : 'Reset filters',
+                onClick: resetJournalFilters,
+              }}
+            />
           )}
           {pagedRows.map(({ transaction, accountName, instrumentName, instrumentSymbol }) => (
             <article className="rounded-lg border border-zinc-800/50 bg-zinc-900 p-4 space-y-2" key={transaction.id}>
@@ -1770,7 +1964,9 @@ export function TransactionsSection() {
                     <span className={`${badge} ${txBadgeVariants[transaction.type as keyof typeof txBadgeVariants] ?? ''}`}>
                       {labelTransactionType(transaction.type)}
                     </span>
-                    <strong className="text-sm font-medium text-zinc-100">{accountName}</strong>
+                    <strong className="text-sm font-medium text-zinc-100">
+                      {instrumentName ?? accountName}
+                    </strong>
                   </div>
                   <strong className="text-sm font-medium tabular-nums text-zinc-100">
                     {formatCurrency(transaction.grossAmount, transaction.currency)}
@@ -1778,10 +1974,14 @@ export function TransactionsSection() {
                 </div>
 
                 <p className="text-sm text-zinc-400 mt-1">
-                  {isPolish ? 'Transakcja' : 'Trade'} {formatDate(transaction.tradeDate)}
-                  {transaction.settlementDate ? isPolish ? ` · rozliczenie ${formatDate(transaction.settlementDate)}` : ` · settle ${formatDate(transaction.settlementDate)}` : ''}
-                  {instrumentName ? ` · ${instrumentName}` : ''}
-                  {instrumentSymbol ? ` (${instrumentSymbol})` : ''}
+                  {accountName}
+                  {instrumentSymbol ? ` · ${instrumentSymbol}` : ''}
+                  {isPolish ? ` · transakcja ${formatDate(transaction.tradeDate)}` : ` · trade ${formatDate(transaction.tradeDate)}`}
+                  {transaction.settlementDate
+                    ? isPolish
+                      ? ` · rozliczenie ${formatDate(transaction.settlementDate)}`
+                      : ` · settle ${formatDate(transaction.settlementDate)}`
+                    : ''}
                 </p>
 
                 {transaction.notes ? <p className="text-sm text-zinc-500 italic">{transaction.notes}</p> : null}
@@ -1875,6 +2075,24 @@ export function TransactionsSection() {
         </section>
       )}
     </section>
+  )
+}
+
+function JournalSummaryTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: string
+  hint: string
+}) {
+  return (
+    <article className="rounded-lg border border-zinc-800/70 bg-zinc-950/30 p-4">
+      <span className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">{label}</span>
+      <strong className="mt-2 block text-2xl font-semibold text-zinc-100">{value}</strong>
+      <p className="mt-1 text-sm text-zinc-500">{hint}</p>
+    </article>
   )
 }
 
