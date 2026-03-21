@@ -36,6 +36,7 @@ async function request(path: string, init: RequestJsonOptions): Promise<Response
   const { contentType = init.body ? 'application/json' : null, headers, ...rest } = init
   const response = await fetch(path, {
     credentials: 'include',
+    cache: 'no-store',
     ...rest,
     headers: {
       ...(contentType ? { 'Content-Type': contentType } : {}),
