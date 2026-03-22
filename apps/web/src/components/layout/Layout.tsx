@@ -129,12 +129,12 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [isMobileNavMounted, isMobileNavVisible])
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex lg:h-screen lg:overflow-hidden">
       <aside className="hidden border-r border-zinc-800 lg:flex lg:w-60 lg:shrink-0">
         <Sidebar />
       </aside>
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
         <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur lg:hidden">
           <div
             className="flex items-center gap-3 px-4 py-3"

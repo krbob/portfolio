@@ -17,6 +17,7 @@ export function AccountsSection() {
   const accountsQuery = useAccounts()
   const createAccountMutation = useCreateAccount()
   const [form, setForm] = useState(initialForm)
+  const sortedAccounts = [...(accountsQuery.data ?? [])].sort(compareAccountsByCreatedAt)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -97,8 +98,8 @@ export function AccountsSection() {
       <div className="space-y-3 mt-4">
         {accountsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie kont...' : 'Loading accounts...'}</p>}
         {accountsQuery.isError && <p className="text-sm text-red-400">{accountsQuery.error.message}</p>}
-        {accountsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak kont.' : 'No accounts yet.'}</p>}
-        {accountsQuery.data?.map((account) => (
+        {sortedAccounts.length === 0 && !accountsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Brak kont.' : 'No accounts yet.'}</p>}
+        {sortedAccounts.map((account) => (
           <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={account.id}>
             <div>
               <strong className="text-sm text-zinc-100">{account.name}</strong>
@@ -112,4 +113,15 @@ export function AccountsSection() {
       </div>
     </Card>
   )
+}
+
+function compareAccountsByCreatedAt(
+  left: { createdAt: string; name: string },
+  right: { createdAt: string; name: string },
+) {
+  if (left.createdAt !== right.createdAt) {
+    return left.createdAt.localeCompare(right.createdAt)
+  }
+
+  return left.name.localeCompare(right.name)
 }

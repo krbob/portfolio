@@ -211,6 +211,14 @@ export function TransactionsSection() {
   const decimalSeparator = isPolish ? ',' : '.'
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
+  const sortedAccountOptions = useMemo(
+    () => [...accountOptions].sort(compareAccountsByCreatedAt),
+    [accountOptions],
+  )
+  const sortedInstrumentOptions = useMemo(
+    () => [...instrumentOptions].sort(compareInstrumentsByName),
+    [instrumentOptions],
+  )
   const importProfiles = transactionImportProfilesQuery.data ?? []
   const localizedImportMappingFields = useMemo(
     () => getImportMappingFields(isPolish),
@@ -1155,7 +1163,7 @@ export function TransactionsSection() {
                     required
                   >
                     <option value="">{isPolish ? 'Wybierz konto' : 'Select account'}</option>
-                    {accountOptions.map((account) => (
+                    {sortedAccountOptions.map((account) => (
                       <option key={account.id} value={account.id}>
                         {account.name}
                       </option>
@@ -1200,7 +1208,7 @@ export function TransactionsSection() {
                     disabled={!requiresInstrument}
                   >
                     <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
-                    {instrumentOptions.map((instrument) => (
+                    {sortedInstrumentOptions.map((instrument) => (
                       <option key={instrument.id} value={instrument.id}>
                         {instrument.name}
                       </option>
@@ -1551,7 +1559,7 @@ export function TransactionsSection() {
                 onChange={(event) => updateImportProfileDefault('accountId', event.target.value)}
               >
                 <option value="">{isPolish ? 'CSV zawiera kolumnę konta' : 'CSV provides account column'}</option>
-                {accountOptions.map((account) => (
+                {sortedAccountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
@@ -1951,7 +1959,7 @@ export function TransactionsSection() {
                 onChange={(event) => updateJournalFilter('accountId', event.target.value)}
               >
                 <option value="ALL">{isPolish ? 'Wszystkie konta' : 'All accounts'}</option>
-                {accountOptions.map((account) => (
+                {sortedAccountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
@@ -1967,7 +1975,7 @@ export function TransactionsSection() {
                 onChange={(event) => updateJournalFilter('instrumentId', event.target.value)}
               >
                 <option value="ALL">{isPolish ? 'Wszystkie instrumenty' : 'All instruments'}</option>
-                {instrumentOptions.map((instrument) => (
+                {sortedInstrumentOptions.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
                   </option>
@@ -2708,6 +2716,29 @@ function compareStrings(left: string, right: string) {
 
 function compareNumbers(left: string, right: string) {
   return Number(left) - Number(right)
+}
+
+function compareAccountsByCreatedAt(
+  left: { createdAt: string; name: string },
+  right: { createdAt: string; name: string },
+) {
+  if (left.createdAt !== right.createdAt) {
+    return left.createdAt.localeCompare(right.createdAt)
+  }
+
+  return left.name.localeCompare(right.name)
+}
+
+function compareInstrumentsByName(
+  left: { name: string; symbol?: string | null },
+  right: { name: string; symbol?: string | null },
+) {
+  const nameComparison = left.name.localeCompare(right.name)
+  if (nameComparison !== 0) {
+    return nameComparison
+  }
+
+  return (left.symbol ?? '').localeCompare(right.symbol ?? '')
 }
 
 function normalizeDecimalInput(value: string): string {

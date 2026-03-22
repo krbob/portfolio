@@ -603,8 +603,16 @@ describe('App', () => {
         return new Response(
           JSON.stringify([
             {
+              id: 'acc-2',
+              name: 'Second account',
+              kind: 'BROKERAGE',
+              currency: 'PLN',
+              createdAt: '2026-03-14T12:00:00Z',
+              updatedAt: '2026-03-14T12:00:00Z',
+            },
+            {
               id: 'acc-1',
-              name: 'Primary',
+              name: 'First account',
               kind: 'BROKERAGE',
               currency: 'PLN',
               createdAt: '2026-03-13T12:00:00Z',
@@ -771,8 +779,16 @@ describe('App', () => {
         return new Response(
           JSON.stringify([
             {
+              id: 'acc-2',
+              name: 'Second account',
+              kind: 'BROKERAGE',
+              currency: 'PLN',
+              createdAt: '2026-03-14T12:00:00Z',
+              updatedAt: '2026-03-14T12:00:00Z',
+            },
+            {
               id: 'acc-1',
-              name: 'Primary',
+              name: 'First account',
               kind: 'BROKERAGE',
               currency: 'PLN',
               createdAt: '2026-03-13T12:00:00Z',
@@ -853,8 +869,15 @@ describe('App', () => {
 
     const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
+    const accountSelect = dialogScope.getByLabelText(/^account$/i)
 
-    fireEvent.change(dialogScope.getByLabelText(/^account$/i), { target: { value: 'acc-1' } })
+    expect(Array.from(accountSelect.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
+      'Select account',
+      'First account',
+      'Second account',
+    ])
+
+    fireEvent.change(accountSelect, { target: { value: 'acc-1' } })
     fireEvent.change(dialogScope.getByLabelText(/^type$/i), { target: { value: 'BUY' } })
     fireEvent.change(dialogScope.getByLabelText(/^instrument$/i), { target: { value: 'ins-1' } })
     fireEvent.change(dialogScope.getByLabelText(/^quantity$/i), { target: { value: '2' } })
