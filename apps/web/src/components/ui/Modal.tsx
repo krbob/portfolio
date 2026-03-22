@@ -6,7 +6,7 @@ interface ModalProps {
   title: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 }
 
 const sizeClasses = {
@@ -14,6 +14,7 @@ const sizeClasses = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
 } as const
 
 export function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
@@ -41,7 +42,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
-        className={`relative w-full ${sizeClasses[size]} rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl`}
+        className={`relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden ${sizeClasses[size]} rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -61,7 +62,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
             </svg>
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
         {footer && (
           <div className="flex justify-end gap-3 border-t border-zinc-800 px-6 py-4">{footer}</div>
         )}

@@ -692,8 +692,29 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /new transaction/i }))
 
+    expect(await screen.findByRole('dialog', { name: /new transaction/i })).toBeInTheDocument()
     expect(await screen.findByLabelText(/gross amount/i)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /close composer/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: /close editor/i }).length).toBeGreaterThan(0)
+
+    const tradeDateInput = screen.getByLabelText(/trade date/i)
+    fireEvent.change(tradeDateInput, { target: { value: '2026-04-01' } })
+
+    expect(screen.queryByLabelText(/^settlement date$/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /set another date/i }))
+
+    const settlementDateInput = await screen.findByLabelText(/^settlement date$/i)
+    expect(settlementDateInput).toHaveValue('2026-04-01')
+
+    fireEvent.change(tradeDateInput, { target: { value: '2026-04-02' } })
+    expect(settlementDateInput).toHaveValue('2026-04-02')
+
+    fireEvent.change(settlementDateInput, { target: { value: '2026-04-05' } })
+    fireEvent.change(tradeDateInput, { target: { value: '2026-04-03' } })
+    expect(settlementDateInput).toHaveValue('2026-04-05')
+
+    fireEvent.click(screen.getByRole('button', { name: /use trade date/i }))
+    expect(screen.queryByLabelText(/^settlement date$/i)).not.toBeInTheDocument()
   })
 
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {

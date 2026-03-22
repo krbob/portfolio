@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
 import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
+import { Modal } from './ui/Modal'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
@@ -201,7 +202,10 @@ export function TransactionsSection() {
   const [currentPage, setCurrentPage] = useState(1)
   const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
   const [showComposer, setShowComposer] = useState(false)
+  const [showSettlementDateField, setShowSettlementDateField] = useState(false)
+  const [hasCustomSettlementDate, setHasCustomSettlementDate] = useState(false)
 
+  const composerOpen = showComposer || editingTransactionId != null
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL' || form.type === 'REDEEM'
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
@@ -512,18 +516,24 @@ export function TransactionsSection() {
     }
 
     createTransactionMutation.mutate(payload, {
-      onSuccess: () =>
+      onSuccess: () => {
+        setShowSettlementDateField(false)
+        setHasCustomSettlementDate(false)
         setForm((current) => ({
           ...initialForm,
           accountId: current.accountId,
           currency: current.currency,
-        })),
+        }))
+      },
     })
   }
 
   function startEditing(transaction: Transaction) {
+    const settlementDate = transaction.settlementDate ?? transaction.tradeDate
     setActiveWorkspace('journal')
     setShowComposer(true)
+    setShowSettlementDateField(settlementDate !== transaction.tradeDate)
+    setHasCustomSettlementDate(settlementDate !== transaction.tradeDate)
     setPendingDeleteTransactionId(null)
     setEditingTransactionId(transaction.id)
     setForm({
@@ -531,7 +541,7 @@ export function TransactionsSection() {
       instrumentId: transaction.instrumentId ?? '',
       type: transaction.type,
       tradeDate: transaction.tradeDate,
-      settlementDate: transaction.settlementDate ?? transaction.tradeDate,
+      settlementDate,
       quantity: transaction.quantity ?? '',
       unitPrice: transaction.unitPrice ?? '',
       grossAmount: transaction.grossAmount,
@@ -545,6 +555,8 @@ export function TransactionsSection() {
 
   function resetForm() {
     setEditingTransactionId(null)
+    setShowSettlementDateField(false)
+    setHasCustomSettlementDate(false)
     setForm(initialForm)
   }
 
@@ -552,6 +564,8 @@ export function TransactionsSection() {
     setActiveWorkspace('journal')
     setPendingDeleteTransactionId(null)
     setEditingTransactionId(null)
+    setShowSettlementDateField(false)
+    setHasCustomSettlementDate(false)
     setForm(initialForm)
     setShowComposer(true)
   }
@@ -559,6 +573,35 @@ export function TransactionsSection() {
   function closeComposer() {
     resetForm()
     setShowComposer(false)
+  }
+
+  function handleTradeDateChange(nextTradeDate: string) {
+    setForm((current) => ({
+      ...current,
+      tradeDate: nextTradeDate,
+      settlementDate: hasCustomSettlementDate ? current.settlementDate : nextTradeDate,
+    }))
+  }
+
+  function handleSettlementDateChange(nextSettlementDate: string) {
+    setForm((current) => ({
+      ...current,
+      settlementDate: nextSettlementDate,
+    }))
+    setHasCustomSettlementDate(nextSettlementDate !== form.tradeDate)
+  }
+
+  function openSettlementDateField() {
+    setShowSettlementDateField(true)
+  }
+
+  function resetSettlementDateToTradeDate() {
+    setForm((current) => ({
+      ...current,
+      settlementDate: current.tradeDate,
+    }))
+    setHasCustomSettlementDate(false)
+    setShowSettlementDateField(false)
   }
 
   function updateJournalFilter(name: keyof typeof initialJournalFilters, value: string) {
@@ -958,19 +1001,19 @@ export function TransactionsSection() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className={showComposer || editingTransactionId ? btnSecondary : btnPrimary}
+                  className={composerOpen ? btnSecondary : btnPrimary}
                   onClick={() => {
-                    if (showComposer || editingTransactionId) {
+                    if (composerOpen) {
                       closeComposer()
                     } else {
                       openComposerForCreate()
                     }
                   }}
                 >
-                  {showComposer || editingTransactionId
+                  {composerOpen
                     ? isPolish
-                      ? 'Zamknij formularz'
-                      : 'Close composer'
+                      ? 'Zamknij edytor'
+                      : 'Close editor'
                     : isPolish
                       ? 'Nowa transakcja'
                       : 'New transaction'}
@@ -1021,30 +1064,30 @@ export function TransactionsSection() {
             </div>
           </Card>
 
-          {(showComposer || editingTransactionId) && (
-            <Card as="section" className="space-y-5">
-              <SectionHeader
-                eyebrow={isPolish ? 'Edytor' : 'Composer'}
-                title={
-                  editingTransactionId
-                    ? isPolish
-                      ? 'Edytuj wybraną transakcję'
-                      : 'Edit selected transaction'
-                    : isPolish
-                      ? 'Dodaj nowe zdarzenie'
-                      : 'Record a new event'
-                }
-                description={
-                  editingTransactionId
-                    ? isPolish
-                      ? 'Zapis od razu zaktualizuje dziennik, wycenę, historię, alokację i zwroty.'
-                      : 'Saving will immediately update the journal, valuation, history, allocation and returns.'
-                    : isPolish
-                      ? 'Uzupełnij tylko pola potrzebne dla wybranego typu. Instrument i ilość są wymagane wyłącznie dla kupna lub sprzedaży.'
-                      : 'Fill only the fields needed for the selected type. Instrument and quantity are required only for buys or sells.'
-                }
-                className="mb-0"
-              />
+          <Modal
+            open={composerOpen}
+            onClose={closeComposer}
+            title={
+              editingTransactionId
+                ? isPolish
+                  ? 'Edytuj transakcję'
+                  : 'Edit transaction'
+                : isPolish
+                  ? 'Nowa transakcja'
+                  : 'New transaction'
+            }
+            size="2xl"
+          >
+            <div className="space-y-5">
+              <p className="text-sm text-zinc-400">
+                {editingTransactionId
+                  ? isPolish
+                    ? 'Zapis od razu zaktualizuje dziennik, wycenę, historię, alokację i zwroty.'
+                    : 'Saving will immediately update the journal, valuation, history, allocation and returns.'
+                  : isPolish
+                    ? 'Uzupełnij tylko pola potrzebne dla wybranego typu. Instrument i ilość są wymagane wyłącznie dla kupna, sprzedaży i wykupu.'
+                    : 'Fill only the fields needed for the selected type. Instrument and quantity are required only for buys, sells and redemptions.'}
+              </p>
 
               <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={handleSubmit}>
                 <label>
@@ -1085,20 +1128,8 @@ export function TransactionsSection() {
                     className={input}
                     type="date"
                     value={form.tradeDate}
-                    onChange={(event) => setForm((current) => ({ ...current, tradeDate: event.target.value }))}
+                    onChange={(event) => handleTradeDateChange(event.target.value)}
                     required
-                  />
-                </label>
-
-                <label>
-                  <span className={labelClass}>{isPolish ? 'Data rozliczenia' : 'Settlement date'}</span>
-                  <input
-                    className={input}
-                    type="date"
-                    value={form.settlementDate}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, settlementDate: event.target.value }))
-                    }
                   />
                 </label>
 
@@ -1210,6 +1241,49 @@ export function TransactionsSection() {
                   />
                 </label>
 
+                <div className="col-span-full rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200">
+                        {isPolish ? 'Data rozliczenia' : 'Settlement date'}
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-500">
+                        {showSettlementDateField
+                          ? isPolish
+                            ? 'Użyj innej daty tylko wtedy, gdy rozliczenie faktycznie nastąpiło później niż transakcja.'
+                            : 'Use a different date only when settlement actually happened later than the trade.'
+                          : isPolish
+                            ? 'Domyślnie data rozliczenia jest taka sama jak data transakcji.'
+                            : 'Settlement date defaults to the trade date.'}
+                      </p>
+                    </div>
+
+                    {showSettlementDateField ? (
+                      <button type="button" className={btnGhost} onClick={resetSettlementDateToTradeDate}>
+                        {isPolish ? 'Użyj daty transakcji' : 'Use trade date'}
+                      </button>
+                    ) : (
+                      <button type="button" className={btnGhost} onClick={openSettlementDateField}>
+                        {isPolish ? 'Ustaw inną datę' : 'Set another date'}
+                      </button>
+                    )}
+                  </div>
+
+                  {showSettlementDateField && (
+                    <div className="mt-4 grid gap-3 lg:max-w-sm">
+                      <label>
+                        <span className={labelClass}>{isPolish ? 'Data rozliczenia' : 'Settlement date'}</span>
+                        <input
+                          className={input}
+                          type="date"
+                          value={form.settlementDate}
+                          onChange={(event) => handleSettlementDateChange(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
                 <div className="col-span-full flex flex-wrap items-center gap-3">
                   <button
                     className={btnPrimary}
@@ -1237,8 +1311,8 @@ export function TransactionsSection() {
                         ? 'Anuluj edycję'
                         : 'Cancel edit'
                       : isPolish
-                        ? 'Zamknij formularz'
-                        : 'Close composer'}
+                        ? 'Zamknij edytor'
+                        : 'Close editor'}
                   </button>
                 </div>
                 {(createTransactionMutation.error || updateTransactionMutation.error) && (
@@ -1247,8 +1321,8 @@ export function TransactionsSection() {
                   </p>
                 )}
               </form>
-            </Card>
-          )}
+            </div>
+          </Modal>
         </div>
       )}
 
