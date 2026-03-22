@@ -1,8 +1,9 @@
-import { useCallback } from 'react'
-import { AreaSeries, type IChartApi } from 'lightweight-charts'
+import { useCallback, useMemo, useState } from 'react'
+import { AreaSeries, type IChartApi, type MouseEventParams, type Time } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
+import { formatDate, formatPercent } from '../../lib/format'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface AllocationTimeChartProps {
@@ -12,6 +13,13 @@ interface AllocationTimeChartProps {
 
 export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChartProps) {
   const { isPolish } = useI18n()
+  const [hoveredPoint, setHoveredPoint] = useState<PortfolioDailyHistoryPoint | null>(null)
+  const latestPoint = points.at(-1) ?? null
+  const activePoint = hoveredPoint ?? latestPoint
+  const pointsByDate = useMemo(
+    () => new Map(points.map((point) => [point.date, point])),
+    [points],
+  )
   const onChart = useCallback(
     (chart: IChartApi) => {
       const equitySeries = chart.addSeries(AreaSeries, {
@@ -37,23 +45,116 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
       bondSeries.setData(points.map((p) => ({ time: p.date, value: Number(p.bondAllocationPct) })))
       cashSeries.setData(points.map((p) => ({ time: p.date, value: Number(p.cashAllocationPct) })))
       chart.timeScale().fitContent()
+
+      const handleCrosshairMove = (param: MouseEventParams<Time>) => {
+        const timeKey = normalizeChartTime(param.time)
+        setHoveredPoint(timeKey ? pointsByDate.get(timeKey) ?? null : null)
+      }
+
+      chart.subscribeCrosshairMove(handleCrosshairMove)
+
+      return () => {
+        chart.unsubscribeCrosshairMove(handleCrosshairMove)
+      }
     },
-    [points],
+    [points, pointsByDate],
   )
 
   return (
-    <ChartContainer
-      height={height}
-      title={isPolish ? 'Historia alokacji' : 'Allocation History'}
-      subtitle={isPolish ? 'Akcje, obligacje i gotówka jako procent portfela' : 'Equities, bonds and cash as percentage of portfolio'}
-      legend={
-        <>
-          <ChartLegendItem color={chartPalette.equities} label={isPolish ? 'Akcje' : 'Equities'} />
-          <ChartLegendItem color={chartPalette.bonds} label={isPolish ? 'Obligacje' : 'Bonds'} />
-          <ChartLegendItem color={chartPalette.cash} label={isPolish ? 'Gotówka' : 'Cash'} />
-        </>
-      }
-      onChart={onChart}
-    />
+    <div>
+      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-200">
+            {isPolish ? 'Historia alokacji' : 'Allocation History'}
+          </h3>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            {isPolish
+              ? 'Akcje, obligacje i gotówka jako procent portfela'
+              : 'Equities, bonds and cash as percentage of portfolio'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-2 lg:min-w-[22rem]">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                {hoveredPoint ? (isPolish ? 'Wybrany dzień' : 'Selected date') : (isPolish ? 'Ostatni dzień' : 'Latest date')}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-100">
+                {activePoint ? formatDate(activePoint.date) : isPolish ? 'Brak danych' : 'No data'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-right">
+              <AllocationMetric
+                color={chartPalette.equities}
+                label={isPolish ? 'Akcje' : 'Equities'}
+                value={activePoint?.equityAllocationPct ?? null}
+              />
+              <AllocationMetric
+                color={chartPalette.bonds}
+                label={isPolish ? 'Obligacje' : 'Bonds'}
+                value={activePoint?.bondAllocationPct ?? null}
+              />
+              <AllocationMetric
+                color={chartPalette.cash}
+                label={isPolish ? 'Gotówka' : 'Cash'}
+                value={activePoint?.cashAllocationPct ?? null}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ChartContainer
+        height={height}
+        legend={
+          <>
+            <ChartLegendItem color={chartPalette.equities} label={isPolish ? 'Akcje' : 'Equities'} />
+            <ChartLegendItem color={chartPalette.bonds} label={isPolish ? 'Obligacje' : 'Bonds'} />
+            <ChartLegendItem color={chartPalette.cash} label={isPolish ? 'Gotówka' : 'Cash'} />
+          </>
+        }
+        onChart={onChart}
+      />
+    </div>
   )
+}
+
+function AllocationMetric({
+  color,
+  label,
+  value,
+}: {
+  color: string
+  label: string
+  value: string | number | null | undefined
+}) {
+  return (
+    <div>
+      <p className="flex items-center justify-end gap-1.5 text-[11px] uppercase tracking-[0.12em] text-zinc-500">
+        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-zinc-100">
+        {formatPercent(value, { maximumFractionDigits: 2 })}
+      </p>
+    </div>
+  )
+}
+
+function normalizeChartTime(time: Time | undefined): string | null {
+  if (time == null) {
+    return null
+  }
+
+  if (typeof time === 'string') {
+    return time
+  }
+
+  if (typeof time === 'number') {
+    return new Date(time * 1000).toISOString().slice(0, 10)
+  }
+
+  return `${time.year}-${String(time.month).padStart(2, '0')}-${String(time.day).padStart(2, '0')}`
 }
