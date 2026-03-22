@@ -28,7 +28,13 @@ const TARGET_FIELDS: Array<{ assetClass: AssetClass; label: string }> = [
   { assetClass: 'CASH', label: 'Cash' },
 ]
 
-const DEFAULT_TARGET_INPUTS: Record<AssetClass, string> = {
+const EMPTY_TARGET_INPUTS: Record<AssetClass, string> = {
+  EQUITIES: '0',
+  BONDS: '0',
+  CASH: '0',
+}
+
+const PRESET_80_20_INPUTS: Record<AssetClass, string> = {
   EQUITIES: '80',
   BONDS: '20',
   CASH: '0',
@@ -42,7 +48,7 @@ export function PortfolioTargetsSection() {
   const replaceTargetsMutation = useReplacePortfolioTargets()
   const saveRebalancingSettingsMutation = useSavePortfolioRebalancingSettings()
 
-  const [inputs, setInputs] = useState<Record<AssetClass, string>>(DEFAULT_TARGET_INPUTS)
+  const [inputs, setInputs] = useState<Record<AssetClass, string>>(EMPTY_TARGET_INPUTS)
   const [toleranceBandInput, setToleranceBandInput] = useState('5.00')
   const [rebalancingMode, setRebalancingMode] = useState<RebalancingMode>('CONTRIBUTIONS_ONLY')
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -56,11 +62,11 @@ export function PortfolioTargetsSection() {
     }
 
     if (targetsQuery.data.length === 0) {
-      setInputs(DEFAULT_TARGET_INPUTS)
+      setInputs(EMPTY_TARGET_INPUTS)
       return
     }
 
-    const nextInputs = { ...DEFAULT_TARGET_INPUTS }
+    const nextInputs = { ...EMPTY_TARGET_INPUTS }
     targetsQuery.data.forEach((target) => {
       const key = target.assetClass as AssetClass
       nextInputs[key] = String(Number(target.targetWeight) * 100)
@@ -81,9 +87,20 @@ export function PortfolioTargetsSection() {
     [inputs],
   )
   const totalIsValid = Math.abs(totalPct - 100) < 0.0001
-  const configuredMixLabel = TARGET_FIELDS
+  const editedMixLabel = TARGET_FIELDS
     .map((field) => `${formatPercent(inputs[field.assetClass], { maximumFractionDigits: 2 })} ${isPolish ? labelAssetClass(field.assetClass).toLowerCase() : field.label.toLowerCase()}`)
     .join(' / ')
+  const savedMixLabel = targetsQuery.data == null
+    ? null
+    : targetsQuery.data.length === 0
+      ? (isPolish ? 'brak konfiguracji' : 'not configured')
+      : TARGET_FIELDS
+        .map((field) => {
+          const savedTarget = targetsQuery.data.find((target) => target.assetClass === field.assetClass)
+          const savedPct = savedTarget == null ? '0' : String(Number(savedTarget.targetWeight) * 100)
+          return `${formatPercent(savedPct, { maximumFractionDigits: 2 })} ${isPolish ? labelAssetClass(field.assetClass).toLowerCase() : field.label.toLowerCase()}`
+        })
+        .join(' / ')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -175,7 +192,7 @@ export function PortfolioTargetsSection() {
             <button
               type="button"
               className={btnSecondary}
-              onClick={() => applyPreset(DEFAULT_TARGET_INPUTS)}
+              onClick={() => applyPreset(PRESET_80_20_INPUTS)}
             >
               {isPolish ? 'Preset 80/20' : 'Preset 80/20'}
             </button>
@@ -217,8 +234,19 @@ export function PortfolioTargetsSection() {
           <span className={`${badge} ${totalIsValid ? badgeVariants.success : badgeVariants.warning}`}>
             {isPolish ? 'Suma' : 'Sum'} {formatPercent(totalPct, { maximumFractionDigits: 2 })}
           </span>
-          <span className="text-sm text-zinc-500">{isPolish ? 'Bieżący miks' : 'Current mix'}: {configuredMixLabel}</span>
+          <span className="text-sm text-zinc-500">{isPolish ? 'Edytowany miks' : 'Edited mix'}: {editedMixLabel}</span>
+          {savedMixLabel ? (
+            <span className="text-sm text-zinc-500">{isPolish ? 'Zapisany miks' : 'Saved mix'}: {savedMixLabel}</span>
+          ) : null}
         </div>
+
+        {targetsQuery.data?.length === 0 ? (
+          <p className="text-sm text-amber-400">
+            {isPolish
+              ? 'Brak zapisanych targetów. Uzupełnij pola albo użyj presetu, a potem kliknij Zapisz targety.'
+              : 'No targets are saved yet. Fill in the weights or use the preset, then click Save targets.'}
+          </p>
+        ) : null}
 
         {feedback && <p className="text-sm text-emerald-400">{feedback}</p>}
         {actionError && <p className="text-sm text-red-400">{actionError}</p>}

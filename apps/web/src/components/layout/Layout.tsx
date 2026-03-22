@@ -58,7 +58,7 @@ export function Layout({ children }: { children: ReactNode }) {
         return
       }
 
-      if (attempts >= 10) {
+      if (attempts >= 40) {
         previousPathRef.current = location.pathname
         return
       }

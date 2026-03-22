@@ -1238,6 +1238,8 @@ describe('App', () => {
     )
 
     expect(await screen.findByText(/target allocation|alokacja docelowa/i)).toBeInTheDocument()
+    expect(await screen.findByText(/saved mix|zapisany miks/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(scrollIntoViewMock).toHaveBeenCalled()
     })
