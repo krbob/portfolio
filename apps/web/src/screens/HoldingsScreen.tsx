@@ -3,7 +3,7 @@ import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
 import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
-import { formatCurrencyPln, formatDate, formatNumber, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
 import {
@@ -271,6 +271,7 @@ export function HoldingsScreen() {
                   const status = normalizedValuationStatus(holding.valuationStatus)
                   const isSelected = key === selectedHoldingKey
                   const gainPln = holding.unrealizedGainPln
+                  const gainPct = holdingGainPercent(holding)
                   const statusPresentation = holdingStatusPresentation(status, isPolish)
 
                   return (
@@ -304,9 +305,12 @@ export function HoldingsScreen() {
                         {formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}
                       </td>
                       <td className={`${tdRight} font-medium ${gainColor(gainPln)}`}>
-                        {gainPln == null
-                          ? (isPolish ? 'b/d' : 'N/A')
-                          : formatSignedCurrencyPln(gainPln)}
+                        <div>{gainPln == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(gainPln)}</div>
+                        {gainPct != null ? (
+                          <div className="mt-0.5 text-xs font-normal text-zinc-500">
+                            {formatPercent(gainPct, { signed: true, scale: 100, maximumFractionDigits: 2 })}
+                          </div>
+                        ) : null}
                       </td>
                       <td className={td}>
                         <span className={`${badge} ${statusPresentation.className}`}>
@@ -357,6 +361,7 @@ export function HoldingsScreen() {
               value={selectedHolding.unrealizedGainPln == null
                 ? (isPolish ? 'b/d' : 'N/A')
                 : formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
+              detail={formatHoldingGainPercent(selectedHolding)}
               className={gainColor(selectedHolding.unrealizedGainPln)}
             />
           </div>
@@ -381,11 +386,22 @@ export function HoldingsScreen() {
 
 // --- Sub-components ---
 
-function DetailStat({ label, value, className }: { label: string; value: string; className?: string }) {
+function DetailStat({
+  label,
+  value,
+  detail,
+  className,
+}: {
+  label: string
+  value: string
+  detail?: string | null
+  className?: string
+}) {
   return (
     <div>
       <p className="text-xs font-medium text-zinc-500">{label}</p>
       <p className={`mt-0.5 text-sm font-medium tabular-nums ${className ?? 'text-zinc-100'}`}>{value}</p>
+      {detail ? <p className="mt-0.5 text-xs text-zinc-500">{detail}</p> : null}
     </div>
   )
 }
@@ -553,6 +569,30 @@ function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortSta
 
 function asNumber(v: string | null | undefined) {
   return v == null || v === '' ? 0 : Number(v)
+}
+
+function holdingGainPercent(holding: PortfolioHolding) {
+  const gain = holding.unrealizedGainPln
+  const costBasis = asNumber(holding.costBasisPln)
+
+  if (gain == null || costBasis <= 0) {
+    return null
+  }
+
+  return asNumber(gain) / costBasis
+}
+
+function formatHoldingGainPercent(holding: PortfolioHolding) {
+  const gainPct = holdingGainPercent(holding)
+  if (gainPct == null) {
+    return null
+  }
+
+  return formatPercent(gainPct, {
+    signed: true,
+    scale: 100,
+    maximumFractionDigits: 2,
+  })
 }
 
 function uniqueValues(values: string[]) {

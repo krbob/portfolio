@@ -552,6 +552,109 @@ describe('App', () => {
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
   })
 
+  it('shows percentage pnl for valued holdings', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              quantity: '10',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '1000.00',
+              bookValuePln: '1000.00',
+              currentPricePln: '112.50',
+              currentValuePln: '1125.00',
+              unrealizedGainPln: '125.00',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 1,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in holdings pnl test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/holdings']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(await screen.findByText('+12.50%')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('VWRA'))
+
+    expect((await screen.findAllByText(/\+.*125\.00/)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('+12.50%')).length).toBeGreaterThan(0)
+  })
+
   it('keeps the transaction journal in focus until the composer is opened explicitly', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
