@@ -39,7 +39,8 @@ data class Transaction(
     private fun validateTypeSpecificRules() {
         when (type) {
             TransactionType.BUY,
-            TransactionType.SELL -> {
+            TransactionType.SELL,
+            TransactionType.REDEEM -> {
                 require(instrumentId != null) { "$type transactions require an instrument." }
                 require(quantity != null && quantity > BigDecimal.ZERO) { "$type transactions require positive quantity." }
                 require(unitPrice != null && unitPrice >= BigDecimal.ZERO) { "$type transactions require unit price." }
@@ -64,6 +65,7 @@ data class Transaction(
 enum class TransactionType {
     BUY,
     SELL,
+    REDEEM,
     DEPOSIT,
     WITHDRAWAL,
     FEE,

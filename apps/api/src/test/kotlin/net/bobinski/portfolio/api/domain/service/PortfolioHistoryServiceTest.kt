@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
+import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
@@ -284,6 +285,49 @@ class PortfolioHistoryServiceTest {
         assertTrue(lastPoint.inflationBenchmarkIndex!!.compareTo(BigDecimal("100")) > 0)
     }
 
+    @Test
+    fun `daily history removes redeemed EDO lots after redemption date`() = runBlocking {
+        val fixture = historyFixture()
+        val edo = edoInstrument()
+        fixture.accountRepository.save(account())
+        fixture.instrumentRepository.save(edo)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = edo.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "0.00",
+                tradeDate = LocalDate.parse("2026-03-02")
+            )
+        )
+        fixture.transactionRepository.save(
+            redeemTransaction(
+                instrumentId = edo.id,
+                quantity = "10",
+                grossAmount = "1080.00",
+                taxAmount = "15.20",
+                tradeDate = LocalDate.parse("2026-03-03")
+            )
+        )
+        fixture.edoLotValuationProvider.values[LocalDate.parse("2026-03-02")] =
+            HistoricalInstrumentValuationResult.Success(
+                prices = listOf(
+                    pricePoint("2026-03-02", "100.00"),
+                    pricePoint("2026-03-03", "108.00")
+                )
+            )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(BigDecimal("2000.00"), history.points[0].totalCurrentValuePln)
+        assertEquals(BigDecimal("2000.00"), history.points[1].totalCurrentValuePln)
+        assertEquals(BigDecimal("2064.80"), history.points[2].totalCurrentValuePln)
+        assertEquals(0, history.points[2].valuedHoldingCount)
+    }
+
     private fun historyFixture(): HistoryFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -313,6 +357,7 @@ class PortfolioHistoryServiceTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historyProvider = historyProvider,
+            edoLotValuationProvider = edoLotValuationProvider,
             referenceProvider = referenceProvider,
             fxRateProvider = fxRateProvider,
             inflationProvider = inflationProvider
@@ -343,6 +388,24 @@ class PortfolioHistoryServiceTest {
         updatedAt = CREATED_AT
     )
 
+    private fun edoInstrument(): Instrument = Instrument(
+        id = UUID.fromString("30000000-0000-0000-0000-000000000001"),
+        name = "EDO0336",
+        kind = InstrumentKind.BOND_EDO,
+        assetClass = AssetClass.BONDS,
+        symbol = null,
+        currency = "PLN",
+        valuationSource = ValuationSource.EDO_CALCULATOR,
+        edoTerms = EdoTerms(
+            seriesMonth = YearMonth.parse("2026-03"),
+            firstPeriodRateBps = 500,
+            marginBps = 150
+        ),
+        isActive = true,
+        createdAt = CREATED_AT,
+        updatedAt = CREATED_AT
+    )
+
     private fun depositTransaction(
         grossAmount: String = "2000.00",
         currency: String = "PLN",
@@ -367,23 +430,54 @@ class PortfolioHistoryServiceTest {
         updatedAt = CREATED_AT
     )
 
-    private fun buyTransaction(instrumentId: UUID): Transaction = Transaction(
-        id = UUID.nameUUIDFromBytes("history-buy".toByteArray()),
+    private fun buyTransaction(
+        instrumentId: UUID,
+        quantity: String = "10",
+        grossAmount: String = "1000.00",
+        feeAmount: String = "5.00",
+        tradeDate: LocalDate = LocalDate.parse("2026-03-02")
+    ): Transaction = Transaction(
+        id = UUID.nameUUIDFromBytes("history-buy-$instrumentId-$tradeDate".toByteArray()),
         accountId = ACCOUNT_ID,
         instrumentId = instrumentId,
         type = TransactionType.BUY,
-        tradeDate = LocalDate.parse("2026-03-02"),
-        settlementDate = LocalDate.parse("2026-03-02"),
-        quantity = BigDecimal("10"),
+        tradeDate = tradeDate,
+        settlementDate = tradeDate,
+        quantity = BigDecimal(quantity),
         unitPrice = BigDecimal("100.00"),
-        grossAmount = BigDecimal("1000.00"),
-        feeAmount = BigDecimal("5.00"),
+        grossAmount = BigDecimal(grossAmount),
+        feeAmount = BigDecimal(feeAmount),
         taxAmount = BigDecimal.ZERO,
         currency = "PLN",
         fxRateToPln = null,
         notes = "",
-        createdAt = CREATED_AT.plusSeconds(1),
-        updatedAt = CREATED_AT.plusSeconds(1)
+        createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),
+        updatedAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong())
+    )
+
+    private fun redeemTransaction(
+        instrumentId: UUID,
+        quantity: String,
+        grossAmount: String,
+        taxAmount: String,
+        tradeDate: LocalDate
+    ): Transaction = Transaction(
+        id = UUID.nameUUIDFromBytes("history-redeem-$instrumentId-$tradeDate".toByteArray()),
+        accountId = ACCOUNT_ID,
+        instrumentId = instrumentId,
+        type = TransactionType.REDEEM,
+        tradeDate = tradeDate,
+        settlementDate = tradeDate,
+        quantity = BigDecimal(quantity),
+        unitPrice = BigDecimal("108.00"),
+        grossAmount = BigDecimal(grossAmount),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal(taxAmount),
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "",
+        createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),
+        updatedAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong())
     )
 
     private fun pricePoint(date: String, closePricePln: String): HistoricalPricePoint =
@@ -399,6 +493,7 @@ class PortfolioHistoryServiceTest {
         val portfolioTargetRepository: InMemoryPortfolioTargetRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val historyProvider: FakeHistoricalInstrumentValuationProvider,
+        val edoLotValuationProvider: FakeEdoLotValuationProvider,
         val referenceProvider: FakeReferenceSeriesProvider,
         val fxRateProvider: FakeFxRateHistoryProvider,
         val inflationProvider: FakeInflationAdjustmentProvider
@@ -419,6 +514,8 @@ class PortfolioHistoryServiceTest {
     }
 
     private class FakeEdoLotValuationProvider : EdoLotValuationProvider {
+        val values: MutableMap<LocalDate, HistoricalInstrumentValuationResult> = linkedMapOf()
+
         override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms) =
             throw UnsupportedOperationException("Not used in history tests.")
 
@@ -426,10 +523,11 @@ class PortfolioHistoryServiceTest {
             lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
             from: LocalDate,
             to: LocalDate
-        ): HistoricalInstrumentValuationResult = HistoricalInstrumentValuationResult.Failure(
-            type = InstrumentValuationFailureType.UNAVAILABLE,
-            reason = "No fake EDO lot history for ${lotTerms.purchaseDate}."
-        )
+        ): HistoricalInstrumentValuationResult = values[lotTerms.purchaseDate]
+            ?: HistoricalInstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNAVAILABLE,
+                reason = "No fake EDO lot history for ${lotTerms.purchaseDate}."
+            )
     }
 
     private class FakeReferenceSeriesProvider : ReferenceSeriesProvider {

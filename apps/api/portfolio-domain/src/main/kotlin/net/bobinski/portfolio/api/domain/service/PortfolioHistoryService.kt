@@ -138,21 +138,36 @@ class PortfolioHistoryService(
                         val costBasisBefore = holding.costBasisPln
 
                         if (quantityBefore.signum() > 0 && sellQuantity.signum() > 0) {
-                            if (instrument.kind == InstrumentKind.BOND_EDO) {
-                                holding.reduceEdoLotsFifo(sellQuantity)
+                            val reducedCostBasis = if (sellQuantity >= quantityBefore) {
+                                costBasisBefore
                             } else {
-                                val reducedCostBasis = if (sellQuantity >= quantityBefore) {
-                                    costBasisBefore
-                                } else {
-                                    costBasisBefore
-                                        .divide(quantityBefore, 12, RoundingMode.HALF_UP)
-                                        .multiply(sellQuantity, MONEY_CONTEXT)
-                                }
-                                holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
-                                holding.costBasisPln = costBasisBefore
-                                    .subtract(reducedCostBasis, MONEY_CONTEXT)
-                                    .max(BigDecimal.ZERO)
+                                costBasisBefore
+                                    .divide(quantityBefore, 12, RoundingMode.HALF_UP)
+                                    .multiply(sellQuantity, MONEY_CONTEXT)
                             }
+                            holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
+                            holding.costBasisPln = costBasisBefore
+                                .subtract(reducedCostBasis, MONEY_CONTEXT)
+                                .max(BigDecimal.ZERO)
+                        }
+                        holding.transactionCount += 1
+
+                        cashBalancePln = cashBalancePln
+                            .add(converted.grossPln, MONEY_CONTEXT)
+                            .subtract(converted.feePln, MONEY_CONTEXT)
+                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                    }
+
+                    TransactionType.REDEEM -> {
+                        val instrument = instrumentsById[transaction.instrumentId] ?: return@forEach
+                        val account = accountsById[transaction.accountId] ?: return@forEach
+                        val holding = holdings.getOrPut(HoldingKey(account.id, instrument.id)) {
+                            MutableHolding(account = account, instrument = instrument)
+                        }
+                        val redeemedQuantity = transaction.quantity ?: BigDecimal.ZERO
+
+                        if (holding.quantity.signum() > 0 && redeemedQuantity.signum() > 0) {
+                            holding.reduceEdoLotsFifo(redeemedQuantity)
                         }
                         holding.transactionCount += 1
 

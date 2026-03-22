@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
+import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.Transaction
@@ -22,11 +23,13 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -148,6 +151,40 @@ class PortfolioReadModelServiceTest {
         assertEquals(0, overview.missingFxTransactions)
     }
 
+    @Test
+    fun `overview removes redeemed EDO lots from holdings and leaves redemption cash`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val edo = edoInstrument()
+        fixture.instrumentRepository.save(edo)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = edo.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "0.00"
+            )
+        )
+        fixture.transactionRepository.save(
+            redeemTransaction(
+                instrumentId = edo.id,
+                quantity = "10",
+                grossAmount = "1080.00",
+                taxAmount = "15.20",
+                tradeDate = LocalDate.parse("2026-03-03")
+            )
+        )
+
+        val overview = fixture.service.overview()
+        val holdings = fixture.service.holdings()
+
+        assertEquals(BigDecimal("2064.80"), overview.totalCurrentValuePln)
+        assertEquals(BigDecimal("2064.80"), overview.cashBalancePln)
+        assertEquals(0, overview.investedCurrentValuePln.compareTo(BigDecimal.ZERO))
+        assertTrue(holdings.isEmpty())
+    }
+
     private fun portfolioFixture(): PortfolioFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -201,6 +238,24 @@ class PortfolioReadModelServiceTest {
         )
     }
 
+    private fun edoInstrument(): Instrument = Instrument(
+        id = UUID.fromString("30000000-0000-0000-0000-000000000001"),
+        name = "EDO0336",
+        kind = InstrumentKind.BOND_EDO,
+        assetClass = AssetClass.BONDS,
+        symbol = null,
+        currency = "PLN",
+        valuationSource = ValuationSource.EDO_CALCULATOR,
+        edoTerms = EdoTerms(
+            seriesMonth = YearMonth.parse("2026-03"),
+            firstPeriodRateBps = 500,
+            marginBps = 150
+        ),
+        isActive = true,
+        createdAt = CREATED_AT,
+        updatedAt = CREATED_AT
+    )
+
     private fun depositTransaction(
         grossAmount: String = "2000.00",
         currency: String = "PLN",
@@ -250,6 +305,31 @@ class PortfolioReadModelServiceTest {
         updatedAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong())
     )
 
+    private fun redeemTransaction(
+        instrumentId: UUID,
+        quantity: String,
+        grossAmount: String,
+        taxAmount: String,
+        tradeDate: LocalDate
+    ): Transaction = Transaction(
+        id = UUID.nameUUIDFromBytes("redeem-$instrumentId-$tradeDate".toByteArray()),
+        accountId = ACCOUNT_ID,
+        instrumentId = instrumentId,
+        type = TransactionType.REDEEM,
+        tradeDate = tradeDate,
+        settlementDate = tradeDate,
+        quantity = BigDecimal(quantity),
+        unitPrice = BigDecimal("108.00"),
+        grossAmount = BigDecimal(grossAmount),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal(taxAmount),
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "",
+        createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),
+        updatedAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong())
+    )
+
     private fun pricePoint(date: String, closePricePln: String): HistoricalPricePoint =
         HistoricalPricePoint(
             date = LocalDate.parse(date),
@@ -277,11 +357,14 @@ class PortfolioReadModelServiceTest {
     }
 
     private class FakeEdoLotValuationProvider : EdoLotValuationProvider {
+        val values: MutableMap<LocalDate, InstrumentValuationResult> = linkedMapOf()
+
         override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms): InstrumentValuationResult =
-            InstrumentValuationResult.Failure(
-                type = InstrumentValuationFailureType.UNAVAILABLE,
-                reason = "No fake EDO lot valuation for ${lotTerms.purchaseDate}."
-            )
+            values[lotTerms.purchaseDate]
+                ?: InstrumentValuationResult.Failure(
+                    type = InstrumentValuationFailureType.UNAVAILABLE,
+                    reason = "No fake EDO lot valuation for ${lotTerms.purchaseDate}."
+                )
 
         override suspend fun dailyPriceSeries(
             lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,

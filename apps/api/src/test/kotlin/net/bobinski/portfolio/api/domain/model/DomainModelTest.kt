@@ -108,6 +108,32 @@ class DomainModelTest {
         assertEquals("BUY transactions require positive quantity.", exception.message)
     }
 
+    @Test
+    fun `redeem transaction requires instrument quantity and unit price`() {
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            Transaction(
+                id = UUID.randomUUID(),
+                accountId = UUID.randomUUID(),
+                instrumentId = null,
+                type = TransactionType.REDEEM,
+                tradeDate = LocalDate.parse("2026-01-10"),
+                settlementDate = LocalDate.parse("2026-01-10"),
+                quantity = BigDecimal.ONE,
+                unitPrice = BigDecimal("100.00"),
+                grossAmount = BigDecimal("101.00"),
+                feeAmount = BigDecimal.ZERO,
+                taxAmount = BigDecimal("0.19"),
+                currency = "PLN",
+                fxRateToPln = null,
+                notes = "",
+                createdAt = NOW,
+                updatedAt = NOW
+            )
+        }
+
+        assertEquals("REDEEM transactions require an instrument.", exception.message)
+    }
+
     private companion object {
         val NOW: Instant = Instant.parse("2026-03-13T12:00:00Z")
     }

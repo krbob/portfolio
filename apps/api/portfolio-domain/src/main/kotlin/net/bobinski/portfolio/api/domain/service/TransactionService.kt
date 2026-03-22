@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.domain.service
 
 import net.bobinski.portfolio.api.domain.error.ResourceNotFoundException
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
+import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
@@ -141,9 +142,21 @@ class TransactionService(
             throw IllegalArgumentException("Transactions cannot target inactive accounts.")
         }
 
-        command.instrumentId?.let { instrumentId ->
+        val instrument = command.instrumentId?.let { instrumentId ->
             instrumentRepository.get(instrumentId)
                 ?: throw ResourceNotFoundException("Instrument $instrumentId was not found.")
+        }
+
+        when (command.type) {
+            TransactionType.REDEEM -> require(instrument?.kind == InstrumentKind.BOND_EDO) {
+                "REDEEM transactions require an EDO instrument."
+            }
+
+            TransactionType.SELL -> require(instrument?.kind != InstrumentKind.BOND_EDO) {
+                "Use REDEEM instead of SELL for EDO instruments."
+            }
+
+            else -> Unit
         }
     }
 

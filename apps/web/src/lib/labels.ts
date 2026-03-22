@@ -199,6 +199,8 @@ export function labelTransactionType(value: string) {
         return 'Kupno'
       case 'SELL':
         return 'Sprzedaż'
+      case 'REDEEM':
+        return 'Wykup'
       case 'FEE':
         return 'Prowizja'
       case 'TAX':
@@ -221,6 +223,8 @@ export function labelTransactionType(value: string) {
       return 'Buy'
     case 'SELL':
       return 'Sell'
+    case 'REDEEM':
+      return 'Redeem'
     case 'FEE':
       return 'Fee'
     case 'TAX':

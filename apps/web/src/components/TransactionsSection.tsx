@@ -43,7 +43,7 @@ import type {
 } from '../api/write-model'
 
 const today = new Date().toISOString().slice(0, 10)
-const transactionTypes = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'] as const
+const transactionTypes = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'REDEEM', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'] as const
 const NEW_IMPORT_PROFILE_ID = '__new_import_profile__'
 const STRUCTURED_IMPORT_TEMPLATE = `[
   {
@@ -202,7 +202,7 @@ export function TransactionsSection() {
   const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
   const [showComposer, setShowComposer] = useState(false)
 
-  const requiresInstrument = form.type === 'BUY' || form.type === 'SELL'
+  const requiresInstrument = form.type === 'BUY' || form.type === 'SELL' || form.type === 'REDEEM'
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
   const importProfiles = transactionImportProfilesQuery.data ?? []

@@ -102,6 +102,61 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `edo redemptions require REDEEM instead of SELL`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val instrumentId = createEdoInstrument()
+
+        val redeemResponse = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "instrumentId": "$instrumentId",
+                  "type": "REDEEM",
+                  "tradeDate": "2026-03-10",
+                  "settlementDate": "2026-03-10",
+                  "quantity": "10",
+                  "unitPrice": "108.00",
+                  "grossAmount": "1080.00",
+                  "taxAmount": "15.20",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+
+        val sellResponse = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "instrumentId": "$instrumentId",
+                  "type": "SELL",
+                  "tradeDate": "2026-03-10",
+                  "settlementDate": "2026-03-10",
+                  "quantity": "10",
+                  "unitPrice": "108.00",
+                  "grossAmount": "1080.00",
+                  "taxAmount": "15.20",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.Created, redeemResponse.status)
+        assertTrue(redeemResponse.bodyAsText().contains("\"type\": \"REDEEM\""))
+        assertEquals(HttpStatusCode.BadRequest, sellResponse.status)
+        assertTrue(sellResponse.bodyAsText().contains("Use REDEEM instead of SELL for EDO instruments."))
+    }
+
+    @Test
     fun `transactions can be updated and deleted`() = testApplication {
         application {
             module()
@@ -347,5 +402,45 @@ class WriteModelRouteTest {
         assertTrue(importResponse.bodyAsText().contains("\"createdCount\": 1"))
         assertTrue(importResponse.bodyAsText().contains("\"skippedDuplicateCount\": 2"))
         assertTrue(listResponse.bodyAsText().contains("\"notes\": \"batch duplicate\""))
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(): String {
+        val response = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Primary",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createEdoInstrument(): String {
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "EDO0336",
+                  "kind": "BOND_EDO",
+                  "assetClass": "BONDS",
+                  "currency": "PLN",
+                  "valuationSource": "EDO_CALCULATOR",
+                  "edoTerms": {
+                    "seriesMonth": "2026-03",
+                    "firstPeriodRateBps": 500,
+                    "marginBps": 150
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
     }
 }
