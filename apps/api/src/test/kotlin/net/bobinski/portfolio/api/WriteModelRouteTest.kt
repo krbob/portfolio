@@ -157,6 +157,44 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `transactions accept decimal commas`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val instrumentId = createEtfInstrument()
+
+        val response = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "instrumentId": "$instrumentId",
+                  "type": "BUY",
+                  "tradeDate": "2026-03-10",
+                  "settlementDate": "2026-03-10",
+                  "quantity": "2",
+                  "unitPrice": "123,45",
+                  "grossAmount": "246,90",
+                  "feeAmount": "1,20",
+                  "taxAmount": "0,00",
+                  "currency": "USD",
+                  "fxRateToPln": "4,0321"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertTrue(response.bodyAsText().contains("\"unitPrice\": \"123.45\""))
+        assertTrue(response.bodyAsText().contains("\"grossAmount\": \"246.90\""))
+        assertTrue(response.bodyAsText().contains("\"feeAmount\": \"1.20\""))
+        assertTrue(response.bodyAsText().contains("\"fxRateToPln\": \"4.0321\""))
+    }
+
+    @Test
     fun `transactions can be updated and deleted`() = testApplication {
         application {
             module()
@@ -437,6 +475,25 @@ class WriteModelRouteTest {
                     "firstPeriodRateBps": 500,
                     "marginBps": 150
                   }
+                }
+                """.trimIndent()
+            )
+        }
+        return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createEtfInstrument(): String {
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "VWRA",
+                  "kind": "ETF",
+                  "assetClass": "EQUITIES",
+                  "symbol": "VWRA.L",
+                  "currency": "USD",
+                  "valuationSource": "STOCK_ANALYST"
                 }
                 """.trimIndent()
             )

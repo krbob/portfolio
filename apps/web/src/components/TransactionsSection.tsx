@@ -72,7 +72,7 @@ const initialForm = {
   settlementDate: today,
   quantity: '',
   unitPrice: '',
-  grossAmount: '1000.00',
+  grossAmount: '',
   feeAmount: '0',
   taxAmount: '0',
   currency: 'PLN',
@@ -204,9 +204,11 @@ export function TransactionsSection() {
   const [showComposer, setShowComposer] = useState(false)
   const [showSettlementDateField, setShowSettlementDateField] = useState(false)
   const [hasCustomSettlementDate, setHasCustomSettlementDate] = useState(false)
+  const [grossAmountMode, setGrossAmountMode] = useState<'auto' | 'manual'>('auto')
 
   const composerOpen = showComposer || editingTransactionId != null
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL' || form.type === 'REDEEM'
+  const decimalSeparator = isPolish ? ',' : '.'
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
   const importProfiles = transactionImportProfilesQuery.data ?? []
@@ -264,6 +266,13 @@ export function TransactionsSection() {
   const canSubmit = useMemo(() => {
     return form.accountId !== '' && (!requiresInstrument || form.instrumentId !== '')
   }, [form.accountId, form.instrumentId, requiresInstrument])
+  const suggestedGrossAmount = useMemo(() => {
+    if (!requiresInstrument) {
+      return ''
+    }
+
+    return multiplyDecimalInputs(form.quantity, form.unitPrice, decimalSeparator)
+  }, [decimalSeparator, form.quantity, form.unitPrice, requiresInstrument])
 
   const accountNameById = useMemo(
     () => new Map(accountOptions.map((account) => [account.id, account.name])),
@@ -422,6 +431,21 @@ export function TransactionsSection() {
   }, [importProfiles, selectedImportProfileId])
 
   useEffect(() => {
+    if (!requiresInstrument || grossAmountMode !== 'auto') {
+      return
+    }
+
+    setForm((current) =>
+      current.grossAmount === suggestedGrossAmount
+        ? current
+        : {
+            ...current,
+            grossAmount: suggestedGrossAmount,
+          },
+    )
+  }, [grossAmountMode, requiresInstrument, suggestedGrossAmount])
+
+  useEffect(() => {
     if (
       pendingSavedImportProfile &&
       (selectedImportProfileId !== pendingSavedImportProfile.id ||
@@ -492,13 +516,13 @@ export function TransactionsSection() {
       type: form.type,
       tradeDate: form.tradeDate,
       settlementDate: form.settlementDate,
-      quantity: requiresInstrument ? form.quantity : null,
-      unitPrice: requiresInstrument ? form.unitPrice : null,
-      grossAmount: form.grossAmount,
-      feeAmount: form.feeAmount,
-      taxAmount: form.taxAmount,
+      quantity: requiresInstrument ? normalizeOptionalDecimalForPayload(form.quantity) : null,
+      unitPrice: requiresInstrument ? normalizeOptionalDecimalForPayload(form.unitPrice) : null,
+      grossAmount: normalizeDecimalForPayload(form.grossAmount),
+      feeAmount: normalizeDecimalForPayload(form.feeAmount),
+      taxAmount: normalizeDecimalForPayload(form.taxAmount),
       currency: form.currency,
-      fxRateToPln: form.fxRateToPln || null,
+      fxRateToPln: normalizeOptionalDecimalForPayload(form.fxRateToPln),
       notes: form.notes,
     }
 
@@ -516,15 +540,7 @@ export function TransactionsSection() {
     }
 
     createTransactionMutation.mutate(payload, {
-      onSuccess: () => {
-        setShowSettlementDateField(false)
-        setHasCustomSettlementDate(false)
-        setForm((current) => ({
-          ...initialForm,
-          accountId: current.accountId,
-          currency: current.currency,
-        }))
-      },
+      onSuccess: () => closeComposer(),
     })
   }
 
@@ -534,6 +550,7 @@ export function TransactionsSection() {
     setShowComposer(true)
     setShowSettlementDateField(settlementDate !== transaction.tradeDate)
     setHasCustomSettlementDate(settlementDate !== transaction.tradeDate)
+    setGrossAmountMode('manual')
     setPendingDeleteTransactionId(null)
     setEditingTransactionId(transaction.id)
     setForm({
@@ -557,6 +574,7 @@ export function TransactionsSection() {
     setEditingTransactionId(null)
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
+    setGrossAmountMode('auto')
     setForm(initialForm)
   }
 
@@ -566,6 +584,7 @@ export function TransactionsSection() {
     setEditingTransactionId(null)
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
+    setGrossAmountMode('auto')
     setForm(initialForm)
     setShowComposer(true)
   }
@@ -602,6 +621,43 @@ export function TransactionsSection() {
     }))
     setHasCustomSettlementDate(false)
     setShowSettlementDateField(false)
+  }
+
+  function handleTypeChange(nextType: string) {
+    setForm((current) => ({
+      ...current,
+      type: nextType,
+    }))
+  }
+
+  function handleQuantityChange(nextQuantity: string) {
+    setForm((current) => ({
+      ...current,
+      quantity: nextQuantity,
+    }))
+  }
+
+  function handleUnitPriceChange(nextUnitPrice: string) {
+    setForm((current) => ({
+      ...current,
+      unitPrice: nextUnitPrice,
+    }))
+  }
+
+  function handleGrossAmountChange(nextGrossAmount: string) {
+    setGrossAmountMode('manual')
+    setForm((current) => ({
+      ...current,
+      grossAmount: nextGrossAmount,
+    }))
+  }
+
+  function applySuggestedGrossAmount() {
+    setGrossAmountMode('auto')
+    setForm((current) => ({
+      ...current,
+      grossAmount: suggestedGrossAmount,
+    }))
   }
 
   function updateJournalFilter(name: keyof typeof initialJournalFilters, value: string) {
@@ -1112,7 +1168,7 @@ export function TransactionsSection() {
                   <select
                     className={input}
                     value={form.type}
-                    onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
+                    onChange={(event) => handleTypeChange(event.target.value)}
                   >
                     {transactionTypes.map((type) => (
                       <option key={type} value={type}>
@@ -1156,8 +1212,9 @@ export function TransactionsSection() {
                   <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
                   <input
                     className={input}
+                    inputMode="decimal"
                     value={form.quantity}
-                    onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
+                    onChange={(event) => handleQuantityChange(event.target.value)}
                     placeholder="10"
                     disabled={!requiresInstrument}
                   />
@@ -1167,33 +1224,53 @@ export function TransactionsSection() {
                   <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
                   <input
                     className={input}
+                    inputMode="decimal"
                     value={form.unitPrice}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, unitPrice: event.target.value }))
-                    }
-                    placeholder="123.45"
+                    onChange={(event) => handleUnitPriceChange(event.target.value)}
+                    placeholder={isPolish ? '123,45' : '123.45'}
                     disabled={!requiresInstrument}
                   />
                 </label>
 
-                <label>
-                  <span className={labelClass}>{isPolish ? 'Kwota brutto' : 'Gross amount'}</span>
+                <div>
+                  <label className={labelClass} htmlFor="transaction-gross-amount">
+                    {isPolish ? 'Kwota brutto' : 'Gross amount'}
+                  </label>
+                  <div className="mb-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                    <span>
+                      {grossAmountMode === 'auto' && requiresInstrument
+                        ? isPolish
+                          ? 'Liczona z ilości i ceny.'
+                          : 'Calculated from quantity and price.'
+                        : isPolish
+                          ? 'Możesz nadpisać ręcznie.'
+                          : 'You can override it manually.'}
+                    </span>
+                    {requiresInstrument && (
+                      <button type="button" className={btnGhost} onClick={applySuggestedGrossAmount}>
+                        {isPolish ? 'Przelicz' : 'Recalculate'}
+                      </button>
+                    )}
+                  </div>
                   <input
+                    id="transaction-gross-amount"
                     className={input}
+                    inputMode="decimal"
                     value={form.grossAmount}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, grossAmount: event.target.value }))
-                    }
+                    onChange={(event) => handleGrossAmountChange(event.target.value)}
+                    placeholder={isPolish ? '246,90' : '246.90'}
                     required
                   />
-                </label>
+                </div>
 
                 <label>
                   <span className={labelClass}>{isPolish ? 'Prowizja' : 'Fee amount'}</span>
                   <input
                     className={input}
+                    inputMode="decimal"
                     value={form.feeAmount}
                     onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
+                    placeholder={isPolish ? '0,00' : '0.00'}
                   />
                 </label>
 
@@ -1201,8 +1278,10 @@ export function TransactionsSection() {
                   <span className={labelClass}>{isPolish ? 'Podatek' : 'Tax amount'}</span>
                   <input
                     className={input}
+                    inputMode="decimal"
                     value={form.taxAmount}
                     onChange={(event) => setForm((current) => ({ ...current, taxAmount: event.target.value }))}
+                    placeholder={isPolish ? '0,00' : '0.00'}
                   />
                 </label>
 
@@ -1223,11 +1302,12 @@ export function TransactionsSection() {
                   <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
                   <input
                     className={input}
+                    inputMode="decimal"
                     value={form.fxRateToPln}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
                     }
-                    placeholder="4.0321"
+                    placeholder={isPolish ? '4,0321' : '4.0321'}
                   />
                 </label>
 
@@ -2628,4 +2708,80 @@ function compareStrings(left: string, right: string) {
 
 function compareNumbers(left: string, right: string) {
   return Number(left) - Number(right)
+}
+
+function normalizeDecimalInput(value: string): string {
+  return value.trim().replace(',', '.')
+}
+
+function normalizeDecimalForPayload(value: string): string {
+  return normalizeDecimalInput(value)
+}
+
+function normalizeOptionalDecimalForPayload(value: string): string | null {
+  const normalized = normalizeDecimalInput(value)
+  return normalized === '' ? null : normalized
+}
+
+function multiplyDecimalInputs(left: string, right: string, decimalSeparator: '.' | ','): string {
+  const leftParts = parseDecimalParts(normalizeDecimalInput(left))
+  const rightParts = parseDecimalParts(normalizeDecimalInput(right))
+
+  if (leftParts == null || rightParts == null) {
+    return ''
+  }
+
+  const unscaled = leftParts.unscaled * rightParts.unscaled
+  const scale = leftParts.scale + rightParts.scale
+  return formatDecimalInput(unscaled, scale, decimalSeparator, 2)
+}
+
+function parseDecimalParts(value: string): { unscaled: bigint; scale: number } | null {
+  if (value === '' || !/^[+-]?\d*(?:\.\d*)?$/.test(value)) {
+    return null
+  }
+
+  const negative = value.startsWith('-')
+  const unsignedValue = negative || value.startsWith('+') ? value.slice(1) : value
+  const [integerPart = '', fractionalPart = ''] = unsignedValue.split('.')
+  const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, '')
+
+  if (digits === '') {
+    return null
+  }
+
+  const magnitude = BigInt(digits)
+  return {
+    unscaled: negative ? -magnitude : magnitude,
+    scale: fractionalPart.length,
+  }
+}
+
+function formatDecimalInput(
+  unscaled: bigint,
+  scale: number,
+  decimalSeparator: '.' | ',',
+  minimumFractionDigits: number,
+): string {
+  const negative = unscaled < 0n
+  const magnitude = negative ? -unscaled : unscaled
+  const digits = magnitude.toString()
+  const paddedDigits = scale > 0 ? digits.padStart(scale + 1, '0') : digits
+  const integerPart = scale > 0 ? paddedDigits.slice(0, -scale) : paddedDigits
+  let fractionalPart = scale > 0 ? paddedDigits.slice(-scale) : ''
+
+  while (fractionalPart.length > minimumFractionDigits && fractionalPart.endsWith('0')) {
+    fractionalPart = fractionalPart.slice(0, -1)
+  }
+
+  if (fractionalPart.length < minimumFractionDigits) {
+    fractionalPart = fractionalPart.padEnd(minimumFractionDigits, '0')
+  }
+
+  const sign = negative ? '-' : ''
+  if (fractionalPart.length === 0) {
+    return `${sign}${integerPart}`
+  }
+
+  return `${sign}${integerPart}${decimalSeparator}${fractionalPart}`
 }

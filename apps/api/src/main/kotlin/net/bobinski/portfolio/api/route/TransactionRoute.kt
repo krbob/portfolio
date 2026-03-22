@@ -213,7 +213,10 @@ private fun parseDate(value: String, field: String): LocalDate =
     }
 
 private fun parseDecimal(value: String, field: String): BigDecimal =
-    value.toBigDecimalOrNull() ?: throw IllegalArgumentException("$field must be a decimal string.")
+    value.trim()
+        .replace(',', '.')
+        .toBigDecimalOrNull()
+        ?: throw IllegalArgumentException("$field must be a decimal string.")
 
 private fun parseTransactionType(value: String): TransactionType =
     try {

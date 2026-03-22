@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -686,7 +686,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^transactions$/i })).toBeInTheDocument()
+    expect((await screen.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
     expect(await screen.findByText(/canonical transaction journal/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/gross amount/i)).not.toBeInTheDocument()
 
@@ -715,6 +715,182 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /use trade date/i }))
     expect(screen.queryByLabelText(/^settlement date$/i)).not.toBeInTheDocument()
+  })
+
+  it('normalizes decimal commas and auto-calculates gross amount when creating a transaction', async () => {
+    let createdPayload: Record<string, string> | null = null
+
+    globalThis.fetch = vi.fn(async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+      const method = input instanceof Request ? input.method : init?.method ?? 'GET'
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'acc-1',
+              name: 'Primary',
+              kind: 'BROKERAGE',
+              currency: 'PLN',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-1',
+              name: 'VWRA',
+              symbol: 'VWRA.L',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/transactions/import/profiles')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/transactions')) {
+        if (method === 'POST') {
+          const body = input instanceof Request ? JSON.parse(await input.text()) : JSON.parse(String(init?.body ?? '{}'))
+          createdPayload = body
+          return new Response(
+            JSON.stringify({
+              id: 'tx-2',
+              ...body,
+              createdAt: '2026-03-13T12:30:00Z',
+              updatedAt: '2026-03-13T12:30:00Z',
+            }),
+            { status: 201 },
+          )
+        }
+
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in transaction create test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    const view = render(
+      <MemoryRouter initialEntries={['/transactions']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const scope = within(view.container)
+
+    expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
+
+    fireEvent.click(scope.getByRole('button', { name: /new transaction/i }))
+
+    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialogScope = within(dialog)
+
+    fireEvent.change(dialogScope.getByLabelText(/^account$/i), { target: { value: 'acc-1' } })
+    fireEvent.change(dialogScope.getByLabelText(/^type$/i), { target: { value: 'BUY' } })
+    fireEvent.change(dialogScope.getByLabelText(/^instrument$/i), { target: { value: 'ins-1' } })
+    fireEvent.change(dialogScope.getByLabelText(/^quantity$/i), { target: { value: '2' } })
+    fireEvent.change(dialogScope.getByLabelText(/^unit price$/i), { target: { value: '123,45' } })
+    const grossAmountInput = dialogScope.getByPlaceholderText('246.90')
+
+    await waitFor(() => {
+      expect(grossAmountInput).toHaveValue('246.90')
+    })
+
+    fireEvent.change(grossAmountInput, { target: { value: '250,00' } })
+    expect(grossAmountInput).toHaveValue('250,00')
+
+    fireEvent.click(dialogScope.getByRole('button', { name: /recalculate/i }))
+    await waitFor(() => {
+      expect(grossAmountInput).toHaveValue('246.90')
+    })
+
+    fireEvent.change(dialogScope.getByLabelText(/^fx rate to pln$/i), { target: { value: '4,0321' } })
+    fireEvent.click(dialogScope.getByRole('button', { name: /add transaction/i }))
+
+    await waitFor(() => {
+      expect(createdPayload).toMatchObject({
+        accountId: 'acc-1',
+        instrumentId: 'ins-1',
+        type: 'BUY',
+        quantity: '2',
+        unitPrice: '123.45',
+        grossAmount: '246.90',
+        fxRateToPln: '4.0321',
+      })
+    })
+
+    await waitFor(() => {
+      expect(scope.queryByRole('dialog', { name: /new transaction/i })).not.toBeInTheDocument()
+    })
   })
 
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {
