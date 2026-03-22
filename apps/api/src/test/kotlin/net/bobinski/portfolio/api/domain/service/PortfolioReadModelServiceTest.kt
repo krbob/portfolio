@@ -11,8 +11,10 @@ import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
+import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuation
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
@@ -151,12 +153,14 @@ class PortfolioReadModelServiceTest {
         val instrumentRepository = InMemoryInstrumentRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val valuationProvider = FakeCurrentInstrumentValuationProvider()
+        val edoLotValuationProvider = FakeEdoLotValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val service = PortfolioReadModelService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             currentInstrumentValuationProvider = valuationProvider,
+            edoLotValuationProvider = edoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
             clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC)
         )
@@ -270,6 +274,21 @@ class PortfolioReadModelServiceTest {
                     type = InstrumentValuationFailureType.UNAVAILABLE,
                     reason = "No fake valuation for ${instrument.name}."
                 )
+    }
+
+    private class FakeEdoLotValuationProvider : EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms): InstrumentValuationResult =
+            InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNAVAILABLE,
+                reason = "No fake EDO lot valuation for ${lotTerms.purchaseDate}."
+            )
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
+            from: LocalDate,
+            to: LocalDate
+        ): HistoricalInstrumentValuationResult =
+            throw UnsupportedOperationException("Not used in read model tests.")
     }
 
     private class FakeFxRateHistoryProvider : FxRateHistoryProvider {

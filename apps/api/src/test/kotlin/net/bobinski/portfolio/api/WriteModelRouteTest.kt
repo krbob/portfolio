@@ -55,17 +55,15 @@ class WriteModelRouteTest {
             setBody(
                 """
                 {
-                  "name": "EDO 2035 2025-07-15",
+                  "name": "EDO0735",
                   "kind": "BOND_EDO",
                   "assetClass": "BONDS",
                   "currency": "PLN",
                   "valuationSource": "EDO_CALCULATOR",
                   "edoTerms": {
-                    "purchaseDate": "2025-07-15",
+                    "seriesMonth": "2025-07",
                     "firstPeriodRateBps": 650,
-                    "marginBps": 200,
-                    "principalUnits": 12,
-                    "maturityDate": "2035-07-15"
+                    "marginBps": 200
                   }
                 }
                 """.trimIndent()
@@ -74,7 +72,7 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.Created, response.status)
         assertTrue(response.bodyAsText().contains("\"kind\": \"BOND_EDO\""))
-        assertTrue(response.bodyAsText().contains("\"principalUnits\": 12"))
+        assertTrue(response.bodyAsText().contains("\"seriesMonth\": \"2025-07\""))
     }
 
     @Test

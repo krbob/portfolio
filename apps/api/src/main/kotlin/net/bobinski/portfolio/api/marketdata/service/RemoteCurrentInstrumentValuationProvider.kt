@@ -2,7 +2,6 @@ package net.bobinski.portfolio.api.marketdata.service
 
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.ValuationSource
-import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
@@ -10,8 +9,7 @@ import java.math.RoundingMode
 
 class RemoteCurrentInstrumentValuationProvider(
     private val config: MarketDataConfig,
-    private val stockAnalystClient: StockAnalystClient,
-    private val edoCalculatorClient: EdoCalculatorClient
+    private val stockAnalystClient: StockAnalystClient
 ) : CurrentInstrumentValuationProvider {
     override suspend fun value(instrument: Instrument): InstrumentValuationResult {
         if (!config.enabled) {
@@ -24,7 +22,10 @@ class RemoteCurrentInstrumentValuationProvider(
         return try {
             when (instrument.valuationSource) {
                 ValuationSource.STOCK_ANALYST -> valueFromStockAnalyst(instrument)
-                ValuationSource.EDO_CALCULATOR -> valueFromEdoCalculator(instrument)
+                ValuationSource.EDO_CALCULATOR -> InstrumentValuationResult.Failure(
+                    type = InstrumentValuationFailureType.UNSUPPORTED,
+                    reason = "EDO series valuation must be derived from purchase lots."
+                )
                 ValuationSource.MANUAL -> InstrumentValuationResult.Failure(
                     type = InstrumentValuationFailureType.UNSUPPORTED,
                     reason = "Manual valuation is not implemented."
@@ -58,18 +59,4 @@ class RemoteCurrentInstrumentValuationProvider(
         )
     }
 
-    private suspend fun valueFromEdoCalculator(instrument: Instrument): InstrumentValuationResult {
-        val terms = instrument.edoTerms
-            ?: return InstrumentValuationResult.Failure(
-                type = InstrumentValuationFailureType.UNSUPPORTED,
-                reason = "EDO instrument does not define terms."
-            )
-        val value = edoCalculatorClient.unitValueInPln(terms = terms)
-        return InstrumentValuationResult.Success(
-            InstrumentValuation(
-                pricePerUnitPln = value.totalValue.setScale(2, RoundingMode.HALF_UP),
-                valuedAt = value.asOf
-            )
-        )
-    }
 }

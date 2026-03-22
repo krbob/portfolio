@@ -11,6 +11,7 @@ import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import java.util.UUID
+import java.time.YearMonth
 
 class JdbcInstrumentRepository(
     private val dataSource: DataSource
@@ -114,22 +115,18 @@ class JdbcInstrumentRepository(
         prepareStatement(
             """
             insert into edo_terms (
-                instrument_id, purchase_date, first_period_rate_bps, margin_bps, principal_units, maturity_date
-            ) values (?, ?, ?, ?, ?, ?)
+                instrument_id, series_month, first_period_rate_bps, margin_bps
+            ) values (?, ?, ?, ?)
             on conflict(instrument_id) do update set
-                purchase_date = excluded.purchase_date,
+                series_month = excluded.series_month,
                 first_period_rate_bps = excluded.first_period_rate_bps,
-                margin_bps = excluded.margin_bps,
-                principal_units = excluded.principal_units,
-                maturity_date = excluded.maturity_date
+                margin_bps = excluded.margin_bps
             """.trimIndent()
         ).use { statement ->
             statement.setUuid(1, instrumentId)
-            statement.setLocalDate(2, edoTerms.purchaseDate)
+            statement.setString(2, edoTerms.seriesMonth.toString())
             statement.setInt(3, edoTerms.firstPeriodRateBps)
             statement.setInt(4, edoTerms.marginBps)
-            statement.setInt(5, edoTerms.principalUnits)
-            statement.setLocalDate(6, edoTerms.maturityDate)
             statement.executeUpdate()
         }
     }
@@ -149,15 +146,13 @@ class JdbcInstrumentRepository(
         symbol = getString("symbol"),
         currency = getString("currency"),
         valuationSource = ValuationSource.valueOf(getString("valuation_source")),
-        edoTerms = if (getString("purchase_date") == null) {
+        edoTerms = if (getString("series_month") == null) {
             null
         } else {
             EdoTerms(
-                purchaseDate = localDate("purchase_date"),
+                seriesMonth = YearMonth.parse(getString("series_month")),
                 firstPeriodRateBps = getInt("first_period_rate_bps"),
-                marginBps = getInt("margin_bps"),
-                principalUnits = getInt("principal_units"),
-                maturityDate = localDate("maturity_date")
+                marginBps = getInt("margin_bps")
             )
         },
         isActive = booleanFromInteger("is_active"),
@@ -178,11 +173,9 @@ class JdbcInstrumentRepository(
                 i.is_active,
                 i.created_at,
                 i.updated_at,
-                e.purchase_date,
+                e.series_month,
                 e.first_period_rate_bps,
-                e.margin_bps,
-                e.principal_units,
-                e.maturity_date
+                e.margin_bps
             from instruments i
             left join edo_terms e on e.instrument_id = i.id
         """

@@ -5,10 +5,17 @@ import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
-const today = new Date().toISOString().slice(0, 10)
-const maturity = new Date(new Date().setFullYear(new Date().getFullYear() + 10))
-  .toISOString()
-  .slice(0, 10)
+const currentSeriesMonth = new Date().toISOString().slice(0, 7)
+
+function buildEdoSeriesName(seriesMonth: string): string {
+  const [yearString, monthString] = seriesMonth.split('-')
+  const year = Number(yearString)
+  const month = Number(monthString)
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return 'EDO'
+  }
+  return `EDO${String(month).padStart(2, '0')}${String((year + 10) % 100).padStart(2, '0')}`
+}
 
 const initialForm = {
   name: '',
@@ -17,11 +24,9 @@ const initialForm = {
   symbol: '',
   currency: 'USD',
   valuationSource: 'STOCK_ANALYST',
-  purchaseDate: today,
+  seriesMonth: currentSeriesMonth,
   firstPeriodRateBps: 650,
   marginBps: 200,
-  principalUnits: 10,
-  maturityDate: maturity,
 }
 
 export function InstrumentsSection() {
@@ -37,6 +42,7 @@ export function InstrumentsSection() {
       if (nextKind === 'BOND_EDO') {
         return {
           ...current,
+          name: buildEdoSeriesName(current.seriesMonth),
           kind: nextKind,
           assetClass: 'BONDS',
           currency: 'PLN',
@@ -66,11 +72,9 @@ export function InstrumentsSection() {
         valuationSource: form.valuationSource,
         edoTerms: isEdo
           ? {
-              purchaseDate: form.purchaseDate,
+              seriesMonth: form.seriesMonth,
               firstPeriodRateBps: form.firstPeriodRateBps,
               marginBps: form.marginBps,
-              principalUnits: form.principalUnits,
-              maturityDate: form.maturityDate,
             }
           : null,
       },
@@ -86,8 +90,8 @@ export function InstrumentsSection() {
         eyebrow="Write model"
         title={isPolish ? 'Instrumenty' : 'Instruments'}
         description={isPolish
-          ? 'Trzymaj ETF-y, benchmarki i zakupowe serie EDO w jednym kanonicznym katalogu.'
-          : 'Keep ETF, benchmark, and purchase-specific EDO instruments in one canonical catalog.'}
+          ? 'Trzymaj ETF-y, benchmarki i miesięczne serie EDO w jednym kanonicznym katalogu.'
+          : 'Keep ETF, benchmark, and monthly EDO series in one canonical catalog.'}
       />
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
@@ -98,6 +102,7 @@ export function InstrumentsSection() {
             value={form.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             placeholder="VWCE"
+            readOnly={isEdo}
             required
           />
         </div>
@@ -172,13 +177,17 @@ export function InstrumentsSection() {
         {isEdo && (
           <>
             <div>
-              <span className={labelClass}>{isPolish ? 'Data zakupu' : 'Purchase date'}</span>
+              <span className={labelClass}>{isPolish ? 'Miesiąc serii' : 'Series month'}</span>
               <input
                 className={input}
-                type="date"
-                value={form.purchaseDate}
+                type="month"
+                value={form.seriesMonth}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, purchaseDate: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    seriesMonth: event.target.value,
+                    name: buildEdoSeriesName(event.target.value),
+                  }))
                 }
                 required
               />
@@ -208,35 +217,6 @@ export function InstrumentsSection() {
                 value={form.marginBps}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, marginBps: Number(event.target.value) }))
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <span className={labelClass}>{isPolish ? 'Jednostki nominalne' : 'Principal units'}</span>
-              <input
-                className={input}
-                type="number"
-                value={form.principalUnits}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    principalUnits: Number(event.target.value),
-                  }))
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <span className={labelClass}>{isPolish ? 'Data wykupu' : 'Maturity date'}</span>
-              <input
-                className={input}
-                type="date"
-                value={form.maturityDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, maturityDate: event.target.value }))
                 }
                 required
               />

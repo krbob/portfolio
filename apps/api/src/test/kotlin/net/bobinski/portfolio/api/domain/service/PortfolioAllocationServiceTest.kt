@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
@@ -17,8 +18,10 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
+import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
@@ -57,6 +60,7 @@ class PortfolioAllocationServiceTest {
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
             clock = CLOCK
         )
@@ -152,6 +156,7 @@ class PortfolioAllocationServiceTest {
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
             clock = CLOCK
         )
@@ -249,11 +254,9 @@ class PortfolioAllocationServiceTest {
         currency = "PLN",
         valuationSource = ValuationSource.EDO_CALCULATOR,
         edoTerms = EdoTerms(
-            purchaseDate = LocalDate.parse("2026-03-03"),
+            seriesMonth = YearMonth.parse("2026-03"),
             firstPeriodRateBps = 500,
-            marginBps = 150,
-            principalUnits = 20,
-            maturityDate = LocalDate.parse("2036-03-03")
+            marginBps = 150
         ),
         isActive = true,
         createdAt = CREATED_AT,
@@ -338,6 +341,21 @@ class PortfolioAllocationServiceTest {
                 type = net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType.UNAVAILABLE,
                 reason = "No live quote in test."
             )
+    }
+
+    private object NoopEdoLotValuationProvider : EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms): InstrumentValuationResult =
+            InstrumentValuationResult.Failure(
+                type = net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType.UNAVAILABLE,
+                reason = "No EDO lot quote in test."
+            )
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
+            from: LocalDate,
+            to: LocalDate
+        ): HistoricalInstrumentValuationResult =
+            throw UnsupportedOperationException("Not used in allocation tests.")
     }
 
     private object NoopFxRateProvider : FxRateHistoryProvider {

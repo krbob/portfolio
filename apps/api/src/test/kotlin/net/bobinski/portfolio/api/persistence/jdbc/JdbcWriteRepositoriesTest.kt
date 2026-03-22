@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.persistence.jdbc
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.io.path.createTempDirectory
@@ -69,8 +70,7 @@ class JdbcWriteRepositoriesTest {
             val updated = initial.copy(
                 name = "EDO 2036/03 updated",
                 edoTerms = initialEdoTerms.copy(
-                    marginBps = 180,
-                    maturityDate = initialEdoTerms.maturityDate.plusDays(1)
+                    marginBps = 180
                 ),
                 updatedAt = initial.updatedAt.plus(1, ChronoUnit.DAYS)
             )
@@ -127,11 +127,9 @@ class JdbcWriteRepositoriesTest {
         currency = "PLN",
         valuationSource = ValuationSource.EDO_CALCULATOR,
         edoTerms = EdoTerms(
-            purchaseDate = LocalDate.parse("2026-03-01"),
+            seriesMonth = YearMonth.parse("2026-03"),
             firstPeriodRateBps = 270,
-            marginBps = 150,
-            principalUnits = 10,
-            maturityDate = LocalDate.parse("2036-03-01")
+            marginBps = 150
         ),
         isActive = true,
         createdAt = Instant.parse("2026-03-01T12:00:00Z"),

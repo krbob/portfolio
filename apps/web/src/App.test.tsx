@@ -1214,7 +1214,7 @@ describe('App', () => {
       if (url.includes('/api/v1/portfolio/state/export')) {
         return new Response(
           JSON.stringify({
-            schemaVersion: 1,
+            schemaVersion: 3,
             exportedAt: '2026-03-13T12:00:00Z',
             accounts: [],
             instruments: [],

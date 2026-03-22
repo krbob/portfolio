@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 
 class DomainModelTest {
@@ -33,22 +34,20 @@ class DomainModelTest {
     }
 
     @Test
-    fun `EDO instrument can be modeled as purchase-specific instrument`() {
+    fun `EDO instrument can be modeled as monthly series instrument`() {
         assertDoesNotThrow {
             Instrument(
                 id = UUID.randomUUID(),
-                name = "EDO 2035 2025-07-15",
+                name = "EDO0735",
                 kind = InstrumentKind.BOND_EDO,
                 assetClass = AssetClass.BONDS,
                 symbol = null,
                 currency = "PLN",
                 valuationSource = ValuationSource.EDO_CALCULATOR,
                 edoTerms = EdoTerms(
-                    purchaseDate = LocalDate.parse("2025-07-15"),
+                    seriesMonth = YearMonth.parse("2025-07"),
                     firstPeriodRateBps = 650,
-                    marginBps = 200,
-                    principalUnits = 12,
-                    maturityDate = LocalDate.parse("2035-07-15")
+                    marginBps = 200
                 ),
                 isActive = true,
                 createdAt = NOW,

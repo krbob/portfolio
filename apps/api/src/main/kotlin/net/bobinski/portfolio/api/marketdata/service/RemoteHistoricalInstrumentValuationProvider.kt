@@ -2,7 +2,6 @@ package net.bobinski.portfolio.api.marketdata.service
 
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.ValuationSource
-import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
@@ -12,8 +11,7 @@ import java.time.LocalDate
 
 class RemoteHistoricalInstrumentValuationProvider(
     private val config: MarketDataConfig,
-    private val stockAnalystClient: StockAnalystClient,
-    private val edoCalculatorClient: EdoCalculatorClient
+    private val stockAnalystClient: StockAnalystClient
 ) : HistoricalInstrumentValuationProvider {
     override suspend fun dailyPriceSeries(
         instrument: Instrument,
@@ -30,7 +28,10 @@ class RemoteHistoricalInstrumentValuationProvider(
         return try {
             when (instrument.valuationSource) {
                 ValuationSource.STOCK_ANALYST -> stockHistory(instrument, from, to)
-                ValuationSource.EDO_CALCULATOR -> edoHistory(instrument, from, to)
+                ValuationSource.EDO_CALCULATOR -> HistoricalInstrumentValuationResult.Failure(
+                    type = InstrumentValuationFailureType.UNSUPPORTED,
+                    reason = "EDO series history must be derived from purchase lots."
+                )
                 ValuationSource.MANUAL -> HistoricalInstrumentValuationResult.Failure(
                     type = InstrumentValuationFailureType.UNSUPPORTED,
                     reason = "Manual valuation history is not implemented."
@@ -83,26 +84,6 @@ class RemoteHistoricalInstrumentValuationProvider(
             .map { HistoricalPricePoint(date = it.date, closePricePln = it.closePricePln) }
 
         return HistoricalInstrumentValuationResult.Success(prices = history)
-    }
-
-    private suspend fun edoHistory(
-        instrument: Instrument,
-        from: LocalDate,
-        to: LocalDate
-    ): HistoricalInstrumentValuationResult {
-        val terms = instrument.edoTerms
-            ?: return HistoricalInstrumentValuationResult.Failure(
-                type = InstrumentValuationFailureType.UNSUPPORTED,
-                reason = "EDO instrument does not define terms."
-            )
-        val start = maxOf(from, terms.purchaseDate)
-        if (to.isBefore(start)) {
-            return HistoricalInstrumentValuationResult.Success(prices = emptyList())
-        }
-
-        return HistoricalInstrumentValuationResult.Success(
-            prices = edoCalculatorClient.historyInPln(terms = terms, from = start, to = to)
-        )
     }
 
     private companion object {

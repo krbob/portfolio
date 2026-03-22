@@ -35,10 +35,12 @@ import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteEdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteFxRateHistoryProvider
@@ -93,14 +95,18 @@ fun appModule(
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
             config = get(),
-            stockAnalystClient = get(),
-            edoCalculatorClient = get()
+            stockAnalystClient = get()
         )
     }
     single<HistoricalInstrumentValuationProvider> {
         RemoteHistoricalInstrumentValuationProvider(
             config = get(),
-            stockAnalystClient = get(),
+            stockAnalystClient = get()
+        )
+    }
+    single<EdoLotValuationProvider> {
+        RemoteEdoLotValuationProvider(
+            config = get(),
             edoCalculatorClient = get()
         )
     }
@@ -207,6 +213,7 @@ fun appModule(
             instrumentRepository = get(),
             transactionRepository = get(),
             currentInstrumentValuationProvider = get(),
+            edoLotValuationProvider = get(),
             transactionFxConversionService = get(),
             clock = get()
         )
@@ -246,6 +253,7 @@ fun appModule(
             portfolioTargetRepository = get(),
             transactionRepository = get(),
             historicalInstrumentValuationProvider = get(),
+            edoLotValuationProvider = get(),
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
             transactionFxConversionService = get(),

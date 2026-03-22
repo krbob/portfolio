@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.io.path.createTempDirectory
@@ -138,6 +139,7 @@ class JdbcParityTest {
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             currentInstrumentValuationProvider = UnsupportedValuationProvider,
+            edoLotValuationProvider = UnsupportedEdoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(NoopFxRateHistoryProvider),
             clock = clock
         )
@@ -285,11 +287,9 @@ class JdbcParityTest {
         currency = "PLN",
         valuationSource = ValuationSource.EDO_CALCULATOR,
         edoTerms = EdoTerms(
-            purchaseDate = LocalDate.parse("2025-02-05"),
+            seriesMonth = YearMonth.parse("2025-02"),
             firstPeriodRateBps = 270,
-            marginBps = 150,
-            principalUnits = 25,
-            maturityDate = LocalDate.parse("2035-02-05")
+            marginBps = 150
         ),
         isActive = true,
         createdAt = Instant.parse("2025-02-01T12:10:00Z"),
@@ -345,6 +345,20 @@ class JdbcParityTest {
                 type = InstrumentValuationFailureType.UNSUPPORTED,
                 reason = "Parity test uses book basis only."
             )
+    }
+
+    private object UnsupportedEdoLotValuationProvider : net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms): InstrumentValuationResult =
+            InstrumentValuationResult.Failure(
+                type = InstrumentValuationFailureType.UNSUPPORTED,
+                reason = "Parity test uses book basis only."
+            )
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
+            from: LocalDate,
+            to: LocalDate
+        ) = throw UnsupportedOperationException("Not used in parity tests.")
     }
 
     private object NoopFxRateHistoryProvider : FxRateHistoryProvider {

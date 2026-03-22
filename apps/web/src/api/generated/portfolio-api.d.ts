@@ -1595,11 +1595,9 @@ export interface components {
         };
         /** net.bobinski.portfolio.api.route.EdoTermsResponse */
         EdoTermsResponse: {
-            purchaseDate: string;
+            seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-            principalUnits: number;
-            maturityDate: string;
         };
         /** net.bobinski.portfolio.api.route.InstrumentResponse */
         InstrumentResponse: {
@@ -1617,11 +1615,9 @@ export interface components {
         };
         /** net.bobinski.portfolio.api.route.EdoTermsRequest */
         EdoTermsRequest: {
-            purchaseDate: string;
+            seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-            principalUnits: number;
-            maturityDate: string;
         };
         /** net.bobinski.portfolio.api.route.CreateInstrumentRequest */
         CreateInstrumentRequest: {
@@ -1963,11 +1959,9 @@ export interface components {
         };
         /** net.bobinski.portfolio.api.route.EdoTermsSnapshotResponse */
         EdoTermsSnapshotResponse: {
-            purchaseDate: string;
+            seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-            principalUnits: number;
-            maturityDate: string;
         };
         /** net.bobinski.portfolio.api.route.InstrumentSnapshotResponse */
         InstrumentSnapshotResponse: {

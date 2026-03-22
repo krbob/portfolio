@@ -82,7 +82,7 @@ class PortfolioBackupRouteTest {
             assertTrue(listResponse.bodyAsText().contains("\"schedulerEnabled\": false"))
             assertTrue(listResponse.bodyAsText().contains(backupFileName))
             assertEquals(HttpStatusCode.OK, downloadResponse.status)
-            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 2"))
+            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 3"))
             assertTrue(downloadResponse.bodyAsText().contains("\"appPreferences\": ["))
             assertTrue(downloadResponse.bodyAsText().contains("\"importProfiles\": ["))
             assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)

@@ -7,13 +7,16 @@ import kotlin.math.pow
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
+import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
+import net.bobinski.portfolio.api.domain.model.toLotTerms
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationResult
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
@@ -35,6 +38,7 @@ class PortfolioHistoryService(
     private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val historicalInstrumentValuationProvider: HistoricalInstrumentValuationProvider,
+    private val edoLotValuationProvider: EdoLotValuationProvider,
     private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val inflationAdjustmentProvider: InflationAdjustmentProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
@@ -101,11 +105,20 @@ class PortfolioHistoryService(
                         val holding = holdings.getOrPut(HoldingKey(account.id, instrument.id)) {
                             MutableHolding(account = account, instrument = instrument)
                         }
-                        holding.quantity = holding.quantity.add(transaction.quantity ?: BigDecimal.ZERO, MONEY_CONTEXT)
-                        holding.costBasisPln = holding.costBasisPln
-                            .add(converted.grossPln, MONEY_CONTEXT)
+                        val buyQuantity = transaction.quantity ?: BigDecimal.ZERO
+                        val buyCostBasis = converted.grossPln
                             .add(converted.feePln, MONEY_CONTEXT)
                             .add(converted.taxPln, MONEY_CONTEXT)
+                        if (instrument.kind == InstrumentKind.BOND_EDO) {
+                            holding.addEdoLot(
+                                purchaseDate = transaction.tradeDate,
+                                quantity = buyQuantity,
+                                costBasisPln = buyCostBasis
+                            )
+                        } else {
+                            holding.quantity = holding.quantity.add(buyQuantity, MONEY_CONTEXT)
+                            holding.costBasisPln = holding.costBasisPln.add(buyCostBasis, MONEY_CONTEXT)
+                        }
                         holding.transactionCount += 1
 
                         cashBalancePln = cashBalancePln
@@ -125,17 +138,21 @@ class PortfolioHistoryService(
                         val costBasisBefore = holding.costBasisPln
 
                         if (quantityBefore.signum() > 0 && sellQuantity.signum() > 0) {
-                            val reducedCostBasis = if (sellQuantity >= quantityBefore) {
-                                costBasisBefore
+                            if (instrument.kind == InstrumentKind.BOND_EDO) {
+                                holding.reduceEdoLotsFifo(sellQuantity)
                             } else {
-                                costBasisBefore
-                                    .divide(quantityBefore, 12, RoundingMode.HALF_UP)
-                                    .multiply(sellQuantity, MONEY_CONTEXT)
+                                val reducedCostBasis = if (sellQuantity >= quantityBefore) {
+                                    costBasisBefore
+                                } else {
+                                    costBasisBefore
+                                        .divide(quantityBefore, 12, RoundingMode.HALF_UP)
+                                        .multiply(sellQuantity, MONEY_CONTEXT)
+                                }
+                                holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
+                                holding.costBasisPln = costBasisBefore
+                                    .subtract(reducedCostBasis, MONEY_CONTEXT)
+                                    .max(BigDecimal.ZERO)
                             }
-                            holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
-                            holding.costBasisPln = costBasisBefore
-                                .subtract(reducedCostBasis, MONEY_CONTEXT)
-                                .max(BigDecimal.ZERO)
                         }
                         holding.transactionCount += 1
 
@@ -191,9 +208,7 @@ class PortfolioHistoryService(
             }
 
             val activeHoldings = holdings.values.filter { it.quantity.signum() > 0 }
-            val valuedHoldingCount = activeHoldings.count { holding ->
-                historyLoads.priceLookup(holding.instrument.id).floorEntry(date)?.value != null
-            }
+            val valuedHoldingCount = activeHoldings.count { holding -> holding.isValuedOn(date, historyLoads) }
 
             val equityCurrentValuePln = activeHoldings
                 .filter { it.instrument.assetClass == AssetClass.EQUITIES }
@@ -262,22 +277,72 @@ class PortfolioHistoryService(
     ): HistoricalLoads = coroutineScope {
         val usedInstrumentIds = transactions.mapNotNull(Transaction::instrumentId).toSet()
         val usedInstruments = instruments.filter { it.id in usedInstrumentIds }
+        val nonEdoInstruments = usedInstruments.filter { it.kind != InstrumentKind.BOND_EDO }
+        val edoInstruments = usedInstruments.filter { it.kind == InstrumentKind.BOND_EDO }
+        val edoLotsByInstrument = transactions
+            .asSequence()
+            .filter { it.type == TransactionType.BUY }
+            .filter { it.instrumentId in edoInstruments.map(Instrument::id).toSet() }
+            .mapNotNull { transaction ->
+                transaction.instrumentId?.let { instrumentId ->
+                    instrumentId to transaction.tradeDate
+                }
+            }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, dates) -> dates.distinct().sorted() }
 
-        val results = usedInstruments
+        val instrumentResults = nonEdoInstruments
             .map { instrument ->
                 async { instrument.id to historicalInstrumentValuationProvider.dailyPriceSeries(instrument, from, until) }
             }
             .awaitAll()
             .toMap()
+        val edoLotResults = edoInstruments
+            .flatMap { instrument ->
+                val terms = instrument.edoTerms ?: return@flatMap emptyList()
+                edoLotsByInstrument[instrument.id].orEmpty().map { purchaseDate ->
+                    async {
+                        EdoLotKey(instrument.id, purchaseDate) to edoLotValuationProvider.dailyPriceSeries(
+                            lotTerms = terms.toLotTerms(purchaseDate),
+                            from = from,
+                            to = until
+                        )
+                    }
+                }
+            }
+            .awaitAll()
+            .toMap()
 
-        val lookups = results.mapValues { (_, result) ->
+        val instrumentLookups = instrumentResults.mapValues { (_, result) ->
             when (result) {
                 is HistoricalInstrumentValuationResult.Success -> result.prices.toLookup()
                 is HistoricalInstrumentValuationResult.Failure -> TreeMap()
             }
         }
-        val issueCount = results.values.count { it is HistoricalInstrumentValuationResult.Failure }
-        val successCount = results.values.count { it is HistoricalInstrumentValuationResult.Success }
+        val edoLotLookups = edoLotResults.mapValues { (_, result) ->
+            when (result) {
+                is HistoricalInstrumentValuationResult.Success -> result.prices.toLookup()
+                is HistoricalInstrumentValuationResult.Failure -> TreeMap()
+            }
+        }
+        val successfulInstrumentIds = buildSet {
+            instrumentResults.forEach { (instrumentId, result) ->
+                if (result is HistoricalInstrumentValuationResult.Success) {
+                    add(instrumentId)
+                }
+            }
+            edoInstruments.forEach { instrument ->
+                val lotDates = edoLotsByInstrument[instrument.id].orEmpty()
+                if (lotDates.isNotEmpty() && lotDates.all { purchaseDate ->
+                        edoLotResults[EdoLotKey(instrument.id, purchaseDate)] is HistoricalInstrumentValuationResult.Success
+                    }
+                ) {
+                    add(instrument.id)
+                }
+            }
+        }
+        val issueCount = usedInstrumentIds.subtract(successfulInstrumentIds).size
+        val successCount = successfulInstrumentIds.size
         val valuationState = when {
             usedInstrumentIds.isEmpty() -> ValuationState.MARK_TO_MARKET
             successCount == usedInstrumentIds.size -> ValuationState.MARK_TO_MARKET
@@ -286,7 +351,8 @@ class PortfolioHistoryService(
         }
 
         HistoricalLoads(
-            lookups = lookups,
+            lookups = instrumentLookups,
+            edoLotLookups = edoLotLookups,
             issueCount = issueCount,
             valuationState = valuationState
         )
@@ -638,16 +704,93 @@ class PortfolioHistoryService(
     private fun HistoricalLoads.priceLookup(instrumentId: UUID): TreeMap<LocalDate, BigDecimal> =
         lookups[instrumentId] ?: TreeMap()
 
+    private fun HistoricalLoads.priceLookup(lotKey: EdoLotKey): TreeMap<LocalDate, BigDecimal> =
+        edoLotLookups[lotKey] ?: TreeMap()
+
     private fun TreeMap<LocalDate, BigDecimal>.lookupOn(date: LocalDate): BigDecimal? =
         floorEntry(date)?.value
 
+    private fun MutableHolding.isValuedOn(date: LocalDate, historyLoads: HistoricalLoads): Boolean =
+        if (instrument.kind == InstrumentKind.BOND_EDO) {
+            edoLots
+                .filter { it.quantity.signum() > 0 }
+                .all { lot -> historyLoads.priceLookup(EdoLotKey(instrument.id, lot.purchaseDate)).floorEntry(date)?.value != null }
+        } else {
+            historyLoads.priceLookup(instrument.id).floorEntry(date)?.value != null
+        }
+
     private fun MutableHolding.currentValueOn(date: LocalDate, historyLoads: HistoricalLoads): BigDecimal {
+        if (instrument.kind == InstrumentKind.BOND_EDO) {
+            return edoLots
+                .filter { it.quantity.signum() > 0 }
+                .fold(BigDecimal.ZERO) { total, lot ->
+                    val price = historyLoads.priceLookup(EdoLotKey(instrument.id, lot.purchaseDate)).floorEntry(date)?.value
+                    val lotValue = if (price != null) {
+                        price.multiply(lot.quantity, MONEY_CONTEXT)
+                    } else {
+                        lot.costBasisPln
+                    }
+                    total.add(lotValue, MONEY_CONTEXT)
+                }
+                .money()
+        }
         val price = historyLoads.priceLookup(instrument.id).floorEntry(date)?.value
         return if (price != null) {
             price.multiply(quantity, MONEY_CONTEXT).money()
         } else {
             costBasisPln.money()
         }
+    }
+
+    private fun MutableHolding.addEdoLot(
+        purchaseDate: LocalDate,
+        quantity: BigDecimal,
+        costBasisPln: BigDecimal
+    ) {
+        if (quantity.signum() <= 0) {
+            return
+        }
+        edoLots += EdoHoldingLot(
+            purchaseDate = purchaseDate,
+            quantity = quantity,
+            costBasisPln = costBasisPln
+        )
+        syncFromEdoLots()
+    }
+
+    private fun MutableHolding.reduceEdoLotsFifo(quantityToReduce: BigDecimal) {
+        if (quantityToReduce.signum() <= 0) {
+            return
+        }
+        var remaining = quantityToReduce
+        val iterator = edoLots.iterator()
+        while (iterator.hasNext() && remaining.signum() > 0) {
+            val lot = iterator.next()
+            if (lot.quantity.signum() <= 0) {
+                iterator.remove()
+                continue
+            }
+            val consumed = remaining.min(lot.quantity)
+            val reducedCostBasis = if (consumed >= lot.quantity) {
+                lot.costBasisPln
+            } else {
+                lot.costBasisPln
+                    .divide(lot.quantity, 12, RoundingMode.HALF_UP)
+                    .multiply(consumed, MONEY_CONTEXT)
+            }
+            lot.quantity = lot.quantity.subtract(consumed, MONEY_CONTEXT).max(BigDecimal.ZERO)
+            lot.costBasisPln = lot.costBasisPln.subtract(reducedCostBasis, MONEY_CONTEXT).max(BigDecimal.ZERO)
+            if (lot.quantity.signum() == 0) {
+                iterator.remove()
+            }
+            remaining = remaining.subtract(consumed, MONEY_CONTEXT).max(BigDecimal.ZERO)
+        }
+        syncFromEdoLots()
+    }
+
+    private fun MutableHolding.syncFromEdoLots() {
+        quantity = edoLots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.quantity, MONEY_CONTEXT) }
+        costBasisPln = edoLots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.costBasisPln, MONEY_CONTEXT) }
     }
 
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
@@ -717,13 +860,26 @@ class PortfolioHistoryService(
         val instrument: Instrument,
         var quantity: BigDecimal = BigDecimal.ZERO,
         var costBasisPln: BigDecimal = BigDecimal.ZERO,
+        val edoLots: MutableList<EdoHoldingLot> = mutableListOf(),
         var transactionCount: Int = 0
     )
 
     private data class HistoricalLoads(
         val lookups: Map<UUID, TreeMap<LocalDate, BigDecimal>>,
+        val edoLotLookups: Map<EdoLotKey, TreeMap<LocalDate, BigDecimal>>,
         val issueCount: Int,
         val valuationState: ValuationState
+    )
+
+    private data class EdoHoldingLot(
+        val purchaseDate: LocalDate,
+        var quantity: BigDecimal,
+        var costBasisPln: BigDecimal
+    )
+
+    private data class EdoLotKey(
+        val instrumentId: UUID,
+        val purchaseDate: LocalDate
     )
 
     private data class ReferenceLoads(

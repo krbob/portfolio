@@ -6,12 +6,15 @@ import kotlinx.coroutines.coroutineScope
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
+import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
+import net.bobinski.portfolio.api.domain.model.toLotTerms
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuation
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
@@ -27,6 +30,7 @@ class PortfolioReadModelService(
     private val instrumentRepository: InstrumentRepository,
     private val transactionRepository: TransactionRepository,
     private val currentInstrumentValuationProvider: CurrentInstrumentValuationProvider,
+    private val edoLotValuationProvider: EdoLotValuationProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock
 ) {
@@ -112,9 +116,15 @@ class PortfolioReadModelService(
 
     private suspend fun buildValuedSnapshot(): PortfolioValuationSnapshot {
         val ledgerSnapshot = buildLedgerSnapshot()
-        val valuations = valueInstruments(ledgerSnapshot.holdings.map { it.instrument })
+        val valuations = valueInstruments(
+            ledgerSnapshot.holdings.map(MutableHolding::instrument).filter { it.kind != InstrumentKind.BOND_EDO }
+        )
         val holdings = ledgerSnapshot.holdings.map { holding ->
-            holding.toValuedHolding(valuations[holding.instrument.id])
+            if (holding.instrument.kind == InstrumentKind.BOND_EDO) {
+                valueEdoHolding(holding)
+            } else {
+                holding.toValuedHolding(valuations[holding.instrument.id])
+            }
         }
 
         return PortfolioValuationSnapshot(
@@ -175,11 +185,20 @@ class PortfolioReadModelService(
                     val holding = holdings.getOrPut(key) {
                         MutableHolding(account = account, instrument = instrument)
                     }
-                    holding.quantity = holding.quantity.add(transaction.quantity ?: BigDecimal.ZERO, MONEY_CONTEXT)
-                    holding.costBasisPln = holding.costBasisPln
-                        .add(converted.grossPln, MONEY_CONTEXT)
+                    val buyQuantity = transaction.quantity ?: BigDecimal.ZERO
+                    val buyCostBasis = converted.grossPln
                         .add(converted.feePln, MONEY_CONTEXT)
                         .add(converted.taxPln, MONEY_CONTEXT)
+                    if (instrument.kind == InstrumentKind.BOND_EDO) {
+                        holding.addEdoLot(
+                            purchaseDate = transaction.tradeDate,
+                            quantity = buyQuantity,
+                            costBasisPln = buyCostBasis
+                        )
+                    } else {
+                        holding.quantity = holding.quantity.add(buyQuantity, MONEY_CONTEXT)
+                        holding.costBasisPln = holding.costBasisPln.add(buyCostBasis, MONEY_CONTEXT)
+                    }
                     holding.transactionCount += 1
 
                     cashBalancePln = cashBalancePln
@@ -200,15 +219,19 @@ class PortfolioReadModelService(
                     val costBasisBefore = holding.costBasisPln
 
                     if (quantityBefore.signum() > 0 && sellQuantity.signum() > 0) {
-                        val reducedCostBasis = if (sellQuantity >= quantityBefore) {
-                            costBasisBefore
+                        if (instrument.kind == InstrumentKind.BOND_EDO) {
+                            holding.reduceEdoLotsFifo(sellQuantity)
                         } else {
-                            costBasisBefore
-                                .divide(quantityBefore, 12, RoundingMode.HALF_UP)
-                                .multiply(sellQuantity, MONEY_CONTEXT)
+                            val reducedCostBasis = if (sellQuantity >= quantityBefore) {
+                                costBasisBefore
+                            } else {
+                                costBasisBefore
+                                    .divide(quantityBefore, 12, RoundingMode.HALF_UP)
+                                    .multiply(sellQuantity, MONEY_CONTEXT)
+                            }
+                            holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
+                            holding.costBasisPln = costBasisBefore.subtract(reducedCostBasis, MONEY_CONTEXT).max(BigDecimal.ZERO)
                         }
-                        holding.quantity = quantityBefore.subtract(sellQuantity, MONEY_CONTEXT).max(BigDecimal.ZERO)
-                        holding.costBasisPln = costBasisBefore.subtract(reducedCostBasis, MONEY_CONTEXT).max(BigDecimal.ZERO)
                     }
                     holding.transactionCount += 1
 
@@ -253,6 +276,100 @@ class PortfolioReadModelService(
             netContributionsPln = netContributionsPln,
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions
+        )
+    }
+
+    private suspend fun valueEdoHolding(holding: MutableHolding): ValuedHolding {
+        val terms = holding.instrument.edoTerms
+            ?: return ValuedHolding(
+                account = holding.account,
+                instrument = holding.instrument,
+                quantity = holding.quantity,
+                costBasisPln = holding.costBasisPln,
+                currentPricePln = null,
+                currentValuePln = null,
+                unrealizedGainPln = null,
+                valuedAt = null,
+                valuationStatus = HoldingValuationStatus.UNSUPPORTED,
+                valuationIssue = "EDO instrument does not define series terms.",
+                transactionCount = holding.transactionCount
+            )
+        val activeLots = holding.edoLots.filter { it.quantity.signum() > 0 }
+        if (activeLots.isEmpty()) {
+            return ValuedHolding(
+                account = holding.account,
+                instrument = holding.instrument,
+                quantity = holding.quantity,
+                costBasisPln = holding.costBasisPln,
+                currentPricePln = null,
+                currentValuePln = null,
+                unrealizedGainPln = null,
+                valuedAt = null,
+                valuationStatus = HoldingValuationStatus.UNAVAILABLE,
+                valuationIssue = "EDO holding does not define active purchase lots.",
+                transactionCount = holding.transactionCount
+            )
+        }
+
+        val lotsByPurchaseDate = activeLots.groupBy(EdoHoldingLot::purchaseDate)
+            .mapValues { (_, lots) ->
+                AggregatedEdoLot(
+                    purchaseDate = lots.first().purchaseDate,
+                    quantity = lots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.quantity, MONEY_CONTEXT) },
+                    costBasisPln = lots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.costBasisPln, MONEY_CONTEXT) }
+                )
+            }
+            .values
+            .sortedBy(AggregatedEdoLot::purchaseDate)
+
+        val results = coroutineScope {
+            lotsByPurchaseDate.map { lot ->
+                async { lot to edoLotValuationProvider.value(terms.toLotTerms(lot.purchaseDate)) }
+            }.awaitAll()
+        }
+        val failure = results.firstNotNullOfOrNull { (lot, result) ->
+            (result as? InstrumentValuationResult.Failure)?.let { lot to it }
+        }
+        if (failure != null) {
+            val (lot, result) = failure
+            return ValuedHolding(
+                account = holding.account,
+                instrument = holding.instrument,
+                quantity = holding.quantity,
+                costBasisPln = holding.costBasisPln,
+                currentPricePln = null,
+                currentValuePln = null,
+                unrealizedGainPln = null,
+                valuedAt = null,
+                valuationStatus = result.type.toHoldingValuationStatus(),
+                valuationIssue = "EDO lot ${lot.purchaseDate}: ${result.reason}",
+                transactionCount = holding.transactionCount
+            )
+        }
+
+        val successfulResults = results.map { (lot, result) -> lot to (result as InstrumentValuationResult.Success).valuation }
+        val currentValuePln = successfulResults.fold(BigDecimal.ZERO) { total, (lot, valuation) ->
+            total.add(valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT), MONEY_CONTEXT)
+        }.money()
+        val currentPricePln = if (holding.quantity.signum() == 0) {
+            BigDecimal.ZERO
+        } else {
+            currentValuePln.divide(holding.quantity, 8, RoundingMode.HALF_UP)
+        }.money()
+        val valuedAt = successfulResults.maxOfOrNull { (_, valuation) -> valuation.valuedAt }
+
+        return ValuedHolding(
+            account = holding.account,
+            instrument = holding.instrument,
+            quantity = holding.quantity,
+            costBasisPln = holding.costBasisPln,
+            currentPricePln = currentPricePln,
+            currentValuePln = currentValuePln,
+            unrealizedGainPln = currentValuePln.subtract(holding.costBasisPln, MONEY_CONTEXT).money(),
+            valuedAt = valuedAt,
+            valuationStatus = HoldingValuationStatus.VALUED,
+            valuationIssue = null,
+            transactionCount = holding.transactionCount
         )
     }
 
@@ -304,6 +421,57 @@ class PortfolioReadModelService(
         )
     }
 
+    private fun MutableHolding.addEdoLot(
+        purchaseDate: LocalDate,
+        quantity: BigDecimal,
+        costBasisPln: BigDecimal
+    ) {
+        if (quantity.signum() <= 0) {
+            return
+        }
+        edoLots += EdoHoldingLot(
+            purchaseDate = purchaseDate,
+            quantity = quantity,
+            costBasisPln = costBasisPln
+        )
+        syncFromEdoLots()
+    }
+
+    private fun MutableHolding.reduceEdoLotsFifo(sellQuantity: BigDecimal) {
+        if (sellQuantity.signum() <= 0) {
+            return
+        }
+        var remaining = sellQuantity
+        val iterator = edoLots.iterator()
+        while (iterator.hasNext() && remaining.signum() > 0) {
+            val lot = iterator.next()
+            if (lot.quantity.signum() <= 0) {
+                iterator.remove()
+                continue
+            }
+            val consumed = remaining.min(lot.quantity)
+            val reducedCostBasis = if (consumed >= lot.quantity) {
+                lot.costBasisPln
+            } else {
+                lot.costBasisPln
+                    .divide(lot.quantity, 12, RoundingMode.HALF_UP)
+                    .multiply(consumed, MONEY_CONTEXT)
+            }
+            lot.quantity = lot.quantity.subtract(consumed, MONEY_CONTEXT).max(BigDecimal.ZERO)
+            lot.costBasisPln = lot.costBasisPln.subtract(reducedCostBasis, MONEY_CONTEXT).max(BigDecimal.ZERO)
+            if (lot.quantity.signum() == 0) {
+                iterator.remove()
+            }
+            remaining = remaining.subtract(consumed, MONEY_CONTEXT).max(BigDecimal.ZERO)
+        }
+        syncFromEdoLots()
+    }
+
+    private fun MutableHolding.syncFromEdoLots() {
+        quantity = edoLots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.quantity, MONEY_CONTEXT) }
+        costBasisPln = edoLots.fold(BigDecimal.ZERO) { total, lot -> total.add(lot.costBasisPln, MONEY_CONTEXT) }
+    }
+
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
@@ -323,7 +491,20 @@ class PortfolioReadModelService(
         val instrument: Instrument,
         var quantity: BigDecimal = BigDecimal.ZERO,
         var costBasisPln: BigDecimal = BigDecimal.ZERO,
+        val edoLots: MutableList<EdoHoldingLot> = mutableListOf(),
         var transactionCount: Int = 0
+    )
+
+    private data class EdoHoldingLot(
+        val purchaseDate: LocalDate,
+        var quantity: BigDecimal,
+        var costBasisPln: BigDecimal
+    )
+
+    private data class AggregatedEdoLot(
+        val purchaseDate: LocalDate,
+        val quantity: BigDecimal,
+        val costBasisPln: BigDecimal
     )
 
     private data class ValuedHolding(

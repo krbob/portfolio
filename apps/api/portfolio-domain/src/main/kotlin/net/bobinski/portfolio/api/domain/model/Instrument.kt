@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.domain.model
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 
 data class Instrument(
@@ -46,19 +47,32 @@ data class Instrument(
 }
 
 data class EdoTerms(
-    val purchaseDate: LocalDate,
+    val seriesMonth: YearMonth,
     val firstPeriodRateBps: Int,
-    val marginBps: Int,
-    val principalUnits: Int,
-    val maturityDate: LocalDate
+    val marginBps: Int
 ) {
     init {
         require(firstPeriodRateBps >= 0) { "First period rate must not be negative." }
         require(marginBps >= 0) { "Margin must not be negative." }
-        require(principalUnits > 0) { "EDO principal units must be positive." }
-        require(maturityDate > purchaseDate) { "EDO maturity date must be after purchase date." }
     }
 }
+
+data class EdoLotTerms(
+    val purchaseDate: LocalDate,
+    val firstPeriodRateBps: Int,
+    val marginBps: Int
+) {
+    init {
+        require(firstPeriodRateBps >= 0) { "First period rate must not be negative." }
+        require(marginBps >= 0) { "Margin must not be negative." }
+    }
+}
+
+fun EdoTerms.toLotTerms(purchaseDate: LocalDate): EdoLotTerms = EdoLotTerms(
+    purchaseDate = purchaseDate,
+    firstPeriodRateBps = firstPeriodRateBps,
+    marginBps = marginBps
+)
 
 enum class InstrumentKind {
     ETF,

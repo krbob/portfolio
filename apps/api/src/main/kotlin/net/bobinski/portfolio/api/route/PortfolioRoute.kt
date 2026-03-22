@@ -502,11 +502,9 @@ data class InstrumentSnapshotResponse(
 
 @Serializable
 data class EdoTermsSnapshotResponse(
-    val purchaseDate: String,
+    val seriesMonth: String,
     val firstPeriodRateBps: Int,
-    val marginBps: Int,
-    val principalUnits: Int,
-    val maturityDate: String
+    val marginBps: Int
 )
 
 @Serializable
@@ -982,11 +980,9 @@ private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfoli
             valuationSource = snapshot.valuationSource,
             edoTerms = snapshot.edoTerms?.let { terms ->
                 EdoTermsSnapshotResponse(
-                    purchaseDate = terms.purchaseDate,
+                    seriesMonth = terms.seriesMonth,
                     firstPeriodRateBps = terms.firstPeriodRateBps,
-                    marginBps = terms.marginBps,
-                    principalUnits = terms.principalUnits,
-                    maturityDate = terms.maturityDate
+                    marginBps = terms.marginBps
                 )
             },
             isActive = snapshot.isActive,
@@ -1096,11 +1092,9 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
                 valuationSource = instrument.valuationSource,
                 edoTerms = instrument.edoTerms?.let { terms ->
                     net.bobinski.portfolio.api.domain.service.EdoTermsSnapshot(
-                        purchaseDate = terms.purchaseDate,
+                        seriesMonth = terms.seriesMonth,
                         firstPeriodRateBps = terms.firstPeriodRateBps,
-                        marginBps = terms.marginBps,
-                        principalUnits = terms.principalUnits,
-                        maturityDate = terms.maturityDate
+                        marginBps = terms.marginBps
                     )
                 },
                 isActive = instrument.isActive,

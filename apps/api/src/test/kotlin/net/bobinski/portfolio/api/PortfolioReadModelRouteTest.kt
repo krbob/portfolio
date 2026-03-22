@@ -338,17 +338,15 @@ class PortfolioReadModelRouteTest {
             setBody(
                 """
                 {
-                  "name": "EDO 2036",
+                  "name": "EDO0336",
                   "kind": "BOND_EDO",
                   "assetClass": "BONDS",
                   "currency": "PLN",
                   "valuationSource": "EDO_CALCULATOR",
                   "edoTerms": {
-                    "purchaseDate": "2026-03-03",
+                    "seriesMonth": "2026-03",
                     "firstPeriodRateBps": 500,
-                    "marginBps": 150,
-                    "principalUnits": 20,
-                    "maturityDate": "2036-03-03"
+                    "marginBps": 150
                   }
                 }
                 """.trimIndent()

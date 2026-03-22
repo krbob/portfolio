@@ -11,6 +11,7 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
@@ -289,6 +290,7 @@ class PortfolioHistoryServiceTest {
         val portfolioTargetRepository = InMemoryPortfolioTargetRepository()
         val transactionRepository = InMemoryTransactionRepository()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
+        val edoLotValuationProvider = FakeEdoLotValuationProvider()
         val referenceProvider = FakeReferenceSeriesProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
@@ -298,6 +300,7 @@ class PortfolioHistoryServiceTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = historyProvider,
+            edoLotValuationProvider = edoLotValuationProvider,
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
@@ -413,6 +416,20 @@ class PortfolioHistoryServiceTest {
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = "No fake history for ${instrument.name}."
             )
+    }
+
+    private class FakeEdoLotValuationProvider : EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms) =
+            throw UnsupportedOperationException("Not used in history tests.")
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
+            from: LocalDate,
+            to: LocalDate
+        ): HistoricalInstrumentValuationResult = HistoricalInstrumentValuationResult.Failure(
+            type = InstrumentValuationFailureType.UNAVAILABLE,
+            reason = "No fake EDO lot history for ${lotTerms.purchaseDate}."
+        )
     }
 
     private class FakeReferenceSeriesProvider : ReferenceSeriesProvider {

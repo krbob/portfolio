@@ -16,7 +16,7 @@ import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.service.CreateInstrumentCommand
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import org.koin.ktor.ext.inject
-import java.time.LocalDate
+import java.time.YearMonth
 
 fun Route.instrumentRoute() {
     val instrumentService: InstrumentService by inject()
@@ -58,11 +58,9 @@ data class CreateInstrumentRequest(
 
 @Serializable
 data class EdoTermsRequest(
-    val purchaseDate: String,
+    val seriesMonth: String,
     val firstPeriodRateBps: Int,
-    val marginBps: Int,
-    val principalUnits: Int,
-    val maturityDate: String
+    val marginBps: Int
 )
 
 @Serializable
@@ -82,19 +80,15 @@ data class InstrumentResponse(
 
 @Serializable
 data class EdoTermsResponse(
-    val purchaseDate: String,
+    val seriesMonth: String,
     val firstPeriodRateBps: Int,
-    val marginBps: Int,
-    val principalUnits: Int,
-    val maturityDate: String
+    val marginBps: Int
 )
 
 private fun EdoTermsRequest.toDomain(): EdoTerms = EdoTerms(
-    purchaseDate = LocalDate.parse(purchaseDate),
+    seriesMonth = YearMonth.parse(seriesMonth),
     firstPeriodRateBps = firstPeriodRateBps,
-    marginBps = marginBps,
-    principalUnits = principalUnits,
-    maturityDate = LocalDate.parse(maturityDate)
+    marginBps = marginBps
 )
 
 private fun Instrument.toResponse(): InstrumentResponse = InstrumentResponse(
@@ -107,11 +101,9 @@ private fun Instrument.toResponse(): InstrumentResponse = InstrumentResponse(
     valuationSource = valuationSource.name,
     edoTerms = edoTerms?.let {
         EdoTermsResponse(
-            purchaseDate = it.purchaseDate.toString(),
+            seriesMonth = it.seriesMonth.toString(),
             firstPeriodRateBps = it.firstPeriodRateBps,
-            marginBps = it.marginBps,
-            principalUnits = it.principalUnits,
-            maturityDate = it.maturityDate.toString()
+            marginBps = it.marginBps
         )
     },
     isActive = isActive,

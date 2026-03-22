@@ -262,6 +262,7 @@ class PortfolioReturnsServiceTest {
         val transactionRepository = InMemoryTransactionRepository()
         val referenceProvider = FakeReferenceSeriesProvider()
         val historyProvider = FakeHistoricalInstrumentValuationProvider()
+        val edoLotValuationProvider = FakeEdoLotValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
         val auditLogService = AuditLogService(
@@ -283,6 +284,7 @@ class PortfolioReturnsServiceTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = historyProvider,
+            edoLotValuationProvider = edoLotValuationProvider,
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
@@ -400,6 +402,17 @@ class PortfolioReturnsServiceTest {
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {
         override suspend fun dailyPriceSeries(
             instrument: net.bobinski.portfolio.api.domain.model.Instrument,
+            from: LocalDate,
+            to: LocalDate
+        ): HistoricalInstrumentValuationResult = HistoricalInstrumentValuationResult.Success(prices = emptyList())
+    }
+
+    private class FakeEdoLotValuationProvider : net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms) =
+            throw UnsupportedOperationException("Not used in returns tests.")
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
             from: LocalDate,
             to: LocalDate
         ): HistoricalInstrumentValuationResult = HistoricalInstrumentValuationResult.Success(prices = emptyList())

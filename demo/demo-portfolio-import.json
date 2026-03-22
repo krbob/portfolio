@@ -2,7 +2,7 @@
   "mode": "REPLACE",
   "confirmation": "REPLACE",
   "snapshot": {
-    "schemaVersion": 1,
+    "schemaVersion": 3,
     "exportedAt": "2026-03-13T19:00:00Z",
     "accounts": [
       {
@@ -62,18 +62,16 @@
       },
       {
         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
-        "name": "EDO 04/2024",
+        "name": "EDO0434",
         "kind": "BOND_EDO",
         "assetClass": "BONDS",
         "symbol": null,
         "currency": "PLN",
         "valuationSource": "EDO_CALCULATOR",
         "edoTerms": {
-          "purchaseDate": "2024-04-11",
+          "seriesMonth": "2024-04",
           "firstPeriodRateBps": 680,
-          "marginBps": 150,
-          "principalUnits": 100,
-          "maturityDate": "2034-04-11"
+          "marginBps": 150
         },
         "isActive": true,
         "createdAt": "2024-04-11T08:00:00Z",
@@ -81,18 +79,16 @@
       },
       {
         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2",
-        "name": "EDO 11/2024",
+        "name": "EDO1134",
         "kind": "BOND_EDO",
         "assetClass": "BONDS",
         "symbol": null,
         "currency": "PLN",
         "valuationSource": "EDO_CALCULATOR",
         "edoTerms": {
-          "purchaseDate": "2024-11-05",
+          "seriesMonth": "2024-11",
           "firstPeriodRateBps": 650,
-          "marginBps": 150,
-          "principalUnits": 150,
-          "maturityDate": "2034-11-05"
+          "marginBps": 150
         },
         "isActive": true,
         "createdAt": "2024-11-05T08:00:00Z",
@@ -100,18 +96,16 @@
       },
       {
         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3",
-        "name": "EDO 05/2025",
+        "name": "EDO0535",
         "kind": "BOND_EDO",
         "assetClass": "BONDS",
         "symbol": null,
         "currency": "PLN",
         "valuationSource": "EDO_CALCULATOR",
         "edoTerms": {
-          "purchaseDate": "2025-05-13",
+          "seriesMonth": "2025-05",
           "firstPeriodRateBps": 590,
-          "marginBps": 150,
-          "principalUnits": 120,
-          "maturityDate": "2035-05-13"
+          "marginBps": 150
         },
         "isActive": true,
         "createdAt": "2025-05-13T08:00:00Z",
@@ -119,18 +113,16 @@
       },
       {
         "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb4",
-        "name": "EDO 12/2025",
+        "name": "EDO1235",
         "kind": "BOND_EDO",
         "assetClass": "BONDS",
         "symbol": null,
         "currency": "PLN",
         "valuationSource": "EDO_CALCULATOR",
         "edoTerms": {
-          "purchaseDate": "2025-12-16",
+          "seriesMonth": "2025-12",
           "firstPeriodRateBps": 560,
-          "marginBps": 150,
-          "principalUnits": 180,
-          "maturityDate": "2035-12-16"
+          "marginBps": 150
         },
         "isActive": true,
         "createdAt": "2025-12-16T08:00:00Z",

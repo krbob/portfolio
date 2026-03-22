@@ -84,6 +84,7 @@ class ReadModelRefreshServiceTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             historicalInstrumentValuationProvider = ThrowingHistoricalProvider(),
+            edoLotValuationProvider = NoopEdoLotValuationProvider(),
             referenceSeriesProvider = NoopReferenceSeriesProvider(),
             inflationAdjustmentProvider = NoopInflationAdjustmentProvider(),
             transactionFxConversionService = TransactionFxConversionService(NoopFxRateHistoryProvider()),
@@ -200,6 +201,17 @@ class ReadModelRefreshServiceTest {
             from: LocalDate,
             to: LocalDate
         ) = throw RuntimeException("History provider boom")
+    }
+
+    private class NoopEdoLotValuationProvider : net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider {
+        override suspend fun value(lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms) =
+            throw RuntimeException("EDO lot provider boom")
+
+        override suspend fun dailyPriceSeries(
+            lotTerms: net.bobinski.portfolio.api.domain.model.EdoLotTerms,
+            from: LocalDate,
+            to: LocalDate
+        ) = throw RuntimeException("EDO lot provider boom")
     }
 
     private class NoopReferenceSeriesProvider : ReferenceSeriesProvider {

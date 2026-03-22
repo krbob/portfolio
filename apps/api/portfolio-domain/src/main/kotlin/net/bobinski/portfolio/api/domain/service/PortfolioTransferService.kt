@@ -22,6 +22,7 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
@@ -411,11 +412,9 @@ class PortfolioTransferService(
         valuationSource = valuationSource.name,
         edoTerms = edoTerms?.let { terms ->
             EdoTermsSnapshot(
-                purchaseDate = terms.purchaseDate.toString(),
+                seriesMonth = terms.seriesMonth.toString(),
                 firstPeriodRateBps = terms.firstPeriodRateBps,
-                marginBps = terms.marginBps,
-                principalUnits = terms.principalUnits,
-                maturityDate = terms.maturityDate.toString()
+                marginBps = terms.marginBps
             )
         },
         isActive = isActive,
@@ -513,11 +512,9 @@ class PortfolioTransferService(
     }
 
     private fun EdoTermsSnapshot.toDomain(): EdoTerms = EdoTerms(
-        purchaseDate = LocalDate.parse(purchaseDate),
+        seriesMonth = YearMonth.parse(seriesMonth),
         firstPeriodRateBps = firstPeriodRateBps,
-        marginBps = marginBps,
-        principalUnits = principalUnits,
-        maturityDate = LocalDate.parse(maturityDate)
+        marginBps = marginBps
     )
 
     private fun TransactionSnapshot.toDomain(): Transaction = Transaction(
@@ -554,8 +551,8 @@ class PortfolioTransferService(
     )
 
     private companion object {
-        const val CURRENT_SCHEMA_VERSION = 2
-        val SUPPORTED_SCHEMA_VERSIONS = setOf(1, 2)
+        const val CURRENT_SCHEMA_VERSION = 3
+        val SUPPORTED_SCHEMA_VERSIONS = setOf(3)
     }
 }
 
@@ -599,11 +596,9 @@ data class InstrumentSnapshot(
 
 @Serializable
 data class EdoTermsSnapshot(
-    val purchaseDate: String,
+    val seriesMonth: String,
     val firstPeriodRateBps: Int,
-    val marginBps: Int,
-    val principalUnits: Int,
-    val maturityDate: String
+    val marginBps: Int
 )
 
 @Serializable
