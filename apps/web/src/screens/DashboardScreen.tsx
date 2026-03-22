@@ -72,9 +72,8 @@ export function DashboardScreen() {
   const cashPct = overview && totalCurrentValue > 0 ? (Number(displayedCashValuePln) / totalCurrentValue) * 100 : 0
 
   const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
-  const breachedBuckets = configuredBuckets.filter((bucket) => !bucket.withinTolerance)
   const mostOffTargetBucket = useMemo(() => {
-    return breachedBuckets.reduce<typeof breachedBuckets[number] | null>((current, bucket) => {
+    return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
       if (!bucket.driftPctPoints) {
         return current
       }
@@ -83,7 +82,7 @@ export function DashboardScreen() {
       }
       return current
     }, null)
-  }, [breachedBuckets])
+  }, [configuredBuckets])
   const rebalanceBucket = useMemo(() => {
     return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
       if (bucket.rebalanceAction !== 'BUY' || !bucket.gapValuePln || Number(bucket.gapValuePln) <= 0) {
@@ -347,9 +346,13 @@ export function DashboardScreen() {
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">
                     {mostOffTargetBucket
-                      ? isPolish
-                        ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu.`
-                        : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target.`
+                      ? mostOffTargetBucket.withinTolerance
+                        ? isPolish
+                          ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu, ale nadal mieszczą się w paśmie.`
+                          : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target, but still inside the configured band.`
+                        : isPolish
+                          ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu.`
+                          : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target.`
                       : isPolish
                         ? 'Koszyki są zgodne ze skonfigurowaną alokacją.'
                         : 'Target buckets are aligned with the configured mix.'}

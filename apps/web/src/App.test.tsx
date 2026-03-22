@@ -244,16 +244,47 @@ describe('App', () => {
             targetWeightSumPct: '100.00',
             totalCurrentValuePln: '2095.00',
             availableCashPln: '995.00',
-            breachedBucketCount: 1,
-            largestBandBreachPctPoints: '3.40',
-            recommendedAction: 'DEPLOY_EXISTING_CASH',
-            recommendedAssetClass: 'BONDS',
-            recommendedContributionPln: '995.00',
-            remainingContributionGapPln: '105.00',
-            fullRebalanceBuyAmountPln: '1100.00',
-            fullRebalanceSellAmountPln: '1100.00',
-            requiresSelling: true,
-            buckets: [],
+            breachedBucketCount: 0,
+            largestBandBreachPctPoints: null,
+            recommendedAction: 'WITHIN_TOLERANCE',
+            recommendedAssetClass: null,
+            recommendedContributionPln: '0.00',
+            remainingContributionGapPln: '0.00',
+            fullRebalanceBuyAmountPln: '10.06',
+            fullRebalanceSellAmountPln: '10.06',
+            requiresSelling: false,
+            buckets: [
+              {
+                assetClass: 'EQUITIES',
+                currentValuePln: '1665.00',
+                currentWeightPct: '79.52',
+                targetWeightPct: '80.00',
+                targetValuePln: '1676.00',
+                driftPctPoints: '-0.48',
+                gapValuePln: '10.06',
+                toleranceLowerPct: '75.00',
+                toleranceUpperPct: '85.00',
+                withinTolerance: true,
+                suggestedContributionPln: '0.00',
+                rebalanceAction: 'HOLD',
+                status: 'ON_TARGET',
+              },
+              {
+                assetClass: 'BONDS',
+                currentValuePln: '430.00',
+                currentWeightPct: '20.48',
+                targetWeightPct: '20.00',
+                targetValuePln: '419.00',
+                driftPctPoints: '+0.48',
+                gapValuePln: '-10.06',
+                toleranceLowerPct: '15.00',
+                toleranceUpperPct: '25.00',
+                withinTolerance: true,
+                suggestedContributionPln: '0.00',
+                rebalanceAction: 'HOLD',
+                status: 'ON_TARGET',
+              },
+            ],
           }),
           { status: 200 },
         )
@@ -356,6 +387,8 @@ describe('App', () => {
     expect(await screen.findByText(/daily change/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/requires full market valuation/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/valuation basis/i)).toBeInTheDocument()
+    expect(await screen.findByText(/-0.48 pp/i)).toBeInTheDocument()
+    expect(await screen.findByText(/inside the configured band/i)).toBeInTheDocument()
   })
 
   it('shows the login gate when password auth is enabled', async () => {
