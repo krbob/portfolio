@@ -221,7 +221,8 @@ fun appModule(
             currentInstrumentValuationProvider = get(),
             edoLotValuationProvider = get(),
             transactionFxConversionService = get(),
-            clock = get()
+            clock = get(),
+            marketDataStaleAfterDays = marketDataConfig.staleAfterDays
         )
     }
     single {
@@ -237,6 +238,7 @@ fun appModule(
                 marketDataConfig.edoCalculatorBaseUrl,
                 marketDataConfig.goldApiBaseUrl,
                 marketDataConfig.goldApiKey.orEmpty(),
+                marketDataConfig.staleAfterDays.toString(),
                 marketDataConfig.usdPlnSymbol,
                 marketDataConfig.goldBenchmarkSymbol,
                 marketDataConfig.equityBenchmarkSymbol,
@@ -263,7 +265,8 @@ fun appModule(
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
             transactionFxConversionService = get(),
-            clock = get()
+            clock = get(),
+            marketDataStaleAfterDays = marketDataConfig.staleAfterDays
         )
     }
     single {

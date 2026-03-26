@@ -129,6 +129,8 @@ export function labelValuationStatus(value: string | null | undefined) {
     switch (value) {
       case 'VALUED':
         return 'Wycenione'
+      case 'STALE':
+        return 'Opóźnione'
       case 'MISSING_MARKET_DATA':
         return 'Brak danych rynkowych'
       case 'MISSING_FX':
@@ -147,6 +149,8 @@ export function labelValuationStatus(value: string | null | undefined) {
   switch (value) {
     case 'VALUED':
       return 'Valued'
+    case 'STALE':
+      return 'Stale'
     case 'MISSING_MARKET_DATA':
       return 'Missing market data'
     case 'MISSING_FX':

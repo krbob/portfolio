@@ -10,6 +10,7 @@ import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSigne
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
+import { isMarketValuedStatus } from '../lib/valuation'
 
 type SortField =
   | 'instrumentName'
@@ -42,7 +43,8 @@ export function InstrumentsScreen() {
   const sortedRows = useMemo(() => [...rows].sort((left, right) => compareRows(left, right, sortState)), [rows, sortState])
 
   const activeRows = rows.filter((row) => row.holdingCount > 0)
-  const degradedCount = rows.filter((row) => row.status !== 'VALUED' && row.holdingCount > 0).length
+  const degradedCount = rows.filter((row) => row.status === 'DEGRADED' && row.holdingCount > 0).length
+  const staleCount = rows.filter((row) => row.status === 'STALE').length
   const totalValuePln = rows.reduce((sum, row) => sum + row.totalCurrentValuePln, 0)
   const totalGainPln = rows.reduce((sum, row) => sum + row.totalUnrealizedGainPln, 0)
   const totalHoldingCount = rows.reduce((sum, row) => sum + row.holdingCount, 0)
@@ -131,9 +133,13 @@ export function InstrumentsScreen() {
             label={isPolish ? 'Instrumenty zdegradowane' : 'Degraded instruments'}
             value={String(degradedCount)}
             detail={degradedCount === 0
-              ? (isPolish ? 'Każdy aktywny instrument ma bieżącą wycenę' : 'Every active instrument has a current valuation')
-              : (isPolish ? 'Część serii nadal spada do podstawy księgowej' : 'Some series still fall back to book basis')}
-            tone={degradedCount === 0 ? 'success' : 'warning'}
+              ? staleCount === 0
+                ? (isPolish ? 'Każdy aktywny instrument ma świeżą wycenę rynkową' : 'Every active instrument has fresh market valuation')
+                : (isPolish ? `${staleCount} ma opóźnioną wycenę rynkową` : `${staleCount} have stale market valuation`)
+              : (isPolish
+                  ? `Część serii spada do podstawy księgowej${staleCount > 0 ? ` · ${staleCount} opóźnione` : ''}`
+                  : `Some series fall back to book basis${staleCount > 0 ? ` · ${staleCount} stale` : ''}`)}
+            tone={degradedCount === 0 && staleCount === 0 ? 'success' : 'warning'}
           />
         </div>
       )}
@@ -379,7 +385,7 @@ function InstrumentDetailsCard({
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                   <p className="text-xs text-zinc-500">
-                    {holding.valuationStatus === 'VALUED'
+                    {isMarketValuedStatus(holding.valuationStatus)
                       ? formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')
                       : isPolish
                         ? 'Księgowo'
@@ -410,7 +416,7 @@ function InstrumentDetailsCard({
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                   <p className="text-xs text-zinc-500">
-                    {lot.valuationStatus === 'VALUED'
+                    {isMarketValuedStatus(lot.valuationStatus)
                       ? formatSignedCurrencyPln(lot.unrealizedGainPln ?? '0')
                       : isPolish
                         ? 'Księgowo'
@@ -494,7 +500,7 @@ interface InstrumentRow {
   totalUnrealizedGainPln: number
   gainPct: number | null
   transactionCount: number
-  status: 'VALUED' | 'DEGRADED' | 'CATALOG_ONLY'
+  status: 'VALUED' | 'STALE' | 'DEGRADED' | 'CATALOG_ONLY'
 }
 
 function buildInstrumentRows(
@@ -512,7 +518,8 @@ function buildInstrumentRows(
   return [...catalog].map((instrument) => {
       const instrumentHoldings = holdingsByInstrument.get(instrument.id) ?? []
       const accountIds = new Set(instrumentHoldings.map((holding) => holding.accountId))
-      const valuedHoldingCount = instrumentHoldings.filter((holding) => holding.valuationStatus === 'VALUED').length
+      const valuedHoldingCount = instrumentHoldings.filter((holding) => isMarketValuedStatus(holding.valuationStatus)).length
+      const staleHoldingCount = instrumentHoldings.filter((holding) => holding.valuationStatus === 'STALE').length
       const quantity = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.quantity), 0)
       const totalBookValuePln = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.bookValuePln), 0)
       const totalCurrentValuePln = instrumentHoldings.reduce(
@@ -527,8 +534,10 @@ function buildInstrumentRows(
       const transactionCount = instrumentHoldings.reduce((sum, holding) => sum + holding.transactionCount, 0)
       const status = instrumentHoldings.length === 0
         ? 'CATALOG_ONLY'
-        : instrumentHoldings.every((holding) => holding.valuationStatus === 'VALUED')
-          ? 'VALUED'
+        : instrumentHoldings.every((holding) => isMarketValuedStatus(holding.valuationStatus))
+          ? staleHoldingCount > 0
+            ? 'STALE'
+            : 'VALUED'
           : 'DEGRADED'
 
       return {
@@ -582,6 +591,8 @@ function statusVariant(status: InstrumentRow['status']) {
   switch (status) {
     case 'VALUED':
       return badgeVariants.success
+    case 'STALE':
+      return badgeVariants.info
     case 'DEGRADED':
       return badgeVariants.warning
     case 'CATALOG_ONLY':
@@ -593,6 +604,8 @@ function labelInstrumentStatus(status: InstrumentRow['status'], isPolish: boolea
   switch (status) {
     case 'VALUED':
       return isPolish ? 'Aktywny' : 'Active'
+    case 'STALE':
+      return isPolish ? 'Opóźniony' : 'Stale'
     case 'DEGRADED':
       return isPolish ? 'Częściowy' : 'Degraded'
     case 'CATALOG_ONLY':
@@ -616,13 +629,13 @@ function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: n
   if (valuedHoldingCount === 0) {
     return isPolish
       ? 'Brak wyceny rynkowej aktywnych pozycji'
-      : 'No live pricing for active holdings'
+      : 'No market valuation for active holdings'
   }
 
   if (valuedHoldingCount < activeHoldingCount) {
     return isPolish
       ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową`
-      : `${valuedHoldingCount}/${activeHoldingCount} holdings with live pricing`
+      : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation`
   }
 
   return isPolish ? 'Tylko aktywne pozycje' : 'Active holdings only'
@@ -639,7 +652,7 @@ function describeInstrumentGain(
   }
 
   if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej' : 'No live pricing'
+    return isPolish ? 'Brak wyceny rynkowej' : 'No market valuation'
   }
 
   if (valuedHoldingCount < holdingCount) {

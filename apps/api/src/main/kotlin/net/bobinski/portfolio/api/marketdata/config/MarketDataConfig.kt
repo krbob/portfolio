@@ -9,6 +9,7 @@ data class MarketDataConfig(
     val edoCalculatorBaseUrl: String,
     val goldApiBaseUrl: String,
     val goldApiKey: String?,
+    val staleAfterDays: Long = 3,
     val usdPlnSymbol: String,
     val goldBenchmarkSymbol: String,
     val equityBenchmarkSymbol: String,
@@ -39,6 +40,11 @@ data class MarketDataConfig(
                 config,
                 "portfolio.marketData.goldApiKey"
             ),
+            staleAfterDays = readSetting(
+                "PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS",
+                config,
+                "portfolio.marketData.staleAfterDays"
+            )?.toLongOrNull()?.takeIf { it > 0 } ?: 3,
             usdPlnSymbol = readSetting(
                 "PORTFOLIO_USDPLN_SYMBOL",
                 config,

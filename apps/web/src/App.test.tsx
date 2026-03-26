@@ -1070,7 +1070,7 @@ describe('App', () => {
     )
 
     expect((await screen.findAllByRole('heading', { name: /^instruments$/i })).length).toBeGreaterThan(0)
-    expect(await screen.findByText(/no live pricing for active holdings/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no market valuation for active holdings/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/book basis/i)).length).toBeGreaterThan(0)
   })

@@ -127,6 +127,41 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `overview marks stale market valuations without falling back to book basis`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = vwce.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-09")
+            )
+        )
+
+        val overview = fixture.service.overview()
+        val holding = fixture.service.holdings().single()
+        val account = fixture.service.accounts().single()
+
+        assertEquals(ValuationState.STALE, overview.valuationState)
+        assertEquals(1, overview.valuedHoldingCount)
+        assertEquals(0, overview.unvaluedHoldingCount)
+        assertEquals(BigDecimal("2195.00"), overview.totalCurrentValuePln)
+        assertEquals(HoldingValuationStatus.STALE, holding.valuationStatus)
+        assertEquals("Last market valuation is from 2026-03-09.", holding.valuationIssue)
+        assertEquals(ValuationState.STALE, account.valuationState)
+    }
+
+    @Test
     fun `overview resolves missing fx from historical rates`() = runBlocking {
         val fixture = portfolioFixture()
         fixture.accountRepository.save(account(baseCurrency = "USD"))
@@ -295,7 +330,9 @@ class PortfolioReadModelServiceTest {
         assertEquals(0, reserveSummary.activeHoldingCount)
     }
 
-    private fun portfolioFixture(): PortfolioFixture {
+    private fun portfolioFixture(
+        clock: Clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC)
+    ): PortfolioFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
         val transactionRepository = InMemoryTransactionRepository()
@@ -309,7 +346,7 @@ class PortfolioReadModelServiceTest {
             currentInstrumentValuationProvider = valuationProvider,
             edoLotValuationProvider = edoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
-            clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC)
+            clock = clock
         )
         return PortfolioFixture(
             service = service,

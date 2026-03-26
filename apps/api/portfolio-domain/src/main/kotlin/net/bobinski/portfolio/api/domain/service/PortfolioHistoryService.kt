@@ -42,7 +42,8 @@ class PortfolioHistoryService(
     private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val inflationAdjustmentProvider: InflationAdjustmentProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val marketDataStaleAfterDays: Long = 3
 ) {
     suspend fun dailyHistory(): PortfolioDailyHistory {
         val accounts = accountRepository.list()
@@ -356,13 +357,33 @@ class PortfolioHistoryService(
                 }
             }
         }
+        val staleInstrumentIds = buildSet {
+            instrumentLookups.forEach { (instrumentId, lookup) ->
+                if (instrumentId in successfulInstrumentIds && lookup.lastEntry()?.key?.let { isStale(it, until) } == true) {
+                    add(instrumentId)
+                }
+            }
+            edoInstruments.forEach { instrument ->
+                val lotDates = edoLotsByInstrument[instrument.id].orEmpty()
+                if (instrument.id !in successfulInstrumentIds) {
+                    return@forEach
+                }
+                if (lotDates.any { purchaseDate ->
+                        edoLotLookups[EdoLotKey(instrument.id, purchaseDate)]?.lastEntry()?.key?.let { isStale(it, until) } == true
+                    }
+                ) {
+                    add(instrument.id)
+                }
+            }
+        }
         val issueCount = usedInstrumentIds.subtract(successfulInstrumentIds).size
         val successCount = successfulInstrumentIds.size
         val valuationState = when {
             usedInstrumentIds.isEmpty() -> ValuationState.MARK_TO_MARKET
-            successCount == usedInstrumentIds.size -> ValuationState.MARK_TO_MARKET
             successCount == 0 -> ValuationState.BOOK_ONLY
-            else -> ValuationState.PARTIALLY_VALUED
+            successCount != usedInstrumentIds.size -> ValuationState.PARTIALLY_VALUED
+            staleInstrumentIds.isNotEmpty() -> ValuationState.STALE
+            else -> ValuationState.MARK_TO_MARKET
         }
 
         HistoricalLoads(
@@ -724,6 +745,9 @@ class PortfolioHistoryService(
 
     private fun TreeMap<LocalDate, BigDecimal>.lookupOn(date: LocalDate): BigDecimal? =
         floorEntry(date)?.value
+
+    private fun isStale(valuedAt: LocalDate, asOf: LocalDate): Boolean =
+        valuedAt.isBefore(asOf.minusDays(marketDataStaleAfterDays))
 
     private fun MutableHolding.isValuedOn(date: LocalDate, historyLoads: HistoricalLoads): Boolean =
         if (instrument.kind == InstrumentKind.BOND_EDO) {

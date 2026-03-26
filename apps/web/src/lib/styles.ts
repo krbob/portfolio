@@ -62,6 +62,7 @@ export const txBadgeVariants = {
 // Valuation status badge colors
 export const valuationBadgeVariants: Record<string, string> = {
   VALUED: 'bg-emerald-500/15 text-emerald-400',
+  STALE: 'bg-sky-500/15 text-sky-300',
   BOOK_ONLY: 'bg-amber-500/15 text-amber-400',
   UNAVAILABLE: 'bg-red-500/15 text-red-400',
 }

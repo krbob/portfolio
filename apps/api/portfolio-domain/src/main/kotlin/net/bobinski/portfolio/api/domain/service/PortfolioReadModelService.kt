@@ -32,7 +32,8 @@ class PortfolioReadModelService(
     private val currentInstrumentValuationProvider: CurrentInstrumentValuationProvider,
     private val edoLotValuationProvider: EdoLotValuationProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val marketDataStaleAfterDays: Long = 3
 ) {
     suspend fun accounts(): List<PortfolioAccountSummary> {
         val snapshot = buildValuedSnapshot()
@@ -49,12 +50,7 @@ class PortfolioReadModelService(
                 val netContributionsPln = snapshot.netContributionsByAccountPln[account.id] ?: BigDecimal.ZERO
                 val totalBookValuePln = investedBookValuePln.add(cashBalancePln, MONEY_CONTEXT)
                 val totalCurrentValuePln = investedCurrentValuePln.add(cashBalancePln, MONEY_CONTEXT)
-                val valuationState = when {
-                    accountHoldings.isEmpty() -> ValuationState.MARK_TO_MARKET
-                    accountHoldings.all { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.MARK_TO_MARKET
-                    accountHoldings.none { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.BOOK_ONLY
-                    else -> ValuationState.PARTIALLY_VALUED
-                }
+                val valuationState = accountHoldings.toValuationState()
                 val portfolioWeightPct = if (totalPortfolioCurrentValuePln.signum() == 0) {
                     BigDecimal.ZERO
                 } else {
@@ -81,7 +77,7 @@ class PortfolioReadModelService(
                     totalUnrealizedGainPln = totalCurrentValuePln.subtract(totalBookValuePln, MONEY_CONTEXT).money(),
                     portfolioWeightPct = portfolioWeightPct,
                     activeHoldingCount = accountHoldings.size,
-                    valuedHoldingCount = accountHoldings.count { it.valuationStatus == HoldingValuationStatus.VALUED },
+                    valuedHoldingCount = accountHoldings.count { it.valuationStatus.isMarketValued() },
                     valuationIssueCount = accountHoldings.count { it.valuationIssue != null }
                 )
             }
@@ -126,8 +122,8 @@ class PortfolioReadModelService(
             accountCount = snapshot.accounts.size,
             instrumentCount = snapshot.instruments.size,
             activeHoldingCount = snapshot.holdings.size,
-            valuedHoldingCount = snapshot.holdings.count { it.valuationStatus == HoldingValuationStatus.VALUED },
-            unvaluedHoldingCount = snapshot.holdings.count { it.valuationStatus != HoldingValuationStatus.VALUED },
+            valuedHoldingCount = snapshot.holdings.count { it.valuationStatus.isMarketValued() },
+            unvaluedHoldingCount = snapshot.holdings.count { !it.valuationStatus.isMarketValued() },
             valuationIssueCount = snapshot.holdings.count { it.valuationIssue != null },
             missingFxTransactions = snapshot.missingFxTransactions,
             unsupportedCorrectionTransactions = snapshot.unsupportedCorrectionTransactions
@@ -191,12 +187,7 @@ class PortfolioReadModelService(
             netContributionsByAccountPln = ledgerSnapshot.netContributionsByAccountPln,
             missingFxTransactions = ledgerSnapshot.missingFxTransactions,
             unsupportedCorrectionTransactions = ledgerSnapshot.unsupportedCorrectionTransactions,
-            valuationState = when {
-                holdings.isEmpty() -> ValuationState.MARK_TO_MARKET
-                holdings.all { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.MARK_TO_MARKET
-                holdings.none { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.BOOK_ONLY
-                else -> ValuationState.PARTIALLY_VALUED
-            }
+            valuationState = holdings.toValuationState()
         )
     }
 
@@ -475,6 +466,11 @@ class PortfolioReadModelService(
             currentValuePln.divide(holding.quantity, 8, RoundingMode.HALF_UP)
         }.money()
         val valuedAt = successfulResults.maxOfOrNull { (_, valuation) -> valuation.valuedAt }
+        val valuationStatus = if (successfulResults.any { (_, valuation) -> isStale(valuation.valuedAt) }) {
+            HoldingValuationStatus.STALE
+        } else {
+            HoldingValuationStatus.VALUED
+        }
 
         return ValuedHolding(
             account = holding.account,
@@ -485,11 +481,12 @@ class PortfolioReadModelService(
             currentValuePln = currentValuePln,
             unrealizedGainPln = currentValuePln.subtract(holding.costBasisPln, MONEY_CONTEXT).money(),
             valuedAt = valuedAt,
-            valuationStatus = HoldingValuationStatus.VALUED,
-            valuationIssue = null,
+            valuationStatus = valuationStatus,
+            valuationIssue = valuedAt?.takeIf(::isStale)?.let(::staleValuationIssue),
             transactionCount = holding.transactionCount,
             edoLots = successfulResults.map { (lot, valuation) ->
                 val lotCurrentValue = valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT).money()
+                val lotStatus = valuationStatusFor(valuation)
                 EdoLotSnapshot(
                     purchaseDate = lot.purchaseDate,
                     quantity = lot.quantity.quantity(),
@@ -498,8 +495,8 @@ class PortfolioReadModelService(
                     currentValuePln = lotCurrentValue,
                     unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
                     valuedAt = valuation.valuedAt,
-                    valuationStatus = HoldingValuationStatus.VALUED,
-                    valuationIssue = null
+                    valuationStatus = lotStatus,
+                    valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue)
                 )
             }
         )
@@ -538,6 +535,7 @@ class PortfolioReadModelService(
 
     private fun MutableHolding.toValuedHolding(valuation: InstrumentValuation): ValuedHolding {
         val currentValuePln = valuation.pricePerUnitPln.multiply(quantity, MONEY_CONTEXT).money()
+        val valuationStatus = valuationStatusFor(valuation)
         return ValuedHolding(
             account = account,
             instrument = instrument,
@@ -547,8 +545,8 @@ class PortfolioReadModelService(
             currentValuePln = currentValuePln,
             unrealizedGainPln = currentValuePln.subtract(costBasisPln, MONEY_CONTEXT).money(),
             valuedAt = valuation.valuedAt,
-            valuationStatus = HoldingValuationStatus.VALUED,
-            valuationIssue = null,
+            valuationStatus = valuationStatus,
+            valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue),
             transactionCount = transactionCount
         )
     }
@@ -607,6 +605,41 @@ class PortfolioReadModelService(
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
+
+    private fun List<ValuedHolding>.toValuationState(): ValuationState {
+        if (isEmpty()) {
+            return ValuationState.MARK_TO_MARKET
+        }
+        val marketValuedCount = count { it.valuationStatus.isMarketValued() }
+        if (marketValuedCount == 0) {
+            return ValuationState.BOOK_ONLY
+        }
+        if (marketValuedCount != size) {
+            return ValuationState.PARTIALLY_VALUED
+        }
+        return if (any { it.valuationStatus == HoldingValuationStatus.STALE }) {
+            ValuationState.STALE
+        } else {
+            ValuationState.MARK_TO_MARKET
+        }
+    }
+
+    private fun HoldingValuationStatus.isMarketValued(): Boolean = when (this) {
+        HoldingValuationStatus.VALUED,
+        HoldingValuationStatus.STALE -> true
+
+        HoldingValuationStatus.UNAVAILABLE,
+        HoldingValuationStatus.UNSUPPORTED -> false
+    }
+
+    private fun valuationStatusFor(valuation: InstrumentValuation): HoldingValuationStatus =
+        if (isStale(valuation.valuedAt)) HoldingValuationStatus.STALE else HoldingValuationStatus.VALUED
+
+    private fun isStale(valuedAt: LocalDate): Boolean =
+        valuedAt.isBefore(LocalDate.now(clock).minusDays(marketDataStaleAfterDays))
+
+    private fun staleValuationIssue(valuedAt: LocalDate): String =
+        "Last market valuation is from $valuedAt."
 
     private fun InstrumentValuationFailureType.toHoldingValuationStatus(): HoldingValuationStatus = when (this) {
         InstrumentValuationFailureType.UNAVAILABLE -> HoldingValuationStatus.UNAVAILABLE
@@ -769,12 +802,14 @@ data class PortfolioAccountSummary(
 
 enum class ValuationState {
     BOOK_ONLY,
+    STALE,
     PARTIALLY_VALUED,
     MARK_TO_MARKET
 }
 
 enum class HoldingValuationStatus {
     VALUED,
+    STALE,
     UNAVAILABLE,
     UNSUPPORTED
 }

@@ -10,6 +10,7 @@ import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../li
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass } from '../lib/labels'
 import { card } from '../lib/styles'
+import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
 
 type DashboardRange = '1Y' | 'MAX'
 
@@ -28,17 +29,17 @@ export function DashboardScreen() {
   const previousPoint = chartPoints.at(-2) ?? allPoints.at(-2)
   const valuationState = overview?.valuationState ?? 'MARK_TO_MARKET'
   const historyValuationState = historyQuery.data?.valuationState ?? valuationState
-  const usesBookBasisOnly = valuationState === 'BOOK_ONLY'
-  const hasFullCurrentValuation = valuationState === 'MARK_TO_MARKET'
-  const hasFullHistoryValuation =
-    historyValuationState === 'MARK_TO_MARKET' &&
+  const usesBookBasisOnly = isBookOnlyValuationState(valuationState)
+  const hasMarketBackedCurrentValuation = isMarketValuationState(valuationState)
+  const hasMarketBackedHistoryValuation =
+    isMarketValuationState(historyValuationState) &&
     Boolean(latestPoint) &&
     Boolean(previousPoint) &&
     latestPoint!.activeHoldingCount === latestPoint!.valuedHoldingCount &&
     previousPoint!.activeHoldingCount === previousPoint!.valuedHoldingCount
 
   const dailyChange =
-    hasFullHistoryValuation && latestPoint && previousPoint
+    hasMarketBackedHistoryValuation && latestPoint && previousPoint
       ? Number(latestPoint.totalCurrentValuePln) - Number(previousPoint.totalCurrentValuePln)
       : null
   const dailyChangePct =
@@ -167,7 +168,7 @@ export function DashboardScreen() {
           value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : (isPolish ? 'b/d' : 'N/A')}
           subtitle={dailyChangePct != null
             ? formatPercent(dailyChangePct, { signed: true })
-            : hasFullCurrentValuation
+            : hasMarketBackedCurrentValuation
               ? isPolish
                 ? 'Oczekiwanie na dane'
                 : 'Waiting for data'
@@ -220,6 +221,10 @@ export function DashboardScreen() {
                     ? isPolish
                       ? 'Wykres opiera się na koszcie księgowym.'
                       : 'This chart is based on book basis.'
+                    : historyValuationState === 'STALE'
+                      ? isPolish
+                        ? 'Wykres korzysta z ostatnich dostępnych cen rynkowych.'
+                        : 'This chart uses the latest available market prices.'
                     : isPolish
                       ? 'Wykres łączy ceny rynkowe z kosztem księgowym.'
                       : 'This chart mixes market prices with book basis.'}
@@ -288,6 +293,10 @@ export function DashboardScreen() {
                       ? isPolish
                         ? 'Sygnał alokacji opiera się na koszcie księgowym.'
                         : 'Allocation signal is based on book basis.'
+                      : allocationQuery.data?.valuationState === 'STALE'
+                        ? isPolish
+                          ? 'Sygnał alokacji korzysta z ostatnich dostępnych cen rynkowych.'
+                          : 'Allocation signal uses the latest available market prices.'
                       : isPolish
                         ? 'Sygnał alokacji łączy ceny rynkowe z kosztem księgowym.'
                         : 'Allocation signal mixes market prices with book basis.'}
@@ -430,13 +439,13 @@ export function DashboardScreen() {
       <div className="mt-4 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
-          value={hasFullCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : (isPolish ? 'b/d' : 'N/A')}
-          subtitle={hasFullCurrentValuation
+          value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : (isPolish ? 'b/d' : 'N/A')}
+          subtitle={hasMarketBackedCurrentValuation
             ? undefined
             : isPolish
               ? 'Wymaga pełnej wyceny rynkowej'
               : 'Requires full market valuation'}
-          change={hasFullCurrentValuation
+          change={hasMarketBackedCurrentValuation
             ? Number(overview.totalUnrealizedGainPln) > 0
               ? 'positive'
               : Number(overview.totalUnrealizedGainPln) < 0
@@ -569,6 +578,9 @@ function labelValuationBasis(valuationState: string, isPolish: boolean) {
   if (valuationState === 'BOOK_ONLY') {
     return isPolish ? 'Księgowa' : 'Book basis'
   }
+  if (valuationState === 'STALE') {
+    return isPolish ? 'Rynkowa opóźniona' : 'Stale market'
+  }
   if (valuationState === 'PARTIALLY_VALUED') {
     return isPolish ? 'Częściowa' : 'Partial'
   }
@@ -592,6 +604,12 @@ function primaryValueSubtitle(
       : `${overview.accountCount} accounts · ${overview.valuedHoldingCount}/${overview.activeHoldingCount} holdings valued`
   }
 
+  if (valuationState === 'STALE') {
+    return isPolish
+      ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji · ostatnie dostępne ceny`
+      : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings · latest available prices`
+  }
+
   return isPolish
     ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji`
     : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings`
@@ -608,6 +626,10 @@ function assetSliceSubtitle(pct: number, valuationState: string, isPolish: boole
     return isPolish ? `${base} · częściowo wycenione` : `${base} · partially valued`
   }
 
+  if (valuationState === 'STALE') {
+    return isPolish ? `${base} · wycena opóźniona` : `${base} · stale pricing`
+  }
+
   return base
 }
 
@@ -619,7 +641,13 @@ function valuationBasisSubtitle(
     return isPolish ? 'Brak aktywnych pozycji do wyceny' : 'No active holdings to value'
   }
 
+  if (overview.valuationState === 'STALE') {
+    return isPolish
+      ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma ostatnią dostępną wycenę rynkową`
+      : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have the latest available market valuation`
+  }
+
   return isPolish
-    ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma bieżącą wycenę`
-    : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have current valuations`
+    ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma wycenę rynkową`
+    : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have market valuations`
 }

@@ -9,6 +9,7 @@ import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../li
 import { useI18n } from '../lib/i18n'
 import { labelAccountType, labelAssetClass } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
+import { isMarketValuedStatus } from '../lib/valuation'
 
 export function AccountsScreen() {
   const { isPolish } = useI18n()
@@ -114,7 +115,7 @@ export function AccountsScreen() {
             value={String(degradedCount)}
             detail={degradedCount === 0
               ? (isPolish ? 'Pełna wycena na wszystkich rachunkach' : 'Full valuation on every account')
-              : (isPolish ? 'Część rachunków używa podstawy księgowej' : 'Some accounts still rely on book basis')}
+              : (isPolish ? 'Część rachunków używa wyceny opóźnionej albo księgowej' : 'Some accounts use stale or book valuation')}
             tone={degradedCount === 0 ? 'success' : 'warning'}
           />
         </div>
@@ -243,7 +244,7 @@ export function AccountsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{account.activeHoldingCount}</p>
                               <p className="text-xs text-zinc-500">
-                                {account.valuedHoldingCount}/{account.activeHoldingCount} {isPolish ? 'wycen' : 'valued'}
+                                {account.valuedHoldingCount}/{account.activeHoldingCount} {isPolish ? 'z wyceną rynkową' : 'market-backed'}
                               </p>
                             </div>
                           </td>
@@ -458,7 +459,7 @@ function AccountDetailsCard({
                   <div className="text-right">
                     <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                     <p className="text-xs text-zinc-500">
-                      {holding.valuationStatus === 'VALUED'
+                      {isMarketValuedStatus(holding.valuationStatus)
                         ? `${formatPercent(weightPct)} · ${formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')}`
                         : `${formatPercent(weightPct)} · ${isPolish ? 'księgowo' : 'book basis'}`}
                     </p>
@@ -532,13 +533,13 @@ function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: n
   if (valuedHoldingCount === 0) {
     return isPolish
       ? 'Brak wyceny rynkowej aktywnych pozycji'
-      : 'No live pricing for active holdings'
+      : 'No market valuation for active holdings'
   }
 
   if (valuedHoldingCount < activeHoldingCount) {
     return isPolish
       ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową · gotówka wyłączona`
-      : `${valuedHoldingCount}/${activeHoldingCount} holdings with live pricing · cash excluded`
+      : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation · cash excluded`
   }
 
   return isPolish ? 'Tylko aktywne pozycje · gotówka wyłączona' : 'Active holdings only · cash excluded'
@@ -555,7 +556,7 @@ function describeAccountGain(
   }
 
   if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej' : 'No live pricing'
+    return isPolish ? 'Brak wyceny rynkowej' : 'No market valuation'
   }
 
   if (valuedHoldingCount < activeHoldingCount) {
@@ -573,7 +574,7 @@ function describeAccountMetricGain(account: PortfolioAccountSummary, isPolish: b
   }
 
   if (account.valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej pozycji' : 'No live pricing for holdings'
+    return isPolish ? 'Brak wyceny rynkowej pozycji' : 'No market valuation for holdings'
   }
 
   return formatSignedCurrencyPln(account.totalUnrealizedGainPln)
@@ -592,6 +593,8 @@ function labelValuationState(valuationState: string, isPolish: boolean) {
   switch (valuationState) {
     case 'MARK_TO_MARKET':
       return isPolish ? 'Rynkowa' : 'Market'
+    case 'STALE':
+      return isPolish ? 'Opóźniona' : 'Stale'
     case 'PARTIALLY_VALUED':
       return isPolish ? 'Częściowa' : 'Partial'
     case 'BOOK_ONLY':
@@ -605,6 +608,8 @@ function valuationStateVariant(valuationState: string) {
   switch (valuationState) {
     case 'MARK_TO_MARKET':
       return badgeVariants.success
+    case 'STALE':
+      return badgeVariants.info
     case 'PARTIALLY_VALUED':
       return badgeVariants.warning
     case 'BOOK_ONLY':

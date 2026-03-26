@@ -7,6 +7,7 @@ import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read
 import { formatCurrencyPln, formatPercent, formatYearMonth } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { card, th, thRight, td, tdRight, tr } from '../lib/styles'
+import { isMarketValuationState } from '../lib/valuation'
 
 type Period = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
 type Unit = 'PLN' | 'USD' | 'AU'
@@ -31,7 +32,7 @@ export function PerformanceScreen() {
   const allPeriods = returnsQuery.data?.periods ?? []
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
-  const returnsDisplayAvailable = historyQuery.data?.valuationState === 'MARK_TO_MARKET'
+  const returnsDisplayAvailable = isMarketValuationState(historyQuery.data?.valuationState)
 
   const series = seriesForUnit(unit)
 
@@ -346,8 +347,8 @@ function ReturnsTab({
           eyebrow={isPolish ? 'Zwroty' : 'Returns'}
           title={isPolish ? 'Zwroty są chwilowo niewiarygodne' : 'Returns are temporarily unavailable'}
           description={isPolish
-            ? 'Historia portfela nie ma obecnie pełnej wyceny rynkowej, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.'
-            : 'Portfolio history is currently missing full market valuation, so return metrics are shown as N/A instead of pretending they are 0.00%.'}
+            ? 'Historia portfela nie ma obecnie wystarczającego pokrycia wyceną rynkową, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.'
+            : 'Portfolio history currently lacks enough market valuation coverage, so return metrics are shown as N/A instead of pretending they are 0.00%.'}
         />
       ) : null}
 

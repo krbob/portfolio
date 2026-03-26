@@ -113,6 +113,31 @@ class PortfolioHistoryServiceTest {
     }
 
     @Test
+    fun `daily history marks stale valuations when latest prices are delayed`() = runBlocking {
+        val fixture = historyFixture(clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC))
+        val account = account()
+        val instrument = etfInstrument()
+        fixture.accountRepository.save(account)
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(buyTransaction(instrument.id))
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-09", "110.00")
+            )
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(ValuationState.STALE, history.valuationState)
+        assertEquals(1, history.points.last().valuedHoldingCount)
+        assertEquals(BigDecimal("2095.00"), history.points.last().totalCurrentValuePln)
+    }
+
+    @Test
     fun `daily history resolves missing fx from historical rates`() = runBlocking {
         val fixture = historyFixture()
         fixture.accountRepository.save(account())
@@ -328,7 +353,9 @@ class PortfolioHistoryServiceTest {
         assertEquals(0, history.points[2].valuedHoldingCount)
     }
 
-    private fun historyFixture(): HistoryFixture {
+    private fun historyFixture(
+        clock: Clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC)
+    ): HistoryFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
         val portfolioTargetRepository = InMemoryPortfolioTargetRepository()
@@ -348,7 +375,7 @@ class PortfolioHistoryServiceTest {
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
-            clock = Clock.fixed(Instant.parse("2026-03-03T12:00:00Z"), ZoneOffset.UTC)
+            clock = clock
         )
         return HistoryFixture(
             service = service,

@@ -45,6 +45,9 @@ internal fun validateStartupConfiguration(
         require(marketDataConfig.goldApiKey == null || marketDataConfig.goldApiBaseUrl.isHttpUrl()) {
             "Gold API integration requires a valid HTTP base URL."
         }
+        require(marketDataConfig.staleAfterDays > 0) {
+            "Market data stale-after threshold must be positive."
+        }
         require(marketDataConfig.usdPlnSymbol.isNotBlank()) {
             "Market data requires a non-blank USD/PLN symbol."
         }

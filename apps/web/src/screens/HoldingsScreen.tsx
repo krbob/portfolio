@@ -8,6 +8,7 @@ import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSigne
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
 import type { TransactionRouteState } from '../lib/transaction-composer'
+import { isMarketValuedStatus } from '../lib/valuation'
 import {
   btnGhost, btnPrimary, card, cardFlush, th, thRight, td, tdRight, tr,
   filterInput, label as labelClass, badge, badgeVariants,
@@ -80,7 +81,8 @@ export function HoldingsScreen() {
     (sum, h) => sum + asNumber(h.currentValuePln ?? h.bookValuePln ?? '0'),
     0,
   )
-  const valuedCount = filteredHoldings.filter((h) => normalizedValuationStatus(h.valuationStatus) === 'VALUED').length
+  const valuedCount = filteredHoldings.filter((h) => isMarketValuedStatus(normalizedValuationStatus(h.valuationStatus))).length
+  const staleCount = filteredHoldings.filter((h) => normalizedValuationStatus(h.valuationStatus) === 'STALE').length
   const degradedCount = filteredHoldings.length - valuedCount
   const fxIssueCount = filteredHoldings.filter((h) => normalizedValuationStatus(h.valuationStatus) === 'MISSING_FX').length
   const marketIssueCount = filteredHoldings.filter((h) => {
@@ -179,11 +181,11 @@ export function HoldingsScreen() {
         />
         <HoldingSummaryTile
           label={isPolish ? 'Problemy danych' : 'Data issues'}
-          value={String(marketIssueCount + fxIssueCount)}
+          value={String(marketIssueCount + fxIssueCount + staleCount)}
           detail={isPolish
-            ? `${marketIssueCount} cen · ${fxIssueCount} FX`
-            : `${marketIssueCount} quotes · ${fxIssueCount} FX`}
-          tone={marketIssueCount + fxIssueCount > 0 ? 'warning' : 'default'}
+            ? `${marketIssueCount} cen · ${fxIssueCount} FX · ${staleCount} opóźnionych`
+            : `${marketIssueCount} quotes · ${fxIssueCount} FX · ${staleCount} stale`}
+          tone={marketIssueCount + fxIssueCount + staleCount > 0 ? 'warning' : 'default'}
         />
       </div>
 
@@ -232,10 +234,11 @@ export function HoldingsScreen() {
         </FilterBar>
       )}
 
-      {filteredHoldings.length > 0 && degradedCount > 0 ? (
+      {filteredHoldings.length > 0 && (degradedCount > 0 || staleCount > 0) ? (
         <HoldingsValuationBanner
           totalCount={filteredHoldings.length}
           valuedCount={valuedCount}
+          staleCount={staleCount}
           marketIssueCount={marketIssueCount}
           fxIssueCount={fxIssueCount}
           isPolish={isPolish}
@@ -486,12 +489,14 @@ function HoldingSummaryTile({
 function HoldingsValuationBanner({
   totalCount,
   valuedCount,
+  staleCount,
   marketIssueCount,
   fxIssueCount,
   isPolish,
 }: {
   totalCount: number
   valuedCount: number
+  staleCount: number
   marketIssueCount: number
   fxIssueCount: number
   isPolish: boolean
@@ -508,6 +513,8 @@ function HoldingsValuationBanner({
           <h2 className="mt-1 text-sm font-semibold text-zinc-100">
             {fullyBookBased
               ? (isPolish ? 'Widok opiera się obecnie na wartości księgowej.' : 'This view currently relies on book basis.')
+              : staleCount > 0 && marketIssueCount + fxIssueCount === 0
+                ? (isPolish ? 'Widok korzysta z ostatnich dostępnych cen rynkowych.' : 'This view uses the latest available market prices.')
               : (isPolish ? 'Widok miesza wyceny rynkowe z wartością księgową.' : 'This view mixes market prices with book basis.')}
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
@@ -515,12 +522,21 @@ function HoldingsValuationBanner({
               ? (isPolish
                   ? 'Bieżący P/L wróci po odzyskaniu cen rynkowych i przeliczeń FX.'
                   : 'Live P/L returns once market quotes and FX coverage are back.')
+              : staleCount > 0 && marketIssueCount + fxIssueCount === 0
+                ? (isPolish
+                    ? `${valuedCount} z ${totalCount} pozycji ma wycenę rynkową, w tym ${staleCount} opóźnionych.`
+                    : `${valuedCount} of ${totalCount} holdings have market valuation, including ${staleCount} stale.`)
               : (isPolish
-                  ? `${valuedCount} z ${totalCount} pozycji ma bieżącą cenę rynkową.`
-                  : `${valuedCount} of ${totalCount} holdings have live market valuation.`)}
+                  ? `${valuedCount} z ${totalCount} pozycji ma wycenę rynkową.`
+                  : `${valuedCount} of ${totalCount} holdings have market valuation.`)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {staleCount > 0 ? (
+            <span className={`${badge} ${badgeVariants.info}`}>
+              {isPolish ? `${staleCount} opóźnionych` : `${staleCount} stale`}
+            </span>
+          ) : null}
           {marketIssueCount > 0 ? (
             <span className={`${badge} ${badgeVariants.warning}`}>
               {isPolish ? `${marketIssueCount} bez ceny` : `${marketIssueCount} without quote`}
@@ -690,6 +706,8 @@ function valuationStatusFilterLabel(value: string | null | undefined, isPolish: 
   switch (normalizedValuationStatus(value)) {
     case 'VALUED':
       return isPolish ? 'Rynkowa' : 'Market valued'
+    case 'STALE':
+      return isPolish ? 'Opóźniona' : 'Stale'
     case 'BOOK_ONLY':
       return isPolish ? 'Księgowa' : 'Book basis'
     case 'MISSING_MARKET_DATA':
@@ -709,6 +727,8 @@ function holdingStatusPresentation(value: string | null | undefined, isPolish: b
   switch (normalizedValuationStatus(value)) {
     case 'VALUED':
       return { label: isPolish ? 'Rynkowa' : 'Market', className: badgeVariants.success }
+    case 'STALE':
+      return { label: isPolish ? 'Opóźniona' : 'Stale', className: badgeVariants.info }
     case 'BOOK_ONLY':
       return { label: isPolish ? 'Księgowa' : 'Book basis', className: badgeVariants.warning }
     case 'MISSING_MARKET_DATA':
@@ -728,6 +748,7 @@ function issueToneClass(value: string | null | undefined) {
   switch (normalizedValuationStatus(value)) {
     case 'UNSUPPORTED_CORRECTIONS':
       return 'text-red-400'
+    case 'STALE':
     case 'MISSING_FX':
     case 'MISSING_MARKET_DATA':
     case 'UNAVAILABLE':
