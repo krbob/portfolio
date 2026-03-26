@@ -5,6 +5,7 @@ import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioBenchmarkSettingsSection } from '../components/PortfolioBenchmarkSettingsSection'
 import { PortfolioDataQualitySection } from '../components/PortfolioDataQualitySection'
+import { PortfolioSetupGuideSection } from '../components/PortfolioSetupGuideSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
@@ -119,6 +120,10 @@ export function SettingsScreen() {
         </aside>
 
         <div className="space-y-12">
+          <section id="setup-guide" className="scroll-mt-24">
+            <PortfolioSetupGuideSection />
+          </section>
+
           <SettingsGroup
             eyebrow={isPolish ? SETTINGS_GROUPS[0].eyebrow.pl : SETTINGS_GROUPS[0].eyebrow.en}
             title={isPolish ? SETTINGS_GROUPS[0].title.pl : SETTINGS_GROUPS[0].title.en}

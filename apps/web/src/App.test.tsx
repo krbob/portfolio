@@ -2882,6 +2882,19 @@ describe('App', () => {
           return new Response(JSON.stringify([]), { status: 200 })
         }
 
+        if (url.includes('/api/v1/portfolio/benchmark-settings')) {
+          return new Response(
+            JSON.stringify({
+              enabledKeys: [],
+              pinnedKeys: [],
+              options: [],
+              customLabel: null,
+              customSymbol: null,
+            }),
+            { status: 200 },
+          )
+        }
+
         if (url.includes('/api/v1/portfolio/overview')) {
           return new Response(
             JSON.stringify({
@@ -3007,7 +3020,7 @@ describe('App', () => {
           )
         }
 
-        if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments')) {
+        if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
           return new Response(JSON.stringify([]), { status: 200 })
         }
 
@@ -3079,6 +3092,7 @@ describe('App', () => {
         throw new Error('Targets section did not render')
       }
 
+      expect(await screen.findByRole('heading', { name: /next steps|następne kroki/i })).toBeInTheDocument()
       expect(await within(targetsSection).findByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).toBeInTheDocument()
       expect(await within(targetsSection).findByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
       expect(await within(targetsSection).findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
