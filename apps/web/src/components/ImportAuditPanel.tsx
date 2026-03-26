@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { SectionHeader } from './ui'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
-import { getActiveUiLanguage, useI18n } from '../lib/i18n'
+import { useI18n } from '../lib/i18n'
+import { buildAuditMetadataSummary, formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAuditOutcome } from '../lib/labels'
 import { badge, badgeVariants, filterInput, label } from '../lib/styles'
 
@@ -34,7 +35,7 @@ export function ImportAuditPanel({
 
       {latestEvent && (
         <p className="text-sm text-zinc-500">
-          {isPolish ? 'Ostatnie zdarzenie:' : 'Latest event:'} {latestEvent.message} ·{' '}
+          {isPolish ? 'Ostatnie zdarzenie:' : 'Latest event:'} {formatAuditEventMessage(latestEvent, isPolish)} ·{' '}
           {formatDateTime(latestEvent.occurredAt)}
         </p>
       )}
@@ -72,14 +73,14 @@ export function ImportAuditPanel({
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
         <div className="space-y-3">
           {visibleEvents.map((event) => {
-            const metadataSummary = buildImportMetadataSummary(event.metadata)
+            const metadataSummary = buildAuditMetadataSummary(event.metadata, isPolish)
             return (
               <article className="rounded-lg border border-zinc-800/50 p-3" key={event.id}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <strong className="text-sm font-medium text-zinc-200">{event.message}</strong>
+                    <strong className="text-sm font-medium text-zinc-200">{formatAuditEventTitle(event.action, isPolish)}</strong>
                     <p className="text-xs text-zinc-500">
-                      {event.action} · {formatDateTime(event.occurredAt)}
+                      {formatAuditEventMessage(event, isPolish)} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
                   <span
@@ -97,35 +98,4 @@ export function ImportAuditPanel({
       )}
     </>
   )
-}
-
-function buildImportMetadataSummary(metadata: Record<string, string>) {
-  const isPolish = getActiveUiLanguage() === 'pl'
-  const parts: string[] = []
-
-  if (metadata.sourceLabel) {
-    parts.push(metadata.sourceLabel)
-  }
-
-  if (metadata.sourceFileName) {
-    parts.push(metadata.sourceFileName)
-  }
-
-  if (metadata.profileName) {
-    parts.push(isPolish ? `profil ${metadata.profileName}` : `profile ${metadata.profileName}`)
-  }
-
-  if (metadata.createdCount) {
-    parts.push(isPolish ? `utworzono ${metadata.createdCount}` : `created ${metadata.createdCount}`)
-  }
-
-  if (metadata.skippedDuplicateCount && metadata.skippedDuplicateCount !== '0') {
-    parts.push(isPolish ? `pominięto ${metadata.skippedDuplicateCount}` : `skipped ${metadata.skippedDuplicateCount}`)
-  }
-
-  if (metadata.invalidRowCount && metadata.invalidRowCount !== '0') {
-    parts.push(isPolish ? `błędne ${metadata.invalidRowCount}` : `invalid ${metadata.invalidRowCount}`)
-  }
-
-  return parts.length > 0 ? parts.join(' · ') : null
 }

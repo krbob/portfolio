@@ -16,11 +16,11 @@ export function SystemReadinessSection() {
         eyebrow={isPolish ? 'Stan systemu' : 'Health'}
         title={isPolish ? 'Gotowość środowiska' : 'Runtime readiness'}
         description={isPolish
-          ? 'Zweryfikuj storage, backupy, integracje danych rynkowych i uwierzytelnianie, zanim zaufasz stanowi portfela.'
+          ? 'Sprawdź bazę danych, kopie zapasowe, źródła danych rynkowych i logowanie, zanim zaufasz stanowi portfela.'
           : 'Verify storage, backups, market-data wiring and authentication before trusting the portfolio state.'}
       />
 
-      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Sprawdzanie zależności środowiska...' : 'Checking runtime dependencies...'}</p>}
+      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Sprawdzanie usług i zależności środowiska...' : 'Checking runtime dependencies...'}</p>}
       {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
 
       {readiness && (
@@ -51,14 +51,14 @@ export function SystemReadinessSection() {
               <article className="rounded-lg border border-zinc-800/50 p-4" key={check.key}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <strong className="text-sm text-zinc-100">{check.label}</strong>
+                    <strong className="text-sm text-zinc-100">{formatCheckLabel(check.key, check.label, isPolish)}</strong>
                     <p className="text-sm text-zinc-500">{check.key}</p>
                   </div>
                   <span className={`${badge} ${readinessBadgeVariant(check.status)}`}>
                     {labelCheckStatus(check.status, isPolish)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-zinc-400">{check.message}</p>
+                <p className="mt-2 text-sm text-zinc-400">{formatCheckMessage(check, isPolish)}</p>
                 {check.details && Object.keys(check.details).length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
                     <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -132,7 +132,7 @@ function labelCheckStatus(status: string, isPolish: boolean) {
 
 function labelDetailKey(key: string, isPolish: boolean) {
   const labels: Record<string, string> = {
-    upstream: isPolish ? 'Upstream' : 'Upstream',
+    upstream: isPolish ? 'Usługa' : 'Upstream',
     operation: isPolish ? 'Operacja' : 'Operation',
     symbol: isPolish ? 'Symbol' : 'Symbol',
     statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
@@ -140,4 +140,134 @@ function labelDetailKey(key: string, isPolish: boolean) {
   }
 
   return labels[key] ?? key
+}
+
+function formatCheckLabel(key: string, label: string, isPolish: boolean) {
+  if (!isPolish) {
+    return label
+  }
+
+  switch (key) {
+    case 'sqlite-directory':
+      return 'Katalog bazy SQLite'
+    case 'sqlite-connection':
+      return 'Połączenie z bazą SQLite'
+    case 'backups-directory':
+      return 'Kopie zapasowe'
+    case 'market-data':
+      return 'Dane rynkowe'
+    case 'stock-analyst':
+      return 'Stock Analyst'
+    case 'edo-calculator':
+      return 'Kalkulator EDO'
+    case 'gold-market-data':
+      return 'Dane o złocie'
+    case 'auth':
+      return 'Uwierzytelnianie'
+    default:
+      return label
+  }
+}
+
+function formatCheckMessage(
+  check: {
+    key: string
+    status: string
+    message: string
+    details?: Record<string, string>
+  },
+  isPolish: boolean,
+) {
+  if (!isPolish) {
+    return check.message
+  }
+
+  switch (check.key) {
+    case 'sqlite-directory':
+      return check.status === 'PASS'
+        ? 'Katalog bazy SQLite jest dostępny i można w nim zapisywać dane.'
+        : check.message === 'Database path must have a parent directory.'
+          ? 'Ścieżka do bazy SQLite musi wskazywać katalog nadrzędny.'
+          : 'Nie udało się zweryfikować katalogu bazy SQLite.'
+    case 'sqlite-connection':
+      return check.status === 'PASS'
+        ? 'Połączenie z bazą SQLite działa poprawnie.'
+        : check.status === 'INFO'
+          ? 'W tym trybie aplikacji nie ma podłączonego źródła danych.'
+          : 'Nie udało się nawiązać połączenia z bazą SQLite.'
+    case 'backups-directory':
+      return check.status === 'PASS'
+        ? 'Katalog kopii zapasowych jest gotowy do użycia.'
+        : check.status === 'INFO'
+          ? 'Kopie zapasowe po stronie serwera są wyłączone.'
+          : 'Nie udało się zweryfikować katalogu kopii zapasowych.'
+    case 'market-data':
+      return 'Integracja z danymi rynkowymi jest wyłączona.'
+    case 'stock-analyst':
+      return formatProbeMessage('Stock Analyst', check)
+    case 'edo-calculator':
+      return formatProbeMessage('Kalkulator EDO', check)
+    case 'gold-market-data':
+      return formatGoldMessage(check)
+    case 'auth':
+      return check.status === 'PASS'
+        ? 'Logowanie hasłem jest włączone.'
+        : 'Aplikacja działa w trybie jednoużytkownikowym bez logowania hasłem.'
+    default:
+      return check.message
+  }
+}
+
+function formatProbeMessage(
+  serviceName: string,
+  check: { status: string; details?: Record<string, string>; message: string },
+) {
+  if (check.status === 'PASS') {
+    return `Usługa ${serviceName} odpowiada poprawnie.`
+  }
+
+  if (check.status === 'INFO') {
+    return `Usługa ${serviceName} nie jest podłączona w tym trybie aplikacji.`
+  }
+
+  const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
+  const statusCode = check.details?.statusCode ? ` Kod HTTP: ${check.details.statusCode}.` : ''
+  return `Usługa ${serviceName} zwróciła błąd${operation}.${statusCode}`.replace('..', '.')
+}
+
+function formatGoldMessage(check: { status: string; details?: Record<string, string>; message: string }) {
+  if (check.status === 'PASS') {
+    return 'Źródło wyceny złota odpowiada poprawnie.'
+  }
+
+  if (check.status === 'INFO') {
+    const fallbackMatch = check.message.match(/fallback benchmark (.+)\./)
+    const benchmark = fallbackMatch?.[1]
+    return benchmark
+      ? `Klucz do wyceny złota nie jest skonfigurowany. Używany jest benchmark zastępczy ${benchmark}.`
+      : 'Klucz do wyceny złota nie jest skonfigurowany.'
+  }
+
+  const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
+  const statusCode = check.details?.statusCode ? ` Kod HTTP: ${check.details.statusCode}.` : ''
+  return `Źródło wyceny złota zwróciło błąd${operation}.${statusCode}`.replace('..', '.')
+}
+
+function labelProbeOperation(operation: string) {
+  switch (operation) {
+    case 'current':
+      return 'pobierania bieżącej ceny'
+    case 'history':
+      return 'pobierania historii'
+    case 'reference-history':
+      return 'pobierania historii benchmarku'
+    case 'inflation':
+      return 'pobierania inflacji'
+    case 'monthly-inflation':
+      return 'pobierania miesięcznej inflacji'
+    case 'gold-history':
+      return 'pobierania historii złota'
+    default:
+      return operation
+  }
 }

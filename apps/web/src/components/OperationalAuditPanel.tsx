@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { buildAuditMetadataEntries, buildAuditMetadataSummary, formatAuditEventMessage, formatAuditEventTitle, isHighImpactAuditAction } from '../lib/audit-copy'
+import { labelAuditCategory } from '../lib/labels'
 import { badge, badgeVariants, filterInput, label as labelClass } from '../lib/styles'
 
 const CATEGORY_OPTIONS = [
@@ -46,7 +48,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
       return false
     }
 
-    if (impactFilter === 'HIGH_IMPACT_ONLY' && !isHighImpactAction(event.action)) {
+    if (impactFilter === 'HIGH_IMPACT_ONLY' && !isHighImpactAuditAction(event.action)) {
       return false
     }
 
@@ -54,7 +56,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
   })
 
   const failureCount = events.filter((event) => event.outcome === 'FAILURE').length
-  const highImpactCount = events.filter((event) => isHighImpactAction(event.action)).length
+  const highImpactCount = events.filter((event) => isHighImpactAuditAction(event.action)).length
   const latestFailure = events.find((event) => event.outcome === 'FAILURE') ?? null
 
   return (
@@ -65,7 +67,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
             {categoryFilter === 'ALL'
               ? (isPolish ? 'Zdarzenia w oknie' : 'Events in window')
               : isPolish
-                ? `Zdarzenia ${categoryFilter}`
+                ? `Zdarzenia: ${labelAuditCategory(categoryFilter)}`
                 : `${categoryFilter} events`}
           </span>
           <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
@@ -95,7 +97,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
           >
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {labelAuditCategory(option)}
               </option>
             ))}
           </select>
@@ -125,8 +127,8 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
             value={impactFilter}
             onChange={(event) => setImpactFilter(event.target.value as ImpactFilter)}
           >
-            <option value="ALL">ALL</option>
-            <option value="HIGH_IMPACT_ONLY">{isPolish ? 'TYLKO WYSOKI WPŁYW' : 'HIGH IMPACT ONLY'}</option>
+            <option value="ALL">{isPolish ? 'Wszystkie' : 'All'}</option>
+            <option value="HIGH_IMPACT_ONLY">{isPolish ? 'Tylko kluczowe' : 'High impact only'}</option>
           </select>
         </div>
       </div>
@@ -141,16 +143,16 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
         <div className="space-y-3">
           {visibleEvents.map((event) => {
-            const metadataSummary = buildMetadataSummary(event.metadata)
-            const metadataEntries = buildMetadataEntries(event.metadata, isPolish)
-            const highImpact = isHighImpactAction(event.action)
+            const metadataSummary = buildAuditMetadataSummary(event.metadata, isPolish)
+            const metadataEntries = buildAuditMetadataEntries(event.metadata, isPolish)
+            const highImpact = isHighImpactAuditAction(event.action)
             return (
               <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <strong className="text-sm text-zinc-100">{humanizeAction(event.action)}</strong>
+                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
                     <p className="text-sm text-zinc-500">
-                      {event.category} · {formatDateTime(event.occurredAt)}
+                      {labelAuditCategory(event.category)} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -163,7 +165,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                   </div>
                 </div>
 
-                <p className="mt-2 text-sm text-zinc-300">{event.message}</p>
+                <p className="mt-2 text-sm text-zinc-300">{formatAuditEventMessage(event, isPolish)}</p>
                 {metadataSummary ? <p className="text-sm text-zinc-500">{metadataSummary}</p> : null}
                 {metadataEntries.length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
@@ -188,131 +190,4 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
       )}
     </>
   )
-}
-
-function humanizeAction(action: string) {
-  return action
-    .toLowerCase()
-    .split('_')
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ')
-}
-
-function isHighImpactAction(action: string) {
-  return ['DELETED', 'RESTORED', 'IMPORTED', 'PRUNED', 'FAILED'].some((marker) => action.includes(marker))
-}
-
-function buildMetadataSummary(metadata: Record<string, string>) {
-  const parts: string[] = []
-
-  if (metadata.mode) {
-    parts.push(`mode ${metadata.mode}`)
-  }
-
-  if (metadata.trigger) {
-    parts.push(`trigger ${metadata.trigger}`)
-  }
-
-  if (metadata.sourceLabel) {
-    parts.push(metadata.sourceLabel)
-  }
-
-  if (metadata.sourceFileName) {
-    parts.push(metadata.sourceFileName)
-  }
-
-  if (metadata.profileName) {
-    parts.push(`profile ${metadata.profileName}`)
-  }
-
-  if (metadata.createdCount && metadata.createdCount !== '0') {
-    parts.push(`created ${metadata.createdCount}`)
-  }
-
-  if (metadata.skippedDuplicateCount && metadata.skippedDuplicateCount !== '0') {
-    parts.push(`skipped ${metadata.skippedDuplicateCount}`)
-  }
-
-  if (metadata.invalidRowCount && metadata.invalidRowCount !== '0') {
-    parts.push(`invalid ${metadata.invalidRowCount}`)
-  }
-
-  if (metadata.transactionCount && metadata.transactionCount !== '0') {
-    parts.push(`transactions ${metadata.transactionCount}`)
-  }
-
-  if (metadata.retentionCount && metadata.retentionCount !== '0') {
-    parts.push(`retention ${metadata.retentionCount}`)
-  }
-
-  if (metadata.safetyBackupFileName && metadata.safetyBackupFileName !== 'none') {
-    parts.push(`safety backup ${metadata.safetyBackupFileName}`)
-  }
-
-  if (metadata.error) {
-    parts.push(metadata.error)
-  }
-
-  return parts.length > 0 ? parts.join(' · ') : null
-}
-
-function buildMetadataEntries(metadata: Record<string, string>, isPolish: boolean): Array<[string, string]> {
-  const labels: Record<string, string> = {
-    upstream: isPolish ? 'Upstream' : 'Upstream',
-    operation: isPolish ? 'Operacja' : 'Operation',
-    symbol: isPolish ? 'Symbol' : 'Symbol',
-    instrumentName: isPolish ? 'Instrument' : 'Instrument',
-    valuationSource: isPolish ? 'Źródło wyceny' : 'Valuation source',
-    purchaseDate: isPolish ? 'Data zakupu' : 'Purchase date',
-    from: isPolish ? 'Od' : 'From',
-    to: isPolish ? 'Do' : 'To',
-    statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
-    responseBodyPreview: isPolish ? 'Treść odpowiedzi' : 'Response body',
-    reason: isPolish ? 'Powód' : 'Reason',
-    exceptionType: isPolish ? 'Typ wyjątku' : 'Exception type',
-    mode: isPolish ? 'Tryb' : 'Mode',
-    trigger: isPolish ? 'Trigger' : 'Trigger',
-    sourceLabel: isPolish ? 'Źródło' : 'Source',
-    sourceFileName: isPolish ? 'Plik źródłowy' : 'Source file',
-    profileName: isPolish ? 'Profil' : 'Profile',
-    createdCount: isPolish ? 'Utworzono' : 'Created',
-    skippedDuplicateCount: isPolish ? 'Pominięte duplikaty' : 'Skipped duplicates',
-    invalidRowCount: isPolish ? 'Niepoprawne wiersze' : 'Invalid rows',
-    transactionCount: isPolish ? 'Transakcje' : 'Transactions',
-    retentionCount: isPolish ? 'Retencja' : 'Retention',
-    safetyBackupFileName: isPolish ? 'Backup bezpieczeństwa' : 'Safety backup',
-    error: isPolish ? 'Błąd' : 'Error',
-    failureMessage: isPolish ? 'Komunikat błędu' : 'Failure message',
-  }
-
-  return Object.entries(metadata)
-    .filter(([, value]) => value.trim().length > 0)
-    .sort(([left], [right]) => metadataSortOrder(left) - metadataSortOrder(right) || left.localeCompare(right))
-    .map(([key, value]) => [labels[key] ?? humanizeMetadataKey(key), value])
-}
-
-function metadataSortOrder(key: string) {
-  const priority = [
-    'upstream',
-    'operation',
-    'symbol',
-    'instrumentName',
-    'purchaseDate',
-    'from',
-    'to',
-    'statusCode',
-    'responseBodyPreview',
-    'reason',
-    'failureMessage',
-  ]
-
-  const index = priority.indexOf(key)
-  return index === -1 ? priority.length : index
-}
-
-function humanizeMetadataKey(key: string) {
-  return key
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/^\w/, (match) => match.toUpperCase())
 }

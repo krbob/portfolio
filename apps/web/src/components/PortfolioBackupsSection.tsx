@@ -9,6 +9,7 @@ import {
 } from '../hooks/use-write-model'
 import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAuditOutcome } from '../lib/labels'
 import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
@@ -34,11 +35,11 @@ export function PortfolioBackupsSection() {
       const result = await runBackupMutation.mutateAsync()
       setFeedback(
         isPolish
-          ? `Utworzono backup ${result.fileName} z ${result.accountCount} kontami, ${result.appPreferenceCount} ustawieniami aplikacji, ${result.instrumentCount} instrumentami, ${result.targetCount} targetami, ${result.transactionCount} transakcjami i ${result.importProfileCount} profilami importu.`
+          ? `Utworzono kopię zapasową ${result.fileName} z ${result.accountCount} kontami, ${result.appPreferenceCount} ustawieniami aplikacji, ${result.instrumentCount} instrumentami, ${result.targetCount} celami, ${result.transactionCount} transakcjami i ${result.importProfileCount} profilami importu.`
           : `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.`,
       )
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Uruchomienie backupu nie powiodło się.' : 'Backup run failed.')
+      setActionError(error instanceof Error ? error.message : isPolish ? 'Nie udało się utworzyć kopii zapasowej.' : 'Backup run failed.')
     }
   }
 
@@ -54,7 +55,7 @@ export function PortfolioBackupsSection() {
       })
       setFeedback(
         isPolish
-          ? `Odtworzono ${result.fileName} w trybie ${result.mode}: ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
+          ? `Przywrócono ${result.fileName} w trybie ${result.mode}: ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} celów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu.${result.safetyBackupFileName ? ` Kopia bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
           : `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setRestoreConfirmation('')
@@ -83,11 +84,11 @@ export function PortfolioBackupsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Backupy' : 'Backups'}
-        title={isPolish ? 'Snapshoty serwera' : 'Server snapshots'}
+        eyebrow={isPolish ? 'Kopie zapasowe' : 'Backups'}
+        title={isPolish ? 'Kopie zapasowe serwera' : 'Server snapshots'}
         description={
           isPolish
-            ? 'Przechowuj kanoniczne backupy JSON na serwerze, łącznie z targetami, ustawieniami aplikacji i profilami importu, uruchamiaj je na żądanie i odtwarzaj znany dobry stan bez pobierania plików.'
+            ? 'Przechowuj na serwerze pełne kopie zapasowe w JSON-ie z celami, ustawieniami aplikacji i profilami importu, uruchamiaj je na żądanie i przywracaj sprawdzony stan bez pobierania plików.'
             : 'Keep canonical JSON backups on the server, including targets, app settings and import profiles, trigger them on demand, and restore a known-good state without downloading files first.'
         }
       />
@@ -106,7 +107,7 @@ export function PortfolioBackupsSection() {
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} ${isPolish ? 'plików' : 'files'}` : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Zapisane backupy' : 'Stored backups'}</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Zapisane kopie' : 'Stored backups'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? backups.length : '...'}</strong>
         </article>
       </div>
@@ -141,7 +142,7 @@ export function PortfolioBackupsSection() {
         )}
 
         <button className={btnPrimary} type="button" onClick={handleRunBackupClick} disabled={runBackupMutation.isPending || backupsQuery.isLoading}>
-          {runBackupMutation.isPending ? (isPolish ? 'Uruchamianie...' : 'Running...') : isPolish ? 'Uruchom backup teraz' : 'Run backup now'}
+          {runBackupMutation.isPending ? (isPolish ? 'Uruchamianie...' : 'Running...') : isPolish ? 'Utwórz kopię teraz' : 'Run backup now'}
         </button>
       </div>
 
@@ -149,7 +150,7 @@ export function PortfolioBackupsSection() {
         <p className="text-sm text-zinc-500">{isPolish ? 'Katalog' : 'Directory'}: {backupsQuery.data?.directory ?? (isPolish ? 'Ładowanie...' : 'Loading...')}</p>
         <p className="text-sm text-zinc-500">
           {isPolish
-            ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy backup bezpieczeństwa.'
+            ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy kopię bezpieczeństwa.'
             : '`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.'}
         </p>
         <p className="text-sm text-zinc-500">
@@ -157,7 +158,7 @@ export function PortfolioBackupsSection() {
           {backupsQuery.data?.lastSuccessAt
             ? formatDateTime(backupsQuery.data.lastSuccessAt)
             : isPolish
-              ? 'Brak udanego backupu.'
+              ? 'Brak udanej kopii zapasowej.'
               : 'No successful backup yet.'}
         </p>
         {backupsQuery.data?.lastFailureMessage && (
@@ -169,12 +170,12 @@ export function PortfolioBackupsSection() {
         )}
       </div>
 
-      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie backupów serwera...' : 'Loading server backups...'}</p>}
+      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie kopii zapasowych serwera...' : 'Loading server backups...'}</p>}
       {backupsQuery.isError && <p className="text-sm text-red-400">{backupsQuery.error.message}</p>}
 
       {!backupsQuery.isLoading && !backupsQuery.isError && (
         <div className="space-y-3 mb-4">
-          {backups.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Nie utworzono jeszcze żadnych backupów serwera.' : 'No server backups have been created yet.'}</p>}
+          {backups.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Nie utworzono jeszcze żadnej kopii zapasowej na serwerze.' : 'No server backups have been created yet.'}</p>}
 
           {backups.map((backup) => (
             <article key={backup.fileName} className="rounded-lg border border-zinc-800/50 p-4">
@@ -205,7 +206,7 @@ export function PortfolioBackupsSection() {
                   <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Targety' : 'Targets'}</dt>
+                  <dt className="text-zinc-500">{isPolish ? 'Cele' : 'Targets'}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? 'n/a'}</dd>
                 </div>
                 <div>
@@ -258,7 +259,7 @@ export function PortfolioBackupsSection() {
                       ? 'Odtwarzanie...'
                       : 'Restoring...'
                     : isPolish
-                      ? 'Odtwórz backup'
+                      ? 'Przywróć kopię'
                       : 'Restore backup'}
                 </button>
               </div>
@@ -269,10 +270,10 @@ export function PortfolioBackupsSection() {
 
       <SectionHeader
         eyebrow={isPolish ? 'Audyt' : 'Audit'}
-        title={isPolish ? 'Aktywność backupów' : 'Backup activity'}
+        title={isPolish ? 'Aktywność kopii zapasowych' : 'Backup activity'}
         description={
           isPolish
-            ? 'Ostatnie uruchomienia backupów, odtworzenia i zdarzenia retencji z append-only audit logu.'
+            ? 'Ostatnie uruchomienia kopii zapasowych, odtworzenia i zdarzenia retencji z niezmienialnego dziennika audytu.'
             : 'Recent backup runs, restores and retention pruning events from the append-only audit log.'
         }
         className="mb-4 mt-8"
@@ -289,10 +290,10 @@ export function PortfolioBackupsSection() {
         </div>
       </div>
 
-      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie aktywności backupów...' : 'Loading backup activity...'}</p>}
+      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie aktywności kopii zapasowych...' : 'Loading backup activity...'}</p>}
       {backupEventsQuery.isError && <p className="text-sm text-red-400">{backupEventsQuery.error.message}</p>}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze zdarzeń audytu związanych z backupami.' : 'No backup-related audit events yet.'}</p>
+        <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze zdarzeń audytu związanych z kopiami zapasowymi.' : 'No backup-related audit events yet.'}</p>
       )}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length > 0 && (
         <div className="space-y-3">
@@ -300,9 +301,9 @@ export function PortfolioBackupsSection() {
             <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
               <div className="flex items-start justify-between">
                     <div>
-                      <strong className="text-sm text-zinc-100">{event.message}</strong>
+                      <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
                       <p className="text-sm text-zinc-500">
-                        {event.action} · {formatDateTime(event.occurredAt)}
+                        {formatAuditEventMessage(event, isPolish)} · {formatDateTime(event.occurredAt)}
                       </p>
                     </div>
                     <span className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}>

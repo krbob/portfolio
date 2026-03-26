@@ -4,6 +4,7 @@ import { useInvalidateReadModelCache, useReadModelRefreshStatus, useRunReadModel
 import { Card, SectionHeader } from './ui'
 import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { labelReadModelInvalidationReason } from '../lib/labels'
 import { badge, badgeVariants, btnPrimary, btnSecondary } from '../lib/styles'
 
 export function ReadModelCacheSection() {
@@ -23,7 +24,7 @@ export function ReadModelCacheSection() {
       const result = await invalidateCacheMutation.mutateAsync()
       setFeedback(
         isPolish
-          ? `Wyczyszczono ${result.clearedSnapshotCount} snapshotów cache. Historia i zwroty odbudują się przy następnym odczycie.`
+          ? `Wyczyszczono ${result.clearedSnapshotCount} migawek pamięci podręcznej. Historia i zwroty odbudują się przy następnym odczycie.`
           : `Cleared ${result.clearedSnapshotCount} cached snapshots. History and returns will rebuild on next access.`,
       )
     } catch {
@@ -49,10 +50,10 @@ export function ReadModelCacheSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Read modele' : 'Read models'}
-        title={isPolish ? 'Snapshoty cache' : 'Cached snapshots'}
+        eyebrow={isPolish ? 'Modele odczytowe' : 'Read models'}
+        title={isPolish ? 'Migawki pamięci podręcznej' : 'Cached snapshots'}
         description={isPolish
-          ? 'Historia i zwroty są cachowane jako odtwarzalne read modele, z metadanymi wyjaśniającymi kiedy i dlaczego dany snapshot powstał.'
+          ? 'Historia i zwroty są zapisywane jako odtwarzalne modele odczytowe, razem z metadanymi wyjaśniającymi kiedy i dlaczego powstała dana migawka.'
           : 'History and returns are cached as rebuildable read models, with metadata that explains when each snapshot was generated and why that generation happened.'}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +82,7 @@ export function ReadModelCacheSection() {
                   ? 'Czyszczenie...'
                   : 'Clearing...'
                 : isPolish
-                  ? 'Wyczyść cache'
+                  ? 'Wyczyść pamięć'
                   : 'Clear cache'}
             </button>
           </div>
@@ -90,7 +91,7 @@ export function ReadModelCacheSection() {
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Scheduler' : 'Scheduler'}</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Harmonogram' : 'Scheduler'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
             {refreshStatusQuery.data
               ? refreshStatusQuery.data.schedulerEnabled
@@ -110,11 +111,11 @@ export function ReadModelCacheSection() {
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Snapshoty' : 'Snapshots'}</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Migawki' : 'Snapshots'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? snapshots.length : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Łączny payload' : 'Total payload'}</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Łączny rozmiar danych' : 'Total payload'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? formatBytes(totalPayloadBytes) : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -131,7 +132,7 @@ export function ReadModelCacheSection() {
           {refreshStatusQuery.data?.modelNames.join(', ') ?? (isPolish ? 'Ładowanie...' : 'Loading...')}
         </p>
         <p className="text-sm text-zinc-500">
-          {isPolish ? 'Ostatni trigger' : 'Last trigger'}:{' '}
+          {isPolish ? 'Ostatnie uruchomienie' : 'Last trigger'}:{' '}
           {refreshStatusQuery.data?.lastTrigger ?? (isPolish ? 'brak' : 'n/a')}
           {refreshStatusQuery.data?.lastDurationMs != null ? ` · ${refreshStatusQuery.data.lastDurationMs} ms` : ''}
         </p>
@@ -144,7 +145,7 @@ export function ReadModelCacheSection() {
         )}
       </div>
 
-      {cacheQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie snapshotów cache read modeli...' : 'Loading read-model cache snapshots...'}</p>}
+      {cacheQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie migawek pamięci modeli odczytowych...' : 'Loading read-model cache snapshots...'}</p>}
       {refreshStatusQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie statusu odświeżania...' : 'Loading refresh status...'}</p>}
       {cacheQuery.isError && <p className="text-sm text-red-400">{cacheQuery.error.message}</p>}
       {refreshStatusQuery.isError && <p className="text-sm text-red-400">{refreshStatusQuery.error.message}</p>}
@@ -156,7 +157,7 @@ export function ReadModelCacheSection() {
         <p className="mb-4 text-sm text-red-400">{runRefreshMutation.error.message}</p>
       )}
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length === 0 && (
-        <p className="text-sm text-zinc-500">{isPolish ? 'Brak snapshotów read modeli. Otwórz historię lub zwroty, aby je wygenerować.' : 'No cached read models yet. Open history or returns to populate them.'}</p>
+        <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze migawek modeli odczytowych. Otwórz historię lub zwroty, aby je wygenerować.' : 'No cached read models yet. Open history or returns to populate them.'}</p>
       )}
 
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length > 0 && (
@@ -167,28 +168,28 @@ export function ReadModelCacheSection() {
                 <div>
                   <h4 className="text-sm font-semibold text-zinc-100">{snapshot.modelName}</h4>
                   <p className="text-sm text-zinc-500">
-                    {snapshot.cacheKey} · {isPolish ? 'wygenerowano' : 'generated'} {formatDateTime(snapshot.generatedAt)}
+                    {snapshot.cacheKey} · {isPolish ? 'utworzono' : 'generated'} {formatDateTime(snapshot.generatedAt)}
                   </p>
                 </div>
 
-                <span className={`${badge} ${badgeVariants.success}`}>{snapshot.invalidationReason}</span>
+                <span className={`${badge} ${badgeVariants.success}`}>{labelReadModelInvalidationReason(snapshot.invalidationReason)}</span>
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-4">
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Wersja' : 'Version'}</dt>
+                  <dt className="text-zinc-500">{isPolish ? 'Wersja modelu' : 'Version'}</dt>
                   <dd className="text-zinc-100">{snapshot.modelVersion}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Okno wejściowe' : 'Input window'}</dt>
+                  <dt className="text-zinc-500">{isPolish ? 'Zakres danych wejściowych' : 'Input window'}</dt>
                   <dd className="text-zinc-100">{formatWindow(snapshot.inputsFrom, snapshot.inputsTo)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Aktualizacja źródła' : 'Source updated'}</dt>
+                  <dt className="text-zinc-500">{isPolish ? 'Aktualizacja źródeł' : 'Source updated'}</dt>
                   <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Payload' : 'Payload'}</dt>
+                  <dt className="text-zinc-500">{isPolish ? 'Rozmiar' : 'Payload'}</dt>
                   <dd className="text-zinc-100">{formatBytes(snapshot.payloadSizeBytes)}</dd>
                 </div>
               </dl>

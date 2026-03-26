@@ -134,11 +134,11 @@ export function labelValuationStatus(value: string | null | undefined) {
       case 'MISSING_MARKET_DATA':
         return 'Brak danych rynkowych'
       case 'MISSING_FX':
-        return 'Brak FX'
+        return 'Brak kursu walutowego'
       case 'UNSUPPORTED_CORRECTIONS':
         return 'Nieobsługiwane korekty'
       case 'BOOK_VALUE_ONLY':
-        return 'Tylko wartość księgowa'
+        return 'Tylko wycena księgowa'
       case 'UNAVAILABLE':
         return 'Niedostępne'
       default:
@@ -268,17 +268,154 @@ export function labelAuditOutcome(value: string) {
   }
 }
 
+export function labelAuditCategory(value: string) {
+  if (getActiveUiLanguage() === 'pl') {
+    switch (value) {
+      case 'ALL':
+        return 'Wszystkie'
+      case 'IMPORTS':
+        return 'Import'
+      case 'BACKUPS':
+        return 'Kopie zapasowe'
+      case 'TRANSACTIONS':
+        return 'Transakcje'
+      case 'ACCOUNTS':
+        return 'Konta'
+      case 'INSTRUMENTS':
+        return 'Instrumenty'
+      case 'TARGETS':
+        return 'Cele'
+      case 'SYSTEM':
+        return 'System'
+      default:
+        return value
+    }
+  }
+
+  switch (value) {
+    case 'ALL':
+      return 'All'
+    case 'IMPORTS':
+      return 'Imports'
+    case 'BACKUPS':
+      return 'Backups'
+    case 'TRANSACTIONS':
+      return 'Transactions'
+    case 'ACCOUNTS':
+      return 'Accounts'
+    case 'INSTRUMENTS':
+      return 'Instruments'
+    case 'TARGETS':
+      return 'Targets'
+    case 'SYSTEM':
+      return 'System'
+    default:
+      return value
+  }
+}
+
+export function labelAuditAction(value: string) {
+  if (getActiveUiLanguage() === 'pl') {
+    switch (value) {
+      case 'ACCOUNT_CREATED':
+        return 'Dodano konto'
+      case 'ACCOUNT_ORDER_UPDATED':
+        return 'Zmieniono kolejność kont'
+      case 'BACKUP_CREATED':
+        return 'Utworzono kopię zapasową'
+      case 'BACKUP_CREATE_FAILED':
+        return 'Nie udało się utworzyć kopii zapasowej'
+      case 'BACKUP_PRUNED':
+        return 'Usunięto starą kopię zapasową'
+      case 'BACKUP_RESTORED':
+        return 'Przywrócono kopię zapasową'
+      case 'BENCHMARK_SETTINGS_UPDATED':
+        return 'Zapisano benchmarki'
+      case 'INSTRUMENT_CREATED':
+        return 'Dodano instrument'
+      case 'MARKET_DATA_REQUEST_FAILED':
+        return 'Błąd pobierania danych rynkowych'
+      case 'PORTFOLIO_STATE_IMPORTED':
+        return 'Zaimportowano stan portfela'
+      case 'READ_MODEL_CACHE_INVALIDATED':
+        return 'Wyczyszczono pamięć modeli odczytowych'
+      case 'READ_MODEL_REFRESH_COMPLETED':
+        return 'Odświeżono modele odczytowe'
+      case 'READ_MODEL_REFRESH_FAILED':
+        return 'Nie udało się odświeżyć modeli odczytowych'
+      case 'REBALANCING_SETTINGS_UPDATED':
+        return 'Zapisano zasady rebalansowania'
+      case 'TRANSACTION_BATCH_IMPORTED':
+        return 'Zaimportowano paczkę transakcji'
+      case 'TRANSACTION_CREATED':
+        return 'Dodano transakcję'
+      case 'TRANSACTION_DELETED':
+        return 'Usunięto transakcję'
+      case 'TRANSACTION_IMPORT_PROFILE_CREATED':
+        return 'Dodano profil importu'
+      case 'TRANSACTION_IMPORT_PROFILE_UPDATED':
+        return 'Zaktualizowano profil importu'
+      case 'TRANSACTION_IMPORT_PROFILE_DELETED':
+        return 'Usunięto profil importu'
+      case 'TRANSACTION_UPDATED':
+        return 'Zmieniono transakcję'
+      default:
+        return value
+    }
+  }
+
+  return value
+}
+
+export function labelReadModelInvalidationReason(value: string) {
+  if (getActiveUiLanguage() === 'pl') {
+    switch (value) {
+      case 'CACHE_MISS':
+        return 'Brak zapisanej migawki'
+      case 'MODEL_VERSION_CHANGED':
+        return 'Zmieniła się wersja modelu'
+      case 'INPUT_WINDOW_CHANGED':
+        return 'Zmienił się zakres danych'
+      case 'CANONICAL_STATE_CHANGED':
+        return 'Zmienił się stan źródłowy'
+      case 'PAYLOAD_DECODE_FAILED':
+        return 'Nie udało się odczytać zapisanych danych'
+      case 'EXPLICIT_REFRESH':
+        return 'Wymuszone odświeżenie'
+      default:
+        return value
+    }
+  }
+
+  switch (value) {
+    case 'CACHE_MISS':
+      return 'Cache miss'
+    case 'MODEL_VERSION_CHANGED':
+      return 'Model version changed'
+    case 'INPUT_WINDOW_CHANGED':
+      return 'Input window changed'
+    case 'CANONICAL_STATE_CHANGED':
+      return 'Canonical state changed'
+    case 'PAYLOAD_DECODE_FAILED':
+      return 'Payload decode failed'
+    case 'EXPLICIT_REFRESH':
+      return 'Explicit refresh'
+    default:
+      return value
+  }
+}
+
 export function labelImportRowStatus(value: string) {
   if (getActiveUiLanguage() === 'pl') {
     switch (value) {
       case 'IMPORTABLE':
-        return 'Do importu'
+        return 'Gotowy do importu'
       case 'DUPLICATE_EXISTING':
-        return 'Duplikat istniejący'
+        return 'Duplikat istniejącej transakcji'
       case 'DUPLICATE_BATCH':
-        return 'Duplikat w paczce'
+        return 'Duplikat w imporcie'
       case 'INVALID':
-        return 'Błędny'
+        return 'Nieprawidłowy'
       default:
         return value
     }
