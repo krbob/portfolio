@@ -21,10 +21,12 @@ export function InstrumentsScreen() {
   const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string | null>(null)
 
-  const activeRows = rows.filter((row) => row.accountCount > 0)
-  const degradedCount = rows.filter((row) => row.status !== 'VALUED' && row.accountCount > 0).length
+  const activeRows = rows.filter((row) => row.holdingCount > 0)
+  const degradedCount = rows.filter((row) => row.status !== 'VALUED' && row.holdingCount > 0).length
   const totalValuePln = rows.reduce((sum, row) => sum + row.totalCurrentValuePln, 0)
   const totalGainPln = rows.reduce((sum, row) => sum + row.totalUnrealizedGainPln, 0)
+  const totalHoldingCount = rows.reduce((sum, row) => sum + row.holdingCount, 0)
+  const totalValuedHoldingCount = rows.reduce((sum, row) => sum + row.valuedHoldingCount, 0)
   const selectedRow = rows.find((row) => row.instrument.id === selectedInstrumentId) ?? rows[0] ?? null
   const selectedHoldings = useMemo(
     () => holdings
@@ -100,10 +102,10 @@ export function InstrumentsScreen() {
             detail={isPolish ? `${activeRows.length} agregatów ponad kontami` : `${activeRows.length} aggregates across accounts`}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Niezrealizowany P/L' : 'Unrealized P/L'}
-            value={formatSignedCurrencyPln(totalGainPln)}
-            detail={isPolish ? 'Suma aktywnych pozycji per instrument' : 'Summed across active holdings per instrument'}
-            tone={totalGainPln >= 0 ? 'success' : 'warning'}
+            label={isPolish ? 'Niezrealizowany P/L pozycji' : 'Unrealized holdings P/L'}
+            value={formatGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
+            detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, isPolish)}
+            tone={totalValuedHoldingCount === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <InstrumentSummaryTile
             label={isPolish ? 'Instrumenty zdegradowane' : 'Degraded instruments'}
@@ -209,11 +211,17 @@ export function InstrumentsScreen() {
                           </td>
                           <td className={tdRight}>
                             <div>
-                              <p className={`tabular-nums ${row.totalUnrealizedGainPln >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {formatSignedCurrencyPln(row.totalUnrealizedGainPln)}
+                              <p className={`tabular-nums ${
+                                row.valuedHoldingCount === 0
+                                  ? 'text-zinc-500'
+                                  : row.totalUnrealizedGainPln >= 0
+                                    ? 'text-emerald-400'
+                                    : 'text-red-400'
+                              }`}>
+                                {formatGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, isPolish)}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {row.gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(row.gainPct, { signed: true })}
+                                {describeInstrumentGain(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
                               </p>
                             </div>
                           </td>
@@ -318,8 +326,8 @@ function InstrumentDetailsCard({
         <InstrumentDetailMetric
           label={isPolish ? 'Bieżąca wartość' : 'Current value'}
           value={formatCurrencyPln(row.totalCurrentValuePln)}
-          detail={row.gainPct == null ? undefined : formatPercent(row.gainPct, { signed: true })}
-          tone={row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
+          detail={describeInstrumentGain(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
+          tone={row.valuedHoldingCount === 0 ? 'default' : row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
         />
       </div>
 
@@ -351,7 +359,11 @@ function InstrumentDetailsCard({
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')}
+                    {holding.valuationStatus === 'VALUED'
+                      ? formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')
+                      : isPolish
+                        ? 'Księgowo'
+                        : 'Book basis'}
                   </p>
                 </div>
               </div>
@@ -378,7 +390,11 @@ function InstrumentDetailsCard({
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatSignedCurrencyPln(lot.unrealizedGainPln ?? '0')}
+                    {lot.valuationStatus === 'VALUED'
+                      ? formatSignedCurrencyPln(lot.unrealizedGainPln ?? '0')
+                      : isPolish
+                        ? 'Księgowo'
+                        : 'Book basis'}
                   </p>
                 </div>
               </div>
@@ -417,6 +433,8 @@ function InstrumentDetailMetric({
 interface InstrumentRow {
   instrument: Instrument
   accountCount: number
+  holdingCount: number
+  valuedHoldingCount: number
   quantity: number
   totalBookValuePln: number
   totalCurrentValuePln: number
@@ -443,6 +461,7 @@ function buildInstrumentRows(
     .map((instrument) => {
       const instrumentHoldings = holdingsByInstrument.get(instrument.id) ?? []
       const accountIds = new Set(instrumentHoldings.map((holding) => holding.accountId))
+      const valuedHoldingCount = instrumentHoldings.filter((holding) => holding.valuationStatus === 'VALUED').length
       const quantity = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.quantity), 0)
       const totalBookValuePln = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.bookValuePln), 0)
       const totalCurrentValuePln = instrumentHoldings.reduce(
@@ -450,7 +469,7 @@ function buildInstrumentRows(
         0,
       )
       const totalUnrealizedGainPln = instrumentHoldings.reduce(
-        (sum, holding) => sum + asNumber(holding.unrealizedGainPln ?? '0'),
+        (sum, holding) => sum + asNumber(holding.unrealizedGainPln),
         0,
       )
       const gainPct = totalBookValuePln > 0 ? ((totalCurrentValuePln - totalBookValuePln) / totalBookValuePln) * 100 : null
@@ -464,6 +483,8 @@ function buildInstrumentRows(
       return {
         instrument,
         accountCount: accountIds.size,
+        holdingCount: instrumentHoldings.length,
+        valuedHoldingCount,
         quantity,
         totalBookValuePln,
         totalCurrentValuePln,
@@ -495,6 +516,57 @@ function labelInstrumentStatus(status: InstrumentRow['status'], isPolish: boolea
     case 'CATALOG_ONLY':
       return isPolish ? 'Katalog' : 'Catalog'
   }
+}
+
+function formatGainDisplay(value: number, valuedHoldingCount: number, isPolish: boolean) {
+  if (valuedHoldingCount === 0) {
+    return isPolish ? 'b/d' : 'N/A'
+  }
+
+  return formatSignedCurrencyPln(value)
+}
+
+function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: number, isPolish: boolean) {
+  if (activeHoldingCount === 0) {
+    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
+  }
+
+  if (valuedHoldingCount === 0) {
+    return isPolish
+      ? 'Brak wyceny rynkowej aktywnych pozycji'
+      : 'No live pricing for active holdings'
+  }
+
+  if (valuedHoldingCount < activeHoldingCount) {
+    return isPolish
+      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową`
+      : `${valuedHoldingCount}/${activeHoldingCount} holdings with live pricing`
+  }
+
+  return isPolish ? 'Tylko aktywne pozycje' : 'Active holdings only'
+}
+
+function describeInstrumentGain(
+  holdingCount: number,
+  valuedHoldingCount: number,
+  gainPct: number | null,
+  isPolish: boolean,
+) {
+  if (holdingCount === 0) {
+    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
+  }
+
+  if (valuedHoldingCount === 0) {
+    return isPolish ? 'Brak wyceny rynkowej' : 'No live pricing'
+  }
+
+  if (valuedHoldingCount < holdingCount) {
+    return isPolish
+      ? `${valuedHoldingCount}/${holdingCount} pozycji wycenionych`
+      : `${valuedHoldingCount}/${holdingCount} holdings valued`
+  }
+
+  return gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })
 }
 
 function asNumber(value: string | number | null | undefined) {

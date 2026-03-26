@@ -31,6 +31,7 @@ export function PerformanceScreen() {
   const allPeriods = returnsQuery.data?.periods ?? []
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
+  const returnsDisplayAvailable = historyQuery.data?.valuationState === 'MARK_TO_MARKET'
 
   const series = seriesForUnit(unit)
 
@@ -102,18 +103,18 @@ export function PerformanceScreen() {
         />
         <StatCard
           label="YTD MWRR"
-          value={formatReturn(ytdPeriod?.nominalPln?.moneyWeightedReturn)}
-          change={returnChange(ytdPeriod?.nominalPln?.moneyWeightedReturn)}
+          value={formatReturn(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          change={returnChange(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
         />
         <StatCard
           label="1Y MWRR"
-          value={formatReturn(y1Period?.nominalPln?.moneyWeightedReturn)}
-          change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn)}
+          value={formatReturn(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
         />
         <StatCard
           label={isPolish ? 'MWRR od początku' : 'Inception MWRR'}
-          value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn)}
-          change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn)}
+          value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
         />
       </div>
 
@@ -156,7 +157,7 @@ export function PerformanceScreen() {
             id="performance-workspace-panel-returns"
             aria-labelledby="performance-workspace-tab-returns"
           >
-            <ReturnsTab returnsQuery={returnsQuery} />
+            <ReturnsTab returnsQuery={returnsQuery} returnsDisplayAvailable={returnsDisplayAvailable} />
           </section>
         )}
       </div>
@@ -273,7 +274,13 @@ function ChartsTab({
 
 // --- Returns Tab ---
 
-function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortfolioReturns> }) {
+function ReturnsTab({
+  returnsQuery,
+  returnsDisplayAvailable,
+}: {
+  returnsQuery: ReturnType<typeof usePortfolioReturns>
+  returnsDisplayAvailable: boolean
+}) {
   const { isPolish } = useI18n()
   const data = returnsQuery.data
 
@@ -334,6 +341,16 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
 
   return (
     <div className="space-y-4">
+      {!returnsDisplayAvailable ? (
+        <StatePanel
+          eyebrow={isPolish ? 'Zwroty' : 'Returns'}
+          title={isPolish ? 'Zwroty są chwilowo niewiarygodne' : 'Returns are temporarily unavailable'}
+          description={isPolish
+            ? 'Historia portfela nie ma obecnie pełnej wyceny rynkowej, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.'
+            : 'Portfolio history is currently missing full market valuation, so return metrics are shown as N/A instead of pretending they are 0.00%.'}
+        />
+      ) : null}
+
       {/* Returns table */}
       <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900">
         <table className="w-full">
@@ -363,19 +380,19 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
                   )}
                 </td>
                 <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.moneyWeightedReturn} />
+                  <ReturnValue value={p.nominalPln?.moneyWeightedReturn} available={returnsDisplayAvailable} />
                 </td>
                 <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.timeWeightedReturn} />
+                  <ReturnValue value={p.nominalPln?.timeWeightedReturn} available={returnsDisplayAvailable} />
                 </td>
                 <td className={tdRight}>
-                  <ReturnValue value={p.realPln?.moneyWeightedReturn} />
+                  <ReturnValue value={p.realPln?.moneyWeightedReturn} available={returnsDisplayAvailable} />
                 </td>
                 <td className={tdRight}>
-                  <ReturnValue value={p.nominalUsd?.moneyWeightedReturn} />
+                  <ReturnValue value={p.nominalUsd?.moneyWeightedReturn} available={returnsDisplayAvailable} />
                 </td>
                 <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.annualizedMoneyWeightedReturn} />
+                  <ReturnValue value={p.nominalPln?.annualizedMoneyWeightedReturn} available={returnsDisplayAvailable} />
                 </td>
                 <td className={`${tdRight} text-zinc-500`}>{p.dayCount}</td>
               </tr>
@@ -419,7 +436,11 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {selectedBenchmarkPeriod.benchmarks.map((benchmark) => (
-              <BenchmarkCard key={`${selectedBenchmarkPeriod.key}:${benchmark.key}`} benchmark={benchmark} />
+              <BenchmarkCard
+                key={`${selectedBenchmarkPeriod.key}:${benchmark.key}`}
+                benchmark={benchmark}
+                returnsDisplayAvailable={returnsDisplayAvailable}
+              />
             ))}
           </div>
         </div>
@@ -428,7 +449,13 @@ function ReturnsTab({ returnsQuery }: { returnsQuery: ReturnType<typeof usePortf
   )
 }
 
-function BenchmarkCard({ benchmark }: { benchmark: BenchmarkComparison }) {
+function BenchmarkCard({
+  benchmark,
+  returnsDisplayAvailable,
+}: {
+  benchmark: BenchmarkComparison
+  returnsDisplayAvailable: boolean
+}) {
   const { isPolish } = useI18n()
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
@@ -440,20 +467,26 @@ function BenchmarkCard({ benchmark }: { benchmark: BenchmarkComparison }) {
           </span>
         ) : null}
       </div>
-      <p className={`mt-1 text-lg font-bold tabular-nums ${returnColor(benchmark.excessTimeWeightedReturn)}`}>
-        {formatReturn(benchmark.excessTimeWeightedReturn)}
+      <p className={`mt-1 text-lg font-bold tabular-nums ${returnColor(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable)}`}>
+        {formatReturn(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
       <p className="mt-0.5 text-xs text-zinc-600">
-        {isPolish ? 'TWR benchmarku' : 'Bench TWR'} {formatReturn(benchmark.nominalPln?.timeWeightedReturn)}
+        {isPolish ? 'TWR benchmarku' : 'Bench TWR'} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
     </div>
   )
 }
 
-function ReturnValue({ value }: { value: string | null | undefined }) {
+function ReturnValue({
+  value,
+  available = true,
+}: {
+  value: string | null | undefined
+  available?: boolean
+}) {
   return (
-    <span className={`font-medium ${returnColor(value)}`}>
-      {formatReturn(value)}
+    <span className={`font-medium ${returnColor(value, available)}`}>
+      {formatReturn(value, available)}
     </span>
   )
 }
@@ -489,20 +522,31 @@ function findReturnPeriod(
   return periods.find((period) => period.key === key)
 }
 
-function formatReturn(value: string | null | undefined) {
+function formatReturn(
+  value: string | null | undefined,
+  available = true,
+  isPolish = false,
+) {
+  if (!available) {
+    return isPolish ? 'b/d' : 'N/A'
+  }
+
   return formatPercent(value, { scale: 100, signed: true })
 }
 
-function returnChange(value: string | null | undefined): 'positive' | 'negative' | 'neutral' | undefined {
-  if (value == null) return undefined
+function returnChange(
+  value: string | null | undefined,
+  available = true,
+): 'positive' | 'negative' | 'neutral' | undefined {
+  if (!available || value == null) return undefined
   const n = Number(value)
   if (n > 0) return 'positive'
   if (n < 0) return 'negative'
   return 'neutral'
 }
 
-function returnColor(value: string | null | undefined) {
-  if (value == null) return 'text-zinc-500'
+function returnColor(value: string | null | undefined, available = true) {
+  if (!available || value == null) return 'text-zinc-500'
   const n = Number(value)
   if (n > 0) return 'text-emerald-400'
   if (n < 0) return 'text-red-400'
