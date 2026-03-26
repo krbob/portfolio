@@ -106,6 +106,7 @@ function LoginCard({ stage, isPolish }: { stage: string; isPolish: boolean }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              aria-label={isPolish ? 'Hasło' : 'Password'}
               placeholder={isPolish ? 'Wpisz hasło' : 'Enter password'}
             />
 

@@ -45,7 +45,7 @@ export function PerformanceScreen() {
     void Promise.all([historyQuery.refetch(), returnsQuery.refetch()])
   }
 
-  if (historyQuery.isLoading && returnsQuery.isLoading && !hasHistory && !hasReturns) {
+  if ((historyQuery.isLoading || returnsQuery.isLoading) && !hasHistory && !hasReturns) {
     return (
       <>
         <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />

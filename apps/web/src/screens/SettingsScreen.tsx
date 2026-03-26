@@ -147,9 +147,9 @@ export function SettingsScreen() {
               <PortfolioStateSection />
             </section>
 
-            <div id="backups" className="scroll-mt-24">
+            <section id="backups" className="scroll-mt-24">
               <PortfolioBackupsSection />
-            </div>
+            </section>
 
             <section id="cache" className="scroll-mt-24">
               <ReadModelCacheSection />

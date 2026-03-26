@@ -82,7 +82,10 @@ export function DashboardScreen() {
     ? formatCurrencyBreakdown(overview?.netContributionBalances)
     : undefined
 
-  const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
+  const configuredBuckets = useMemo(
+    () => allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? [],
+    [allocationQuery.data?.buckets],
+  )
   const mostOffTargetBucket = useMemo(() => {
     return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
       if (!bucket.driftPctPoints) {

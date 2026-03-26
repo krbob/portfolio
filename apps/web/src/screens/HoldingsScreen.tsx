@@ -249,7 +249,7 @@ export function HoldingsScreen() {
           <FilterSelect
             label={isPolish ? 'Klasa' : 'Class'}
             value={assetClassFilter}
-            options={filterOptions.assetClasses.map((c) => ({ value: c, label: assetClassLabel(c) }))}
+            options={filterOptions.assetClasses.map((c) => ({ value: c, label: labelAssetClass(c) }))}
             allLabel={isPolish ? 'Wszystkie klasy' : 'All classes'}
             onChange={setAssetClassFilter}
           />
@@ -343,7 +343,7 @@ export function HoldingsScreen() {
                       <td className={`${td} text-zinc-300`}>{holding.accountName}</td>
                       <td className={td}>
                         <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 ${assetClassDot(holding.assetClass)}`} />
-                        <span className="text-zinc-400">{assetClassLabel(holding.assetClass)}</span>
+                        <span className="text-zinc-400">{labelAssetClass(holding.assetClass)}</span>
                       </td>
                       <td className={tdRight}>{formatNumber(holding.quantity, { maximumFractionDigits: 6 })}</td>
                       <td className={`${tdRight} font-medium text-zinc-100`}>
@@ -388,7 +388,7 @@ export function HoldingsScreen() {
             <div>
               <h3 className="text-lg font-semibold text-zinc-100">{selectedHolding.instrumentName}</h3>
               <p className="mt-0.5 text-sm text-zinc-500">
-                {selectedHolding.accountName} · {labelInstrumentKind(selectedHolding.kind)} · {assetClassLabel(selectedHolding.assetClass)}
+                {selectedHolding.accountName} · {labelInstrumentKind(selectedHolding.kind)} · {labelAssetClass(selectedHolding.assetClass)}
               </p>
             </div>
             <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).className}`}>
@@ -691,7 +691,7 @@ function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortSta
   switch (sort.field) {
     case 'instrumentName': return f * a.instrumentName.localeCompare(b.instrumentName)
     case 'accountName': return f * a.accountName.localeCompare(b.accountName)
-    case 'assetClass': return f * assetClassLabel(a.assetClass).localeCompare(assetClassLabel(b.assetClass))
+    case 'assetClass': return f * labelAssetClass(a.assetClass).localeCompare(labelAssetClass(b.assetClass))
     case 'valuationStatus': return f * valuationStatusFilterLabel(a.valuationStatus, getActiveUiLanguage() === 'pl').localeCompare(valuationStatusFilterLabel(b.valuationStatus, getActiveUiLanguage() === 'pl'))
     case 'quantity': return f * (asNumber(a.quantity) - asNumber(b.quantity))
     case 'unrealizedGainPln': return f * (asNumber(a.unrealizedGainPln) - asNumber(b.unrealizedGainPln))
@@ -734,10 +734,6 @@ function uniqueValues(values: string[]) {
 
 function holdingKey(h: PortfolioHolding) {
   return `${h.accountId}:${h.instrumentId}`
-}
-
-function assetClassLabel(c: string) {
-  return labelAssetClass(c)
 }
 
 function assetClassDot(c: string) {

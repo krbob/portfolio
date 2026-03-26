@@ -413,7 +413,7 @@ export function PortfolioTargetsSection() {
                   <article key={bucket.assetClass} className="rounded-lg border border-zinc-800/50 p-4">
                     <div className="flex items-start justify-between gap-3">
                     <div>
-                        <h4 className="text-sm font-semibold text-zinc-100">{prettyAssetClass(bucket.assetClass)}</h4>
+                        <h4 className="text-sm font-semibold text-zinc-100">{labelAssetClass(bucket.assetClass)}</h4>
                         <p className="mt-1 text-sm text-zinc-500">
                           {isPolish ? 'Obecnie' : 'Current'} {formatPercent(bucket.currentWeightPct, { maximumFractionDigits: 2 })} · {isPolish ? 'cel' : 'target'} {formatPercent(bucket.targetWeightPct, { maximumFractionDigits: 2 })}
                         </p>
@@ -474,10 +474,6 @@ function sanitizePercentInput(value: string) {
 function toNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
-}
-
-function prettyAssetClass(assetClass: string) {
-  return labelAssetClass(assetClass)
 }
 
 function driftColor(value: string | null | undefined) {

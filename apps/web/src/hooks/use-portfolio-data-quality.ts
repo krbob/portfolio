@@ -26,7 +26,7 @@ export function usePortfolioDataQuality() {
   )
 
   const isLoading =
-    (overviewQuery.isLoading || historyQuery.isLoading || returnsQuery.isLoading) &&
+    (overviewQuery.isLoading || historyQuery.isLoading || returnsQuery.isLoading || cacheQuery.isLoading || refreshStatusQuery.isLoading) &&
     !summary
 
   const error =

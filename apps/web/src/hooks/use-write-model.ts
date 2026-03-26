@@ -76,6 +76,7 @@ export function useCreateAccount() {
         queryClient.invalidateQueries({ queryKey: ['accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
       ])
     },
   })
@@ -344,6 +345,9 @@ export function useRunReadModelRefresh() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
       ])
     },
   })
@@ -408,6 +412,7 @@ export function useImportPortfolioState() {
         queryClient.invalidateQueries({ queryKey: ['read-model-refresh-status'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })

@@ -84,7 +84,7 @@ export function AccountsScreen() {
           description={isPolish
             ? 'Nie udało się wczytać podsumowania rachunków. Spróbuj ponownie albo sprawdź stan systemu.'
             : 'Per-account aggregates could not load. Retry now or inspect system health.'}
-          onRetry={() => void accountsQuery.refetch()}
+          onRetry={() => void Promise.all([accountsQuery.refetch(), holdingsQuery.refetch()])}
         />
       </>
     )
@@ -94,7 +94,7 @@ export function AccountsScreen() {
     <>
       <PageHeader title={isPolish ? 'Konta' : 'Accounts'}>
         <Badge variant="default">
-          {accounts.length} {isPolish ? (accounts.length === 1 ? 'konto' : 'konta') : 'accounts'}
+          {accounts.length} {isPolish ? (accounts.length === 1 ? 'konto' : (accounts.length % 10 >= 2 && accounts.length % 10 <= 4 && (accounts.length % 100 < 12 || accounts.length % 100 > 14)) ? 'konta' : 'kont') : 'accounts'}
         </Badge>
         {accounts.length > 0 && (
           <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValuePln)}</span>

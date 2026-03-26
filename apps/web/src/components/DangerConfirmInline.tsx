@@ -1,3 +1,4 @@
+import { getActiveUiLanguage } from '../lib/i18n'
 import { btnDanger, btnSecondary } from '../lib/styles'
 
 interface DangerConfirmInlineProps {
@@ -15,8 +16,8 @@ export function DangerConfirmInline({
   title,
   description,
   confirmLabel,
-  cancelLabel = 'Cancel',
-  confirmPendingLabel = 'Working...',
+  cancelLabel = getActiveUiLanguage() === 'pl' ? 'Anuluj' : 'Cancel',
+  confirmPendingLabel = getActiveUiLanguage() === 'pl' ? 'Przetwarzanie...' : 'Working...',
   isPending = false,
   onCancel,
   onConfirm,
