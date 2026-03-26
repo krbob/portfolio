@@ -18,11 +18,9 @@ const CATEGORY_OPTIONS = [
 ] as const
 
 const OUTCOME_OPTIONS = ['ALL', 'SUCCESS', 'FAILURE'] as const
-const IMPACT_OPTIONS = ['ALL', 'HIGH_IMPACT_ONLY'] as const
-
 type CategoryFilter = typeof CATEGORY_OPTIONS[number]
 type OutcomeFilter = typeof OUTCOME_OPTIONS[number]
-type ImpactFilter = typeof IMPACT_OPTIONS[number]
+type ImpactFilter = 'ALL' | 'HIGH_IMPACT_ONLY'
 
 interface OperationalAuditPanelProps {
   limit?: number
