@@ -48,6 +48,8 @@ class PortfolioReadModelService(
                 val investedCurrentValuePln = accountHoldings.sumOf(ValuedHolding::effectiveCurrentValuePln)
                 val cashBalancePln = snapshot.cashBalanceByAccountPln[account.id] ?: BigDecimal.ZERO
                 val netContributionsPln = snapshot.netContributionsByAccountPln[account.id] ?: BigDecimal.ZERO
+                val cashBalances = snapshot.cashBalancesByAccount[account.id].orEmpty()
+                val netContributionBalances = snapshot.netContributionBalancesByAccount[account.id].orEmpty()
                 val totalBookValuePln = investedBookValuePln.add(cashBalancePln, MONEY_CONTEXT)
                 val totalCurrentValuePln = investedCurrentValuePln.add(cashBalancePln, MONEY_CONTEXT)
                 val valuationState = accountHoldings.toValuationState()
@@ -73,7 +75,9 @@ class PortfolioReadModelService(
                     investedBookValuePln = investedBookValuePln.money(),
                     investedCurrentValuePln = investedCurrentValuePln.money(),
                     cashBalancePln = cashBalancePln.money(),
+                    cashBalances = cashBalances,
                     netContributionsPln = netContributionsPln.money(),
+                    netContributionBalances = netContributionBalances,
                     totalUnrealizedGainPln = totalCurrentValuePln.subtract(totalBookValuePln, MONEY_CONTEXT).money(),
                     portfolioWeightPct = portfolioWeightPct,
                     activeHoldingCount = accountHoldings.size,
@@ -111,7 +115,9 @@ class PortfolioReadModelService(
             investedBookValuePln = investedBookValuePln.money(),
             investedCurrentValuePln = investedCurrentValuePln.money(),
             cashBalancePln = cashBookValuePln.money(),
+            cashBalances = snapshot.cashBalances,
             netContributionsPln = snapshot.netContributionsPln.money(),
+            netContributionBalances = snapshot.netContributionBalances,
             equityBookValuePln = equityBookValuePln.money(),
             equityCurrentValuePln = equityCurrentValuePln.money(),
             bondBookValuePln = bondBookValuePln.money(),
@@ -183,8 +189,12 @@ class PortfolioReadModelService(
             holdings = holdings,
             cashBalancePln = ledgerSnapshot.cashBalancePln,
             cashBalanceByAccountPln = ledgerSnapshot.cashBalanceByAccountPln,
+            cashBalances = ledgerSnapshot.cashBalances,
+            cashBalancesByAccount = ledgerSnapshot.cashBalancesByAccount,
             netContributionsPln = ledgerSnapshot.netContributionsPln,
             netContributionsByAccountPln = ledgerSnapshot.netContributionsByAccountPln,
+            netContributionBalances = ledgerSnapshot.netContributionBalances,
+            netContributionBalancesByAccount = ledgerSnapshot.netContributionBalancesByAccount,
             missingFxTransactions = ledgerSnapshot.missingFxTransactions,
             unsupportedCorrectionTransactions = ledgerSnapshot.unsupportedCorrectionTransactions,
             valuationState = holdings.toValuationState()
@@ -213,24 +223,36 @@ class PortfolioReadModelService(
         val holdings = linkedMapOf<HoldingKey, MutableHolding>()
         val cashBalanceByAccountPln = accounts.associateBy(Account::id) { BigDecimal.ZERO }.toMutableMap()
         val netContributionsByAccountPln = accounts.associateBy(Account::id) { BigDecimal.ZERO }.toMutableMap()
+        val cashBalancesByAccount = accounts.associate { it.id to linkedMapOf<String, CurrencyBreakdownAccumulator>() }.toMutableMap()
+        val netContributionBalancesByAccount = accounts.associate { it.id to linkedMapOf<String, CurrencyBreakdownAccumulator>() }.toMutableMap()
+        val cashBalances = linkedMapOf<String, CurrencyBreakdownAccumulator>()
+        val netContributionBalances = linkedMapOf<String, CurrencyBreakdownAccumulator>()
 
         var cashBalancePln = BigDecimal.ZERO
         var netContributionsPln = BigDecimal.ZERO
         var missingFxTransactions = 0
         var unsupportedCorrectionTransactions = 0
 
-        fun adjustCashBalance(accountId: UUID, deltaPln: BigDecimal) {
+        fun adjustCashBalance(accountId: UUID, currency: String, deltaAmount: BigDecimal, deltaPln: BigDecimal) {
             cashBalancePln = cashBalancePln.add(deltaPln, MONEY_CONTEXT)
             cashBalanceByAccountPln[accountId] = cashBalanceByAccountPln
                 .getOrDefault(accountId, BigDecimal.ZERO)
                 .add(deltaPln, MONEY_CONTEXT)
+            cashBalances.adjust(currency, deltaAmount, deltaPln)
+            cashBalancesByAccount
+                .getOrPut(accountId) { linkedMapOf() }
+                .adjust(currency, deltaAmount, deltaPln)
         }
 
-        fun adjustNetContributions(accountId: UUID, deltaPln: BigDecimal) {
+        fun adjustNetContributions(accountId: UUID, currency: String, deltaAmount: BigDecimal, deltaPln: BigDecimal) {
             netContributionsPln = netContributionsPln.add(deltaPln, MONEY_CONTEXT)
             netContributionsByAccountPln[accountId] = netContributionsByAccountPln
                 .getOrDefault(accountId, BigDecimal.ZERO)
                 .add(deltaPln, MONEY_CONTEXT)
+            netContributionBalances.adjust(currency, deltaAmount, deltaPln)
+            netContributionBalancesByAccount
+                .getOrPut(accountId) { linkedMapOf() }
+                .adjust(currency, deltaAmount, deltaPln)
         }
 
         transactions.forEach { transaction ->
@@ -266,6 +288,11 @@ class PortfolioReadModelService(
 
                     adjustCashBalance(
                         accountId = transaction.accountId,
+                        currency = transaction.currency,
+                        deltaAmount = transaction.grossAmount
+                            .add(transaction.feeAmount, MONEY_CONTEXT)
+                            .add(transaction.taxAmount, MONEY_CONTEXT)
+                            .negate(),
                         deltaPln = converted.grossPln
                             .add(converted.feePln, MONEY_CONTEXT)
                             .add(converted.taxPln, MONEY_CONTEXT)
@@ -299,6 +326,10 @@ class PortfolioReadModelService(
 
                     adjustCashBalance(
                         accountId = transaction.accountId,
+                        currency = transaction.currency,
+                        deltaAmount = transaction.grossAmount
+                            .subtract(transaction.feeAmount, MONEY_CONTEXT)
+                            .subtract(transaction.taxAmount, MONEY_CONTEXT),
                         deltaPln = converted.grossPln
                             .subtract(converted.feePln, MONEY_CONTEXT)
                             .subtract(converted.taxPln, MONEY_CONTEXT)
@@ -321,6 +352,10 @@ class PortfolioReadModelService(
 
                     adjustCashBalance(
                         accountId = transaction.accountId,
+                        currency = transaction.currency,
+                        deltaAmount = transaction.grossAmount
+                            .subtract(transaction.feeAmount, MONEY_CONTEXT)
+                            .subtract(transaction.taxAmount, MONEY_CONTEXT),
                         deltaPln = converted.grossPln
                             .subtract(converted.feePln, MONEY_CONTEXT)
                             .subtract(converted.taxPln, MONEY_CONTEXT)
@@ -328,22 +363,37 @@ class PortfolioReadModelService(
                 }
 
                 TransactionType.DEPOSIT -> {
-                    adjustCashBalance(transaction.accountId, converted.grossPln)
-                    adjustNetContributions(transaction.accountId, converted.grossPln)
+                    adjustCashBalance(transaction.accountId, transaction.currency, transaction.grossAmount, converted.grossPln)
+                    adjustNetContributions(transaction.accountId, transaction.currency, transaction.grossAmount, converted.grossPln)
                 }
 
                 TransactionType.WITHDRAWAL -> {
-                    adjustCashBalance(transaction.accountId, converted.grossPln.negate())
-                    adjustNetContributions(transaction.accountId, converted.grossPln.negate())
+                    adjustCashBalance(
+                        transaction.accountId,
+                        transaction.currency,
+                        transaction.grossAmount.negate(),
+                        converted.grossPln.negate()
+                    )
+                    adjustNetContributions(
+                        transaction.accountId,
+                        transaction.currency,
+                        transaction.grossAmount.negate(),
+                        converted.grossPln.negate()
+                    )
                 }
 
                 TransactionType.FEE,
                 TransactionType.TAX -> {
-                    adjustCashBalance(transaction.accountId, converted.grossPln.negate())
+                    adjustCashBalance(
+                        transaction.accountId,
+                        transaction.currency,
+                        transaction.grossAmount.negate(),
+                        converted.grossPln.negate()
+                    )
                 }
 
                 TransactionType.INTEREST -> {
-                    adjustCashBalance(transaction.accountId, converted.grossPln)
+                    adjustCashBalance(transaction.accountId, transaction.currency, transaction.grossAmount, converted.grossPln)
                 }
 
                 TransactionType.CORRECTION -> {
@@ -360,8 +410,12 @@ class PortfolioReadModelService(
                 .toList(),
             cashBalancePln = cashBalancePln,
             cashBalanceByAccountPln = cashBalanceByAccountPln.toMap(),
+            cashBalances = cashBalances.toCurrencyBreakdown(),
+            cashBalancesByAccount = cashBalancesByAccount.mapValues { (_, balances) -> balances.toCurrencyBreakdown() },
             netContributionsPln = netContributionsPln,
             netContributionsByAccountPln = netContributionsByAccountPln.toMap(),
+            netContributionBalances = netContributionBalances.toCurrencyBreakdown(),
+            netContributionBalancesByAccount = netContributionBalancesByAccount.mapValues { (_, balances) -> balances.toCurrencyBreakdown() },
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions
         )
@@ -606,6 +660,37 @@ class PortfolioReadModelService(
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
 
+    private fun MutableMap<String, CurrencyBreakdownAccumulator>.adjust(
+        currency: String,
+        deltaAmount: BigDecimal,
+        deltaBookValuePln: BigDecimal
+    ) {
+        if (deltaAmount.signum() == 0 && deltaBookValuePln.signum() == 0) {
+            return
+        }
+        val normalizedCurrency = currency.uppercase()
+        val accumulator = getOrPut(normalizedCurrency) { CurrencyBreakdownAccumulator() }
+        accumulator.amount = accumulator.amount.add(deltaAmount, MONEY_CONTEXT)
+        accumulator.bookValuePln = accumulator.bookValuePln.add(deltaBookValuePln, MONEY_CONTEXT)
+        if (accumulator.amount.signum() == 0 && accumulator.bookValuePln.signum() == 0) {
+            remove(normalizedCurrency)
+        }
+    }
+
+    private fun Map<String, CurrencyBreakdownAccumulator>.toCurrencyBreakdown(): List<CurrencyAmountSnapshot> =
+        entries
+            .map { (currency, accumulator) ->
+                CurrencyAmountSnapshot(
+                    currency = currency,
+                    amount = accumulator.amount.quantity(),
+                    bookValuePln = accumulator.bookValuePln.money()
+                )
+            }
+            .sortedWith(
+                compareByDescending<CurrencyAmountSnapshot> { it.bookValuePln.abs() }
+                    .thenBy { it.currency }
+            )
+
     private fun List<ValuedHolding>.toValuationState(): ValuationState {
         if (isEmpty()) {
             return ValuationState.MARK_TO_MARKET
@@ -695,8 +780,12 @@ class PortfolioReadModelService(
         val holdings: List<MutableHolding>,
         val cashBalancePln: BigDecimal,
         val cashBalanceByAccountPln: Map<UUID, BigDecimal>,
+        val cashBalances: List<CurrencyAmountSnapshot>,
+        val cashBalancesByAccount: Map<UUID, List<CurrencyAmountSnapshot>>,
         val netContributionsPln: BigDecimal,
         val netContributionsByAccountPln: Map<UUID, BigDecimal>,
+        val netContributionBalances: List<CurrencyAmountSnapshot>,
+        val netContributionBalancesByAccount: Map<UUID, List<CurrencyAmountSnapshot>>,
         val missingFxTransactions: Int,
         val unsupportedCorrectionTransactions: Int
     )
@@ -707,17 +796,32 @@ class PortfolioReadModelService(
         val holdings: List<ValuedHolding>,
         val cashBalancePln: BigDecimal,
         val cashBalanceByAccountPln: Map<UUID, BigDecimal>,
+        val cashBalances: List<CurrencyAmountSnapshot>,
+        val cashBalancesByAccount: Map<UUID, List<CurrencyAmountSnapshot>>,
         val netContributionsPln: BigDecimal,
         val netContributionsByAccountPln: Map<UUID, BigDecimal>,
+        val netContributionBalances: List<CurrencyAmountSnapshot>,
+        val netContributionBalancesByAccount: Map<UUID, List<CurrencyAmountSnapshot>>,
         val missingFxTransactions: Int,
         val unsupportedCorrectionTransactions: Int,
         val valuationState: ValuationState
+    )
+
+    private data class CurrencyBreakdownAccumulator(
+        var amount: BigDecimal = BigDecimal.ZERO,
+        var bookValuePln: BigDecimal = BigDecimal.ZERO
     )
 
     private companion object {
         val MONEY_CONTEXT: MathContext = MathContext.DECIMAL64
     }
 }
+
+data class CurrencyAmountSnapshot(
+    val currency: String,
+    val amount: BigDecimal,
+    val bookValuePln: BigDecimal
+)
 
 data class PortfolioOverview(
     val asOf: LocalDate,
@@ -727,7 +831,9 @@ data class PortfolioOverview(
     val investedBookValuePln: BigDecimal,
     val investedCurrentValuePln: BigDecimal,
     val cashBalancePln: BigDecimal,
+    val cashBalances: List<CurrencyAmountSnapshot> = emptyList(),
     val netContributionsPln: BigDecimal,
+    val netContributionBalances: List<CurrencyAmountSnapshot> = emptyList(),
     val equityBookValuePln: BigDecimal,
     val equityCurrentValuePln: BigDecimal,
     val bondBookValuePln: BigDecimal,
@@ -792,7 +898,9 @@ data class PortfolioAccountSummary(
     val investedBookValuePln: BigDecimal,
     val investedCurrentValuePln: BigDecimal,
     val cashBalancePln: BigDecimal,
+    val cashBalances: List<CurrencyAmountSnapshot> = emptyList(),
     val netContributionsPln: BigDecimal,
+    val netContributionBalances: List<CurrencyAmountSnapshot> = emptyList(),
     val totalUnrealizedGainPln: BigDecimal,
     val portfolioWeightPct: BigDecimal,
     val activeHoldingCount: Int,

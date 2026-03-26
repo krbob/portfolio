@@ -1709,6 +1709,12 @@ export interface components {
             valuationSource: string;
             edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
         };
+        /** net.bobinski.portfolio.api.route.CurrencyAmountResponse */
+        CurrencyAmountResponse: {
+            currency: string;
+            amount: string;
+            bookValuePln: string;
+        };
         /** net.bobinski.portfolio.api.route.PortfolioOverviewResponse */
         PortfolioOverviewResponse: {
             asOf: string;
@@ -1718,7 +1724,9 @@ export interface components {
             investedBookValuePln: string;
             investedCurrentValuePln: string;
             cashBalancePln: string;
+            cashBalances?: components["schemas"]["CurrencyAmountResponse"][];
             netContributionsPln: string;
+            netContributionBalances?: components["schemas"]["CurrencyAmountResponse"][];
             equityBookValuePln: string;
             equityCurrentValuePln: string;
             bondBookValuePln: string;
@@ -1783,7 +1791,9 @@ export interface components {
             investedBookValuePln: string;
             investedCurrentValuePln: string;
             cashBalancePln: string;
+            cashBalances?: components["schemas"]["CurrencyAmountResponse"][];
             netContributionsPln: string;
+            netContributionBalances?: components["schemas"]["CurrencyAmountResponse"][];
             totalUnrealizedGainPln: string;
             portfolioWeightPct: string;
             activeHoldingCount: number;

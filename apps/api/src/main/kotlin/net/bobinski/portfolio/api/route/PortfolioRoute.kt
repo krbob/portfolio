@@ -34,6 +34,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
+import net.bobinski.portfolio.api.domain.service.CurrencyAmountSnapshot
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
 import net.bobinski.portfolio.api.domain.service.AllocationBucketAction
@@ -245,7 +246,9 @@ data class PortfolioOverviewResponse(
     val investedBookValuePln: String,
     val investedCurrentValuePln: String,
     val cashBalancePln: String,
+    val cashBalances: List<CurrencyAmountResponse> = emptyList(),
     val netContributionsPln: String,
+    val netContributionBalances: List<CurrencyAmountResponse> = emptyList(),
     val equityBookValuePln: String,
     val equityCurrentValuePln: String,
     val bondBookValuePln: String,
@@ -313,12 +316,21 @@ data class PortfolioAccountResponse(
     val investedBookValuePln: String,
     val investedCurrentValuePln: String,
     val cashBalancePln: String,
+    val cashBalances: List<CurrencyAmountResponse> = emptyList(),
     val netContributionsPln: String,
+    val netContributionBalances: List<CurrencyAmountResponse> = emptyList(),
     val totalUnrealizedGainPln: String,
     val portfolioWeightPct: String,
     val activeHoldingCount: Int,
     val valuedHoldingCount: Int,
     val valuationIssueCount: Int
+)
+
+@Serializable
+data class CurrencyAmountResponse(
+    val currency: String,
+    val amount: String,
+    val bookValuePln: String
 )
 
 @Serializable
@@ -768,7 +780,9 @@ private fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = Portfoli
     investedBookValuePln = investedBookValuePln.toPlainString(),
     investedCurrentValuePln = investedCurrentValuePln.toPlainString(),
     cashBalancePln = cashBalancePln.toPlainString(),
+    cashBalances = cashBalances.map(CurrencyAmountSnapshot::toResponse),
     netContributionsPln = netContributionsPln.toPlainString(),
+    netContributionBalances = netContributionBalances.map(CurrencyAmountSnapshot::toResponse),
     equityBookValuePln = equityBookValuePln.toPlainString(),
     equityCurrentValuePln = equityCurrentValuePln.toPlainString(),
     bondBookValuePln = bondBookValuePln.toPlainString(),
@@ -833,12 +847,20 @@ private fun PortfolioAccountSummary.toResponse(): PortfolioAccountResponse = Por
     investedBookValuePln = investedBookValuePln.toPlainString(),
     investedCurrentValuePln = investedCurrentValuePln.toPlainString(),
     cashBalancePln = cashBalancePln.toPlainString(),
+    cashBalances = cashBalances.map(CurrencyAmountSnapshot::toResponse),
     netContributionsPln = netContributionsPln.toPlainString(),
+    netContributionBalances = netContributionBalances.map(CurrencyAmountSnapshot::toResponse),
     totalUnrealizedGainPln = totalUnrealizedGainPln.toPlainString(),
     portfolioWeightPct = portfolioWeightPct.toPlainString(),
     activeHoldingCount = activeHoldingCount,
     valuedHoldingCount = valuedHoldingCount,
     valuationIssueCount = valuationIssueCount
+)
+
+private fun CurrencyAmountSnapshot.toResponse(): CurrencyAmountResponse = CurrencyAmountResponse(
+    currency = currency,
+    amount = amount.toPlainString(),
+    bookValuePln = bookValuePln.toPlainString()
 )
 
 private fun PortfolioDailyHistory.toResponse(): PortfolioDailyHistoryResponse = PortfolioDailyHistoryResponse(

@@ -183,6 +183,12 @@ class PortfolioReadModelServiceTest {
         assertEquals(BigDecimal("400.00"), overview.totalCurrentValuePln)
         assertEquals(BigDecimal("400.00"), overview.cashBalancePln)
         assertEquals(BigDecimal("400.00"), overview.netContributionsPln)
+        assertEquals(1, overview.cashBalances.size)
+        assertEquals("USD", overview.cashBalances.single().currency)
+        assertEquals(0, overview.cashBalances.single().amount.compareTo(BigDecimal("100")))
+        assertEquals(BigDecimal("400.00"), overview.cashBalances.single().bookValuePln)
+        assertEquals(1, overview.netContributionBalances.size)
+        assertEquals("USD", overview.netContributionBalances.single().currency)
         assertEquals(0, overview.missingFxTransactions)
     }
 
@@ -325,9 +331,48 @@ class PortfolioReadModelServiceTest {
         assertEquals(BigDecimal("2195.00"), primarySummary.totalCurrentValuePln)
         assertEquals(BigDecimal("195.00"), primarySummary.totalUnrealizedGainPln)
         assertEquals(BigDecimal("81.45"), primarySummary.portfolioWeightPct)
+        assertEquals(listOf("PLN"), primarySummary.cashBalances.map { it.currency })
+        assertEquals(BigDecimal("995"), primarySummary.cashBalances.single().amount)
         assertEquals(BigDecimal("500.00"), reserveSummary.cashBalancePln)
         assertEquals(BigDecimal("18.55"), reserveSummary.portfolioWeightPct)
+        assertEquals(listOf("PLN"), reserveSummary.cashBalances.map { it.currency })
         assertEquals(0, reserveSummary.activeHoldingCount)
+    }
+
+    @Test
+    fun `accounts keep native cash balances split by currency`() = runBlocking {
+        val fixture = portfolioFixture()
+        val account = account(baseCurrency = "USD")
+        fixture.accountRepository.save(account)
+        fixture.transactionRepository.save(
+            depositTransaction(
+                accountId = account.id,
+                grossAmount = "1000.00",
+                currency = "PLN"
+            )
+        )
+        fixture.transactionRepository.save(
+            depositTransaction(
+                accountId = account.id,
+                grossAmount = "100.00",
+                currency = "USD"
+            )
+        )
+        fixture.fxRateProvider.values["USD"] = FxRateHistoryResult.Success(
+            prices = listOf(
+                pricePoint(date = "2026-03-01", closePricePln = "4.00")
+            )
+        )
+
+        val summary = fixture.service.accounts().single()
+
+        assertEquals(BigDecimal("1400.00"), summary.cashBalancePln)
+        assertEquals(listOf("PLN", "USD"), summary.cashBalances.map { it.currency })
+        assertEquals(0, summary.cashBalances[0].amount.compareTo(BigDecimal("1000")))
+        assertEquals(BigDecimal("1000.00"), summary.cashBalances[0].bookValuePln)
+        assertEquals(0, summary.cashBalances[1].amount.compareTo(BigDecimal("100")))
+        assertEquals(BigDecimal("400.00"), summary.cashBalances[1].bookValuePln)
+        assertEquals(listOf("PLN", "USD"), summary.netContributionBalances.map { it.currency })
     }
 
     private fun portfolioFixture(
