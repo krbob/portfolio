@@ -72,11 +72,6 @@ private fun String.sha256Bytes(): ByteArray {
     return digest.digest(toByteArray()).copyOf(16)
 }
 
-private fun String.sha256Hex(): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-    return hex(digest.digest(toByteArray()))
-}
-
 private fun String.hmacKeyBytes(): ByteArray {
     val mac = Mac.getInstance("HmacSHA256")
     mac.init(SecretKeySpec(toByteArray(), "HmacSHA256"))

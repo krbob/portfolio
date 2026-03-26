@@ -9,11 +9,18 @@ import io.ktor.server.response.respond
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.error.ResourceNotFoundException
+import java.time.format.DateTimeParseException
 
 fun Application.configureStatusPages() {
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message ?: "Bad request."))
+        }
+        exception<NumberFormatException> { call, cause ->
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message ?: "Invalid number format."))
+        }
+        exception<DateTimeParseException> { call, cause ->
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message ?: "Invalid date format."))
         }
         exception<BadRequestException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message ?: "Bad request."))

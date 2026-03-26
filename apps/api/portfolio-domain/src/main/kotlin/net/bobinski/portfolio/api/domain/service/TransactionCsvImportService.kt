@@ -273,6 +273,8 @@ class TransactionCsvImportService(
     }
 
     private fun parseCsv(text: String, delimiter: Char): List<List<String>> {
+        @Suppress("NAME_SHADOWING")
+        val text = text.removePrefix("\uFEFF")
         val rows = mutableListOf<List<String>>()
         val currentRow = mutableListOf<String>()
         val currentField = StringBuilder()
