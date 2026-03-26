@@ -5,7 +5,7 @@ export function useAuthSession() {
   return useQuery({
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
-    staleTime: 30_000,
+    retry: false,
   })
 }
 

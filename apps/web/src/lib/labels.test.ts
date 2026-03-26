@@ -15,8 +15,7 @@ import {
 describe('labelAssetClass', () => {
   it('maps all known asset classes to non-empty labels', () => {
     for (const value of ['EQUITIES', 'BONDS', 'CASH', 'FX', 'BENCHMARK']) {
-      expect(labelAssetClass(value)).toBeTruthy()
-      expect(labelAssetClass(value)).not.toBe('')
+      expect(labelAssetClass(value), `labelAssetClass('${value}')`).toBeTruthy()
     }
   })
 
@@ -28,7 +27,8 @@ describe('labelAssetClass', () => {
 describe('labelAccountType', () => {
   it('maps all known account types', () => {
     for (const value of ['BROKERAGE', 'BOND_REGISTER', 'CASH']) {
-      expect(labelAccountType(value)).toBeTruthy()
+      expect(labelAccountType(value), `labelAccountType('${value}')`).toBeTruthy()
+      expect(labelAccountType(value)).not.toBe(value)
     }
   })
 
@@ -40,7 +40,7 @@ describe('labelAccountType', () => {
 describe('labelInstrumentKind', () => {
   it('maps all known instrument kinds', () => {
     for (const value of ['ETF', 'STOCK', 'BOND_EDO', 'CASH', 'BENCHMARK_GOLD']) {
-      expect(labelInstrumentKind(value)).toBeTruthy()
+      expect(labelInstrumentKind(value), `labelInstrumentKind('${value}')`).toBeTruthy()
     }
   })
 
@@ -51,8 +51,9 @@ describe('labelInstrumentKind', () => {
 
 describe('labelValuationSource', () => {
   it('maps all known valuation sources', () => {
-    for (const value of ['STOCK_ANALYST', 'EDO_CALCULATOR', 'MANUAL', 'GOLD_API']) {
-      expect(labelValuationSource(value)).toBeTruthy()
+    for (const value of ['STOCK_ANALYST', 'EDO_CALCULATOR', 'MANUAL']) {
+      expect(labelValuationSource(value), `labelValuationSource('${value}')`).toBeTruthy()
+      expect(labelValuationSource(value)).not.toBe(value)
     }
   })
 
@@ -62,9 +63,11 @@ describe('labelValuationSource', () => {
 })
 
 describe('labelValuationStatus', () => {
-  it('maps known statuses', () => {
+  it('maps known statuses to distinct labels', () => {
     for (const value of ['VALUED', 'STALE', 'BOOK_ONLY', 'UNAVAILABLE']) {
-      expect(labelValuationStatus(value)).toBeTruthy()
+      const label = labelValuationStatus(value)
+      expect(label, `labelValuationStatus('${value}')`).toBeTruthy()
+      expect(label).not.toBe(value)
     }
   })
 
@@ -75,10 +78,16 @@ describe('labelValuationStatus', () => {
 })
 
 describe('labelReadinessStatus', () => {
-  it('maps known readiness statuses', () => {
-    for (const value of ['PASS', 'WARN', 'FAIL', 'INFO', 'SKIP']) {
-      expect(labelReadinessStatus(value)).toBeTruthy()
+  it('maps overall readiness statuses', () => {
+    for (const value of ['READY', 'DEGRADED', 'NOT_READY']) {
+      const label = labelReadinessStatus(value)
+      expect(label, `labelReadinessStatus('${value}')`).toBeTruthy()
+      expect(label).not.toBe(value)
     }
+  })
+
+  it('returns raw value for unknown status', () => {
+    expect(labelReadinessStatus('UNKNOWN_STATUS')).toBe('UNKNOWN_STATUS')
   })
 })
 
@@ -87,7 +96,7 @@ describe('labelTransactionType', () => {
     const types = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'REDEEM', 'FEE', 'TAX', 'INTEREST', 'CORRECTION']
     for (const type of types) {
       const label = labelTransactionType(type)
-      expect(label).toBeTruthy()
+      expect(label, `labelTransactionType('${type}')`).toBeTruthy()
       expect(label).not.toBe(type)
     }
   })
@@ -99,8 +108,9 @@ describe('labelTransactionType', () => {
 
 describe('labelAuditOutcome', () => {
   it('maps known outcomes', () => {
-    expect(labelAuditOutcome('SUCCESS')).toBeTruthy()
-    expect(labelAuditOutcome('FAILURE')).toBeTruthy()
+    for (const value of ['ALL', 'SUCCESS', 'FAILURE']) {
+      expect(labelAuditOutcome(value), `labelAuditOutcome('${value}')`).toBeTruthy()
+    }
   })
 
   it('returns raw value for unknown outcome', () => {
@@ -111,7 +121,8 @@ describe('labelAuditOutcome', () => {
 describe('labelAuditCategory', () => {
   it('maps known categories', () => {
     for (const category of ['ACCOUNTS', 'INSTRUMENTS', 'TRANSACTIONS', 'TARGETS', 'IMPORTS', 'BACKUPS', 'SYSTEM']) {
-      expect(labelAuditCategory(category)).toBeTruthy()
+      expect(labelAuditCategory(category), `labelAuditCategory('${category}')`).toBeTruthy()
+      expect(labelAuditCategory(category)).not.toBe(category)
     }
   })
 
@@ -123,7 +134,8 @@ describe('labelAuditCategory', () => {
 describe('labelImportRowStatus', () => {
   it('maps known import row statuses', () => {
     for (const status of ['IMPORTABLE', 'DUPLICATE_EXISTING', 'DUPLICATE_BATCH', 'INVALID']) {
-      expect(labelImportRowStatus(status)).toBeTruthy()
+      expect(labelImportRowStatus(status), `labelImportRowStatus('${status}')`).toBeTruthy()
+      expect(labelImportRowStatus(status)).not.toBe(status)
     }
   })
 

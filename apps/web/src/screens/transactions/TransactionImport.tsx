@@ -123,7 +123,6 @@ function ImportPreviewPanel({
 
 export interface TransactionImportProps {
   selectedImportProfile: TransactionImportProfile | null
-  importProfileDirty: boolean
   importProfileBlockingReason: string | null
   importProfileTemplate: string
   previewTransactionsCsvImportMutation: UseMutationResult<ImportTransactionsPreviewResult, Error, CsvTransactionsImportPayload>
@@ -161,8 +160,8 @@ export function TransactionImport({
   const [structuredImportPreviewStatusFilter, setStructuredImportPreviewStatusFilter] =
     useState<ImportPreviewStatusFilter>('ALL')
 
-  // Sync importSkipDuplicates with the profile's default when the profile changes
-  const profileSyncKey = selectedImportProfile?.id ?? null
+  // Sync importSkipDuplicates with the profile's default when profile identity or its default changes
+  const profileSyncKey = `${selectedImportProfile?.id}:${selectedImportProfile?.skipDuplicatesByDefault}`
   const [prevProfileSyncKey, setPrevProfileSyncKey] = useState(profileSyncKey)
   if (prevProfileSyncKey !== profileSyncKey) {
     setPrevProfileSyncKey(profileSyncKey)

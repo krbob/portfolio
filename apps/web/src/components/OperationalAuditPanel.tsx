@@ -3,7 +3,7 @@ import { usePortfolioAuditEvents } from '../hooks/use-read-model'
 import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { buildAuditMetadataEntries, buildAuditMetadataSummary, formatAuditEventMessage, formatAuditEventTitle, isHighImpactAuditAction } from '../lib/audit-copy'
-import { labelAuditCategory } from '../lib/labels'
+import { labelAuditCategory, labelAuditOutcome } from '../lib/labels'
 import { badge, badgeVariants, filterInput, label as labelClass } from '../lib/styles'
 
 const CATEGORY_OPTIONS = [
@@ -111,7 +111,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
           >
             {OUTCOME_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {labelAuditOutcome(option)}
               </option>
             ))}
           </select>

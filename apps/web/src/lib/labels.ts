@@ -137,7 +137,7 @@ export function labelValuationStatus(value: string | null | undefined) {
         return 'Brak kursu walutowego'
       case 'UNSUPPORTED_CORRECTIONS':
         return 'Nieobsługiwane korekty'
-      case 'BOOK_VALUE_ONLY':
+      case 'BOOK_ONLY':
         return 'Tylko wycena księgowa'
       case 'UNAVAILABLE':
         return 'Niedostępne'
@@ -157,7 +157,7 @@ export function labelValuationStatus(value: string | null | undefined) {
       return 'Missing FX'
     case 'UNSUPPORTED_CORRECTIONS':
       return 'Unsupported corrections'
-    case 'BOOK_VALUE_ONLY':
+    case 'BOOK_ONLY':
       return 'Book value only'
     case 'UNAVAILABLE':
       return 'Unavailable'

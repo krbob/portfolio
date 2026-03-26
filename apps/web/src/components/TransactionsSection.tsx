@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioAuditEvents, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
@@ -26,9 +27,11 @@ import {
 import { TransactionJournal } from '../screens/transactions/TransactionJournal'
 import { TransactionImport } from '../screens/transactions/TransactionImport'
 import { TransactionImportProfiles } from '../screens/transactions/TransactionImportProfiles'
+import type { TransactionRouteState } from '../lib/transaction-composer'
 
 export function TransactionsSection() {
   const { isPolish } = useI18n()
+  const location = useLocation()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
@@ -112,6 +115,13 @@ export function TransactionsSection() {
       setSelectedImportProfileId(importProfiles[0]?.id ?? NEW_IMPORT_PROFILE_ID)
     }
   }, [importProfiles, selectedImportProfileId])
+
+  useEffect(() => {
+    const routeState = (location.state as TransactionRouteState | null) ?? {}
+    if (routeState.transactionDraft != null && activeWorkspace !== 'journal') {
+      setActiveWorkspace('journal')
+    }
+  }, [activeWorkspace, location.state])
 
   const handleFilteredRowCountChange = useCallback((count: number) => {
     setFilteredJournalRowCount(count)
@@ -276,7 +286,6 @@ export function TransactionsSection() {
       {activeWorkspace === 'import' && (
         <TransactionImport
           selectedImportProfile={selectedImportProfile}
-          importProfileDirty={importProfileDirty}
           importProfileBlockingReason={importProfileBlockingReason}
           importProfileTemplate={importProfileTemplate}
           previewTransactionsCsvImportMutation={previewTransactionsCsvImportMutation}

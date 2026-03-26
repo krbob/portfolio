@@ -36,10 +36,9 @@ This keeps rebuilds and redeploys predictable and makes market-data behavior a d
 
 ### Frontend
 
-- React 19
-- TypeScript
+- React + TypeScript
 - Vite
-- Tailwind v4 via `app.css`, with a small shared primitive layer on top
+- Tailwind via `app.css`, with a small shared primitive layer on top
 - React Router and TanStack Query
 - browser-driven `pl` / `en` localization in the SPA
 - lightweight PWA shell for self-hosted mobile use
@@ -50,11 +49,10 @@ This keeps rebuilds and redeploys predictable and makes market-data behavior a d
 
 ### Backend
 
-- Kotlin 2.3
-- Ktor 3
+- Kotlin + Ktor
 - Koin
 - kotlinx.serialization
-- JUnit 6
+- JUnit
 - multi-project Gradle build with:
   - API module for HTTP, persistence, integrations, and operational services
   - `portfolio-domain` for domain models, repository/provider interfaces, and portfolio calculations

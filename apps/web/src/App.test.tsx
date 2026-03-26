@@ -2033,7 +2033,7 @@ describe('App', () => {
 
     expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
 
-    fireEvent.click(scope.getByRole('button', { name: /new transaction/i }))
+    fireEvent.click(await scope.findByRole('button', { name: /new transaction/i }))
 
     const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
@@ -2269,7 +2269,7 @@ describe('App', () => {
 
     expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
 
-    fireEvent.click(scope.getByRole('button', { name: /new transaction/i }))
+    fireEvent.click(await scope.findByRole('button', { name: /new transaction/i }))
 
     const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
