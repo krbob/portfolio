@@ -6,12 +6,19 @@ import com.sun.net.httpserver.HttpServer
 import java.math.BigDecimal
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
+import net.bobinski.portfolio.api.domain.model.AuditEventCategory
+import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
+import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -24,6 +31,7 @@ class RemoteReferenceSeriesProviderTest {
         server.start()
 
         try {
+            val auditEventRepository = InMemoryAuditEventRepository()
             val provider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
@@ -45,6 +53,12 @@ class RemoteReferenceSeriesProviderTest {
                     httpClient = HttpClient.newHttpClient(),
                     json = AppJsonFactory.create(),
                     baseUrl = server.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = auditEventRepository,
+                        clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
+                    )
                 )
             )
 
@@ -64,11 +78,73 @@ class RemoteReferenceSeriesProviderTest {
             server.close()
         }
     }
+
+    @Test
+    fun `reference series failures are recorded in operational audit with upstream details`() = runBlocking {
+        val server = FakeReferenceSeriesServer(failUsdHistory = true)
+        server.start()
+
+        try {
+            val auditEventRepository = InMemoryAuditEventRepository()
+            val provider = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystBaseUrl = server.baseUrl,
+                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
+                    goldApiBaseUrl = server.baseUrl,
+                    goldApiKey = null,
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = auditEventRepository,
+                        clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
+                    )
+                )
+            )
+
+            val result = provider.usdPln(
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+
+            assertTrue(result is ReferenceSeriesResult.Failure)
+
+            val events = auditEventRepository.list()
+            assertEquals(1, events.size)
+            val event = events.single()
+            assertEquals(AuditEventCategory.SYSTEM, event.category)
+            assertEquals(AuditEventOutcome.FAILURE, event.outcome)
+            assertEquals("MARKET_DATA_REQUEST_FAILED", event.action)
+            assertEquals("stock-analyst", event.metadata["upstream"])
+            assertEquals("reference-history", event.metadata["operation"])
+            assertEquals("PLN=X", event.metadata["symbol"])
+            assertEquals("429", event.metadata["statusCode"])
+            assertTrue(event.metadata["responseBodyPreview"]!!.contains("Too many requests"))
+        } finally {
+            server.close()
+        }
+    }
 }
 
-private class FakeReferenceSeriesServer : AutoCloseable {
+private class FakeReferenceSeriesServer(
+    private val failUsdHistory: Boolean = false
+) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-        createContext("/history", HistoryHandler)
+        createContext("/history", HistoryHandler(failUsdHistory))
         executor = null
     }
 
@@ -83,29 +159,38 @@ private class FakeReferenceSeriesServer : AutoCloseable {
         server.stop(0)
     }
 
-    private object HistoryHandler : HttpHandler {
+    private class HistoryHandler(
+        private val failUsdHistory: Boolean
+    ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
-            val body = when {
-                exchange.requestURI.path == "/history" ->
-                    """{"error":"Rate limit exceeded. Maximum 10 requests per hour."}"""
+            val path = exchange.requestURI.path
+            when {
+                path == "/history" -> {
+                    respond(exchange, """{"error":"Rate limit exceeded. Maximum 10 requests per hour."}""", status = 429)
+                    return
+                }
 
-                exchange.requestURI.path.contains("/history/GC%3DF") || exchange.requestURI.path.contains("/history/GC=F") ->
-                    """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}"""
+                failUsdHistory && (path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X")) -> {
+                    respond(exchange, """{"error":"Too many requests","retryAfterSeconds":60}""", status = 429)
+                    return
+                }
 
-                exchange.requestURI.path.contains("/history/PLN%3DX") || exchange.requestURI.path.contains("/history/PLN=X") ->
-                    """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}"""
+                path.contains("/history/GC%3DF") || path.contains("/history/GC=F") ->
+                    respond(exchange, """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}""")
 
-                else -> """{"prices":[]}"""
+                path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
+                    respond(exchange, """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}""")
+
+                else -> respond(exchange, """{"prices":[]}""")
             }
-            respond(exchange, body)
         }
     }
 }
 
-private fun respond(exchange: HttpExchange, body: String) {
+private fun respond(exchange: HttpExchange, body: String, status: Int = 200) {
     val bytes = body.toByteArray()
     exchange.responseHeaders.add("Content-Type", "application/json")
-    exchange.sendResponseHeaders(200, bytes.size.toLong())
+    exchange.sendResponseHeaders(status, bytes.size.toLong())
     exchange.responseBody.use { output ->
         output.write(bytes)
     }

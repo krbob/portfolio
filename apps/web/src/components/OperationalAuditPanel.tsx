@@ -142,6 +142,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
         <div className="space-y-3">
           {visibleEvents.map((event) => {
             const metadataSummary = buildMetadataSummary(event.metadata)
+            const metadataEntries = buildMetadataEntries(event.metadata, isPolish)
             const highImpact = isHighImpactAction(event.action)
             return (
               <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
@@ -164,6 +165,21 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
 
                 <p className="mt-2 text-sm text-zinc-300">{event.message}</p>
                 {metadataSummary ? <p className="text-sm text-zinc-500">{metadataSummary}</p> : null}
+                {metadataEntries.length > 0 ? (
+                  <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      {isPolish ? 'Szczegóły błędu i kontekstu' : 'Failure and context details'}
+                    </summary>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
+                      {metadataEntries.map(([label, value]) => (
+                        <div className="contents" key={label}>
+                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-600">{label}</dt>
+                          <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                ) : null}
                 {event.entityId ? <p className="mt-1 text-xs font-mono text-zinc-600">{event.entityId}</p> : null}
               </article>
             )
@@ -238,4 +254,65 @@ function buildMetadataSummary(metadata: Record<string, string>) {
   }
 
   return parts.length > 0 ? parts.join(' · ') : null
+}
+
+function buildMetadataEntries(metadata: Record<string, string>, isPolish: boolean): Array<[string, string]> {
+  const labels: Record<string, string> = {
+    upstream: isPolish ? 'Upstream' : 'Upstream',
+    operation: isPolish ? 'Operacja' : 'Operation',
+    symbol: isPolish ? 'Symbol' : 'Symbol',
+    instrumentName: isPolish ? 'Instrument' : 'Instrument',
+    valuationSource: isPolish ? 'Źródło wyceny' : 'Valuation source',
+    purchaseDate: isPolish ? 'Data zakupu' : 'Purchase date',
+    from: isPolish ? 'Od' : 'From',
+    to: isPolish ? 'Do' : 'To',
+    statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
+    responseBodyPreview: isPolish ? 'Treść odpowiedzi' : 'Response body',
+    reason: isPolish ? 'Powód' : 'Reason',
+    exceptionType: isPolish ? 'Typ wyjątku' : 'Exception type',
+    mode: isPolish ? 'Tryb' : 'Mode',
+    trigger: isPolish ? 'Trigger' : 'Trigger',
+    sourceLabel: isPolish ? 'Źródło' : 'Source',
+    sourceFileName: isPolish ? 'Plik źródłowy' : 'Source file',
+    profileName: isPolish ? 'Profil' : 'Profile',
+    createdCount: isPolish ? 'Utworzono' : 'Created',
+    skippedDuplicateCount: isPolish ? 'Pominięte duplikaty' : 'Skipped duplicates',
+    invalidRowCount: isPolish ? 'Niepoprawne wiersze' : 'Invalid rows',
+    transactionCount: isPolish ? 'Transakcje' : 'Transactions',
+    retentionCount: isPolish ? 'Retencja' : 'Retention',
+    safetyBackupFileName: isPolish ? 'Backup bezpieczeństwa' : 'Safety backup',
+    error: isPolish ? 'Błąd' : 'Error',
+    failureMessage: isPolish ? 'Komunikat błędu' : 'Failure message',
+  }
+
+  return Object.entries(metadata)
+    .filter(([, value]) => value.trim().length > 0)
+    .sort(([left], [right]) => metadataSortOrder(left) - metadataSortOrder(right) || left.localeCompare(right))
+    .map(([key, value]) => [labels[key] ?? humanizeMetadataKey(key), value])
+}
+
+function metadataSortOrder(key: string) {
+  const priority = [
+    'upstream',
+    'operation',
+    'symbol',
+    'instrumentName',
+    'purchaseDate',
+    'from',
+    'to',
+    'statusCode',
+    'responseBodyPreview',
+    'reason',
+    'failureMessage',
+  ]
+
+  const index = priority.indexOf(key)
+  return index === -1 ? priority.length : index
+}
+
+function humanizeMetadataKey(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/^\w/, (match) => match.toUpperCase())
 }

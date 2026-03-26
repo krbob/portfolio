@@ -30,7 +30,12 @@ class EdoCalculatorClient(
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
             throw MarketDataClientException(
-                "edo-calculator returned HTTP ${response.statusCode()} for purchase date ${terms.purchaseDate}."
+                message = "edo-calculator returned HTTP ${response.statusCode()} for purchase date ${terms.purchaseDate}.",
+                upstream = "edo-calculator",
+                operation = "value",
+                symbol = terms.purchaseDate.toString(),
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
             )
         }
 
@@ -55,7 +60,12 @@ class EdoCalculatorClient(
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
             throw MarketDataClientException(
-                "edo-calculator history returned HTTP ${response.statusCode()} for purchase date ${terms.purchaseDate}."
+                message = "edo-calculator history returned HTTP ${response.statusCode()} for purchase date ${terms.purchaseDate}.",
+                upstream = "edo-calculator",
+                operation = "history",
+                symbol = terms.purchaseDate.toString(),
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
             )
         }
 
@@ -78,7 +88,12 @@ class EdoCalculatorClient(
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
             throw MarketDataClientException(
-                "edo-calculator inflation returned HTTP ${response.statusCode()} for $from."
+                message = "edo-calculator inflation returned HTTP ${response.statusCode()} for $from.",
+                upstream = "edo-calculator",
+                operation = "inflation",
+                symbol = from.toString(),
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
             )
         }
 
@@ -100,7 +115,12 @@ class EdoCalculatorClient(
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
             throw MarketDataClientException(
-                "edo-calculator monthly inflation returned HTTP ${response.statusCode()} for $from..$untilExclusive."
+                message = "edo-calculator monthly inflation returned HTTP ${response.statusCode()} for $from..$untilExclusive.",
+                upstream = "edo-calculator",
+                operation = "monthly-inflation",
+                symbol = "$from..$untilExclusive",
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
             )
         }
 

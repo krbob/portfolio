@@ -13,6 +13,7 @@ import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
+import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -257,11 +258,13 @@ class SystemReadinessService(
                     message = message
                 )
             }.getOrElse { exception ->
+                val details = (exception as? MarketDataClientException)?.toReadinessDetails() ?: emptyMap()
                 SystemReadinessCheck(
                     key = key,
                     label = label,
                     status = ReadinessCheckStatus.WARN,
-                    message = exception.message ?: "$label probe failed."
+                    message = exception.message ?: "$label probe failed.",
+                    details = details
                 )
             }
         }
@@ -311,7 +314,8 @@ data class SystemReadinessCheck(
     val key: String,
     val label: String,
     val status: ReadinessCheckStatus,
-    val message: String
+    val message: String,
+    val details: Map<String, String> = emptyMap()
 )
 
 enum class SystemReadinessStatus {
@@ -325,4 +329,12 @@ enum class ReadinessCheckStatus {
     WARN,
     FAIL,
     INFO
+}
+
+private fun MarketDataClientException.toReadinessDetails(): Map<String, String> = buildMap {
+    upstream?.let { put("upstream", it) }
+    operation?.let { put("operation", it) }
+    symbol?.let { put("symbol", it) }
+    statusCode?.let { put("statusCode", it.toString()) }
+    responseBodyPreview?.let { put("responseBodyPreview", it) }
 }

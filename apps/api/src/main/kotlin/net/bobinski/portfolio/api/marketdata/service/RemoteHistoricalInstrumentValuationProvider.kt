@@ -11,7 +11,8 @@ import java.time.LocalDate
 
 class RemoteHistoricalInstrumentValuationProvider(
     private val config: MarketDataConfig,
-    private val stockAnalystClient: StockAnalystClient
+    private val stockAnalystClient: StockAnalystClient,
+    private val marketDataFailureAuditService: MarketDataFailureAuditService
 ) : HistoricalInstrumentValuationProvider {
     override suspend fun dailyPriceSeries(
         instrument: Instrument,
@@ -48,6 +49,18 @@ class RemoteHistoricalInstrumentValuationProvider(
                 to,
                 exception.message
             )
+            marketDataFailureAuditService.recordFailure(
+                upstream = "stock-analyst",
+                operation = "history",
+                reason = exception.message ?: "Market data request failed.",
+                symbol = instrument.symbol,
+                instrumentId = instrument.id.toString(),
+                instrumentName = instrument.name,
+                valuationSource = instrument.valuationSource.name,
+                from = from,
+                to = to,
+                exception = exception
+            )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
@@ -62,6 +75,18 @@ class RemoteHistoricalInstrumentValuationProvider(
                 from,
                 to,
                 exception
+            )
+            marketDataFailureAuditService.recordFailure(
+                upstream = "stock-analyst",
+                operation = "history",
+                reason = exception.message ?: "Unexpected market data error.",
+                symbol = instrument.symbol,
+                instrumentId = instrument.id.toString(),
+                instrumentName = instrument.name,
+                valuationSource = instrument.valuationSource.name,
+                from = from,
+                to = to,
+                exception = exception
             )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,

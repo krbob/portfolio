@@ -39,6 +39,7 @@ import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
+import net.bobinski.portfolio.api.marketdata.service.MarketDataFailureAuditService
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteEdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
@@ -95,26 +96,30 @@ fun appModule(
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
             config = get(),
-            stockAnalystClient = get()
+            stockAnalystClient = get(),
+            marketDataFailureAuditService = get()
         )
     }
     single<HistoricalInstrumentValuationProvider> {
         RemoteHistoricalInstrumentValuationProvider(
             config = get(),
-            stockAnalystClient = get()
+            stockAnalystClient = get(),
+            marketDataFailureAuditService = get()
         )
     }
     single<EdoLotValuationProvider> {
         RemoteEdoLotValuationProvider(
             config = get(),
-            edoCalculatorClient = get()
+            edoCalculatorClient = get(),
+            marketDataFailureAuditService = get()
         )
     }
     single<ReferenceSeriesProvider> {
         RemoteReferenceSeriesProvider(
             config = get(),
             stockAnalystClient = get(),
-            goldApiClient = get()
+            goldApiClient = get(),
+            marketDataFailureAuditService = get()
         )
     }
     single<FxRateHistoryProvider> {
@@ -160,6 +165,7 @@ fun appModule(
     single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
     single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
+    single { MarketDataFailureAuditService(auditLogService = get()) }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
     single { InstrumentService(instrumentRepository = get(), auditLogService = get(), clock = get()) }
     single {

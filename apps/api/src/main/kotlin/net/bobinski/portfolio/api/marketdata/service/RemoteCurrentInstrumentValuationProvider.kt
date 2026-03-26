@@ -9,7 +9,8 @@ import java.math.RoundingMode
 
 class RemoteCurrentInstrumentValuationProvider(
     private val config: MarketDataConfig,
-    private val stockAnalystClient: StockAnalystClient
+    private val stockAnalystClient: StockAnalystClient,
+    private val marketDataFailureAuditService: MarketDataFailureAuditService
 ) : CurrentInstrumentValuationProvider {
     override suspend fun value(instrument: Instrument): InstrumentValuationResult {
         if (!config.enabled) {
@@ -32,11 +33,31 @@ class RemoteCurrentInstrumentValuationProvider(
                 )
             }
         } catch (exception: MarketDataClientException) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "stock-analyst",
+                operation = "quote",
+                reason = exception.message ?: "Market data request failed.",
+                symbol = instrument.symbol,
+                instrumentId = instrument.id.toString(),
+                instrumentName = instrument.name,
+                valuationSource = instrument.valuationSource.name,
+                exception = exception
+            )
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "stock-analyst",
+                operation = "quote",
+                reason = exception.message ?: "Unexpected market data error.",
+                symbol = instrument.symbol,
+                instrumentId = instrument.id.toString(),
+                instrumentName = instrument.name,
+                valuationSource = instrument.valuationSource.name,
+                exception = exception
+            )
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."

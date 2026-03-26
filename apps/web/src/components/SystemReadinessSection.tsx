@@ -59,6 +59,23 @@ export function SystemReadinessSection() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">{check.message}</p>
+                {check.details && Object.keys(check.details).length > 0 ? (
+                  <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      {isPolish ? 'Szczegóły upstreamu' : 'Upstream details'}
+                    </summary>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
+                      {Object.entries(check.details).map(([key, value]) => (
+                        <div className="contents" key={key}>
+                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-600">
+                            {labelDetailKey(key, isPolish)}
+                          </dt>
+                          <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                ) : null}
               </article>
             ))}
           </div>
@@ -111,4 +128,16 @@ function labelCheckStatus(status: string, isPolish: boolean) {
     default:
       return status
   }
+}
+
+function labelDetailKey(key: string, isPolish: boolean) {
+  const labels: Record<string, string> = {
+    upstream: isPolish ? 'Upstream' : 'Upstream',
+    operation: isPolish ? 'Operacja' : 'Operation',
+    symbol: isPolish ? 'Symbol' : 'Symbol',
+    statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
+    responseBodyPreview: isPolish ? 'Treść odpowiedzi' : 'Response body',
+  }
+
+  return labels[key] ?? key
 }

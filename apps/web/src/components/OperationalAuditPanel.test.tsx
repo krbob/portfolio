@@ -13,6 +13,24 @@ describe('OperationalAuditPanel', () => {
     vi.mocked(usePortfolioAuditEvents).mockReturnValue({
       data: [
         {
+          id: 'market-data-1',
+          category: 'SYSTEM',
+          action: 'MARKET_DATA_REQUEST_FAILED',
+          outcome: 'FAILURE',
+          entityType: 'MARKET_DATA',
+          entityId: 'VWRA.L',
+          message: 'Stock-analyst history failed for VWRA.L.',
+          metadata: {
+            upstream: 'stock-analyst',
+            operation: 'history',
+            symbol: 'VWRA.L',
+            statusCode: '403',
+            responseBodyPreview: '{"error":"Forbidden"}',
+            reason: 'stock-analyst history returned HTTP 403 for symbol VWRA.L.',
+          },
+          occurredAt: '2026-03-13T19:00:00Z',
+        },
+        {
           id: 'backup-1',
           category: 'BACKUPS',
           action: 'BACKUP_RESTORED',
@@ -48,8 +66,12 @@ describe('OperationalAuditPanel', () => {
     render(<OperationalAuditPanel />)
 
     expect(screen.getByText('Events in window')).toBeInTheDocument()
+    expect(screen.getByText(/stock-analyst history failed for vwra\.l\./i)).toBeInTheDocument()
     expect(screen.getByText(/restored backup portfolio-backup-1\.json in replace mode\./i)).toBeInTheDocument()
     expect(screen.getByText(/imported 5 transaction rows\./i)).toBeInTheDocument()
+    expect(screen.getAllByText('Failure and context details').length).toBeGreaterThan(0)
+    expect(screen.getByText('HTTP status')).toBeInTheDocument()
+    expect(screen.getByText('403')).toBeInTheDocument()
 
     const user = userEvent.setup()
     await user.selectOptions(screen.getByLabelText('Category'), 'BACKUPS')

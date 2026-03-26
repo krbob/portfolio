@@ -109,7 +109,8 @@ data class ReadinessCheckResponse(
     val key: String,
     val label: String,
     val status: String,
-    val message: String
+    val message: String,
+    val details: Map<String, String> = emptyMap()
 )
 
 @Serializable
@@ -135,5 +136,6 @@ private fun SystemReadinessCheck.toResponse(): ReadinessCheckResponse = Readines
     key = key,
     label = label,
     status = status.name,
-    message = message
+    message = message,
+    details = details
 )

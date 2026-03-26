@@ -31,7 +31,14 @@ class StockAnalystClient(
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
-            throw MarketDataClientException("stock-analyst returned HTTP ${response.statusCode()} for symbol $symbol.")
+            throw MarketDataClientException(
+                message = "stock-analyst returned HTTP ${response.statusCode()} for symbol $symbol.",
+                upstream = "stock-analyst",
+                operation = "quote",
+                symbol = symbol,
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
+            )
         }
 
         val payload = json.decodeFromString<StockAnalystQuoteResponse>(response.body())
@@ -61,7 +68,14 @@ class StockAnalystClient(
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
-            throw MarketDataClientException("stock-analyst history returned HTTP ${response.statusCode()} for symbol $symbol.")
+            throw MarketDataClientException(
+                message = "stock-analyst history returned HTTP ${response.statusCode()} for symbol $symbol.",
+                upstream = "stock-analyst",
+                operation = "history",
+                symbol = symbol,
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
+            )
         }
 
         val payload = json.decodeFromString<StockAnalystHistoryResponse>(response.body())

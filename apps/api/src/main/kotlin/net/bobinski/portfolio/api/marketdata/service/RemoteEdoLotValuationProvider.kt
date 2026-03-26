@@ -8,7 +8,8 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 
 class RemoteEdoLotValuationProvider(
     private val config: MarketDataConfig,
-    private val edoCalculatorClient: EdoCalculatorClient
+    private val edoCalculatorClient: EdoCalculatorClient,
+    private val marketDataFailureAuditService: MarketDataFailureAuditService
 ) : EdoLotValuationProvider {
     override suspend fun value(lotTerms: EdoLotTerms): InstrumentValuationResult {
         if (!config.enabled) {
@@ -27,11 +28,25 @@ class RemoteEdoLotValuationProvider(
                 )
             )
         } catch (exception: MarketDataClientException) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "edo-calculator",
+                operation = "value",
+                reason = exception.message ?: "Market data request failed.",
+                purchaseDate = lotTerms.purchaseDate,
+                exception = exception
+            )
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "edo-calculator",
+                operation = "value",
+                reason = exception.message ?: "Unexpected market data error.",
+                purchaseDate = lotTerms.purchaseDate,
+                exception = exception
+            )
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
@@ -61,11 +76,29 @@ class RemoteEdoLotValuationProvider(
                 prices = edoCalculatorClient.historyInPln(terms = lotTerms, from = start, to = to)
             )
         } catch (exception: MarketDataClientException) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "edo-calculator",
+                operation = "history",
+                reason = exception.message ?: "Market data request failed.",
+                purchaseDate = lotTerms.purchaseDate,
+                from = start,
+                to = to,
+                exception = exception
+            )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            marketDataFailureAuditService.recordFailure(
+                upstream = "edo-calculator",
+                operation = "history",
+                reason = exception.message ?: "Unexpected market data error.",
+                purchaseDate = lotTerms.purchaseDate,
+                from = start,
+                to = to,
+                exception = exception
+            )
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."

@@ -36,7 +36,14 @@ class GoldApiClient(
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) {
-            throw MarketDataClientException("gold-api history returned HTTP ${response.statusCode()} for symbol $symbol.")
+            throw MarketDataClientException(
+                message = "gold-api history returned HTTP ${response.statusCode()} for symbol $symbol.",
+                upstream = "gold-api",
+                operation = "history",
+                symbol = symbol,
+                statusCode = response.statusCode(),
+                responseBodyPreview = responseBodyPreview(response.body())
+            )
         }
 
         val payload = json.parseToJsonElement(response.body()).jsonArray

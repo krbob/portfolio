@@ -1626,6 +1626,9 @@ export interface components {
             label: string;
             status: string;
             message: string;
+            details?: {
+                [key: string]: string;
+            };
         };
         /** net.bobinski.portfolio.api.route.ReadinessResponse */
         ReadinessResponse: {

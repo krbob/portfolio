@@ -13,7 +13,8 @@ import java.util.TreeMap
 class RemoteReferenceSeriesProvider(
     private val config: MarketDataConfig,
     private val stockAnalystClient: StockAnalystClient,
-    private val goldApiClient: GoldApiClient
+    private val goldApiClient: GoldApiClient,
+    private val marketDataFailureAuditService: MarketDataFailureAuditService
 ) : ReferenceSeriesProvider {
     override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         loadSeries(
@@ -74,6 +75,15 @@ class RemoteReferenceSeriesProvider(
             to,
             exception.message
         )
+        marketDataFailureAuditService.recordFailure(
+            upstream = "stock-analyst",
+            operation = "reference-history",
+            reason = exception.message ?: "Reference market data request failed.",
+            symbol = symbol,
+            from = from,
+            to = to,
+            exception = exception
+        )
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
     } catch (exception: Exception) {
         logger.warn(
@@ -83,6 +93,15 @@ class RemoteReferenceSeriesProvider(
             from,
             to,
             exception
+        )
+        marketDataFailureAuditService.recordFailure(
+            upstream = "stock-analyst",
+            operation = "reference-history",
+            reason = exception.message ?: "Unexpected reference market data error.",
+            symbol = symbol,
+            from = from,
+            to = to,
+            exception = exception
         )
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected reference market data error.")
     }
@@ -123,9 +142,27 @@ class RemoteReferenceSeriesProvider(
         }
     } catch (exception: MarketDataClientException) {
         logger.warn("Gold spot series failed in {}..{}: {}", from, to, exception.message)
+        marketDataFailureAuditService.recordFailure(
+            upstream = "gold-api",
+            operation = "history",
+            reason = exception.message ?: "Gold spot history request failed.",
+            symbol = "XAU",
+            from = from,
+            to = to,
+            exception = exception
+        )
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: Exception) {
         logger.warn("Unexpected gold spot series error in {}..{}", from, to, exception)
+        marketDataFailureAuditService.recordFailure(
+            upstream = "gold-api",
+            operation = "history",
+            reason = exception.message ?: "Unexpected gold spot history error.",
+            symbol = "XAU",
+            from = from,
+            to = to,
+            exception = exception
+        )
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected gold spot history error.")
     }
 

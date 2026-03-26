@@ -80,6 +80,14 @@ export function PortfolioDataQualitySection() {
               </article>
             ))}
           </div>
+
+          {summary.checks.some((check) => check.status === 'WARN') ? (
+            <p className="mt-4 text-sm text-zinc-500">
+              {isPolish
+                ? 'Szczegóły awarii upstreamów znajdziesz niżej w audycie operacyjnym i panelu gotowości środowiska.'
+                : 'Detailed upstream failures appear below in the operational audit and runtime readiness panels.'}
+            </p>
+          ) : null}
         </>
       )}
     </Card>
