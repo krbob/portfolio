@@ -5,7 +5,7 @@ import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useReorderAccounts } from '../hooks/use-write-model'
-import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
+import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatNumber, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType, labelAssetClass } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
@@ -476,14 +476,14 @@ function AccountDetailsCard({
                   <div>
                     <p className="font-medium text-zinc-100">{holding.instrumentName}</p>
                     <p className="text-xs text-zinc-500">
-                      {labelAssetClass(holding.assetClass)} · {holding.quantity} {isPolish ? 'szt.' : 'units'}
+                      {labelAssetClass(holding.assetClass)} · {formatHoldingQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                     <p className="text-xs text-zinc-500">
                       {isMarketValuedStatus(holding.valuationStatus)
-                        ? `${formatPercent(weightPct)} · ${formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')}`
+                        ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)}`
                         : `${formatPercent(weightPct)} · ${isPolish ? 'księgowo' : 'book basis'}`}
                     </p>
                   </div>
@@ -640,6 +640,24 @@ function describeAccountMetricGain(account: PortfolioAccountSummary, isPolish: b
   }
 
   return formatSignedCurrencyPln(account.totalUnrealizedGainPln)
+}
+
+function formatHoldingGainPreview(value: string | null | undefined, isPolish: boolean) {
+  return value == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(value)
+}
+
+function formatHoldingQuantity(value: string | number) {
+  const amount = typeof value === 'number' ? value : Number(value)
+
+  if (!Number.isFinite(amount)) {
+    return formatNumber(value, { maximumFractionDigits: 2 })
+  }
+
+  if (Number.isInteger(amount)) {
+    return formatNumber(amount, { maximumFractionDigits: 0 })
+  }
+
+  return formatNumber(amount, { maximumFractionDigits: 2 })
 }
 
 function toGainPct(currentValuePln: string, bookValuePln: string) {

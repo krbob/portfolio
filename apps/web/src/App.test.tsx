@@ -1107,6 +1107,214 @@ describe('App', () => {
     expect((await screen.findAllByText(/book basis/i)).length).toBeGreaterThan(0)
   })
 
+  it('does not fake zero pnl in account holding previews when gain payload is missing', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(JSON.stringify({ authEnabled: false, authenticated: true, mode: 'DISABLED' }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(JSON.stringify({
+          name: 'Portfolio',
+          stage: 'dev',
+          version: '0.1.0-dev',
+          auth: { enabled: false, mode: 'DISABLED' },
+          stack: {
+            web: 'React 19 + TypeScript + Vite',
+            api: 'Kotlin 2.3 + Ktor 3',
+            database: 'SQLite',
+          },
+          capabilities: ['Transaction-based portfolio accounting'],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(JSON.stringify({ status: 'READY', checkedAt: '2026-03-13T12:00:00Z', checks: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/accounts')) {
+        return new Response(JSON.stringify([
+          {
+            accountId: 'acc-1',
+            accountName: 'Primary',
+            institution: 'Broker',
+            type: 'BROKERAGE',
+            baseCurrency: 'PLN',
+            valuationState: 'MARK_TO_MARKET',
+            totalBookValuePln: '2000.00',
+            totalCurrentValuePln: '2200.00',
+            investedBookValuePln: '1000.00',
+            investedCurrentValuePln: '1200.00',
+            cashBalancePln: '1000.00',
+            cashBalances: [{ currency: 'PLN', amount: '1000.00', bookValuePln: '1000.00' }],
+            netContributionsPln: '2000.00',
+            netContributionBalances: [{ currency: 'PLN', amount: '2000.00', bookValuePln: '2000.00' }],
+            totalUnrealizedGainPln: '200.00',
+            portfolioWeightPct: '100.00',
+            activeHoldingCount: 1,
+            valuedHoldingCount: 1,
+            valuationIssueCount: 0,
+          },
+        ]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([
+          {
+            accountId: 'acc-1',
+            accountName: 'Primary',
+            instrumentId: 'ins-1',
+            instrumentName: 'VWRA',
+            kind: 'ETF',
+            assetClass: 'EQUITIES',
+            currency: 'USD',
+            quantity: '10.0000',
+            averageCostPerUnitPln: '100.00',
+            costBasisPln: '1000.00',
+            bookValuePln: '1000.00',
+            currentPricePln: '120.00',
+            currentValuePln: '1200.00',
+            unrealizedGainPln: null,
+            valuedAt: '2026-03-20',
+            valuationStatus: 'VALUED',
+            valuationIssue: null,
+            transactionCount: 2,
+          },
+        ]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in account holding preview test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/accounts']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByRole('heading', { name: /^accounts$/i })).length).toBeGreaterThan(0)
+    const holdingTitle = (await screen.findAllByText(/^VWRA$/i))[0]!
+    const holdingCard = holdingTitle.closest('div')?.parentElement
+    expect(holdingCard).not.toBeNull()
+    expect(within(holdingCard as HTMLElement).getByText(/n\/a/i)).toBeInTheDocument()
+    expect(within(holdingCard as HTMLElement).queryByText(/\+.*0(\.00)?/i)).not.toBeInTheDocument()
+    expect(within(holdingCard as HTMLElement).getByText(/10 units/i)).toBeInTheDocument()
+  })
+
+  it('does not fake zero pnl in instrument account splits when gain payload is missing', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(JSON.stringify({ authEnabled: false, authenticated: true, mode: 'DISABLED' }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(JSON.stringify({
+          name: 'Portfolio',
+          stage: 'dev',
+          version: '0.1.0-dev',
+          auth: { enabled: false, mode: 'DISABLED' },
+          stack: {
+            web: 'React 19 + TypeScript + Vite',
+            api: 'Kotlin 2.3 + Ktor 3',
+            database: 'SQLite',
+          },
+          capabilities: ['Transaction-based portfolio accounting'],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(JSON.stringify({ status: 'READY', checkedAt: '2026-03-13T12:00:00Z', checks: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([
+          {
+            accountId: 'acc-1',
+            accountName: 'Primary',
+            instrumentId: 'ins-1',
+            instrumentName: 'VWRA',
+            kind: 'ETF',
+            assetClass: 'EQUITIES',
+            currency: 'USD',
+            quantity: '10.0000',
+            averageCostPerUnitPln: '100.00',
+            costBasisPln: '1000.00',
+            bookValuePln: '1000.00',
+            currentPricePln: '120.00',
+            currentValuePln: '1200.00',
+            unrealizedGainPln: null,
+            valuedAt: '2026-03-20',
+            valuationStatus: 'VALUED',
+            valuationIssue: null,
+            transactionCount: 2,
+          },
+        ]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(JSON.stringify([
+          {
+            id: 'ins-1',
+            name: 'VWRA',
+            kind: 'ETF',
+            assetClass: 'EQUITIES',
+            symbol: 'VWRA.L',
+            currency: 'USD',
+            valuationSource: 'STOCK_ANALYST',
+            edoTerms: null,
+            isActive: true,
+            createdAt: '2026-03-01T00:00:00Z',
+            updatedAt: '2026-03-01T00:00:00Z',
+          },
+        ]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in instrument holding preview test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/instruments']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByRole('heading', { name: /^instruments$/i })).length).toBeGreaterThan(0)
+    const accountName = (await screen.findAllByText(/^Primary$/i))[0]!
+    const holdingCard = accountName.closest('div')?.parentElement
+    expect(holdingCard).not.toBeNull()
+    expect(within(holdingCard as HTMLElement).getByText(/n\/a/i)).toBeInTheDocument()
+    expect(within(holdingCard as HTMLElement).queryByText(/\+.*0(\.00)?/i)).not.toBeInTheDocument()
+    expect(within(holdingCard as HTMLElement).getByText(/10 units/i)).toBeInTheDocument()
+  })
+
   it('sorts instrument rows and rounds displayed quantities', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)

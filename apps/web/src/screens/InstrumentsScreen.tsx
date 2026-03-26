@@ -391,7 +391,7 @@ function InstrumentDetailsCard({
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(holding.valuationStatus)
-                      ? formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')
+                      ? formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)
                       : isPolish
                         ? 'Księgowo'
                         : 'Book basis'}
@@ -422,7 +422,7 @@ function InstrumentDetailsCard({
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(lot.valuationStatus)
-                      ? formatSignedCurrencyPln(lot.unrealizedGainPln ?? '0')
+                      ? formatHoldingGainPreview(lot.unrealizedGainPln, isPolish)
                       : isPolish
                         ? 'Księgowo'
                         : 'Book basis'}
@@ -704,6 +704,10 @@ function formatQuantity(value: string | number) {
   }
 
   return formatNumber(amount, { maximumFractionDigits: 2 })
+}
+
+function formatHoldingGainPreview(value: string | null | undefined, isPolish: boolean) {
+  return value == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(value)
 }
 
 function asNumber(value: string | number | null | undefined) {
