@@ -5,7 +5,7 @@ import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useReorderAccounts } from '../hooks/use-write-model'
-import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType, labelAssetClass } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
@@ -179,6 +179,7 @@ export function AccountsScreen() {
                     {orderedAccounts.map((account) => {
                       const gainPct = toGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
                       const isSelected = selectedAccount?.accountId === account.accountId
+                      const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
                       return (
                         <tr
                           className={`${tr} cursor-pointer ${draggedAccountId === account.accountId ? 'opacity-60' : ''} ${dropTargetAccountId === account.accountId ? 'bg-zinc-950/30' : ''} ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
@@ -252,7 +253,9 @@ export function AccountsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.cashBalancePln)}</p>
                               <p className="text-xs text-zinc-500">
-                                {isPolish ? 'Wpłaty netto' : 'Net contributions'} {formatCurrencyPln(account.netContributionsPln)}
+                                {hasMeaningfulCurrencyBreakdown(account.cashBalances)
+                                  ? cashBreakdown
+                                  : `${isPolish ? 'Wpłaty netto' : 'Net contributions'} ${formatCurrencyPln(account.netContributionsPln)}`}
                               </p>
                             </div>
                           </td>
@@ -382,10 +385,15 @@ function AccountDetailsCard({
   holdings: PortfolioHolding[]
   isPolish: boolean
 }) {
+  const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
+  const contributionBreakdown = formatCurrencyBreakdown(account.netContributionBalances)
   const largestHolding = holdings[0] ?? null
   const cashSharePct = asNumber(account.totalCurrentValuePln) > 0
     ? (asNumber(account.cashBalancePln) / asNumber(account.totalCurrentValuePln)) * 100
     : 0
+  const showBreakdownPanels =
+    hasMeaningfulCurrencyBreakdown(account.cashBalances) ||
+    hasMeaningfulCurrencyBreakdown(account.netContributionBalances)
 
   return (
     <Card>
@@ -408,7 +416,7 @@ function AccountDetailsCard({
         <AccountDetailMetric
           label={isPolish ? 'Gotówka' : 'Cash'}
           value={formatCurrencyPln(account.cashBalancePln)}
-          detail={formatPercent(cashSharePct)}
+          detail={cashBreakdown ?? formatPercent(cashSharePct)}
         />
         <AccountDetailMetric
           label={isPolish ? 'Zainwestowane' : 'Invested'}
@@ -418,10 +426,25 @@ function AccountDetailsCard({
         <AccountDetailMetric
           label={isPolish ? 'Wpłaty netto' : 'Net contributions'}
           value={formatCurrencyPln(account.netContributionsPln)}
-          detail={describeAccountMetricGain(account, isPolish)}
+          detail={contributionBreakdown ?? describeAccountMetricGain(account, isPolish)}
           tone={account.valuedHoldingCount === 0 ? 'default' : asNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
         />
       </div>
+
+      {showBreakdownPanels && (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <CurrencyBreakdownCard
+            title={isPolish ? 'Salda natywne' : 'Native cash balances'}
+            items={account.cashBalances}
+            isPolish={isPolish}
+          />
+          <CurrencyBreakdownCard
+            title={isPolish ? 'Wpłaty netto wg waluty' : 'Net contributions by currency'}
+            items={account.netContributionBalances}
+            isPolish={isPolish}
+          />
+        </div>
+      )}
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
@@ -494,6 +517,45 @@ function AccountDetailMetric({
         {value}
       </p>
       {detail && <p className="mt-1 text-xs text-zinc-500">{detail}</p>}
+    </div>
+  )
+}
+
+function CurrencyBreakdownCard({
+  title,
+  items,
+  isPolish,
+}: {
+  title: string
+  items: PortfolioAccountSummary['cashBalances'] | PortfolioAccountSummary['netContributionBalances'] | undefined
+  isPolish: boolean
+}) {
+  const rows = items ?? []
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-zinc-500">
+          {isPolish ? 'Brak danych walutowych.' : 'No currency data yet.'}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {rows.map((row) => (
+            <div className="flex items-center justify-between gap-3" key={`${title}-${row.currency}`}>
+              <span className="text-sm text-zinc-400">{row.currency}</span>
+              <div className="text-right">
+                <p className="tabular-nums text-sm font-medium text-zinc-100">
+                  {formatCurrency(row.amount, row.currency)}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  {isPolish ? 'księgowo' : 'book'} {formatCurrencyPln(row.bookValuePln)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

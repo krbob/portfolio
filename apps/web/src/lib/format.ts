@@ -36,6 +36,42 @@ export function formatCurrency(
   return formatterForCurrency(currency).format(amount)
 }
 
+export function formatCurrencyBreakdown(
+  items:
+    | Array<{
+      currency: string
+      amount: string | number | null | undefined
+    }>
+    | null
+    | undefined,
+) {
+  if (!items || items.length === 0) {
+    return undefined
+  }
+
+  const formatted = items
+    .map((item) => formatCurrency(item.amount, item.currency))
+    .filter((value) => value !== unavailableLabel())
+
+  return formatted.length > 0 ? formatted.join(' · ') : undefined
+}
+
+export function hasMeaningfulCurrencyBreakdown(
+  items:
+    | Array<{
+      currency: string
+      amount: string | number | null | undefined
+    }>
+    | null
+    | undefined,
+) {
+  if (!items || items.length === 0) {
+    return false
+  }
+
+  return items.length > 1 || items.some((item) => item.currency !== 'PLN')
+}
+
 export function formatSignedCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {

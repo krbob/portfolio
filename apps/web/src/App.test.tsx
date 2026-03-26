@@ -643,7 +643,15 @@ describe('App', () => {
               investedBookValuePln: '1005.00',
               investedCurrentValuePln: '1200.00',
               cashBalancePln: '995.00',
+              cashBalances: [
+                { currency: 'PLN', amount: '700.00', bookValuePln: '700.00' },
+                { currency: 'USD', amount: '75.00', bookValuePln: '295.00' },
+              ],
               netContributionsPln: '2000.00',
+              netContributionBalances: [
+                { currency: 'PLN', amount: '1500.00', bookValuePln: '1500.00' },
+                { currency: 'USD', amount: '125.00', bookValuePln: '500.00' },
+              ],
               totalUnrealizedGainPln: '195.00',
               portfolioWeightPct: '81.45',
               activeHoldingCount: 1,
@@ -662,7 +670,9 @@ describe('App', () => {
               investedBookValuePln: '0.00',
               investedCurrentValuePln: '0.00',
               cashBalancePln: '500.00',
+              cashBalances: [{ currency: 'PLN', amount: '500.00', bookValuePln: '500.00' }],
               netContributionsPln: '500.00',
+              netContributionBalances: [{ currency: 'PLN', amount: '500.00', bookValuePln: '500.00' }],
               totalUnrealizedGainPln: '0.00',
               portfolioWeightPct: '18.55',
               activeHoldingCount: 0,
@@ -734,6 +744,15 @@ describe('App', () => {
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/top positions/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/largest line/i)).length).toBeGreaterThan(0)
+    const nativeCashBalancesHeading = await screen.findByText(/native cash balances/i)
+    const nativeCashBalancesCard = nativeCashBalancesHeading.closest('div')
+    expect(nativeCashBalancesCard).not.toBeNull()
+    expect(within(nativeCashBalancesCard as HTMLElement).getByText(/^USD$/i)).toBeInTheDocument()
+
+    const netContributionsByCurrencyHeading = await screen.findByText(/net contributions by currency/i)
+    const netContributionsByCurrencyCard = netContributionsByCurrencyHeading.closest('div')
+    expect(netContributionsByCurrencyCard).not.toBeNull()
+    expect(within(netContributionsByCurrencyCard as HTMLElement).getByText(/^USD$/i)).toBeInTheDocument()
 
     fireEvent.click(await screen.findByText(/^reserve$/i))
 

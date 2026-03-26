@@ -6,7 +6,7 @@ import { PageHeader } from '../components/layout'
 import { StatCard, Badge, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
-import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass } from '../lib/labels'
 import { card } from '../lib/styles'
@@ -71,6 +71,11 @@ export function DashboardScreen() {
   const equityPct = overview && totalCurrentValue > 0 ? (Number(displayedEquityValuePln) / totalCurrentValue) * 100 : 0
   const bondPct = overview && totalCurrentValue > 0 ? (Number(displayedBondValuePln) / totalCurrentValue) * 100 : 0
   const cashPct = overview && totalCurrentValue > 0 ? (Number(displayedCashValuePln) / totalCurrentValue) * 100 : 0
+  const cashBreakdownSubtitle = hasMeaningfulCurrencyBreakdown(overview?.cashBalances) ? formatCurrencyBreakdown(overview?.cashBalances)
+    : undefined
+  const contributionBreakdownSubtitle = hasMeaningfulCurrencyBreakdown(overview?.netContributionBalances)
+    ? formatCurrencyBreakdown(overview?.netContributionBalances)
+    : undefined
 
   const configuredBuckets = allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? []
   const mostOffTargetBucket = useMemo(() => {
@@ -456,10 +461,12 @@ export function DashboardScreen() {
         <StatCard
           label={isPolish ? 'Wpłaty netto' : 'Net Contributions'}
           value={formatCurrencyPln(overview.netContributionsPln)}
+          subtitle={contributionBreakdownSubtitle}
         />
         <StatCard
           label={isPolish ? 'Saldo gotówki' : 'Cash Balance'}
           value={formatCurrencyPln(overview.cashBalancePln)}
+          subtitle={cashBreakdownSubtitle}
         />
         <StatCard
           label={isPolish ? 'Podstawa wyceny' : 'Valuation basis'}
@@ -497,6 +504,7 @@ function driftTone(value: string | null | undefined) {
   }
   return 'text-red-400'
 }
+
 
 function gapTone(value: string | null | undefined) {
   if (value == null) {
