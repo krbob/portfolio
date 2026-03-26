@@ -311,6 +311,9 @@ npm run build
 
 cd ../..
 ./scripts/smoke-test-sqlite-stack.sh
+PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst.example/api \
+PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example \
+./scripts/smoke-test-remote-market-data-stack.sh
 ```
 
 ## Related services
