@@ -36,7 +36,7 @@ create table transactions (
     id text primary key,
     account_id text not null references accounts(id) on delete restrict,
     instrument_id text references instruments(id) on delete restrict,
-    type text not null check (type in ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION')),
+    type text not null check (type in ('BUY', 'SELL', 'REDEEM', 'DEPOSIT', 'WITHDRAWAL', 'FEE', 'TAX', 'INTEREST', 'CORRECTION')),
     trade_date text not null,
     settlement_date text,
     quantity text,
@@ -56,7 +56,7 @@ create table transactions (
     check (fx_rate_to_pln is null or (trim(fx_rate_to_pln) <> '' and cast(fx_rate_to_pln as real) > 0)),
     check (
         case
-            when type in ('BUY', 'SELL') then
+            when type in ('BUY', 'SELL', 'REDEEM') then
                 instrument_id is not null
                 and quantity is not null
                 and trim(quantity) <> ''

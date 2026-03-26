@@ -82,6 +82,25 @@ class JdbcWriteRepositoriesTest {
         }
     }
 
+    @Test
+    fun `sqlite transaction repository persists redeem transactions on fresh schema`() = runBlocking {
+        sqliteDatabase { dataSource ->
+            val accountRepository = JdbcAccountRepository(dataSource)
+            val instrumentRepository = JdbcInstrumentRepository(dataSource)
+            val transactionRepository = JdbcTransactionRepository(dataSource)
+
+            val account = account()
+            val instrument = edoInstrument()
+            val redeemTransaction = redeemTransaction(account.id, instrument.id)
+
+            accountRepository.save(account)
+            instrumentRepository.save(instrument)
+            transactionRepository.save(redeemTransaction)
+
+            assertEquals(redeemTransaction, transactionRepository.get(redeemTransaction.id))
+        }
+    }
+
     private fun sqliteDatabase(block: suspend (javax.sql.DataSource) -> Unit) {
         val directory = createTempDirectory("portfolio-sqlite-write-repositories-test")
         val databasePath = directory.resolve("portfolio.db")
@@ -153,6 +172,25 @@ class JdbcWriteRepositoriesTest {
         notes = "Initial EDO purchase",
         createdAt = Instant.parse("2026-03-01T12:05:00Z"),
         updatedAt = Instant.parse("2026-03-01T12:05:00Z")
+    )
+
+    private fun redeemTransaction(accountId: UUID, instrumentId: UUID) = Transaction(
+        id = UUID.fromString("40000000-0000-0000-0000-000000000002"),
+        accountId = accountId,
+        instrumentId = instrumentId,
+        type = TransactionType.REDEEM,
+        tradeDate = LocalDate.parse("2026-03-15"),
+        settlementDate = LocalDate.parse("2026-03-15"),
+        quantity = BigDecimal("4"),
+        unitPrice = BigDecimal("101.50"),
+        grossAmount = BigDecimal("406.00"),
+        feeAmount = BigDecimal("0.00"),
+        taxAmount = BigDecimal("6.50"),
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "Maturity redemption",
+        createdAt = Instant.parse("2026-03-15T12:05:00Z"),
+        updatedAt = Instant.parse("2026-03-15T12:05:00Z")
     )
 
     private fun portfolioTarget() = PortfolioTarget(
