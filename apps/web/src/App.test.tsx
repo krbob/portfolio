@@ -2120,308 +2120,318 @@ describe('App', () => {
     const scrollIntoViewMock = vi.fn()
     const originalScrollIntoView = Element.prototype.scrollIntoView
     Element.prototype.scrollIntoView = scrollIntoViewMock
+    try {
+      globalThis.fetch = vi.fn(async (input) => {
+        const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
-    globalThis.fetch = vi.fn(async (input) => {
-      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
-
-      if (url.includes('/api/v1/auth/session')) {
-        return new Response(
-          JSON.stringify({
-            authEnabled: false,
-            authenticated: true,
-            mode: 'DISABLED',
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/meta')) {
-        return new Response(
-          JSON.stringify({
-            name: 'Portfolio',
-            stage: 'dev',
-            version: '0.1.0-dev',
-            auth: {
-              enabled: false,
+        if (url.includes('/api/v1/auth/session')) {
+          return new Response(
+            JSON.stringify({
+              authEnabled: false,
+              authenticated: true,
               mode: 'DISABLED',
-            },
-            stack: {
-              web: 'React 19 + TypeScript + Vite',
-              api: 'Kotlin 2.3 + Ktor 3',
-              database: 'SQLite',
-            },
-            capabilities: ['Transaction-based portfolio accounting'],
-          }),
-          { status: 200 },
-        )
-      }
+            }),
+            { status: 200 },
+          )
+        }
 
-      if (url.includes('/api/v1/readiness')) {
-        return new Response(
-          JSON.stringify({
-            status: 'READY',
-            checkedAt: '2026-03-13T12:00:00Z',
-            checks: [],
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/portfolio/allocation')) {
-        return new Response(
-          JSON.stringify({
-            asOf: '2026-03-13',
-            valuationState: 'MARK_TO_MARKET',
-            configured: true,
-            toleranceBandPctPoints: '5.00',
-            rebalancingMode: 'CONTRIBUTIONS_ONLY',
-            targetWeightSumPct: '100.00',
-            totalCurrentValuePln: '2000.00',
-            availableCashPln: '400.00',
-            breachedBucketCount: 1,
-            largestBandBreachPctPoints: '2.50',
-            recommendedAction: 'DEPLOY_EXISTING_CASH',
-            recommendedAssetClass: 'BONDS',
-            recommendedContributionPln: '400.00',
-            remainingContributionGapPln: '100.00',
-            fullRebalanceBuyAmountPln: '500.00',
-            fullRebalanceSellAmountPln: '500.00',
-            requiresSelling: true,
-            buckets: [],
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
-        return new Response(
-          JSON.stringify({
-            toleranceBandPctPoints: '5.00',
-            mode: 'CONTRIBUTIONS_ONLY',
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
-        return new Response(
-          JSON.stringify({
-            schedulerEnabled: false,
-            intervalMinutes: 720,
-            runOnStart: true,
-            running: false,
-            lastRunAt: '2026-03-13T12:00:00Z',
-            lastSuccessAt: '2026-03-13T12:00:00Z',
-            lastFailureAt: null,
-            lastFailureMessage: null,
-            lastTrigger: 'MANUAL',
-            lastDurationMs: 420,
-            modelNames: ['DAILY_HISTORY', 'RETURNS'],
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/portfolio/targets')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
-
-      if (url.includes('/api/v1/portfolio/overview')) {
-        return new Response(
-          JSON.stringify({
-            asOf: '2026-03-13',
-            valuationState: 'MARK_TO_MARKET',
-            totalBookValuePln: '2000.00',
-            totalCurrentValuePln: '2100.00',
-            investedBookValuePln: '1600.00',
-            investedCurrentValuePln: '1700.00',
-            cashBalancePln: '400.00',
-            netContributionsPln: '2000.00',
-            equityBookValuePln: '1600.00',
-            equityCurrentValuePln: '1700.00',
-            bondBookValuePln: '0.00',
-            bondCurrentValuePln: '0.00',
-            cashBookValuePln: '400.00',
-            cashCurrentValuePln: '400.00',
-            totalUnrealizedGainPln: '100.00',
-            accountCount: 1,
-            instrumentCount: 1,
-            activeHoldingCount: 1,
-            valuedHoldingCount: 1,
-            unvaluedHoldingCount: 0,
-            valuationIssueCount: 0,
-            missingFxTransactions: 0,
-            unsupportedCorrectionTransactions: 0,
-          }),
-          { status: 200 },
-        )
-      }
-
-      if (url.includes('/api/v1/portfolio/history/daily')) {
-        return new Response(
-          JSON.stringify({
-            from: '2026-01-01',
-            until: '2026-03-13',
-            valuationState: 'MARK_TO_MARKET',
-            instrumentHistoryIssueCount: 0,
-            referenceSeriesIssueCount: 0,
-            benchmarkSeriesIssueCount: 0,
-            missingFxTransactions: 0,
-            unsupportedCorrectionTransactions: 0,
-            points: [
-              {
-                date: '2026-03-13',
-                totalBookValuePln: '2000.00',
-                totalCurrentValuePln: '2100.00',
-                netContributionsPln: '2000.00',
-                cashBalancePln: '400.00',
-                totalCurrentValueUsd: '500.00',
-                netContributionsUsd: '480.00',
-                cashBalanceUsd: '95.00',
-                totalCurrentValueAu: '1.10',
-                netContributionsAu: '1.00',
-                cashBalanceAu: '0.20',
-                equityCurrentValuePln: '1700.00',
-                bondCurrentValuePln: '0.00',
-                cashCurrentValuePln: '400.00',
-                equityAllocationPct: '80.95',
-                bondAllocationPct: '0.00',
-                cashAllocationPct: '19.05',
-                portfolioPerformanceIndex: '1.05',
-                equityBenchmarkIndex: '1.03',
-                inflationBenchmarkIndex: '1.01',
-                targetMixBenchmarkIndex: '1.02',
-                activeHoldingCount: 1,
-                valuedHoldingCount: 1,
+        if (url.includes('/api/v1/meta')) {
+          return new Response(
+            JSON.stringify({
+              name: 'Portfolio',
+              stage: 'dev',
+              version: '0.1.0-dev',
+              auth: {
+                enabled: false,
+                mode: 'DISABLED',
               },
-            ],
-          }),
-          { status: 200 },
-        )
-      }
+              stack: {
+                web: 'React 19 + TypeScript + Vite',
+                api: 'Kotlin 2.3 + Ktor 3',
+                database: 'SQLite',
+              },
+              capabilities: ['Transaction-based portfolio accounting'],
+            }),
+            { status: 200 },
+          )
+        }
 
-      if (url.includes('/api/v1/portfolio/returns')) {
-        return new Response(
-          JSON.stringify({
-            asOf: '2026-03-13',
-            periods: [
-              {
-                key: 'MAX',
-                label: 'MAX',
-                requestedFrom: '2026-01-01',
-                from: '2026-01-01',
-                until: '2026-03-13',
-                clippedToInception: false,
-                dayCount: 72,
-                nominalPln: {
-                  moneyWeightedReturn: '0.05',
-                  annualizedMoneyWeightedReturn: '0.05',
-                  timeWeightedReturn: '0.05',
-                  annualizedTimeWeightedReturn: '0.05',
+        if (url.includes('/api/v1/readiness')) {
+          return new Response(
+            JSON.stringify({
+              status: 'READY',
+              checkedAt: '2026-03-13T12:00:00Z',
+              checks: [],
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/allocation')) {
+          return new Response(
+            JSON.stringify({
+              asOf: '2026-03-13',
+              valuationState: 'MARK_TO_MARKET',
+              configured: true,
+              toleranceBandPctPoints: '5.00',
+              rebalancingMode: 'CONTRIBUTIONS_ONLY',
+              targetWeightSumPct: '100.00',
+              totalCurrentValuePln: '2000.00',
+              availableCashPln: '400.00',
+              breachedBucketCount: 1,
+              largestBandBreachPctPoints: '2.50',
+              recommendedAction: 'DEPLOY_EXISTING_CASH',
+              recommendedAssetClass: 'BONDS',
+              recommendedContributionPln: '400.00',
+              remainingContributionGapPln: '100.00',
+              fullRebalanceBuyAmountPln: '500.00',
+              fullRebalanceSellAmountPln: '500.00',
+              requiresSelling: true,
+              buckets: [],
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
+          return new Response(
+            JSON.stringify({
+              toleranceBandPctPoints: '5.00',
+              mode: 'CONTRIBUTIONS_ONLY',
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+          return new Response(
+            JSON.stringify({
+              schedulerEnabled: false,
+              intervalMinutes: 720,
+              runOnStart: true,
+              running: false,
+              lastRunAt: '2026-03-13T12:00:00Z',
+              lastSuccessAt: '2026-03-13T12:00:00Z',
+              lastFailureAt: null,
+              lastFailureMessage: null,
+              lastTrigger: 'MANUAL',
+              lastDurationMs: 420,
+              modelNames: ['DAILY_HISTORY', 'RETURNS'],
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/targets')) {
+          return new Response(JSON.stringify([]), { status: 200 })
+        }
+
+        if (url.includes('/api/v1/portfolio/overview')) {
+          return new Response(
+            JSON.stringify({
+              asOf: '2026-03-13',
+              valuationState: 'MARK_TO_MARKET',
+              totalBookValuePln: '2000.00',
+              totalCurrentValuePln: '2100.00',
+              investedBookValuePln: '1600.00',
+              investedCurrentValuePln: '1700.00',
+              cashBalancePln: '400.00',
+              netContributionsPln: '2000.00',
+              equityBookValuePln: '1600.00',
+              equityCurrentValuePln: '1700.00',
+              bondBookValuePln: '0.00',
+              bondCurrentValuePln: '0.00',
+              cashBookValuePln: '400.00',
+              cashCurrentValuePln: '400.00',
+              totalUnrealizedGainPln: '100.00',
+              accountCount: 1,
+              instrumentCount: 1,
+              activeHoldingCount: 1,
+              valuedHoldingCount: 1,
+              unvaluedHoldingCount: 0,
+              valuationIssueCount: 0,
+              missingFxTransactions: 0,
+              unsupportedCorrectionTransactions: 0,
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/history/daily')) {
+          return new Response(
+            JSON.stringify({
+              from: '2026-01-01',
+              until: '2026-03-13',
+              valuationState: 'MARK_TO_MARKET',
+              instrumentHistoryIssueCount: 0,
+              referenceSeriesIssueCount: 0,
+              benchmarkSeriesIssueCount: 0,
+              missingFxTransactions: 0,
+              unsupportedCorrectionTransactions: 0,
+              points: [
+                {
+                  date: '2026-03-13',
+                  totalBookValuePln: '2000.00',
+                  totalCurrentValuePln: '2100.00',
+                  netContributionsPln: '2000.00',
+                  cashBalancePln: '400.00',
+                  totalCurrentValueUsd: '500.00',
+                  netContributionsUsd: '480.00',
+                  cashBalanceUsd: '95.00',
+                  totalCurrentValueAu: '1.10',
+                  netContributionsAu: '1.00',
+                  cashBalanceAu: '0.20',
+                  equityCurrentValuePln: '1700.00',
+                  bondCurrentValuePln: '0.00',
+                  cashCurrentValuePln: '400.00',
+                  equityAllocationPct: '80.95',
+                  bondAllocationPct: '0.00',
+                  cashAllocationPct: '19.05',
+                  portfolioPerformanceIndex: '1.05',
+                  equityBenchmarkIndex: '1.03',
+                  inflationBenchmarkIndex: '1.01',
+                  targetMixBenchmarkIndex: '1.02',
+                  activeHoldingCount: 1,
+                  valuedHoldingCount: 1,
                 },
-                nominalUsd: null,
-                realPln: {
-                  moneyWeightedReturn: '0.03',
-                  annualizedMoneyWeightedReturn: '0.03',
-                  timeWeightedReturn: '0.03',
-                  annualizedTimeWeightedReturn: '0.03',
-                },
-                inflationFrom: '2026-01',
-                inflationUntil: '2026-03',
-                inflationMultiplier: '1.02',
-                benchmarks: [
-                  {
-                    key: 'VWRA',
-                    label: 'VWRA benchmark',
-                    pinned: true,
-                    nominalPln: {
-                      moneyWeightedReturn: '0.04',
-                      annualizedMoneyWeightedReturn: '0.04',
-                      timeWeightedReturn: '0.04',
-                      annualizedTimeWeightedReturn: '0.04',
-                    },
-                    excessTimeWeightedReturn: '0.01',
-                    excessAnnualizedTimeWeightedReturn: '0.01',
+              ],
+            }),
+            { status: 200 },
+          )
+        }
+
+        if (url.includes('/api/v1/portfolio/returns')) {
+          return new Response(
+            JSON.stringify({
+              asOf: '2026-03-13',
+              periods: [
+                {
+                  key: 'MAX',
+                  label: 'MAX',
+                  requestedFrom: '2026-01-01',
+                  from: '2026-01-01',
+                  until: '2026-03-13',
+                  clippedToInception: false,
+                  dayCount: 72,
+                  nominalPln: {
+                    moneyWeightedReturn: '0.05',
+                    annualizedMoneyWeightedReturn: '0.05',
+                    timeWeightedReturn: '0.05',
+                    annualizedTimeWeightedReturn: '0.05',
                   },
-                ],
-              },
-            ],
-          }),
-          { status: 200 },
-        )
-      }
+                  nominalUsd: null,
+                  realPln: {
+                    moneyWeightedReturn: '0.03',
+                    annualizedMoneyWeightedReturn: '0.03',
+                    timeWeightedReturn: '0.03',
+                    annualizedTimeWeightedReturn: '0.03',
+                  },
+                  inflationFrom: '2026-01',
+                  inflationUntil: '2026-03',
+                  inflationMultiplier: '1.02',
+                  benchmarks: [
+                    {
+                      key: 'VWRA',
+                      label: 'VWRA benchmark',
+                      pinned: true,
+                      nominalPln: {
+                        moneyWeightedReturn: '0.04',
+                        annualizedMoneyWeightedReturn: '0.04',
+                        timeWeightedReturn: '0.04',
+                        annualizedTimeWeightedReturn: '0.04',
+                      },
+                      excessTimeWeightedReturn: '0.01',
+                      excessAnnualizedTimeWeightedReturn: '0.01',
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200 },
+          )
+        }
 
-      if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
+        if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments')) {
+          return new Response(JSON.stringify([]), { status: 200 })
+        }
 
-      if (url.includes('/api/v1/portfolio/state/export')) {
-        return new Response(
-          JSON.stringify({
-            schemaVersion: 4,
-            exportedAt: '2026-03-13T12:00:00Z',
-            accounts: [],
-            instruments: [],
-            targets: [],
-            transactions: [],
-          }),
-          { status: 200 },
-        )
-      }
+        if (url.includes('/api/v1/portfolio/state/export')) {
+          return new Response(
+            JSON.stringify({
+              schemaVersion: 4,
+              exportedAt: '2026-03-13T12:00:00Z',
+              accounts: [],
+              instruments: [],
+              targets: [],
+              transactions: [],
+            }),
+            { status: 200 },
+          )
+        }
 
-      if (url.includes('/api/v1/portfolio/backups')) {
-        return new Response(
-          JSON.stringify({
-            schedulerEnabled: false,
-            directory: '/srv/portfolio/backups',
-            intervalMinutes: 1440,
-            retentionCount: 30,
-            running: false,
-            lastRunAt: null,
-            lastSuccessAt: null,
-            lastFailureAt: null,
-            lastFailureMessage: null,
-            backups: [],
-          }),
-          { status: 200 },
-        )
-      }
+        if (url.includes('/api/v1/portfolio/backups')) {
+          return new Response(
+            JSON.stringify({
+              schedulerEnabled: false,
+              directory: '/srv/portfolio/backups',
+              intervalMinutes: 1440,
+              retentionCount: 30,
+              running: false,
+              lastRunAt: null,
+              lastSuccessAt: null,
+              lastFailureAt: null,
+              lastFailureMessage: null,
+              backups: [],
+            }),
+            { status: 200 },
+          )
+        }
 
-      if (url.includes('/api/v1/portfolio/audit/events')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
+        if (url.includes('/api/v1/portfolio/audit/events')) {
+          return new Response(JSON.stringify([]), { status: 200 })
+        }
 
-      if (url.includes('/api/v1/portfolio/read-model-cache')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
+        if (url.includes('/api/v1/portfolio/read-model-cache')) {
+          return new Response(JSON.stringify([]), { status: 200 })
+        }
 
-      return new Response(JSON.stringify({ message: 'Not found' }), { status: 404 })
-    })
+        return new Response(JSON.stringify({ message: 'Not found' }), { status: 404 })
+      })
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+          },
         },
-      },
-    })
+      })
 
-    render(
-      <MemoryRouter initialEntries={[{ pathname: '/settings', hash: '#targets' }]}>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </MemoryRouter>,
-    )
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/settings', hash: '#targets' }]}>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </MemoryRouter>,
+      )
 
-    expect(await screen.findByText(/target allocation|alokacja docelowa/i)).toBeInTheDocument()
-    expect(await screen.findByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
-    expect(await screen.findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
-    await waitFor(() => {
-      expect(scrollIntoViewMock).toHaveBeenCalled()
-    })
+      expect(await screen.findByRole('heading', { name: /settings|ustawienia/i, level: 2 })).toBeInTheDocument()
 
-    Element.prototype.scrollIntoView = originalScrollIntoView
+      const targetsSection = document.getElementById('targets')
+      expect(targetsSection).not.toBeNull()
+      if (!targetsSection) {
+        throw new Error('Targets section did not render')
+      }
+
+      expect(await within(targetsSection).findByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).toBeInTheDocument()
+      expect(within(targetsSection).getByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
+      expect(within(targetsSection).getByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalled()
+      })
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView
+    }
   })
 
   it('reorders accounts from the accounts screen', async () => {
@@ -2598,16 +2608,20 @@ describe('App', () => {
 
     const moveBetaUpButtonName = /move beta up|przesuń beta w górę/i
 
-    expect((await screen.findAllByRole('heading', { name: /^(accounts|konta)$/i })).length).toBeGreaterThan(0)
-
-    await screen.findByRole('button', { name: moveBetaUpButtonName })
+    expect(await screen.findByRole('heading', { name: /accounts|konta/i, level: 2 })).toBeInTheDocument()
+    const alphaCells = await screen.findAllByText(/^Alpha$/)
+    const betaCells = await screen.findAllByText(/^Beta$/)
     await waitFor(() => {
-      const alpha = screen.getAllByText(/^Alpha$/)[0]
-      const beta = screen.getAllByText(/^Beta$/)[0]
-      expect(appearsBefore(alpha, beta)).toBe(true)
+      expect(appearsBefore(alphaCells[0], betaCells[0])).toBe(true)
     })
 
-    fireEvent.click(screen.getAllByRole('button', { name: moveBetaUpButtonName })[0])
+    const betaRow = betaCells[0]?.closest('tr')
+    expect(betaRow).not.toBeNull()
+    if (!betaRow) {
+      throw new Error('Beta row did not render')
+    }
+
+    fireEvent.click(within(betaRow).getByRole('button', { name: moveBetaUpButtonName }))
 
     await waitFor(() => {
       expect(reorderPayloads).toEqual([['acc-b', 'acc-a']])
