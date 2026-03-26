@@ -38,7 +38,8 @@ class PortfolioTransferService(
     private val clock: Clock
 ) {
     suspend fun exportState(): PortfolioSnapshot {
-        val accounts = accountRepository.list().sortedBy(Account::createdAt)
+        val accounts = accountRepository.list()
+            .sortedWith(compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
         val appPreferences = appPreferenceRepository.list().sortedBy(AppPreference::key)
         val instruments = instrumentRepository.list().sortedBy(Instrument::createdAt)
         val targets = portfolioTargetRepository.list()
@@ -286,7 +287,7 @@ class PortfolioTransferService(
         }
 
         val accounts = request.snapshot.accounts
-            .sortedBy(AccountSnapshot::createdAt)
+            .sortedWith(compareBy<AccountSnapshot>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
             .map { snapshot ->
                 accountRepository.save(snapshot.toDomain())
             }
@@ -397,6 +398,7 @@ class PortfolioTransferService(
         institution = institution,
         type = type.name,
         baseCurrency = baseCurrency,
+        displayOrder = displayOrder,
         isActive = isActive,
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString()
@@ -475,6 +477,7 @@ class PortfolioTransferService(
         institution = institution,
         type = AccountType.valueOf(type),
         baseCurrency = baseCurrency,
+        displayOrder = displayOrder,
         isActive = isActive,
         createdAt = Instant.parse(createdAt),
         updatedAt = Instant.parse(updatedAt)
@@ -551,8 +554,8 @@ class PortfolioTransferService(
     )
 
     private companion object {
-        const val CURRENT_SCHEMA_VERSION = 3
-        val SUPPORTED_SCHEMA_VERSIONS = setOf(3)
+        const val CURRENT_SCHEMA_VERSION = 4
+        val SUPPORTED_SCHEMA_VERSIONS = setOf(4)
     }
 }
 
@@ -574,6 +577,7 @@ data class AccountSnapshot(
     val institution: String,
     val type: String,
     val baseCurrency: String,
+    val displayOrder: Int,
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String

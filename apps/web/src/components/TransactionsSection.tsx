@@ -212,7 +212,7 @@ export function TransactionsSection() {
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
   const sortedAccountOptions = useMemo(
-    () => [...accountOptions].sort(compareAccountsByCreatedAt),
+    () => [...accountOptions].sort(compareAccountsByDisplayOrder),
     [accountOptions],
   )
   const sortedInstrumentOptions = useMemo(
@@ -2718,10 +2718,17 @@ function compareNumbers(left: string, right: string) {
   return Number(left) - Number(right)
 }
 
-function compareAccountsByCreatedAt(
-  left: { createdAt: string; name: string },
-  right: { createdAt: string; name: string },
+function compareAccountsByDisplayOrder(
+  left: { displayOrder?: number; createdAt: string; name: string },
+  right: { displayOrder?: number; createdAt: string; name: string },
 ) {
+  const leftOrder = left.displayOrder ?? Number.MAX_SAFE_INTEGER
+  const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER
+
+  if (leftOrder !== rightOrder) {
+    return leftOrder - rightOrder
+  }
+
   if (left.createdAt !== right.createdAt) {
     return left.createdAt.localeCompare(right.createdAt)
   }

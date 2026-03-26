@@ -53,6 +53,7 @@ data class AccountResponse(
     val institution: String,
     val type: String,
     val baseCurrency: String,
+    val displayOrder: Int,
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String
@@ -64,6 +65,7 @@ private fun Account.toResponse(): AccountResponse = AccountResponse(
     institution = institution,
     type = type.name,
     baseCurrency = baseCurrency,
+    displayOrder = displayOrder,
     isActive = isActive,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString()

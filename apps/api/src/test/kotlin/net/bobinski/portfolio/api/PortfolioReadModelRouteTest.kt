@@ -184,13 +184,16 @@ class PortfolioReadModelRouteTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"accountName\": \"Primary\""))
+        assertTrue(body.contains("\"displayOrder\": 0"))
         assertTrue(body.contains("\"cashBalancePln\": \"995.00\""))
         assertTrue(body.contains("\"investedBookValuePln\": \"1005.00\""))
         assertTrue(body.contains("\"totalCurrentValuePln\": \"2000.00\""))
         assertTrue(body.contains("\"netContributionsPln\": \"2000.00\""))
         assertTrue(body.contains("\"accountName\": \"Reserve\""))
+        assertTrue(body.contains("\"displayOrder\": 1"))
         assertTrue(body.contains("\"cashBalancePln\": \"500.00\""))
         assertTrue(body.contains("\"portfolioWeightPct\": \"20.00\""))
+        assertTrue(body.indexOf("\"accountName\": \"Primary\"") < body.indexOf("\"accountName\": \"Reserve\""))
     }
 
     @Test

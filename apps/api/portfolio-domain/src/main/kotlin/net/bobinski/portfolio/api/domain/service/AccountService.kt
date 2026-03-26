@@ -17,6 +17,10 @@ class AccountService(
 
     suspend fun create(command: CreateAccountCommand): Account {
         val now = Instant.now(clock)
+        val nextDisplayOrder = accountRepository.list()
+            .maxOfOrNull(Account::displayOrder)
+            ?.plus(1)
+            ?: 0
         val account = accountRepository.save(
             Account(
                 id = UUID.randomUUID(),
@@ -24,6 +28,7 @@ class AccountService(
                 institution = command.institution.trim(),
                 type = command.type,
                 baseCurrency = command.baseCurrency.uppercase(),
+                displayOrder = nextDisplayOrder,
                 isActive = true,
                 createdAt = now,
                 updatedAt = now
@@ -38,7 +43,8 @@ class AccountService(
             metadata = mapOf(
                 "institution" to account.institution,
                 "type" to account.type.name,
-                "baseCurrency" to account.baseCurrency
+                "baseCurrency" to account.baseCurrency,
+                "displayOrder" to account.displayOrder.toString()
             )
         )
         return account

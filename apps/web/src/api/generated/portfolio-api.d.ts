@@ -1616,6 +1616,7 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
+            displayOrder: number;
             isActive: boolean;
             createdAt: string;
             updatedAt: string;
@@ -1717,6 +1718,7 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
+            displayOrder: number;
             valuationState: string;
             totalBookValuePln: string;
             totalCurrentValuePln: string;
@@ -2001,6 +2003,7 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
+            displayOrder: number;
             isActive: boolean;
             createdAt: string;
             updatedAt: string;

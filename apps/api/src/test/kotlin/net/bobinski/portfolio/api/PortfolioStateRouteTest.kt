@@ -159,11 +159,12 @@ class PortfolioStateRouteTest {
         val importProfilesResponse = client.get("/v1/transactions/import/profiles")
 
         assertEquals(HttpStatusCode.OK, exportResponse.status)
-        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 3"))
+        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 4"))
         assertTrue(exportResponse.bodyAsText().contains("\"appPreferences\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"targets\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"importProfiles\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"name\": \"Primary\""))
+        assertTrue(exportResponse.bodyAsText().contains("\"displayOrder\": 0"))
         assertEquals(HttpStatusCode.OK, importResponse.status)
         assertTrue(importResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
         assertTrue(importResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))
@@ -299,7 +300,7 @@ class PortfolioStateRouteTest {
                 {
                   "mode": "REPLACE",
                   "snapshot": {
-                    "schemaVersion": 3,
+                    "schemaVersion": 4,
                     "exportedAt": "2026-03-13T18:00:00Z",
                     "accounts": [],
                     "appPreferences": [],

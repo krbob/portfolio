@@ -40,8 +40,53 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.Created, createResponse.status)
         assertTrue(createResponse.bodyAsText().contains("\"type\": \"BROKERAGE\""))
+        assertTrue(createResponse.bodyAsText().contains("\"displayOrder\": 0"))
         assertEquals(HttpStatusCode.OK, listResponse.status)
         assertTrue(listResponse.bodyAsText().contains("\"name\": \"Interactive Brokers\""))
+    }
+
+    @Test
+    fun `accounts keep stable display order as they are created`() = testApplication {
+        application {
+            module()
+        }
+
+        val firstResponse = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "First",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        val secondResponse = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Second",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+
+        val listResponse = client.get("/v1/accounts")
+        val body = listResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.Created, firstResponse.status)
+        assertEquals(HttpStatusCode.Created, secondResponse.status)
+        assertTrue(firstResponse.bodyAsText().contains("\"displayOrder\": 0"))
+        assertTrue(secondResponse.bodyAsText().contains("\"displayOrder\": 1"))
+        assertEquals(HttpStatusCode.OK, listResponse.status)
+        assertTrue(body.indexOf("\"name\": \"First\"") < body.indexOf("\"name\": \"Second\""))
     }
 
     @Test

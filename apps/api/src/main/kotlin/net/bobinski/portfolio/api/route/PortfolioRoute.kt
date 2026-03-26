@@ -292,6 +292,7 @@ data class PortfolioAccountResponse(
     val institution: String,
     val type: String,
     val baseCurrency: String,
+    val displayOrder: Int,
     val valuationState: String,
     val totalBookValuePln: String,
     val totalCurrentValuePln: String,
@@ -506,6 +507,7 @@ data class AccountSnapshotResponse(
     val institution: String,
     val type: String,
     val baseCurrency: String,
+    val displayOrder: Int,
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String
@@ -797,6 +799,7 @@ private fun PortfolioAccountSummary.toResponse(): PortfolioAccountResponse = Por
     institution = institution,
     type = type,
     baseCurrency = baseCurrency,
+    displayOrder = displayOrder,
     valuationState = valuationState.name,
     totalBookValuePln = totalBookValuePln.toPlainString(),
     totalCurrentValuePln = totalCurrentValuePln.toPlainString(),
@@ -1003,6 +1006,7 @@ private fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfoli
             institution = snapshot.institution,
             type = snapshot.type,
             baseCurrency = snapshot.baseCurrency,
+            displayOrder = snapshot.displayOrder,
             isActive = snapshot.isActive,
             createdAt = snapshot.createdAt,
             updatedAt = snapshot.updatedAt
@@ -1115,6 +1119,7 @@ private fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Por
                 institution = account.institution,
                 type = account.type,
                 baseCurrency = account.baseCurrency,
+                displayOrder = account.displayOrder,
                 isActive = account.isActive,
                 createdAt = account.createdAt,
                 updatedAt = account.updatedAt

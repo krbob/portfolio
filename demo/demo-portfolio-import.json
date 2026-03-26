@@ -2,7 +2,7 @@
   "mode": "REPLACE",
   "confirmation": "REPLACE",
   "snapshot": {
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "exportedAt": "2026-03-13T19:00:00Z",
     "accounts": [
       {
@@ -11,6 +11,7 @@
         "institution": "Interactive Brokers",
         "type": "BROKERAGE",
         "baseCurrency": "USD",
+        "displayOrder": 0,
         "isActive": true,
         "createdAt": "2024-03-01T09:00:00Z",
         "updatedAt": "2026-03-13T19:00:00Z"
@@ -21,6 +22,7 @@
         "institution": "XTB",
         "type": "BROKERAGE",
         "baseCurrency": "USD",
+        "displayOrder": 1,
         "isActive": true,
         "createdAt": "2024-03-01T09:05:00Z",
         "updatedAt": "2026-03-13T19:00:00Z"
@@ -31,6 +33,7 @@
         "institution": "mBank",
         "type": "BROKERAGE",
         "baseCurrency": "USD",
+        "displayOrder": 2,
         "isActive": true,
         "createdAt": "2024-03-01T09:10:00Z",
         "updatedAt": "2026-03-13T19:00:00Z"
@@ -41,6 +44,7 @@
         "institution": "PKO BP",
         "type": "BOND_REGISTER",
         "baseCurrency": "PLN",
+        "displayOrder": 3,
         "isActive": true,
         "createdAt": "2024-03-01T09:15:00Z",
         "updatedAt": "2026-03-13T19:00:00Z"

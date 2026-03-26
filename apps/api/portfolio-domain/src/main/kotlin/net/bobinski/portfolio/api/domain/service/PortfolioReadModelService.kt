@@ -40,7 +40,7 @@ class PortfolioReadModelService(
             .add(snapshot.cashBalancePln, MONEY_CONTEXT)
 
         return snapshot.accounts
-            .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
+            .sortedWith(compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
             .map { account ->
                 val accountHoldings = snapshot.holdings.filter { it.account.id == account.id }
                 val investedBookValuePln = accountHoldings.sumOf(ValuedHolding::costBasisPln)
@@ -70,6 +70,7 @@ class PortfolioReadModelService(
                     institution = account.institution,
                     type = account.type.name,
                     baseCurrency = account.baseCurrency,
+                    displayOrder = account.displayOrder,
                     valuationState = valuationState,
                     totalBookValuePln = totalBookValuePln.money(),
                     totalCurrentValuePln = totalCurrentValuePln.money(),
@@ -701,6 +702,7 @@ data class PortfolioAccountSummary(
     val institution: String,
     val type: String,
     val baseCurrency: String,
+    val displayOrder: Int,
     val valuationState: ValuationState,
     val totalBookValuePln: BigDecimal,
     val totalCurrentValuePln: BigDecimal,
