@@ -11,6 +11,11 @@ import io.ktor.http.contentType
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import java.nio.file.Files
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -73,6 +78,7 @@ class PortfolioBackupRouteTest {
                 )
             }
             val accountsResponse = client.get("/v1/accounts")
+            val downloadPayload = Json.parseToJsonElement(downloadResponse.bodyAsText()).jsonObject
 
             assertEquals(HttpStatusCode.OK, runResponse.status)
             assertTrue(runResponse.bodyAsText().contains("\"isReadable\": true"))
@@ -82,9 +88,9 @@ class PortfolioBackupRouteTest {
             assertTrue(listResponse.bodyAsText().contains("\"schedulerEnabled\": false"))
             assertTrue(listResponse.bodyAsText().contains(backupFileName))
             assertEquals(HttpStatusCode.OK, downloadResponse.status)
-            assertTrue(downloadResponse.bodyAsText().contains("\"schemaVersion\": 3"))
-            assertTrue(downloadResponse.bodyAsText().contains("\"appPreferences\": ["))
-            assertTrue(downloadResponse.bodyAsText().contains("\"importProfiles\": ["))
+            assertTrue(downloadPayload["schemaVersion"]?.jsonPrimitive?.intOrNull?.let { it > 0 } == true)
+            assertEquals(2, downloadPayload["appPreferences"]?.jsonArray?.size)
+            assertEquals(1, downloadPayload["importProfiles"]?.jsonArray?.size)
             assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)
             assertEquals(HttpStatusCode.OK, restoreResponse.status)
             assertTrue(restoreResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))

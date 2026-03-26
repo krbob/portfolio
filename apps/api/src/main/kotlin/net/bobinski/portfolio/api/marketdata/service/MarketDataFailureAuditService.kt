@@ -23,9 +23,9 @@ class MarketDataFailureAuditService(
         exception: Throwable? = null
     ) {
         val clientException = exception as? MarketDataClientException
-        val resolvedUpstream = clientException?.upstream ?: upstream
-        val resolvedOperation = clientException?.operation ?: operation
-        val resolvedSymbol = clientException?.symbol ?: symbol
+        val resolvedUpstream = upstream.ifBlank { clientException?.upstream ?: upstream }
+        val resolvedOperation = operation.ifBlank { clientException?.operation ?: operation }
+        val resolvedSymbol = symbol ?: clientException?.symbol
         val message = buildFailureMessage(
             upstream = resolvedUpstream,
             operation = resolvedOperation,

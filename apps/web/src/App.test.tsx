@@ -2358,7 +2358,7 @@ describe('App', () => {
       if (url.includes('/api/v1/portfolio/state/export')) {
         return new Response(
           JSON.stringify({
-            schemaVersion: 3,
+            schemaVersion: 4,
             exportedAt: '2026-03-13T12:00:00Z',
             accounts: [],
             instruments: [],
@@ -2415,7 +2415,7 @@ describe('App', () => {
     )
 
     expect(await screen.findByText(/target allocation|alokacja docelowa/i)).toBeInTheDocument()
-    expect(await screen.findByText(/saved mix|zapisany miks/i)).toBeInTheDocument()
+    expect(await screen.findByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
     expect(await screen.findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
     await waitFor(() => {
       expect(scrollIntoViewMock).toHaveBeenCalled()
@@ -2596,16 +2596,18 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^accounts$/i })).length).toBeGreaterThan(0)
+    const moveBetaUpButtonName = /move beta up|przesuń beta w górę/i
 
-    await screen.findByRole('button', { name: /move beta up/i })
+    expect((await screen.findAllByRole('heading', { name: /^(accounts|konta)$/i })).length).toBeGreaterThan(0)
+
+    await screen.findByRole('button', { name: moveBetaUpButtonName })
     await waitFor(() => {
       const alpha = screen.getAllByText(/^Alpha$/)[0]
       const beta = screen.getAllByText(/^Beta$/)[0]
       expect(appearsBefore(alpha, beta)).toBe(true)
     })
 
-    fireEvent.click(screen.getAllByRole('button', { name: /move beta up/i })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: moveBetaUpButtonName })[0])
 
     await waitFor(() => {
       expect(reorderPayloads).toEqual([['acc-b', 'acc-a']])
