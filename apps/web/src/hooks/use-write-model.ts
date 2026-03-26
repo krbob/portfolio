@@ -26,6 +26,7 @@ import {
   previewTransactionsCsvImport,
   previewTransactionsImport,
   previewPortfolioStateImport,
+  reorderAccounts,
   replacePortfolioTargets,
   restorePortfolioBackup,
   runReadModelRefresh,
@@ -44,6 +45,7 @@ import {
   type PortfolioRebalancingSettings,
   type PortfolioTarget,
   type ReadModelCacheInvalidationResult,
+  type ReorderAccountsPayload,
   type SaveTransactionImportProfilePayload,
   type SavePortfolioBenchmarkSettingsPayload,
   type SavePortfolioRebalancingSettingsPayload,
@@ -73,6 +75,20 @@ export function useCreateAccount() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
+  })
+}
+
+export function useReorderAccounts() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: ReorderAccountsPayload) => reorderAccounts(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },

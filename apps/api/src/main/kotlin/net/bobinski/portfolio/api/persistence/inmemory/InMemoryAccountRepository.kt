@@ -19,6 +19,12 @@ class InMemoryAccountRepository : AccountRepository {
         return account
     }
 
+    override suspend fun saveAll(accounts: List<Account>) {
+        accounts.forEach { account ->
+            this.accounts[account.id] = account
+        }
+    }
+
     override suspend fun deleteAll() {
         accounts.clear()
     }

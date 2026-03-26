@@ -53,6 +53,28 @@ class JdbcAccountRepository(
         return account
     }
 
+    override suspend fun saveAll(accounts: List<Account>) {
+        if (accounts.isEmpty()) {
+            return
+        }
+
+        dataSource.connection.use { connection ->
+            val previousAutoCommit = connection.autoCommit
+            connection.autoCommit = false
+            try {
+                accounts.forEach { account ->
+                    connection.upsertAccount(account)
+                }
+                connection.commit()
+            } catch (exception: Exception) {
+                connection.rollback()
+                throw exception
+            } finally {
+                connection.autoCommit = previousAutoCommit
+            }
+        }
+    }
+
     override suspend fun deleteAll() {
         dataSource.connection.use { connection ->
             connection.prepareStatement("delete from accounts").use { statement ->

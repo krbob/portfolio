@@ -1,21 +1,32 @@
+import { useEffect, useState } from 'react'
+import type { PortfolioAccountSummary } from '../api/read-model'
 import { AccountsSection } from '../components/AccountsSection'
 import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioAccounts } from '../hooks/use-read-model'
+import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType } from '../lib/labels'
-import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
+import { badge, badgeVariants, btnGhost, td, tdRight, th, thRight, tr } from '../lib/styles'
 
 export function AccountsScreen() {
   const { isPolish } = useI18n()
   const accountsQuery = usePortfolioAccounts()
+  const reorderAccountsMutation = useReorderAccounts()
   const accounts = accountsQuery.data ?? []
+  const [orderedAccounts, setOrderedAccounts] = useState(accounts)
+  const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null)
+  const [dropTargetAccountId, setDropTargetAccountId] = useState<string | null>(null)
   const totalValuePln = accounts.reduce((sum, account) => sum + asNumber(account.totalCurrentValuePln), 0)
   const totalCashPln = accounts.reduce((sum, account) => sum + asNumber(account.cashBalancePln), 0)
   const totalGainPln = accounts.reduce((sum, account) => sum + asNumber(account.totalUnrealizedGainPln), 0)
   const degradedCount = accounts.filter((account) => account.valuationState !== 'MARK_TO_MARKET').length
   const totalHoldings = accounts.reduce((sum, account) => sum + account.activeHoldingCount, 0)
+
+  useEffect(() => {
+    setOrderedAccounts(accounts)
+  }, [accounts])
 
   if (accountsQuery.isLoading) {
     return (
@@ -94,9 +105,24 @@ export function AccountsScreen() {
               eyebrow={isPolish ? 'Read model' : 'Read model'}
               title={isPolish ? 'Przegląd rachunków' : 'Account overview'}
               description={isPolish
-                ? 'Wartość, gotówka i bieżący wynik rozbite na rachunki, zanim dojdzie drag and drop kolejności.'
-                : 'Value, cash and current P/L split by account before manual ordering lands.'}
+                ? 'Wartość, gotówka i bieżący wynik rozbite na rachunki z ręcznym sterowaniem kolejnością.'
+                : 'Value, cash and current P/L split by account, with manual ordering controlled from this view.'}
             />
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+              <span>
+                {isPolish
+                  ? 'Przeciągnij wiersz albo użyj przycisków W górę / W dół, aby ustawić kolejność kont.'
+                  : 'Drag a row or use Move up / Move down to set the account order.'}
+              </span>
+              {reorderAccountsMutation.isPending && (
+                <span className="text-blue-400">
+                  {isPolish ? 'Zapisywanie kolejności...' : 'Saving order...'}
+                </span>
+              )}
+              {reorderAccountsMutation.error && (
+                <span className="text-red-400">{reorderAccountsMutation.error.message}</span>
+              )}
+            </div>
           </div>
 
           {accounts.length === 0 ? (
@@ -113,6 +139,7 @@ export function AccountsScreen() {
               <table className="min-w-full">
                 <thead className="bg-zinc-950/30">
                   <tr>
+                    <th className={th}>{isPolish ? 'Kolejność' : 'Order'}</th>
                     <th className={th}>{isPolish ? 'Konto' : 'Account'}</th>
                     <th className={th}>{isPolish ? 'Typ' : 'Type'}</th>
                     <th className={thRight}>{isPolish ? 'Pozycje' : 'Holdings'}</th>
@@ -123,10 +150,51 @@ export function AccountsScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {accounts.map((account) => {
+                  {orderedAccounts.map((account, index) => {
                     const gainPct = toGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
                     return (
-                      <tr className={tr} key={account.accountId}>
+                      <tr
+                        className={`${tr} ${draggedAccountId === account.accountId ? 'opacity-60' : ''} ${dropTargetAccountId === account.accountId ? 'bg-zinc-950/30' : ''}`}
+                        key={account.accountId}
+                        draggable={!reorderAccountsMutation.isPending}
+                        onDragStart={() => setDraggedAccountId(account.accountId)}
+                        onDragEnd={() => {
+                          setDraggedAccountId(null)
+                          setDropTargetAccountId(null)
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault()
+                          if (draggedAccountId && draggedAccountId !== account.accountId) {
+                            setDropTargetAccountId(account.accountId)
+                          }
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault()
+                          handleDrop(account.accountId)
+                        }}
+                      >
+                        <td className={td}>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className={btnGhost}
+                              onClick={() => moveAccountByOffset(account.accountId, -1)}
+                              disabled={reorderAccountsMutation.isPending || index === 0}
+                              aria-label={isPolish ? `Przesuń ${account.accountName} w górę` : `Move ${account.accountName} up`}
+                            >
+                              {isPolish ? 'W górę' : 'Up'}
+                            </button>
+                            <button
+                              type="button"
+                              className={btnGhost}
+                              onClick={() => moveAccountByOffset(account.accountId, 1)}
+                              disabled={reorderAccountsMutation.isPending || index === orderedAccounts.length - 1}
+                              aria-label={isPolish ? `Przesuń ${account.accountName} w dół` : `Move ${account.accountName} down`}
+                            >
+                              {isPolish ? 'W dół' : 'Down'}
+                            </button>
+                          </div>
+                        </td>
                         <td className={td}>
                           <div>
                             <p className="font-medium text-zinc-100">{account.accountName}</p>
@@ -195,6 +263,64 @@ export function AccountsScreen() {
       </div>
     </>
   )
+
+  function moveAccountByOffset(accountId: string, direction: -1 | 1) {
+    if (reorderAccountsMutation.isPending) {
+      return
+    }
+
+    const currentIndex = orderedAccounts.findIndex((account) => account.accountId === accountId)
+    if (currentIndex < 0) {
+      return
+    }
+
+    const targetIndex = currentIndex + direction
+    if (targetIndex < 0 || targetIndex >= orderedAccounts.length) {
+      return
+    }
+
+    persistOrder(moveItem(orderedAccounts, currentIndex, targetIndex))
+  }
+
+  function handleDrop(targetAccountId: string) {
+    if (reorderAccountsMutation.isPending || draggedAccountId == null || draggedAccountId === targetAccountId) {
+      setDraggedAccountId(null)
+      setDropTargetAccountId(null)
+      return
+    }
+
+    const currentIndex = orderedAccounts.findIndex((account) => account.accountId === draggedAccountId)
+    const targetIndex = orderedAccounts.findIndex((account) => account.accountId === targetAccountId)
+
+    setDraggedAccountId(null)
+    setDropTargetAccountId(null)
+
+    if (currentIndex < 0 || targetIndex < 0) {
+      return
+    }
+
+    const insertionIndex = targetIndex
+    if (currentIndex === insertionIndex) {
+      return
+    }
+
+    persistOrder(moveItem(orderedAccounts, currentIndex, insertionIndex))
+  }
+
+  function persistOrder(nextAccounts: PortfolioAccountSummary[]) {
+    const previousAccounts = orderedAccounts
+    setOrderedAccounts(nextAccounts)
+    reorderAccountsMutation.mutate(
+      {
+        accountIds: nextAccounts.map((account) => account.accountId),
+      },
+      {
+        onError: () => {
+          setOrderedAccounts(previousAccounts)
+        },
+      },
+    )
+  }
 }
 
 function AccountSummaryTile({
@@ -262,4 +388,11 @@ function asNumber(value: string | number | null | undefined) {
   }
 
   return typeof value === 'number' ? value : Number(value)
+}
+
+function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  const nextItems = [...items]
+  const [item] = nextItems.splice(fromIndex, 1)
+  nextItems.splice(toIndex, 0, item)
+  return nextItems
 }

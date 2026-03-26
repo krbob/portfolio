@@ -90,6 +90,36 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `accounts can be reordered explicitly`() = testApplication {
+        application {
+            module()
+        }
+
+        val firstAccountId = createAccount(name = "First")
+        val secondAccountId = createAccount(name = "Second")
+        val thirdAccountId = createAccount(name = "Third")
+
+        val reorderResponse = client.put("/v1/accounts/order") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountIds": ["$thirdAccountId", "$firstAccountId", "$secondAccountId"]
+                }
+                """.trimIndent()
+            )
+        }
+        val listResponse = client.get("/v1/accounts")
+        val body = listResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, reorderResponse.status)
+        assertTrue(reorderResponse.bodyAsText().contains("\"displayOrder\": 0"))
+        assertEquals(HttpStatusCode.OK, listResponse.status)
+        assertTrue(body.indexOf("\"name\": \"Third\"") < body.indexOf("\"name\": \"First\""))
+        assertTrue(body.indexOf("\"name\": \"First\"") < body.indexOf("\"name\": \"Second\""))
+    }
+
+    @Test
     fun `edo instruments can be created`() = testApplication {
         application {
             module()
@@ -487,13 +517,13 @@ class WriteModelRouteTest {
         assertTrue(listResponse.bodyAsText().contains("\"notes\": \"batch duplicate\""))
     }
 
-    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(): String {
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(name: String = "Primary"): String {
         val response = client.post("/v1/accounts") {
             contentType(ContentType.Application.Json)
             setBody(
                 """
                 {
-                  "name": "Primary",
+                  "name": "$name",
                   "institution": "Broker",
                   "type": "BROKERAGE",
                   "baseCurrency": "PLN"

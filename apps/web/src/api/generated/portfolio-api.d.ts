@@ -312,6 +312,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounts/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReorderAccountsRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountResponse"][];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/instruments": {
         parameters: {
             query?: never;
@@ -1627,6 +1665,10 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
+        };
+        /** net.bobinski.portfolio.api.route.ReorderAccountsRequest */
+        ReorderAccountsRequest: {
+            accountIds: string[];
         };
         /** net.bobinski.portfolio.api.route.EdoTermsResponse */
         EdoTermsResponse: {

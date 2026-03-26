@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api
 
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -194,6 +195,58 @@ class PortfolioReadModelRouteTest {
         assertTrue(body.contains("\"cashBalancePln\": \"500.00\""))
         assertTrue(body.contains("\"portfolioWeightPct\": \"20.00\""))
         assertTrue(body.indexOf("\"accountName\": \"Primary\"") < body.indexOf("\"accountName\": \"Reserve\""))
+    }
+
+    @Test
+    fun `accounts read model follows manual display order`() = testApplication {
+        application {
+            module()
+        }
+
+        val firstAccountId = createAccount(name = "First")
+        val secondAccountId = createAccount(name = "Second")
+        createTransaction(
+            """
+            {
+              "accountId": "$firstAccountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "1000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$secondAccountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "500.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val reorderResponse = client.put("/v1/accounts/order") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountIds": ["$secondAccountId", "$firstAccountId"]
+                }
+                """.trimIndent()
+            )
+        }
+        val response = client.get("/v1/portfolio/accounts")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, reorderResponse.status)
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"displayOrder\": 0"))
+        assertTrue(body.indexOf("\"accountName\": \"Second\"") < body.indexOf("\"accountName\": \"First\""))
     }
 
     @Test

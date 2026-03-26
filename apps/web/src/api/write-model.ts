@@ -13,6 +13,10 @@ export type Transaction =
 export type CreateAccountPayload =
   components['schemas']['CreateAccountRequest']
 
+export interface ReorderAccountsPayload {
+  accountIds: string[]
+}
+
 export type CreateInstrumentPayload =
   components['schemas']['CreateInstrumentRequest']
 
@@ -119,6 +123,13 @@ export function listAccounts() {
 export function createAccount(payload: CreateAccountPayload) {
   return requestJson<Account>('/api/v1/accounts', {
     method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function reorderAccounts(payload: ReorderAccountsPayload) {
+  return requestJson<Account[]>('/api/v1/accounts/order', {
+    method: 'PUT',
     body: JSON.stringify(payload),
   })
 }
