@@ -109,6 +109,12 @@ That starts:
 - `edo-calculator`
 
 The app still uses the local Dockerfiles from this repository, but the market-data services come from their published images.
+Depending on ticker, FX, and CPI coverage exposed by the published upstream images, the portfolio may settle in either:
+
+- `MARK_TO_MARKET` / `STALE`
+- `PARTIALLY_VALUED`
+
+That is expected for this mode. The self-hosted smoke test verifies both the fully valued path and the partial-coverage fallback.
 
 ### 4. Run the full self-hosted stack from published images
 
@@ -314,6 +320,7 @@ cd ../..
 PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst.example/api \
 PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example \
 ./scripts/smoke-test-remote-market-data-stack.sh
+sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
 ```
 
 ## Related services
