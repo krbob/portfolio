@@ -25,6 +25,32 @@ print(payload[os.environ["JSON_FIELD"]])
 PY
 }
 
+json_array_field() {
+  JSON_PAYLOAD=$1 JSON_INDEX=$2 JSON_FIELD=$3 python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["JSON_PAYLOAD"])
+index = int(os.environ["JSON_INDEX"])
+field = os.environ["JSON_FIELD"]
+print(payload[index][field])
+PY
+}
+
+json_swap_first_two_account_ids() {
+  JSON_PAYLOAD=$1 python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["JSON_PAYLOAD"])
+account_ids = [account["id"] for account in payload]
+if len(account_ids) < 2:
+    raise SystemExit("Expected at least two accounts to reorder.")
+account_ids[0], account_ids[1] = account_ids[1], account_ids[0]
+print(json.dumps({"accountIds": account_ids}))
+PY
+}
+
 assert_edo_smoke_state() {
   HOLDINGS_JSON=$1 EXPECTED_MODE=$2 python3 - <<'PY'
 import json
@@ -92,11 +118,32 @@ PORTFOLIO_API_BASE_URL="$API_BASE_URL" sh "$PROJECT_ROOT/scripts/import-demo-por
 
 overview=$(curl -sSf "$API_BASE_URL/v1/portfolio/overview")
 holdings=$(curl -sSf "$API_BASE_URL/v1/portfolio/holdings")
+write_accounts=$(curl -sSf "$API_BASE_URL/v1/accounts")
+portfolio_accounts=$(curl -sSf "$API_BASE_URL/v1/portfolio/accounts")
 transactions=$(curl -sSf "$API_BASE_URL/v1/transactions")
 read_model_refresh_status=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-refresh")
 read_model_refresh_run=$(curl -sSf -X POST "$API_BASE_URL/v1/portfolio/read-model-refresh/run")
 read_model_cache=$(curl -sSf "$API_BASE_URL/v1/portfolio/read-model-cache")
 meta_via_web=$(curl -sSf "$WEB_BASE_URL/api/v1/meta")
+
+first_write_account_name=$(json_array_field "$write_accounts" 0 name)
+second_write_account_name=$(json_array_field "$write_accounts" 1 name)
+first_portfolio_account_name=$(json_array_field "$portfolio_accounts" 0 accountName)
+second_portfolio_account_name=$(json_array_field "$portfolio_accounts" 1 accountName)
+
+[ "$first_write_account_name" = "$first_portfolio_account_name" ]
+[ "$second_write_account_name" = "$second_portfolio_account_name" ]
+
+reorder_payload=$(json_swap_first_two_account_ids "$write_accounts")
+curl -sSf \
+  -X PUT \
+  -H 'Content-Type: application/json' \
+  -d "$reorder_payload" \
+  "$API_BASE_URL/v1/accounts/order" >/dev/null
+
+portfolio_accounts_after_reorder=$(curl -sSf "$API_BASE_URL/v1/portfolio/accounts")
+[ "$(json_array_field "$portfolio_accounts_after_reorder" 0 accountName)" = "$second_write_account_name" ]
+[ "$(json_array_field "$portfolio_accounts_after_reorder" 1 accountName)" = "$first_write_account_name" ]
 
 printf '%s' "$overview" | grep -F '"totalBookValuePln": "104736.00"' >/dev/null
 printf '%s' "$overview" | grep -F '"activeHoldingCount": 7' >/dev/null
@@ -215,12 +262,15 @@ meta_after_restart=$(curl -sSf "$API_BASE_URL/v1/meta")
 meta_via_web_after_restart=$(curl -sSf "$WEB_BASE_URL/api/v1/meta")
 transactions_after_restart=$(curl -sSf "$API_BASE_URL/v1/transactions")
 edo_holdings_after_restart=$(curl -sSf "$API_BASE_URL/v1/portfolio/holdings")
+portfolio_accounts_after_restart=$(curl -sSf "$API_BASE_URL/v1/portfolio/accounts")
 
 printf '%s' "$overview_after_restart" | grep -F '"missingFxTransactions": 0' >/dev/null
 printf '%s' "$meta_after_restart" | grep -F '"persistenceMode": "SQLITE"' >/dev/null
 printf '%s' "$meta_via_web_after_restart" | grep -F '"persistenceMode": "SQLITE"' >/dev/null
 printf '%s' "$transactions_after_restart" | grep -F '"fxRateToPln": "3.95500000"' >/dev/null
 printf '%s' "$transactions_after_restart" | grep -F '"type": "REDEEM"' >/dev/null
+[ "$(json_array_field "$portfolio_accounts_after_restart" 0 accountName)" = "$second_write_account_name" ]
+[ "$(json_array_field "$portfolio_accounts_after_restart" 1 accountName)" = "$first_write_account_name" ]
 assert_edo_smoke_state "$edo_holdings_after_restart" after
 
 printf 'SQLite smoke test passed on %s\n' "$API_BASE_URL"
