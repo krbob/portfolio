@@ -173,6 +173,23 @@ Without that key the app falls back to `GC=F`, which is a futures proxy rather t
 
 The production web image does not use `vite preview`. It serves static files through `nginx` and proxies `/api` to `portfolio-api`, so a reverse proxy such as Traefik only needs to publish the web container.
 
+## Production deployment notes
+
+For a real self-hosted deployment:
+
+- keep private upstream URLs, hostnames, and API keys in a local `.env`, not in Git
+- use [docker-compose.full-stack.example.yml](./docker-compose.full-stack.example.yml) as the baseline if you want published images for all services
+- use your own compose file plus `.env` if you want remote market-data services or a reverse proxy such as Traefik or Dockge in front
+
+If you want a completely fresh start with empty SQLite data and empty backup history:
+
+```bash
+docker compose down --volumes --remove-orphans
+docker compose up -d
+```
+
+That removes the named Docker volumes used by the app stack.
+
 ## Runtime model
 
 Portfolio is intentionally `SQLite-only`.
@@ -322,6 +339,12 @@ PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example \
 ./scripts/smoke-test-remote-market-data-stack.sh
 sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
 ```
+
+CI coverage is intentionally split by cost and determinism:
+
+- pull requests run API tests, web tests, web build, OpenAPI client sync verification, and the SQLite Docker smoke test
+- pushes to `main` additionally run the self-hosted market-data smoke test before publishing container images
+- the remote market-data smoke test remains manual because it depends on environment-specific upstream URLs and optional external API credentials
 
 ## Related services
 
