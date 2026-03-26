@@ -135,16 +135,17 @@ export function InstrumentsSection() {
           </select>
         </div>
 
-        <div>
-          <span className={labelClass}>{isPolish ? 'Symbol' : 'Symbol'}</span>
-          <input
-            className={input}
-            value={form.symbol}
-            onChange={(event) => setForm((current) => ({ ...current, symbol: event.target.value }))}
-            placeholder="VWCE.DE"
-            disabled={isEdo}
-          />
-        </div>
+        {!isEdo && (
+          <div>
+            <span className={labelClass}>{isPolish ? 'Symbol' : 'Symbol'}</span>
+            <input
+              className={input}
+              value={form.symbol}
+              onChange={(event) => setForm((current) => ({ ...current, symbol: event.target.value }))}
+              placeholder="VWCE.DE"
+            />
+          </div>
+        )}
 
         <div>
           <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>

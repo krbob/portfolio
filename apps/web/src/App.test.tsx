@@ -2614,7 +2614,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    const moveBetaUpButtonName = /move beta up|przesuń beta w górę/i
+    const dragBetaHandleName = /drag beta to reorder|przeciągnij beta, aby zmienić kolejność/i
 
     expect(await screen.findByRole('heading', { name: /accounts|konta/i, level: 2 })).toBeInTheDocument()
     const alphaCells = await screen.findAllByText(/^Alpha$/)
@@ -2629,7 +2629,17 @@ describe('App', () => {
       throw new Error('Beta row did not render')
     }
 
-    fireEvent.click(within(betaRow).getByRole('button', { name: moveBetaUpButtonName }))
+    const alphaRow = alphaCells[0]?.closest('tr')
+    expect(alphaRow).not.toBeNull()
+    if (!alphaRow) {
+      throw new Error('Alpha row did not render')
+    }
+
+    const dragHandle = within(betaRow).getByLabelText(dragBetaHandleName)
+    fireEvent.dragStart(dragHandle)
+    fireEvent.dragOver(alphaRow)
+    fireEvent.drop(alphaRow)
+    fireEvent.dragEnd(dragHandle)
 
     await waitFor(() => {
       expect(reorderPayloads).toEqual([['acc-b', 'acc-a']])
