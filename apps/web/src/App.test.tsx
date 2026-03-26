@@ -1075,6 +1075,176 @@ describe('App', () => {
     expect((await screen.findAllByText(/book basis/i)).length).toBeGreaterThan(0)
   })
 
+  it('sorts instrument rows and rounds displayed quantities', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              quantity: '10.125',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '1012.50',
+              bookValuePln: '1012.50',
+              currentPricePln: '112.50',
+              currentValuePln: '1139.06',
+              unrealizedGainPln: '126.56',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 2,
+            },
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-2',
+              instrumentName: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              quantity: '4',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '400.00',
+              bookValuePln: '400.00',
+              currentPricePln: '101.37',
+              currentValuePln: '405.48',
+              unrealizedGainPln: '5.48',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 1,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-1',
+              name: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              symbol: 'VWRA.L',
+              currency: 'USD',
+              valuationSource: 'STOCK_ANALYST',
+              edoTerms: null,
+              isActive: true,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+            },
+            {
+              id: 'ins-2',
+              name: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              symbol: null,
+              currency: 'PLN',
+              valuationSource: 'EDO_CALCULATOR',
+              edoTerms: {
+                seriesMonth: '2026-03',
+                firstPeriodRateBps: 500,
+                marginBps: 150,
+              },
+              isActive: true,
+              createdAt: '2026-03-02T00:00:00Z',
+              updatedAt: '2026-03-02T00:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in instrument sorting test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/instruments']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('10.13')).toBeInTheDocument()
+    expect(screen.queryByText('10.1250')).not.toBeInTheDocument()
+
+    const quantityToggle = screen.getAllByRole('button', { name: /^quantity/i })[0]!
+    fireEvent.click(quantityToggle)
+    fireEvent.click(quantityToggle)
+
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row')
+      const vwraRow = rows.find((row) => within(row).queryByText('VWRA'))
+      const edoRow = rows.find((row) => within(row).queryByText('EDO0336'))
+
+      expect(vwraRow).toBeDefined()
+      expect(edoRow).toBeDefined()
+      expect(rows.indexOf(vwraRow!)).toBeLessThan(rows.indexOf(edoRow!))
+    })
+  })
+
   it('shows percentage pnl for valued holdings', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)

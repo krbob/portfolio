@@ -7,9 +7,27 @@ import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
-import { useI18n } from '../lib/i18n'
+import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
+
+type SortField =
+  | 'instrumentName'
+  | 'catalog'
+  | 'accountCount'
+  | 'quantity'
+  | 'totalCurrentValuePln'
+  | 'totalUnrealizedGainPln'
+  | 'status'
+
+type SortDirection = 'asc' | 'desc'
+
+interface SortState {
+  field: SortField
+  direction: SortDirection
+}
+
+const defaultSort: SortState = { field: 'instrumentName', direction: 'asc' }
 
 export function InstrumentsScreen() {
   const { isPolish } = useI18n()
@@ -19,7 +37,9 @@ export function InstrumentsScreen() {
   const catalog = instrumentsQuery.data ?? []
   const holdings = holdingsQuery.data ?? []
   const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
+  const [sortState, setSortState] = useState<SortState>(defaultSort)
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string | null>(null)
+  const sortedRows = useMemo(() => [...rows].sort((left, right) => compareRows(left, right, sortState)), [rows, sortState])
 
   const activeRows = rows.filter((row) => row.holdingCount > 0)
   const degradedCount = rows.filter((row) => row.status !== 'VALUED' && row.holdingCount > 0).length
@@ -27,7 +47,7 @@ export function InstrumentsScreen() {
   const totalGainPln = rows.reduce((sum, row) => sum + row.totalUnrealizedGainPln, 0)
   const totalHoldingCount = rows.reduce((sum, row) => sum + row.holdingCount, 0)
   const totalValuedHoldingCount = rows.reduce((sum, row) => sum + row.valuedHoldingCount, 0)
-  const selectedRow = rows.find((row) => row.instrument.id === selectedInstrumentId) ?? rows[0] ?? null
+  const selectedRow = sortedRows.find((row) => row.instrument.id === selectedInstrumentId) ?? sortedRows[0] ?? null
   const selectedHoldings = useMemo(
     () => holdings
       .filter((holding) => holding.instrumentId === selectedRow?.instrument.id)
@@ -36,15 +56,15 @@ export function InstrumentsScreen() {
   )
 
   useEffect(() => {
-    if (rows.length === 0) {
+    if (sortedRows.length === 0) {
       setSelectedInstrumentId(null)
       return
     }
 
-    if (!selectedInstrumentId || !rows.some((row) => row.instrument.id === selectedInstrumentId)) {
-      setSelectedInstrumentId(rows[0]?.instrument.id ?? null)
+    if (!selectedInstrumentId || !sortedRows.some((row) => row.instrument.id === selectedInstrumentId)) {
+      setSelectedInstrumentId(sortedRows[0]?.instrument.id ?? null)
     }
-  }, [rows, selectedInstrumentId])
+  }, [sortedRows, selectedInstrumentId])
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
     return (
@@ -145,17 +165,17 @@ export function InstrumentsScreen() {
                 <table className="min-w-full">
                   <thead className="bg-zinc-950/30">
                     <tr>
-                      <th className={th}>{isPolish ? 'Instrument' : 'Instrument'}</th>
-                      <th className={th}>{isPolish ? 'Katalog' : 'Catalog'}</th>
-                      <th className={thRight}>{isPolish ? 'Konta' : 'Accounts'}</th>
-                      <th className={thRight}>{isPolish ? 'Ilość' : 'Quantity'}</th>
-                      <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
-                      <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
-                      <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
+                      <SortableHeader sort={sortState} field="instrumentName" label={isPolish ? 'Instrument' : 'Instrument'} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="catalog" label={isPolish ? 'Katalog' : 'Catalog'} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="accountCount" label={isPolish ? 'Konta' : 'Accounts'} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="quantity" label={isPolish ? 'Ilość' : 'Quantity'} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="totalCurrentValuePln" label={isPolish ? 'Wartość' : 'Value'} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="totalUnrealizedGainPln" label="P/L" onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="status" label={isPolish ? 'Status' : 'Status'} onToggle={setSortState} align="right" />
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => {
+                    {sortedRows.map((row) => {
                       const isSelected = selectedRow?.instrument.id === row.instrument.id
                       return (
                         <tr
@@ -195,7 +215,7 @@ export function InstrumentsScreen() {
                           </td>
                           <td className={tdRight}>
                             <div>
-                              <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatNumber(row.quantity, { maximumFractionDigits: 4 })}</p>
+                              <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatQuantity(row.quantity)}</p>
                               <p className="text-xs text-zinc-500">
                                 {row.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
                               </p>
@@ -320,7 +340,7 @@ function InstrumentDetailsCard({
         />
         <InstrumentDetailMetric
           label={isPolish ? 'Łączna ilość' : 'Total quantity'}
-          value={row.accountCount === 0 ? '0' : formatNumber(row.quantity, { maximumFractionDigits: 4 })}
+          value={row.accountCount === 0 ? '0' : formatQuantity(row.quantity)}
           detail={isPolish ? `Koszt ${formatCurrencyPln(row.totalBookValuePln)}` : `Cost ${formatCurrencyPln(row.totalBookValuePln)}`}
         />
         <InstrumentDetailMetric
@@ -353,7 +373,7 @@ function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{holding.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {holding.quantity} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                    {formatQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -384,7 +404,7 @@ function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{lot.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatDate(lot.purchaseDate)} · {lot.quantity} {isPolish ? 'szt.' : 'units'}
+                    {formatDate(lot.purchaseDate)} · {formatQuantity(lot.quantity)} {isPolish ? 'szt.' : 'units'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -430,6 +450,39 @@ function InstrumentDetailMetric({
   )
 }
 
+function SortableHeader({
+  sort,
+  field,
+  label,
+  onToggle,
+  align,
+}: {
+  sort: SortState
+  field: SortField
+  label: string
+  onToggle: (s: SortState) => void
+  align?: 'right'
+}) {
+  const isActive = sort.field === field
+  const arrow = !isActive ? '↕' : sort.direction === 'asc' ? '↑' : '↓'
+  const base = align === 'right' ? thRight : th
+
+  return (
+    <th className={base}>
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1 ${isActive ? 'text-zinc-300' : ''}`}
+        onClick={() =>
+          onToggle({ field, direction: isActive && sort.direction === 'desc' ? 'asc' : 'desc' })
+        }
+      >
+        {label}
+        <span className="text-[10px]">{arrow}</span>
+      </button>
+    </th>
+  )
+}
+
 interface InstrumentRow {
   instrument: Instrument
   accountCount: number
@@ -456,9 +509,7 @@ function buildInstrumentRows(
     holdingsByInstrument.set(holding.instrumentId, bucket)
   }
 
-  return [...catalog]
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .map((instrument) => {
+  return [...catalog].map((instrument) => {
       const instrumentHoldings = holdingsByInstrument.get(instrument.id) ?? []
       const accountIds = new Set(instrumentHoldings.map((holding) => holding.accountId))
       const valuedHoldingCount = instrumentHoldings.filter((holding) => holding.valuationStatus === 'VALUED').length
@@ -494,6 +545,37 @@ function buildInstrumentRows(
         status,
       } satisfies InstrumentRow
     })
+}
+
+function compareRows(a: InstrumentRow, b: InstrumentRow, sort: SortState) {
+  const factor = sort.direction === 'asc' ? 1 : -1
+
+  switch (sort.field) {
+    case 'instrumentName':
+      return factor * a.instrument.name.localeCompare(b.instrument.name)
+    case 'catalog':
+      return factor * instrumentCatalogLabel(a).localeCompare(instrumentCatalogLabel(b))
+    case 'accountCount':
+      return factor * (a.accountCount - b.accountCount)
+    case 'quantity':
+      return factor * (a.quantity - b.quantity)
+    case 'totalCurrentValuePln':
+      return factor * (a.totalCurrentValuePln - b.totalCurrentValuePln)
+    case 'totalUnrealizedGainPln':
+      return factor * (a.totalUnrealizedGainPln - b.totalUnrealizedGainPln)
+    case 'status':
+      return factor * instrumentStatusLabel(a.status).localeCompare(instrumentStatusLabel(b.status))
+    default:
+      return 0
+  }
+}
+
+function instrumentCatalogLabel(row: InstrumentRow) {
+  return `${labelInstrumentKind(row.instrument.kind)} ${labelAssetClass(row.instrument.assetClass)} ${labelValuationSource(row.instrument.valuationSource)}`
+}
+
+function instrumentStatusLabel(status: InstrumentRow['status']) {
+  return labelInstrumentStatus(status, getActiveUiLanguage() === 'pl')
 }
 
 function statusVariant(status: InstrumentRow['status']) {
@@ -567,6 +649,20 @@ function describeInstrumentGain(
   }
 
   return gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })
+}
+
+function formatQuantity(value: string | number) {
+  const amount = typeof value === 'number' ? value : Number(value)
+
+  if (!Number.isFinite(amount)) {
+    return formatNumber(value, { maximumFractionDigits: 2 })
+  }
+
+  if (Number.isInteger(amount)) {
+    return formatNumber(amount, { maximumFractionDigits: 0 })
+  }
+
+  return formatNumber(amount, { maximumFractionDigits: 2 })
 }
 
 function asNumber(value: string | number | null | undefined) {

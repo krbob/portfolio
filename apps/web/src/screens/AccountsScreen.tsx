@@ -162,7 +162,9 @@ export function AccountsScreen() {
                 <table className="min-w-full">
                   <thead className="bg-zinc-950/30">
                     <tr>
-                      <th className={th}>{isPolish ? 'Kolejność' : 'Order'}</th>
+                      <th className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                        <span className="sr-only">{isPolish ? 'Kolejność' : 'Order'}</span>
+                      </th>
                       <th className={th}>{isPolish ? 'Konto' : 'Account'}</th>
                       <th className={th}>{isPolish ? 'Typ' : 'Type'}</th>
                       <th className={thRight}>{isPolish ? 'Pozycje' : 'Holdings'}</th>
@@ -193,9 +195,9 @@ export function AccountsScreen() {
                             handleDrop(account.accountId)
                           }}
                         >
-                          <td className={td}>
+                          <td className="w-14 px-3 py-3 text-sm">
                             <div
-                              className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/50 transition ${
+                              className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/50 transition ${
                                 reorderAccountsMutation.isPending
                                   ? 'cursor-not-allowed text-zinc-700'
                                   : 'cursor-grab text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 active:cursor-grabbing'

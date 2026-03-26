@@ -155,7 +155,7 @@ export function DashboardScreen() {
       </PageHeader>
 
       {/* Hero stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label={labelPrimaryValueMetric(valuationState, isPolish)}
           value={formatCurrencyPln(displayedTotalValuePln)}
@@ -192,9 +192,9 @@ export function DashboardScreen() {
 
       {/* Allocation bar */}
       <div className={`${card} mt-4`}>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Alokacja' : 'Allocation'}</h3>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <AllocationLegend label={isPolish ? 'Akcje' : 'Equities'} color="bg-blue-500" pct={equityPct} />
             <AllocationLegend label={isPolish ? 'Obligacje' : 'Bonds'} color="bg-amber-500" pct={bondPct} />
             <AllocationLegend label={isPolish ? 'Gotówka' : 'Cash'} color="bg-zinc-500" pct={cashPct} />
@@ -211,7 +211,7 @@ export function DashboardScreen() {
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Mini portfolio chart */}
         <div className={`${card} lg:col-span-2`}>
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryValueMetric(historyValuationState, isPolish)}</h3>
               {historyValuationState !== 'MARK_TO_MARKET' ? (
@@ -335,7 +335,7 @@ export function DashboardScreen() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <p className={`text-3xl font-bold tabular-nums ${driftTone(mostOffTargetBucket?.driftPctPoints)}`}>
+                  <p className={`text-2xl font-bold tabular-nums sm:text-3xl ${driftTone(mostOffTargetBucket?.driftPctPoints)}`}>
                     {mostOffTargetBucket
                       ? formatPercent(mostOffTargetBucket.driftPctPoints, {
                           signed: true,
@@ -427,7 +427,7 @@ export function DashboardScreen() {
       </div>
 
       {/* Quick stats row */}
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
           value={hasFullCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : (isPolish ? 'b/d' : 'N/A')}
@@ -464,7 +464,7 @@ export function DashboardScreen() {
 
 function AllocationLegend({ label, color, pct }: { label: string; color: string; pct: number }) {
   return (
-    <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+    <span className="flex items-center gap-1.5 text-[11px] text-zinc-400 sm:text-xs">
       <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
       {label} {formatPercent(pct)}
     </span>
