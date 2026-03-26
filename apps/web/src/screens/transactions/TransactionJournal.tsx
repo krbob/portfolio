@@ -4,6 +4,7 @@ import { DangerConfirmInline } from '../../components/DangerConfirmInline'
 import { Card, EmptyState, SectionHeader } from '../../components/ui'
 import { Modal } from '../../components/ui/Modal'
 import { usePortfolioHoldings } from '../../hooks/use-read-model'
+import { notApplicableLabel } from '../../lib/availability'
 import { formatCurrency, formatDate, formatNumber } from '../../lib/format'
 import { useI18n } from '../../lib/i18n'
 import { labelTransactionType } from '../../lib/labels'
@@ -646,9 +647,7 @@ export function TransactionJournal({
               value={
                 latestTradeDateInFilteredJournal
                   ? formatDate(latestTradeDateInFilteredJournal)
-                  : isPolish
-                    ? 'b/d'
-                    : 'n/a'
+                  : notApplicableLabel(isPolish)
               }
               hint={isPolish ? `Strona ${currentPage} / ${totalPages}` : `Page ${currentPage} / ${totalPages}`}
             />

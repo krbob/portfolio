@@ -1,3 +1,4 @@
+import { missingDataLabel } from './availability'
 import type {
   PortfolioDailyHistory,
   PortfolioOverview,
@@ -114,7 +115,7 @@ export function buildPortfolioDataQualitySummary({
     availableBenchmarkCount,
     totalBenchmarkCount,
     cpiCoverageThroughMonth,
-    cpiCoverageThroughLabel: cpiCoverageThroughMonth ? formatYearMonth(cpiCoverageThroughMonth) : notAvailableLabel(isPolish),
+    cpiCoverageThroughLabel: cpiCoverageThroughMonth ? formatYearMonth(cpiCoverageThroughMonth) : missingDataLabel(isPolish),
     lastRefreshAt,
     lastHistoryRefreshAt: historySnapshot?.generatedAt ?? null,
     lastReturnsRefreshAt: returnsSnapshot?.generatedAt ?? null,
@@ -358,9 +359,6 @@ function findCpiCoverageThroughMonth(returns: PortfolioReturns): string | null {
   return `${coverageDate.getUTCFullYear()}-${String(coverageDate.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-function notAvailableLabel(isPolish: boolean) {
-  return isPolish ? 'b/d' : 'N/A'
-}
 
 function latestTimestamp(values: Array<string | null | undefined>): string | null {
   return values

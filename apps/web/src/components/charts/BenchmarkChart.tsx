@@ -55,7 +55,7 @@ export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
       subtitle={isPolish ? 'Indeksowane do 100 na początku wybranego okresu' : 'Indexed to 100 at the start of the selected period'}
       legend={
         <>
-          <ChartLegendItem color={chartPalette.portfolio} label="Portfolio" />
+          <ChartLegendItem color={chartPalette.portfolio} label={isPolish ? 'Portfel' : 'Portfolio'} />
           <ChartLegendItem color={chartPalette.vwra} label="VWRA" dashed />
           <ChartLegendItem color={chartPalette.inflation} label={isPolish ? 'Inflacja' : 'Inflation'} dashed />
           <ChartLegendItem color={chartPalette.targetMix} label={isPolish ? 'Miks docelowy' : 'Target mix'} dashed />

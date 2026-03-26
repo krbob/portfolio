@@ -228,7 +228,7 @@ export function TransactionsSection() {
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
           <span className="text-xs text-zinc-500">{isPolish ? 'Ostatnie zdarzenie importu' : 'Latest import event'}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
-            {latestImportEvent ? labelAuditOutcome(latestImportEvent.outcome) : isPolish ? 'n/d' : 'n/a'}
+            {latestImportEvent ? labelAuditOutcome(latestImportEvent.outcome) : isPolish ? 'Brak' : 'None yet'}
           </strong>
         </article>
       </div>

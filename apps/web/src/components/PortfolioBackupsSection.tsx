@@ -7,6 +7,7 @@ import {
   useRestorePortfolioBackup,
   useRunPortfolioBackup,
 } from '../hooks/use-write-model'
+import { missingDataLabel } from '../lib/availability'
 import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
@@ -195,31 +196,31 @@ export function PortfolioBackupsSection() {
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Ustawienia' : 'App settings'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Instrumenty' : 'Instruments'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Cele' : 'Targets'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Schemat' : 'Schema'}</dt>
-                  <dd className="text-zinc-100">{backup.schemaVersion ?? 'n/a'}</dd>
+                  <dd className="text-zinc-100">{backup.schemaVersion ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Utworzono' : 'Created'}</dt>

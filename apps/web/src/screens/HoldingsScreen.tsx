@@ -4,6 +4,7 @@ import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
 import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
+import { missingDataLabel } from '../lib/availability'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
@@ -350,7 +351,7 @@ export function HoldingsScreen() {
                         {formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}
                       </td>
                       <td className={`${tdRight} font-medium ${gainColor(gainPln)}`}>
-                        <div>{gainPln == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(gainPln)}</div>
+                        <div>{gainPln == null ? missingDataLabel(isPolish) : formatSignedCurrencyPln(gainPln)}</div>
                         {gainPct != null ? (
                           <div className="mt-0.5 text-xs font-normal text-zinc-500">
                             {formatPercent(gainPct, { signed: true, scale: 100, maximumFractionDigits: 2 })}
@@ -404,7 +405,7 @@ export function HoldingsScreen() {
             <DetailStat
               label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
               value={selectedHolding.unrealizedGainPln == null
-                ? (isPolish ? 'b/d' : 'N/A')
+                ? missingDataLabel(isPolish)
                 : formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
               detail={formatHoldingGainPercent(selectedHolding)}
               className={gainColor(selectedHolding.unrealizedGainPln)}

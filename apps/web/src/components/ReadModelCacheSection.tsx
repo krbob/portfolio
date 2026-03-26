@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { activeNotApplicableLabel, notApplicableLabel } from '../lib/availability'
 import { useReadModelCacheSnapshots } from '../hooks/use-read-model'
 import { useInvalidateReadModelCache, useReadModelRefreshStatus, useRunReadModelRefresh } from '../hooks/use-write-model'
 import { Card, SectionHeader } from './ui'
@@ -121,7 +122,7 @@ export function ReadModelCacheSection() {
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">{isPolish ? 'Ostatnie odświeżenie' : 'Last refresh'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
-            {refreshStatusQuery.data?.lastSuccessAt ? formatDateTime(refreshStatusQuery.data.lastSuccessAt) : 'n/a'}
+            {refreshStatusQuery.data?.lastSuccessAt ? formatDateTime(refreshStatusQuery.data.lastSuccessAt) : notApplicableLabel(isPolish)}
           </strong>
         </article>
       </div>
@@ -133,7 +134,7 @@ export function ReadModelCacheSection() {
         </p>
         <p className="text-sm text-zinc-500">
           {isPolish ? 'Ostatnie uruchomienie' : 'Last trigger'}:{' '}
-          {refreshStatusQuery.data?.lastTrigger ?? (isPolish ? 'brak' : 'n/a')}
+          {refreshStatusQuery.data?.lastTrigger ?? (isPolish ? 'Brak' : 'None yet')}
           {refreshStatusQuery.data?.lastDurationMs != null ? ` · ${refreshStatusQuery.data.lastDurationMs} ms` : ''}
         </p>
         {refreshStatusQuery.data?.lastFailureMessage && (
@@ -186,7 +187,7 @@ export function ReadModelCacheSection() {
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Aktualizacja źródeł' : 'Source updated'}</dt>
-                  <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : 'n/a'}</dd>
+                  <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : notApplicableLabel(isPolish)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{isPolish ? 'Rozmiar' : 'Payload'}</dt>
@@ -203,7 +204,7 @@ export function ReadModelCacheSection() {
 
 function formatWindow(from?: string | null, to?: string | null) {
   if (!from && !to) {
-    return 'n/a'
+    return activeNotApplicableLabel()
   }
   return `${from ?? '...'} -> ${to ?? '...'}`
 }

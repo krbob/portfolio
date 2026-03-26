@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, TabBar } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
+import { missingDataLabel } from '../lib/availability'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { isMarketValuationState } from '../lib/valuation'
@@ -98,7 +99,7 @@ export function PerformanceScreen() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={isPolish ? 'Ostatnia wartość' : 'Latest Value'}
-          value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : (isPolish ? 'n/d' : 'N/A')}
+          value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
         />
         <StatCard
           label="YTD MWRR"

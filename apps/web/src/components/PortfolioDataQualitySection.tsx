@@ -1,5 +1,6 @@
 import { Card, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
+import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { badge, badgeVariants } from '../lib/styles'
@@ -61,7 +62,7 @@ export function PortfolioDataQualitySection() {
             />
             <MetricCard
               label={isPolish ? 'Ostatni refresh' : 'Last refresh'}
-              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : (isPolish ? 'brak' : 'n/a')}
+              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : notApplicableLabel(isPolish)}
             />
           </div>
 

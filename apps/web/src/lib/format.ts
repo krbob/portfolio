@@ -1,4 +1,8 @@
-import { getActiveLocaleTag, getActiveUiLanguage } from './i18n'
+import {
+  activeNotApplicableLabel,
+  activeUnavailableLabel,
+} from './availability'
+import { getActiveLocaleTag } from './i18n'
 
 const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
 const numberFormatterCache = new Map<string, Intl.NumberFormat>()
@@ -18,7 +22,7 @@ function toNumber(value: string | number | null | undefined) {
 export function formatCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return unavailableLabel()
+    return activeUnavailableLabel()
   }
 
   return formatterForCurrency('PLN').format(amount)
@@ -30,7 +34,7 @@ export function formatCurrency(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount) || !currency) {
-    return unavailableLabel()
+    return activeUnavailableLabel()
   }
 
   return formatterForCurrency(currency).format(amount)
@@ -51,7 +55,7 @@ export function formatCurrencyBreakdown(
 
   const formatted = items
     .map((item) => formatCurrency(item.amount, item.currency))
-    .filter((value) => value !== unavailableLabel())
+    .filter((value) => value !== activeUnavailableLabel())
 
   return formatted.length > 0 ? formatted.join(' · ') : undefined
 }
@@ -75,7 +79,7 @@ export function hasMeaningfulCurrencyBreakdown(
 export function formatSignedCurrencyPln(value: string | number | null | undefined) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return unavailableLabel()
+    return activeUnavailableLabel()
   }
 
   const formatted = formatCurrencyPln(amount)
@@ -88,7 +92,7 @@ export function formatNumber(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return unavailableLabel()
+    return activeUnavailableLabel()
   }
 
   if (options.maximumFractionDigits != null) {
@@ -109,7 +113,7 @@ export function formatPercent(
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
-    return unavailableLabel()
+    return activeUnavailableLabel()
   }
 
   const scaled = amount * (options.scale ?? 1)
@@ -133,42 +137,42 @@ export function formatPercent(
 
 export function formatDateTime(value: string | number | Date | null | undefined) {
   if (value == null || value === '') {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
 
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.valueOf())) {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
   return dateTimeFormatter().format(date)
 }
 
 export function formatDate(value: string | number | Date | null | undefined) {
   if (value == null || value === '') {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
 
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.valueOf())) {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
   return dateFormatter().format(date)
 }
 
 export function formatYearMonth(value: string | null | undefined) {
   if (!value) {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
 
   const match = /^(\d{4})-(\d{2})$/.exec(value)
   if (!match) {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
 
   const year = Number(match[1])
   const month = Number(match[2])
   if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
-    return notAvailableLabel()
+    return activeNotApplicableLabel()
   }
 
   return monthFormatter().format(new Date(Date.UTC(year, month - 1, 1)))
@@ -272,12 +276,4 @@ function monthFormatter() {
     )
   }
   return monthFormatterCache.get(locale)!
-}
-
-function unavailableLabel() {
-  return getActiveUiLanguage() === 'pl' ? 'Niedostępne' : 'Unavailable'
-}
-
-function notAvailableLabel() {
-  return getActiveUiLanguage() === 'pl' ? 'n/d' : 'n/a'
 }

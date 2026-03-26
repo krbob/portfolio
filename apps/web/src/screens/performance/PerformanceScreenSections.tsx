@@ -2,6 +2,7 @@ import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPe
 import { AllocationTimeChart, BenchmarkChart, PortfolioValueChart } from '../../components/charts'
 import { ErrorState, LoadingState, StatePanel, SegmentedControl } from '../../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
+import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
 import { useI18n } from '../../lib/i18n'
 import { card, td, tdRight, th, thRight, tr } from '../../lib/styles'
@@ -335,7 +336,7 @@ export function formatReturn(
   isPolish = false,
 ) {
   if (!available) {
-    return isPolish ? 'b/d' : 'N/A'
+    return missingDataLabel(isPolish)
   }
 
   return formatPercent(value, { scale: 100, signed: true })

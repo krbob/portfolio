@@ -1,4 +1,8 @@
 import type { PortfolioOverview } from '../api/read-model'
+import {
+  missingDataLabel,
+  notApplicableLabel,
+} from './availability'
 import { formatNumber, formatPercent, formatSignedCurrencyPln } from './format'
 import { badgeVariants } from './styles'
 
@@ -29,7 +33,7 @@ export function calculateGainPct(
 
 export function formatPortfolioGainDisplay(value: number, valuedHoldingCount: number, isPolish: boolean) {
   if (valuedHoldingCount === 0) {
-    return isPolish ? 'b/d' : 'N/A'
+    return missingDataLabel(isPolish)
   }
 
   return formatSignedCurrencyPln(value)
@@ -88,7 +92,7 @@ export function describeHoldingGainRate(
       : `${valuedHoldingCount}/${activeHoldingCount} holdings valued`
   }
 
-  return gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })
+  return gainPct == null ? notApplicableLabel(isPolish) : formatPercent(gainPct, { signed: true })
 }
 
 export function describeHoldingGainValue(
@@ -109,7 +113,7 @@ export function describeHoldingGainValue(
 }
 
 export function formatHoldingGainPreview(value: string | number | null | undefined, isPolish: boolean) {
-  return value == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(value)
+  return value == null ? missingDataLabel(isPolish) : formatSignedCurrencyPln(value)
 }
 
 export function formatHoldingQuantity(value: string | number) {

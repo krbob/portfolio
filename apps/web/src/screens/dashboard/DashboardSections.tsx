@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioOverview } from '../../api/read-model'
 import { MiniChart } from '../../components/charts'
 import { Badge, ErrorState, LoadingState, StatCard, StatePanel } from '../../components/ui'
+import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
 import { labelAssetClass } from '../../lib/labels'
@@ -49,7 +50,7 @@ export function DashboardHeroStats({
       />
       <StatCard
         label={isPolish ? 'Zmiana dzienna' : 'Daily Change'}
-        value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : (isPolish ? 'b/d' : 'N/A')}
+        value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
         subtitle={dailyChangePct != null
           ? formatPercent(dailyChangePct, { signed: true })
           : hasMarketBackedCurrentValuation
@@ -401,7 +402,7 @@ export function DashboardQuickStats({
     <div className="mt-4 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
       <StatCard
         label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
-        value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : (isPolish ? 'b/d' : 'N/A')}
+        value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
         subtitle={hasMarketBackedCurrentValuation
           ? undefined
           : isPolish
