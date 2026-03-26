@@ -1564,6 +1564,195 @@ describe('App', () => {
     expect(dialogScope.getByLabelText(/^quantity$/i)).toHaveValue('100')
   })
 
+  it('opens a prefilled redeem composer from holdings quick actions', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'acc-1',
+              name: 'Primary account',
+              institution: 'Broker',
+              type: 'BROKERAGE',
+              baseCurrency: 'PLN',
+              displayOrder: 0,
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-2',
+              name: 'EDO0336',
+              symbol: null,
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              edoTerms: {
+                seriesMonth: '2026-03',
+                firstPeriodRateBps: 500,
+                marginBps: 150,
+              },
+              valuationSource: 'EDO_CALCULATOR',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary account',
+              instrumentId: 'ins-2',
+              instrumentName: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              quantity: '100',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '10000.00',
+              bookValuePln: '10000.00',
+              currentPricePln: '101.59',
+              currentValuePln: '10159.00',
+              unrealizedGainPln: '159.00',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 2,
+              edoLots: [
+                {
+                  purchaseDate: '2026-03-02',
+                  quantity: '70',
+                  costBasisPln: '7000.00',
+                  currentPricePln: '102.10',
+                  currentValuePln: '7147.00',
+                  unrealizedGainPln: '147.00',
+                  valuedAt: '2026-03-20',
+                  valuationStatus: 'VALUED',
+                  valuationIssue: null,
+                },
+                {
+                  purchaseDate: '2026-03-22',
+                  quantity: '30',
+                  costBasisPln: '3000.00',
+                  currentPricePln: '100.40',
+                  currentValuePln: '3012.00',
+                  unrealizedGainPln: '12.00',
+                  valuedAt: '2026-03-20',
+                  valuationStatus: 'VALUED',
+                  valuationIssue: null,
+                },
+              ],
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/transactions/import/profiles')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/transactions')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in holdings redeem quick action test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    const view = render(
+      <MemoryRouter initialEntries={['/holdings']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const scope = within(view.container)
+
+    expect((await scope.findAllByRole('heading', { name: /^holdings$/i })).length).toBeGreaterThan(0)
+
+    fireEvent.click(await scope.findByText(/EDO0336/))
+    fireEvent.click(await scope.findByRole('button', { name: /redeem all/i }))
+
+    expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
+
+    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialogScope = within(dialog)
+
+    expect(dialogScope.getByLabelText(/^account$/i)).toHaveValue('acc-1')
+    expect(dialogScope.getByLabelText(/^instrument$/i)).toHaveValue('ins-2')
+    expect(dialogScope.getByLabelText(/^type$/i)).toHaveValue('REDEEM')
+    expect(dialogScope.getByLabelText(/^quantity$/i)).toHaveValue('100')
+  })
+
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)

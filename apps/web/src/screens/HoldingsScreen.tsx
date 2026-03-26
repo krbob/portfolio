@@ -1,4 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
 import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
@@ -6,8 +7,9 @@ import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
+import type { TransactionRouteState } from '../lib/transaction-composer'
 import {
-  card, cardFlush, th, thRight, td, tdRight, tr,
+  btnGhost, btnPrimary, card, cardFlush, th, thRight, td, tdRight, tr,
   filterInput, label as labelClass, badge, badgeVariants,
 } from '../lib/styles'
 
@@ -31,6 +33,7 @@ const defaultSort: SortState = { field: 'currentValuePln', direction: 'desc' }
 
 export function HoldingsScreen() {
   const { isPolish } = useI18n()
+  const navigate = useNavigate()
   const holdingsQuery = usePortfolioHoldings()
   const holdings = holdingsQuery.data ?? []
   const [accountFilter, setAccountFilter] = useState('ALL')
@@ -378,10 +381,58 @@ export function HoldingsScreen() {
           {selectedHolding.valuationIssue && (
             <p className={`mt-2 text-sm ${issueToneClass(normalizedValuationStatus(selectedHolding.valuationStatus))}`}>{selectedHolding.valuationIssue}</p>
           )}
+          {selectedHolding.kind === 'BOND_EDO' && (selectedHolding.edoLots?.length ?? 0) > 0 ? (
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-zinc-200">
+                    {isPolish ? 'Wykup EDO' : 'Redeem EDO'}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {isPolish
+                      ? `${selectedHolding.edoLots?.length ?? 0} aktywne partie${selectedHolding.edoLots?.[0]?.purchaseDate ? ` od ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Otwórz wykup z już wybraną serią i kontem.`
+                      : `${selectedHolding.edoLots?.length ?? 0} active lots${selectedHolding.edoLots?.[0]?.purchaseDate ? ` starting from ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Open redemption with this series and account preselected.`}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={btnGhost}
+                    onClick={() => openRedeemFlow(selectedHolding)}
+                  >
+                    {isPolish ? 'Otwórz wykup' : 'Start redeem'}
+                  </button>
+                  <button
+                    type="button"
+                    className={btnPrimary}
+                    onClick={() => openRedeemFlow(selectedHolding, selectedHolding.quantity)}
+                  >
+                    {isPolish
+                      ? `Wykup wszystko (${formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} szt.)`
+                      : `Redeem all (${formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} units)`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </>
   )
+
+  function openRedeemFlow(holding: PortfolioHolding, quantity?: string) {
+    const state: TransactionRouteState = {
+      transactionDraft: {
+        accountId: holding.accountId,
+        instrumentId: holding.instrumentId,
+        type: 'REDEEM',
+        quantity,
+        currency: holding.currency,
+      },
+    }
+
+    navigate('/transactions', { state })
+  }
 }
 
 // --- Sub-components ---

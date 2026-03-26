@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
 import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
@@ -7,6 +8,7 @@ import { usePortfolioAuditEvents, usePortfolioHoldings } from '../hooks/use-read
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAuditOutcome, labelImportRowStatus, labelTransactionType } from '../lib/labels'
+import type { TransactionComposerDraft, TransactionRouteState } from '../lib/transaction-composer'
 import {
   badge,
   btnGhost,
@@ -158,6 +160,8 @@ const importMappingFields: Array<{
 
 export function TransactionsSection() {
   const { isPolish } = useI18n()
+  const location = useLocation()
+  const navigate = useNavigate()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
@@ -206,6 +210,8 @@ export function TransactionsSection() {
   const [showSettlementDateField, setShowSettlementDateField] = useState(false)
   const [hasCustomSettlementDate, setHasCustomSettlementDate] = useState(false)
   const [grossAmountMode, setGrossAmountMode] = useState<'auto' | 'manual'>('auto')
+  const routeState = (location.state as TransactionRouteState | null) ?? {}
+  const pendingTransactionDraft = routeState.transactionDraft ?? null
 
   const composerOpen = showComposer || editingTransactionId != null
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL' || form.type === 'REDEEM'
@@ -586,6 +592,37 @@ export function TransactionsSection() {
     setStructuredImportPreviewStatusFilter('ALL')
   }, [structuredImportJson, structuredImportSkipDuplicates])
 
+  useEffect(() => {
+    if (pendingTransactionDraft == null) {
+      return
+    }
+    if (accountsQuery.data == null || instrumentsQuery.data == null) {
+      return
+    }
+    if (pendingTransactionDraft.type === 'REDEEM' && holdingsQuery.data == null) {
+      return
+    }
+
+    openComposerWithDraft(pendingTransactionDraft)
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      },
+      { replace: true },
+    )
+  }, [
+    accountsQuery.data,
+    holdingsQuery.data,
+    instrumentsQuery.data,
+    location.hash,
+    location.pathname,
+    location.search,
+    navigate,
+    pendingTransactionDraft,
+  ])
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const payload = {
@@ -657,13 +694,32 @@ export function TransactionsSection() {
   }
 
   function openComposerForCreate() {
+    openComposerWithDraft(null)
+  }
+
+  function openComposerWithDraft(draft: TransactionComposerDraft | null) {
     setActiveWorkspace('journal')
     setPendingDeleteTransactionId(null)
     setEditingTransactionId(null)
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
-    setGrossAmountMode('auto')
-    setForm(initialForm)
+    setGrossAmountMode(draft?.grossAmount ? 'manual' : 'auto')
+    setForm({
+      ...initialForm,
+      accountId: draft?.accountId ?? initialForm.accountId,
+      instrumentId: draft?.instrumentId ?? initialForm.instrumentId,
+      type: draft?.type ?? initialForm.type,
+      tradeDate: draft?.tradeDate ?? initialForm.tradeDate,
+      settlementDate: draft?.settlementDate ?? draft?.tradeDate ?? initialForm.settlementDate,
+      quantity: draft?.quantity ?? initialForm.quantity,
+      unitPrice: draft?.unitPrice ?? initialForm.unitPrice,
+      grossAmount: draft?.grossAmount ?? initialForm.grossAmount,
+      feeAmount: draft?.feeAmount ?? initialForm.feeAmount,
+      taxAmount: draft?.taxAmount ?? initialForm.taxAmount,
+      currency: draft?.currency ?? initialForm.currency,
+      fxRateToPln: draft?.fxRateToPln ?? initialForm.fxRateToPln,
+      notes: draft?.notes ?? initialForm.notes,
+    })
     setShowComposer(true)
   }
 
