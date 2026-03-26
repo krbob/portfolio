@@ -19,10 +19,26 @@ jobs:
     name: Verify
     uses: ./.github/workflows/ci-verify.yml
 
+  smoke-self-hosted-market-data-docker:
+    name: Self-hosted market-data smoke
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run self-hosted market-data smoke test
+        run: sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
+
   publish-api:
     name: Publish API image
     runs-on: ubuntu-latest
-    needs: verify
+    needs:
+      - verify
+      - smoke-self-hosted-market-data-docker
     permissions:
       contents: read
       packages: write
@@ -59,7 +75,9 @@ jobs:
   publish-web:
     name: Publish Web image
     runs-on: ubuntu-latest
-    needs: verify
+    needs:
+      - verify
+      - smoke-self-hosted-market-data-docker
     permissions:
       contents: read
       packages: write
