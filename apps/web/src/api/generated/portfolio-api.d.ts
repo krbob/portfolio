@@ -11,25 +11,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": unknown;
-                    };
-                };
-            };
-        };
+        /**
+         * Get the API root banner
+         * @description Returns a plain-text banner confirming that the Portfolio API is reachable.
+         */
+        get: operations["getApiBanner"];
         put?: never;
         post?: never;
         delete?: never;
@@ -45,25 +31,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": unknown;
-                    };
-                };
-            };
-        };
+        /**
+         * Export the OpenAPI document
+         * @description Returns the generated OpenAPI specification for the Portfolio API as JSON.
+         */
+        get: operations["getOpenApiDocument"];
         put?: never;
         post?: never;
         delete?: never;
@@ -79,25 +51,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["HealthResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get the API health status
+         * @description Returns the basic liveness payload with application name, stage, version and auth mode.
+         */
+        get: operations["getHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -113,25 +71,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AppMetaResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get application metadata
+         * @description Returns application metadata, stack details and high-level feature capabilities.
+         */
+        get: operations["getAppMeta"];
         put?: never;
         post?: never;
         delete?: never;
@@ -147,25 +91,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReadinessResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get system readiness checks
+         * @description Returns the latest readiness evaluation for storage, market data, backups and authentication.
+         */
+        get: operations["getReadiness"];
         put?: never;
         post?: never;
         delete?: never;
@@ -181,76 +111,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthSessionResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get current authentication session
+         * @description Returns whether password authentication is enabled and whether the current session is authenticated.
+         */
+        get: operations["getAuthSession"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateAuthSessionRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthSessionResponse"];
-                    };
-                };
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthSessionResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create an authentication session
+         * @description Authenticates the current client using the configured password and creates a session cookie.
+         */
+        post: operations["createAuthSession"];
+        /**
+         * Clear the authentication session
+         * @description Clears the current session cookie and returns the resulting authentication state.
+         */
+        delete: operations["deleteAuthSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -263,49 +139,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AccountResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List accounts
+         * @description Returns all configured portfolio accounts ordered by their display order.
+         */
+        get: operations["listAccounts"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateAccountRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AccountResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create an account
+         * @description Creates a new portfolio account with its institution, type and base currency.
+         */
+        post: operations["createAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -320,29 +164,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ReorderAccountsRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AccountResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * Reorder accounts
+         * @description Updates the display order for accounts using the supplied ordered list of account IDs.
+         */
+        put: operations["reorderAccounts"];
         post?: never;
         delete?: never;
         options?: never;
@@ -357,49 +183,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstrumentResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List instruments
+         * @description Returns the full instrument catalog used by the portfolio ledger and read models.
+         */
+        get: operations["listInstruments"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateInstrumentRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstrumentResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create an instrument
+         * @description Creates a new instrument definition, including valuation source and optional EDO terms.
+         */
+        post: operations["createInstrument"];
         delete?: never;
         options?: never;
         head?: never;
@@ -413,25 +207,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioOverviewResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get portfolio overview
+         * @description Returns the current overview totals, valuation basis and top-level portfolio metrics.
+         */
+        get: operations["getPortfolioOverview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -447,25 +227,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["HoldingResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List portfolio holdings
+         * @description Returns current holdings with valuation, gains and optional EDO lot details.
+         */
+        get: operations["listPortfolioHoldings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -481,25 +247,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioAccountResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List portfolio account summaries
+         * @description Returns read-model account summaries with balances, valuation status and allocation details.
+         */
+        get: operations["listPortfolioAccounts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -515,25 +267,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioDailyHistoryResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get daily portfolio history
+         * @description Returns the cached or freshly computed daily portfolio history read model.
+         */
+        get: operations["getPortfolioDailyHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -549,25 +287,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioReturnsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get portfolio returns
+         * @description Returns aggregated portfolio return metrics and benchmark comparisons.
+         */
+        get: operations["getPortfolioReturns"];
         put?: never;
         post?: never;
         delete?: never;
@@ -583,25 +307,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioAllocationResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get allocation summary
+         * @description Returns current allocation, target mix drift and rebalancing guidance.
+         */
+        get: operations["getPortfolioAllocation"];
         put?: never;
         post?: never;
         delete?: never;
@@ -617,25 +327,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReadModelCacheSnapshotResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List read-model cache snapshots
+         * @description Returns cached read-model snapshots and their invalidation metadata.
+         */
+        get: operations["listReadModelCacheSnapshots"];
         put?: never;
         post?: never;
         delete?: never;
@@ -653,25 +349,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReadModelCacheInvalidationResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Invalidate read-model cache
+         * @description Clears all cached read-model snapshots so they are rebuilt on the next access.
+         */
+        post: operations["invalidateReadModelCache"];
         delete?: never;
         options?: never;
         head?: never;
@@ -685,25 +367,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReadModelRefreshStatusResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get read-model refresh status
+         * @description Returns the status of background refresh jobs for read models.
+         */
+        get: operations["getReadModelRefreshStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -721,25 +389,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReadModelRefreshRunResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Run a manual read-model refresh
+         * @description Triggers an immediate refresh of portfolio read models and returns the result.
+         */
+        post: operations["runReadModelRefresh"];
         delete?: never;
         options?: never;
         head?: never;
@@ -753,28 +407,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: {
-                    limit?: string;
-                    category?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuditEventResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List portfolio audit events
+         * @description Returns recent operational audit events with optional category filtering.
+         */
+        get: operations["listPortfolioAuditEvents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -790,49 +427,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioTargetResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List target allocation weights
+         * @description Returns the saved portfolio target allocation weights.
+         */
+        get: operations["listPortfolioTargets"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ReplacePortfolioTargetsRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioTargetResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * Replace target allocation weights
+         * @description Replaces the saved portfolio target allocation with the provided set of weights.
+         */
+        post: operations["replacePortfolioTargets"];
         delete?: never;
         options?: never;
         head?: never;
@@ -846,49 +451,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get benchmark settings
+         * @description Returns enabled, pinned and custom benchmark settings for the portfolio.
+         */
+        get: operations["getPortfolioBenchmarkSettings"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SavePortfolioBenchmarkSettingsRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Save benchmark settings
+         * @description Saves enabled, pinned and optional custom benchmark configuration.
+         */
+        post: operations["savePortfolioBenchmarkSettings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -902,49 +475,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get rebalancing settings
+         * @description Returns current tolerance band and rebalancing mode settings.
+         */
+        get: operations["getPortfolioRebalancingSettings"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SavePortfolioRebalancingSettingsRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Save rebalancing settings
+         * @description Saves the portfolio tolerance band and rebalancing mode configuration.
+         */
+        post: operations["savePortfolioRebalancingSettings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -958,25 +499,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioBackupStatusResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get backup status
+         * @description Returns server backup status, retention settings and stored backup records.
+         */
+        get: operations["getPortfolioBackupStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -992,30 +519,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: {
-                    fileName?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        "Content-Disposition"?: {
-                            "text/plain": unknown;
-                        };
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": unknown;
-                    };
-                };
-            };
-        };
+        /**
+         * Download a portfolio backup
+         * @description Downloads a stored portfolio backup as a JSON attachment.
+         */
+        get: operations["downloadPortfolioBackup"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1033,25 +541,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioBackupRecordResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create a portfolio backup
+         * @description Triggers an on-demand portfolio backup and returns the created backup metadata.
+         */
+        post: operations["runPortfolioBackup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1067,29 +561,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["RestorePortfolioBackupRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioBackupRestoreResultResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Restore a portfolio backup
+         * @description Restores a stored portfolio backup in merge or replace mode.
+         */
+        post: operations["restorePortfolioBackup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1103,25 +579,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioSnapshotResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Export portfolio state
+         * @description Exports the canonical portfolio state as structured JSON.
+         */
+        get: operations["exportPortfolioState"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1139,29 +601,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ImportPortfolioStateRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioImportPreviewResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Preview portfolio state import
+         * @description Validates an incoming portfolio state snapshot and returns a preview of the import impact.
+         */
+        post: operations["previewPortfolioStateImport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1177,29 +621,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ImportPortfolioStateRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PortfolioImportResultResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Import portfolio state
+         * @description Imports a portfolio state snapshot in merge or replace mode.
+         */
+        post: operations["importPortfolioState"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1213,49 +639,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionImportProfileResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List transaction import profiles
+         * @description Returns saved CSV import profiles used for broker exports.
+         */
+        get: operations["listTransactionImportProfiles"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionImportProfileResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create a transaction import profile
+         * @description Creates a new CSV import profile with delimiter, mappings and defaults.
+         */
+        post: operations["createTransactionImportProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1270,51 +664,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionImportProfileResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Update a transaction import profile
+         * @description Updates an existing CSV import profile selected by its identifier.
+         */
+        put: operations["updateTransactionImportProfile"];
         post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        /**
+         * Delete a transaction import profile
+         * @description Deletes an existing CSV import profile selected by its identifier.
+         */
+        delete: operations["deleteTransactionImportProfile"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1329,29 +689,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CsvTransactionsImportRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Preview a CSV transaction import
+         * @description Parses the provided CSV payload with a saved import profile and returns row-level validation results.
+         */
+        post: operations["previewTransactionCsvImport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1367,29 +709,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CsvTransactionsImportRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ImportTransactionsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Import transactions from CSV
+         * @description Imports transactions from the provided CSV payload using the selected saved profile.
+         */
+        post: operations["importTransactionCsv"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1405,29 +729,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ImportTransactionsRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ImportTransactionsResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Import a structured transaction batch
+         * @description Imports a batch of transactions provided as structured JSON rows.
+         */
+        post: operations["importTransactions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1443,29 +749,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ImportTransactionsRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Preview a structured transaction batch
+         * @description Validates a structured transaction batch and returns row-level preview results without importing.
+         */
+        post: operations["previewTransactionImport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1479,49 +767,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionResponse"][];
-                    };
-                };
-            };
-        };
+        /**
+         * List transactions
+         * @description Returns the canonical transaction ledger in chronological order.
+         */
+        get: operations["listTransactions"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateTransactionRequest"];
-                };
-            };
-            responses: {
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create a transaction
+         * @description Creates a single transaction in the canonical portfolio ledger.
+         */
+        post: operations["createTransaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1536,51 +792,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateTransactionRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TransactionResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Update a transaction
+         * @description Updates an existing transaction selected by its identifier.
+         */
+        put: operations["updateTransaction"];
         post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        /**
+         * Delete a transaction
+         * @description Deletes an existing transaction selected by its identifier.
+         */
+        delete: operations["deleteTransaction"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2362,4 +1584,1028 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    getApiBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+        };
+    };
+    getOpenApiDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+        };
+    };
+    getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    getAppMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppMetaResponse"];
+                };
+            };
+        };
+    };
+    getReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    getAuthSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+        };
+    };
+    createAuthSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateAuthSessionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteAuthSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+        };
+    };
+    listAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountResponse"][];
+                };
+            };
+        };
+    };
+    createAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateAccountRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    reorderAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReorderAccountsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountResponse"][];
+                };
+            };
+        };
+    };
+    listInstruments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentResponse"][];
+                };
+            };
+        };
+    };
+    createInstrument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateInstrumentRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioOverviewResponse"];
+                };
+            };
+        };
+    };
+    listPortfolioHoldings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoldingResponse"][];
+                };
+            };
+        };
+    };
+    listPortfolioAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAccountResponse"][];
+                };
+            };
+        };
+    };
+    getPortfolioDailyHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioDailyHistoryResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioReturns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioReturnsResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioAllocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAllocationResponse"];
+                };
+            };
+        };
+    };
+    listReadModelCacheSnapshots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelCacheSnapshotResponse"][];
+                };
+            };
+        };
+    };
+    invalidateReadModelCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelCacheInvalidationResponse"];
+                };
+            };
+        };
+    };
+    getReadModelRefreshStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelRefreshStatusResponse"];
+                };
+            };
+        };
+    };
+    runReadModelRefresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelRefreshRunResponse"];
+                };
+            };
+        };
+    };
+    listPortfolioAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: string;
+                category?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventResponse"][];
+                };
+            };
+        };
+    };
+    listPortfolioTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioTargetResponse"][];
+                };
+            };
+        };
+    };
+    replacePortfolioTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReplacePortfolioTargetsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioTargetResponse"][];
+                };
+            };
+        };
+    };
+    getPortfolioBenchmarkSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
+                };
+            };
+        };
+    };
+    savePortfolioBenchmarkSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SavePortfolioBenchmarkSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBenchmarkSettingsResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioRebalancingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                };
+            };
+        };
+    };
+    savePortfolioRebalancingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SavePortfolioRebalancingSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioBackupStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBackupStatusResponse"];
+                };
+            };
+        };
+    };
+    downloadPortfolioBackup: {
+        parameters: {
+            query?: {
+                fileName?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description JSON backup file. */
+            200: {
+                headers: {
+                    /** @description Attachment header containing the backup file name. */
+                    "Content-Disposition": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    runPortfolioBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBackupRecordResponse"];
+                };
+            };
+        };
+    };
+    restorePortfolioBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RestorePortfolioBackupRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioBackupRestoreResultResponse"];
+                };
+            };
+        };
+    };
+    exportPortfolioState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioSnapshotResponse"];
+                };
+            };
+        };
+    };
+    previewPortfolioStateImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ImportPortfolioStateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioImportPreviewResponse"];
+                };
+            };
+        };
+    };
+    importPortfolioState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ImportPortfolioStateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioImportResultResponse"];
+                };
+            };
+        };
+    };
+    listTransactionImportProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionImportProfileResponse"][];
+                };
+            };
+        };
+    };
+    createTransactionImportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionImportProfileResponse"];
+                };
+            };
+        };
+    };
+    updateTransactionImportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SaveTransactionImportProfileRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionImportProfileResponse"];
+                };
+            };
+        };
+    };
+    deleteTransactionImportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    previewTransactionCsvImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CsvTransactionsImportRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
+                };
+            };
+        };
+    };
+    importTransactionCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CsvTransactionsImportRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTransactionsResponse"];
+                };
+            };
+        };
+    };
+    importTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ImportTransactionsRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTransactionsResponse"];
+                };
+            };
+        };
+    };
+    previewTransactionImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ImportTransactionsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTransactionsPreviewResponse"];
+                };
+            };
+        };
+    };
+    listTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"][];
+                };
+            };
+        };
+    };
+    createTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateTransactionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    updateTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateTransactionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    deleteTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+}
