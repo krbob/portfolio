@@ -30,6 +30,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioImportIssue
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
+import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
@@ -83,6 +84,10 @@ fun Route.portfolioRoute() {
 
         get("/holdings") {
             call.respond(portfolioReadModelService.holdings().map { it.toResponse() })
+        }
+
+        get("/accounts") {
+            call.respond(portfolioReadModelService.accounts().map { it.toResponse() })
         }
 
         get("/history/daily") {
@@ -278,6 +283,27 @@ data class HoldingResponse(
     val valuationStatus: String,
     val valuationIssue: String?,
     val transactionCount: Int
+)
+
+@Serializable
+data class PortfolioAccountResponse(
+    val accountId: String,
+    val accountName: String,
+    val institution: String,
+    val type: String,
+    val baseCurrency: String,
+    val valuationState: String,
+    val totalBookValuePln: String,
+    val totalCurrentValuePln: String,
+    val investedBookValuePln: String,
+    val investedCurrentValuePln: String,
+    val cashBalancePln: String,
+    val netContributionsPln: String,
+    val totalUnrealizedGainPln: String,
+    val portfolioWeightPct: String,
+    val activeHoldingCount: Int,
+    val valuedHoldingCount: Int,
+    val valuationIssueCount: Int
 )
 
 @Serializable
@@ -763,6 +789,26 @@ private fun HoldingSnapshot.toResponse(): HoldingResponse = HoldingResponse(
     valuationStatus = valuationStatus.name,
     valuationIssue = valuationIssue,
     transactionCount = transactionCount
+)
+
+private fun PortfolioAccountSummary.toResponse(): PortfolioAccountResponse = PortfolioAccountResponse(
+    accountId = accountId.toString(),
+    accountName = accountName,
+    institution = institution,
+    type = type,
+    baseCurrency = baseCurrency,
+    valuationState = valuationState.name,
+    totalBookValuePln = totalBookValuePln.toPlainString(),
+    totalCurrentValuePln = totalCurrentValuePln.toPlainString(),
+    investedBookValuePln = investedBookValuePln.toPlainString(),
+    investedCurrentValuePln = investedCurrentValuePln.toPlainString(),
+    cashBalancePln = cashBalancePln.toPlainString(),
+    netContributionsPln = netContributionsPln.toPlainString(),
+    totalUnrealizedGainPln = totalUnrealizedGainPln.toPlainString(),
+    portfolioWeightPct = portfolioWeightPct.toPlainString(),
+    activeHoldingCount = activeHoldingCount,
+    valuedHoldingCount = valuedHoldingCount,
+    valuationIssueCount = valuationIssueCount
 )
 
 private fun PortfolioDailyHistory.toResponse(): PortfolioDailyHistoryResponse = PortfolioDailyHistoryResponse(

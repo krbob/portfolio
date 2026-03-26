@@ -436,6 +436,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortfolioAccountResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/history/daily": {
         parameters: {
             query?: never;
@@ -1675,6 +1709,26 @@ export interface components {
             valuationStatus: string;
             valuationIssue?: string | null;
             transactionCount: number;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioAccountResponse */
+        PortfolioAccountResponse: {
+            accountId: string;
+            accountName: string;
+            institution: string;
+            type: string;
+            baseCurrency: string;
+            valuationState: string;
+            totalBookValuePln: string;
+            totalCurrentValuePln: string;
+            investedBookValuePln: string;
+            investedCurrentValuePln: string;
+            cashBalancePln: string;
+            netContributionsPln: string;
+            totalUnrealizedGainPln: string;
+            portfolioWeightPct: string;
+            activeHoldingCount: number;
+            valuedHoldingCount: number;
+            valuationIssueCount: number;
         };
         /** net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse */
         PortfolioDailyHistoryPointResponse: {

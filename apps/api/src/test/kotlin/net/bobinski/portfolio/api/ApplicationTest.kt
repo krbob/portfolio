@@ -88,6 +88,7 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"openapi\""))
         assertTrue(body.contains("/v1/portfolio/overview"))
+        assertTrue(body.contains("/v1/portfolio/accounts"))
         assertTrue(body.contains("/v1/portfolio/returns"))
     }
 

@@ -32,6 +32,15 @@ export const investingNav: NavItem[] = [
     ),
   },
   {
+    to: '/accounts',
+    label: { en: 'Accounts', pl: 'Konta' },
+    icon: (
+      <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75h19.5M3 6.75h18M4.5 18.75V6.75m15 12V6.75M8.25 10.5h.008v.008H8.25V10.5zm0 3h.008v.008H8.25V13.5zm0 3h.008v.008H8.25v-.008zm3.75-6h3.75m-3.75 3h3.75m-3.75 3h3.75" />
+      </svg>
+    ),
+  },
+  {
     to: '/performance',
     label: { en: 'Performance', pl: 'Wyniki' },
     aliases: ['/returns', '/charts'],

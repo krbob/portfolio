@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  fetchPortfolioAccounts,
   fetchPortfolioAllocation,
   fetchPortfolioAuditEvents,
   fetchPortfolioDailyHistory,
@@ -20,6 +21,13 @@ export function usePortfolioHoldings() {
   return useQuery({
     queryKey: ['portfolio-holdings'],
     queryFn: fetchPortfolioHoldings,
+  })
+}
+
+export function usePortfolioAccounts() {
+  return useQuery({
+    queryKey: ['portfolio-accounts'],
+    queryFn: fetchPortfolioAccounts,
   })
 }
 

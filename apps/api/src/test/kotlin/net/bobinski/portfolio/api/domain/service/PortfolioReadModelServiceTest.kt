@@ -185,6 +185,63 @@ class PortfolioReadModelServiceTest {
         assertTrue(holdings.isEmpty())
     }
 
+    @Test
+    fun `accounts expose per-account cash weights and gains`() = runBlocking {
+        val fixture = portfolioFixture()
+        val primary = account()
+        val reserve = account(
+            id = UUID.fromString("10000000-0000-0000-0000-000000000002"),
+            name = "Reserve"
+        )
+        fixture.accountRepository.save(primary)
+        fixture.accountRepository.save(reserve)
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(
+            depositTransaction(
+                accountId = primary.id,
+                grossAmount = "2000.00"
+            )
+        )
+        fixture.transactionRepository.save(
+            buyTransaction(
+                accountId = primary.id,
+                instrumentId = vwce.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.transactionRepository.save(
+            depositTransaction(
+                accountId = reserve.id,
+                grossAmount = "500.00",
+                tradeDate = LocalDate.parse("2026-03-03")
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-10")
+            )
+        )
+
+        val accounts = fixture.service.accounts()
+
+        val primarySummary = accounts.first { it.accountId == primary.id }
+        val reserveSummary = accounts.first { it.accountId == reserve.id }
+
+        assertEquals(ValuationState.MARK_TO_MARKET, primarySummary.valuationState)
+        assertEquals(BigDecimal("995.00"), primarySummary.cashBalancePln)
+        assertEquals(BigDecimal("1200.00"), primarySummary.investedCurrentValuePln)
+        assertEquals(BigDecimal("2195.00"), primarySummary.totalCurrentValuePln)
+        assertEquals(BigDecimal("195.00"), primarySummary.totalUnrealizedGainPln)
+        assertEquals(BigDecimal("81.45"), primarySummary.portfolioWeightPct)
+        assertEquals(BigDecimal("500.00"), reserveSummary.cashBalancePln)
+        assertEquals(BigDecimal("18.55"), reserveSummary.portfolioWeightPct)
+        assertEquals(0, reserveSummary.activeHoldingCount)
+    }
+
     private fun portfolioFixture(): PortfolioFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -211,9 +268,13 @@ class PortfolioReadModelServiceTest {
         )
     }
 
-    private fun account(baseCurrency: String = "PLN"): Account = Account(
-        id = ACCOUNT_ID,
-        name = "Primary",
+    private fun account(
+        id: UUID = ACCOUNT_ID,
+        name: String = "Primary",
+        baseCurrency: String = "PLN"
+    ): Account = Account(
+        id = id,
+        name = name,
         institution = "Broker",
         type = AccountType.BROKERAGE,
         baseCurrency = baseCurrency,
@@ -257,13 +318,14 @@ class PortfolioReadModelServiceTest {
     )
 
     private fun depositTransaction(
+        accountId: UUID = ACCOUNT_ID,
         grossAmount: String = "2000.00",
         currency: String = "PLN",
         fxRateToPln: BigDecimal? = null,
         tradeDate: LocalDate = LocalDate.parse("2026-03-01")
     ): Transaction = Transaction(
-        id = UUID.nameUUIDFromBytes("deposit".toByteArray()),
-        accountId = ACCOUNT_ID,
+        id = UUID.nameUUIDFromBytes("deposit-$accountId-$tradeDate-$grossAmount-$currency".toByteArray()),
+        accountId = accountId,
         instrumentId = null,
         type = TransactionType.DEPOSIT,
         tradeDate = tradeDate,
@@ -281,14 +343,15 @@ class PortfolioReadModelServiceTest {
     )
 
     private fun buyTransaction(
+        accountId: UUID = ACCOUNT_ID,
         instrumentId: UUID,
         quantity: String,
         grossAmount: String,
         feeAmount: String,
         tradeDate: LocalDate = LocalDate.parse("2026-03-02")
     ): Transaction = Transaction(
-        id = UUID.nameUUIDFromBytes("$instrumentId-$tradeDate".toByteArray()),
-        accountId = ACCOUNT_ID,
+        id = UUID.nameUUIDFromBytes("$accountId-$instrumentId-$tradeDate".toByteArray()),
+        accountId = accountId,
         instrumentId = instrumentId,
         type = TransactionType.BUY,
         tradeDate = tradeDate,
@@ -306,14 +369,15 @@ class PortfolioReadModelServiceTest {
     )
 
     private fun redeemTransaction(
+        accountId: UUID = ACCOUNT_ID,
         instrumentId: UUID,
         quantity: String,
         grossAmount: String,
         taxAmount: String,
         tradeDate: LocalDate
     ): Transaction = Transaction(
-        id = UUID.nameUUIDFromBytes("redeem-$instrumentId-$tradeDate".toByteArray()),
-        accountId = ACCOUNT_ID,
+        id = UUID.nameUUIDFromBytes("redeem-$accountId-$instrumentId-$tradeDate".toByteArray()),
+        accountId = accountId,
         instrumentId = instrumentId,
         type = TransactionType.REDEEM,
         tradeDate = tradeDate,

@@ -130,6 +130,70 @@ class PortfolioReadModelRouteTest {
     }
 
     @Test
+    fun `accounts expose per-account cash value and gain`() = testApplication {
+        application {
+            module()
+        }
+
+        val primaryAccountId = createAccount(name = "Primary")
+        val reserveAccountId = createAccount(name = "Reserve")
+        val instrumentId = createInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$primaryAccountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "2000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$primaryAccountId",
+              "instrumentId": "$instrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "10",
+              "unitPrice": "100.00",
+              "grossAmount": "1000.00",
+              "feeAmount": "5.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$reserveAccountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-03",
+              "settlementDate": "2026-03-03",
+              "grossAmount": "500.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val response = client.get("/v1/portfolio/accounts")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"accountName\": \"Primary\""))
+        assertTrue(body.contains("\"cashBalancePln\": \"995.00\""))
+        assertTrue(body.contains("\"investedBookValuePln\": \"1005.00\""))
+        assertTrue(body.contains("\"totalCurrentValuePln\": \"2000.00\""))
+        assertTrue(body.contains("\"netContributionsPln\": \"2000.00\""))
+        assertTrue(body.contains("\"accountName\": \"Reserve\""))
+        assertTrue(body.contains("\"cashBalancePln\": \"500.00\""))
+        assertTrue(body.contains("\"portfolioWeightPct\": \"20.00\""))
+    }
+
+    @Test
     fun `overview reports transactions missing fx conversion when lookup fails`() = testApplication {
         application {
             module()
@@ -295,6 +359,7 @@ class PortfolioReadModelRouteTest {
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(
+        name: String = "Primary",
         baseCurrency: String = "PLN"
     ): String {
         val response = client.post("/v1/accounts") {
@@ -302,7 +367,7 @@ class PortfolioReadModelRouteTest {
             setBody(
                 """
                 {
-                  "name": "Primary",
+                  "name": "$name",
                   "institution": "Broker",
                   "type": "BROKERAGE",
                   "baseCurrency": "$baseCurrency"

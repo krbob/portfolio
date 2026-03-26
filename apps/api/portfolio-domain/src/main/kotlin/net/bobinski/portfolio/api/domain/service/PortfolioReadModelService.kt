@@ -34,6 +34,58 @@ class PortfolioReadModelService(
     private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock
 ) {
+    suspend fun accounts(): List<PortfolioAccountSummary> {
+        val snapshot = buildValuedSnapshot()
+        val totalPortfolioCurrentValuePln = snapshot.holdings.sumOf { it.effectiveCurrentValuePln() }
+            .add(snapshot.cashBalancePln, MONEY_CONTEXT)
+
+        return snapshot.accounts
+            .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
+            .map { account ->
+                val accountHoldings = snapshot.holdings.filter { it.account.id == account.id }
+                val investedBookValuePln = accountHoldings.sumOf(ValuedHolding::costBasisPln)
+                val investedCurrentValuePln = accountHoldings.sumOf(ValuedHolding::effectiveCurrentValuePln)
+                val cashBalancePln = snapshot.cashBalanceByAccountPln[account.id] ?: BigDecimal.ZERO
+                val netContributionsPln = snapshot.netContributionsByAccountPln[account.id] ?: BigDecimal.ZERO
+                val totalBookValuePln = investedBookValuePln.add(cashBalancePln, MONEY_CONTEXT)
+                val totalCurrentValuePln = investedCurrentValuePln.add(cashBalancePln, MONEY_CONTEXT)
+                val valuationState = when {
+                    accountHoldings.isEmpty() -> ValuationState.MARK_TO_MARKET
+                    accountHoldings.all { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.MARK_TO_MARKET
+                    accountHoldings.none { it.valuationStatus == HoldingValuationStatus.VALUED } -> ValuationState.BOOK_ONLY
+                    else -> ValuationState.PARTIALLY_VALUED
+                }
+                val portfolioWeightPct = if (totalPortfolioCurrentValuePln.signum() == 0) {
+                    BigDecimal.ZERO
+                } else {
+                    totalCurrentValuePln
+                        .multiply(BigDecimal("100"), MONEY_CONTEXT)
+                        .divide(totalPortfolioCurrentValuePln, 8, RoundingMode.HALF_UP)
+                        .money()
+                }
+
+                PortfolioAccountSummary(
+                    accountId = account.id,
+                    accountName = account.name,
+                    institution = account.institution,
+                    type = account.type.name,
+                    baseCurrency = account.baseCurrency,
+                    valuationState = valuationState,
+                    totalBookValuePln = totalBookValuePln.money(),
+                    totalCurrentValuePln = totalCurrentValuePln.money(),
+                    investedBookValuePln = investedBookValuePln.money(),
+                    investedCurrentValuePln = investedCurrentValuePln.money(),
+                    cashBalancePln = cashBalancePln.money(),
+                    netContributionsPln = netContributionsPln.money(),
+                    totalUnrealizedGainPln = totalCurrentValuePln.subtract(totalBookValuePln, MONEY_CONTEXT).money(),
+                    portfolioWeightPct = portfolioWeightPct,
+                    activeHoldingCount = accountHoldings.size,
+                    valuedHoldingCount = accountHoldings.count { it.valuationStatus == HoldingValuationStatus.VALUED },
+                    valuationIssueCount = accountHoldings.count { it.valuationIssue != null }
+                )
+            }
+    }
+
     suspend fun overview(): PortfolioOverview {
         val snapshot = buildValuedSnapshot()
         val investedBookValuePln = snapshot.holdings.sumOf { it.costBasisPln }
@@ -132,7 +184,9 @@ class PortfolioReadModelService(
             instruments = ledgerSnapshot.instruments,
             holdings = holdings,
             cashBalancePln = ledgerSnapshot.cashBalancePln,
+            cashBalanceByAccountPln = ledgerSnapshot.cashBalanceByAccountPln,
             netContributionsPln = ledgerSnapshot.netContributionsPln,
+            netContributionsByAccountPln = ledgerSnapshot.netContributionsByAccountPln,
             missingFxTransactions = ledgerSnapshot.missingFxTransactions,
             unsupportedCorrectionTransactions = ledgerSnapshot.unsupportedCorrectionTransactions,
             valuationState = when {
@@ -164,11 +218,27 @@ class PortfolioReadModelService(
         val accountsById = accounts.associateBy(Account::id)
         val instrumentsById = instruments.associateBy(Instrument::id)
         val holdings = linkedMapOf<HoldingKey, MutableHolding>()
+        val cashBalanceByAccountPln = accounts.associateBy(Account::id) { BigDecimal.ZERO }.toMutableMap()
+        val netContributionsByAccountPln = accounts.associateBy(Account::id) { BigDecimal.ZERO }.toMutableMap()
 
         var cashBalancePln = BigDecimal.ZERO
         var netContributionsPln = BigDecimal.ZERO
         var missingFxTransactions = 0
         var unsupportedCorrectionTransactions = 0
+
+        fun adjustCashBalance(accountId: UUID, deltaPln: BigDecimal) {
+            cashBalancePln = cashBalancePln.add(deltaPln, MONEY_CONTEXT)
+            cashBalanceByAccountPln[accountId] = cashBalanceByAccountPln
+                .getOrDefault(accountId, BigDecimal.ZERO)
+                .add(deltaPln, MONEY_CONTEXT)
+        }
+
+        fun adjustNetContributions(accountId: UUID, deltaPln: BigDecimal) {
+            netContributionsPln = netContributionsPln.add(deltaPln, MONEY_CONTEXT)
+            netContributionsByAccountPln[accountId] = netContributionsByAccountPln
+                .getOrDefault(accountId, BigDecimal.ZERO)
+                .add(deltaPln, MONEY_CONTEXT)
+        }
 
         transactions.forEach { transaction ->
             val converted = fxLookups.convertedAmountsOrNull(transaction)
@@ -201,10 +271,13 @@ class PortfolioReadModelService(
                     }
                     holding.transactionCount += 1
 
-                    cashBalancePln = cashBalancePln
-                        .subtract(converted.grossPln, MONEY_CONTEXT)
-                        .subtract(converted.feePln, MONEY_CONTEXT)
-                        .subtract(converted.taxPln, MONEY_CONTEXT)
+                    adjustCashBalance(
+                        accountId = transaction.accountId,
+                        deltaPln = converted.grossPln
+                            .add(converted.feePln, MONEY_CONTEXT)
+                            .add(converted.taxPln, MONEY_CONTEXT)
+                            .negate()
+                    )
                 }
 
                 TransactionType.SELL -> {
@@ -231,10 +304,12 @@ class PortfolioReadModelService(
                     }
                     holding.transactionCount += 1
 
-                    cashBalancePln = cashBalancePln
-                        .add(converted.grossPln, MONEY_CONTEXT)
-                        .subtract(converted.feePln, MONEY_CONTEXT)
-                        .subtract(converted.taxPln, MONEY_CONTEXT)
+                    adjustCashBalance(
+                        accountId = transaction.accountId,
+                        deltaPln = converted.grossPln
+                            .subtract(converted.feePln, MONEY_CONTEXT)
+                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                    )
                 }
 
                 TransactionType.REDEEM -> {
@@ -251,29 +326,31 @@ class PortfolioReadModelService(
                     }
                     holding.transactionCount += 1
 
-                    cashBalancePln = cashBalancePln
-                        .add(converted.grossPln, MONEY_CONTEXT)
-                        .subtract(converted.feePln, MONEY_CONTEXT)
-                        .subtract(converted.taxPln, MONEY_CONTEXT)
+                    adjustCashBalance(
+                        accountId = transaction.accountId,
+                        deltaPln = converted.grossPln
+                            .subtract(converted.feePln, MONEY_CONTEXT)
+                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                    )
                 }
 
                 TransactionType.DEPOSIT -> {
-                    cashBalancePln = cashBalancePln.add(converted.grossPln, MONEY_CONTEXT)
-                    netContributionsPln = netContributionsPln.add(converted.grossPln, MONEY_CONTEXT)
+                    adjustCashBalance(transaction.accountId, converted.grossPln)
+                    adjustNetContributions(transaction.accountId, converted.grossPln)
                 }
 
                 TransactionType.WITHDRAWAL -> {
-                    cashBalancePln = cashBalancePln.subtract(converted.grossPln, MONEY_CONTEXT)
-                    netContributionsPln = netContributionsPln.subtract(converted.grossPln, MONEY_CONTEXT)
+                    adjustCashBalance(transaction.accountId, converted.grossPln.negate())
+                    adjustNetContributions(transaction.accountId, converted.grossPln.negate())
                 }
 
                 TransactionType.FEE,
                 TransactionType.TAX -> {
-                    cashBalancePln = cashBalancePln.subtract(converted.grossPln, MONEY_CONTEXT)
+                    adjustCashBalance(transaction.accountId, converted.grossPln.negate())
                 }
 
                 TransactionType.INTEREST -> {
-                    cashBalancePln = cashBalancePln.add(converted.grossPln, MONEY_CONTEXT)
+                    adjustCashBalance(transaction.accountId, converted.grossPln)
                 }
 
                 TransactionType.CORRECTION -> {
@@ -289,7 +366,9 @@ class PortfolioReadModelService(
                 .filter { it.quantity.signum() > 0 }
                 .toList(),
             cashBalancePln = cashBalancePln,
+            cashBalanceByAccountPln = cashBalanceByAccountPln.toMap(),
             netContributionsPln = netContributionsPln,
+            netContributionsByAccountPln = netContributionsByAccountPln.toMap(),
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions
         )
@@ -544,7 +623,9 @@ class PortfolioReadModelService(
         val instruments: List<Instrument>,
         val holdings: List<MutableHolding>,
         val cashBalancePln: BigDecimal,
+        val cashBalanceByAccountPln: Map<UUID, BigDecimal>,
         val netContributionsPln: BigDecimal,
+        val netContributionsByAccountPln: Map<UUID, BigDecimal>,
         val missingFxTransactions: Int,
         val unsupportedCorrectionTransactions: Int
     )
@@ -554,7 +635,9 @@ class PortfolioReadModelService(
         val instruments: List<Instrument>,
         val holdings: List<ValuedHolding>,
         val cashBalancePln: BigDecimal,
+        val cashBalanceByAccountPln: Map<UUID, BigDecimal>,
         val netContributionsPln: BigDecimal,
+        val netContributionsByAccountPln: Map<UUID, BigDecimal>,
         val missingFxTransactions: Int,
         val unsupportedCorrectionTransactions: Int,
         val valuationState: ValuationState
@@ -610,6 +693,26 @@ data class HoldingSnapshot(
     val valuationStatus: HoldingValuationStatus,
     val valuationIssue: String?,
     val transactionCount: Int
+)
+
+data class PortfolioAccountSummary(
+    val accountId: UUID,
+    val accountName: String,
+    val institution: String,
+    val type: String,
+    val baseCurrency: String,
+    val valuationState: ValuationState,
+    val totalBookValuePln: BigDecimal,
+    val totalCurrentValuePln: BigDecimal,
+    val investedBookValuePln: BigDecimal,
+    val investedCurrentValuePln: BigDecimal,
+    val cashBalancePln: BigDecimal,
+    val netContributionsPln: BigDecimal,
+    val totalUnrealizedGainPln: BigDecimal,
+    val portfolioWeightPct: BigDecimal,
+    val activeHoldingCount: Int,
+    val valuedHoldingCount: Int,
+    val valuationIssueCount: Int
 )
 
 enum class ValuationState {

@@ -31,6 +31,7 @@ class OpenApiExportTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("/v1/portfolio/overview"))
+        assertTrue(body.contains("/v1/portfolio/accounts"))
 
         val outputPath = Path.of(
             System.getProperty("portfolio.openapi.outputPath")

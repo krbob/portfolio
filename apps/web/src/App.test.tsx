@@ -130,6 +130,33 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              institution: 'Broker',
+              type: 'BROKERAGE',
+              baseCurrency: 'PLN',
+              valuationState: 'MARK_TO_MARKET',
+              totalBookValuePln: '2000.00',
+              totalCurrentValuePln: '2095.00',
+              investedBookValuePln: '1100.00',
+              investedCurrentValuePln: '1100.00',
+              cashBalancePln: '995.00',
+              netContributionsPln: '2000.00',
+              totalUnrealizedGainPln: '95.00',
+              portfolioWeightPct: '100.00',
+              activeHoldingCount: 1,
+              valuedHoldingCount: 1,
+              valuationIssueCount: 0,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/portfolio/history/daily')) {
         return new Response(
           JSON.stringify({
@@ -371,6 +398,7 @@ describe('App', () => {
     // Sidebar navigation links
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^accounts$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
 
     // Sidebar runtime status
@@ -550,6 +578,131 @@ describe('App', () => {
     expect(await screen.findByText(/this view currently relies on book basis/i)).toBeInTheDocument()
     expect(await screen.findByText(/^no valuation$/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
+  })
+
+  it('renders account summaries on the dedicated accounts screen', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              institution: 'Broker',
+              type: 'BROKERAGE',
+              baseCurrency: 'PLN',
+              valuationState: 'MARK_TO_MARKET',
+              totalBookValuePln: '2000.00',
+              totalCurrentValuePln: '2195.00',
+              investedBookValuePln: '1005.00',
+              investedCurrentValuePln: '1200.00',
+              cashBalancePln: '995.00',
+              netContributionsPln: '2000.00',
+              totalUnrealizedGainPln: '195.00',
+              portfolioWeightPct: '81.45',
+              activeHoldingCount: 1,
+              valuedHoldingCount: 1,
+              valuationIssueCount: 0,
+            },
+            {
+              accountId: 'acc-2',
+              accountName: 'Reserve',
+              institution: 'Bank',
+              type: 'CASH',
+              baseCurrency: 'PLN',
+              valuationState: 'MARK_TO_MARKET',
+              totalBookValuePln: '500.00',
+              totalCurrentValuePln: '500.00',
+              investedBookValuePln: '0.00',
+              investedCurrentValuePln: '0.00',
+              cashBalancePln: '500.00',
+              netContributionsPln: '500.00',
+              totalUnrealizedGainPln: '0.00',
+              portfolioWeightPct: '18.55',
+              activeHoldingCount: 0,
+              valuedHoldingCount: 0,
+              valuationIssueCount: 0,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in accounts screen test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/accounts']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^accounts$/i })).toBeInTheDocument()
+    expect(await screen.findByText(/account overview/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/primary/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/reserve/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/cash on accounts/i)).toBeInTheDocument()
+    expect(await screen.findByText(/81.45% of portfolio/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
   })
 
   it('shows percentage pnl for valued holdings', async () => {

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { AccountsSection } from '../components/AccountsSection'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { MobileAppSection } from '../components/MobileAppSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
@@ -33,8 +32,8 @@ const SETTINGS_GROUPS = [
     eyebrow: { en: 'Portfolio', pl: 'Portfolio' },
     title: { en: 'Setup and portfolio policy', pl: 'Konfiguracja i polityka portfela' },
     description: {
-      en: 'Accounts, instruments, target allocation and benchmark policy.',
-      pl: 'Konta, instrumenty, alokacja docelowa i polityka benchmarków.',
+      en: 'Instrument catalog, target allocation and benchmark policy.',
+      pl: 'Katalog instrumentów, alokacja docelowa i polityka benchmarków.',
     },
     sectionIds: ['setup', 'targets', 'benchmarks'] as const,
   },
@@ -127,8 +126,7 @@ export function SettingsScreen() {
             title={isPolish ? SETTINGS_GROUPS[0].title.pl : SETTINGS_GROUPS[0].title.en}
             description={isPolish ? SETTINGS_GROUPS[0].description.pl : SETTINGS_GROUPS[0].description.en}
           >
-            <section id="setup" className="scroll-mt-24 grid grid-cols-1 gap-8 lg:grid-cols-2">
-              <AccountsSection />
+            <section id="setup" className="scroll-mt-24">
               <InstrumentsSection />
             </section>
 

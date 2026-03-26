@@ -7,6 +7,9 @@ export type PortfolioOverview =
 export type PortfolioHolding =
   paths['/v1/portfolio/holdings']['get']['responses'][200]['content']['application/json'][number]
 
+export type PortfolioAccountSummary =
+  paths['/v1/portfolio/accounts']['get']['responses'][200]['content']['application/json'][number]
+
 export type PortfolioDailyHistory =
   paths['/v1/portfolio/history/daily']['get']['responses'][200]['content']['application/json']
 
@@ -43,6 +46,10 @@ export function fetchPortfolioOverview() {
 
 export function fetchPortfolioHoldings() {
   return requestJson<PortfolioHolding[]>('/api/v1/portfolio/holdings')
+}
+
+export function fetchPortfolioAccounts() {
+  return requestJson<PortfolioAccountSummary[]>('/api/v1/portfolio/accounts')
 }
 
 export function fetchPortfolioDailyHistory() {
