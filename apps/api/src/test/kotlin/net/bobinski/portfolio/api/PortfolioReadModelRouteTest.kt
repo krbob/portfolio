@@ -131,6 +131,73 @@ class PortfolioReadModelRouteTest {
     }
 
     @Test
+    fun `holdings expose EDO lots for redeem guidance`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val instrumentId = createBondInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "15000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$instrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "70",
+              "unitPrice": "100.00",
+              "grossAmount": "7000.00",
+              "feeAmount": "0",
+              "taxAmount": "0",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$instrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-22",
+              "settlementDate": "2026-03-22",
+              "quantity": "30",
+              "unitPrice": "100.00",
+              "grossAmount": "3000.00",
+              "feeAmount": "0",
+              "taxAmount": "0",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val response = client.get("/v1/portfolio/holdings")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"instrumentName\": \"EDO0336\""))
+        assertTrue(body.contains("\"edoLots\": ["))
+        assertTrue(body.contains("\"purchaseDate\": \"2026-03-02\""))
+        assertTrue(body.contains("\"purchaseDate\": \"2026-03-22\""))
+        assertTrue(body.contains("\"quantity\": \"70\""))
+        assertTrue(body.contains("\"quantity\": \"30\""))
+    }
+
+    @Test
     fun `accounts expose per-account cash value and gain`() = testApplication {
         application {
             module()

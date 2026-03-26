@@ -1070,6 +1070,10 @@ describe('App', () => {
         return new Response(JSON.stringify([]), { status: 200 })
       }
 
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
       if (url.includes('/api/v1/transactions')) {
         return new Response(
           JSON.stringify([
@@ -1246,6 +1250,10 @@ describe('App', () => {
         return new Response(JSON.stringify([]), { status: 200 })
       }
 
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
       if (url.includes('/api/v1/transactions')) {
         if (method === 'POST') {
           const body = input instanceof Request ? JSON.parse(await input.text()) : JSON.parse(String(init?.body ?? '{}'))
@@ -1337,6 +1345,223 @@ describe('App', () => {
     await waitFor(() => {
       expect(scope.queryByRole('dialog', { name: /new transaction/i })).not.toBeInTheDocument()
     })
+  })
+
+  it('shows active EDO lots and FIFO preview for redeem transactions', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'acc-1',
+              name: 'Primary account',
+              kind: 'BROKERAGE',
+              currency: 'PLN',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-1',
+              name: 'VWRA',
+              symbol: 'VWRA.L',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+            {
+              id: 'ins-2',
+              name: 'EDO0336',
+              symbol: null,
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              edoTerms: {
+                seriesMonth: '2026-03',
+                firstPeriodRateBps: 500,
+                marginBps: 150,
+              },
+              valuationSource: 'EDO_CALCULATOR',
+              createdAt: '2026-03-13T12:00:00Z',
+              updatedAt: '2026-03-13T12:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary account',
+              instrumentId: 'ins-2',
+              instrumentName: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              quantity: '100',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '10000.00',
+              bookValuePln: '10000.00',
+              currentPricePln: '101.59',
+              currentValuePln: '10159.00',
+              unrealizedGainPln: '159.00',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 2,
+              edoLots: [
+                {
+                  purchaseDate: '2026-03-02',
+                  quantity: '70',
+                  costBasisPln: '7000.00',
+                  currentPricePln: '102.10',
+                  currentValuePln: '7147.00',
+                  unrealizedGainPln: '147.00',
+                  valuedAt: '2026-03-20',
+                  valuationStatus: 'VALUED',
+                  valuationIssue: null,
+                },
+                {
+                  purchaseDate: '2026-03-22',
+                  quantity: '30',
+                  costBasisPln: '3000.00',
+                  currentPricePln: '100.40',
+                  currentValuePln: '3012.00',
+                  unrealizedGainPln: '12.00',
+                  valuedAt: '2026-03-20',
+                  valuationStatus: 'VALUED',
+                  valuationIssue: null,
+                },
+              ],
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/transactions/import/profiles')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/transactions')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      throw new Error(`Unhandled fetch in redeem guidance test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    const view = render(
+      <MemoryRouter initialEntries={['/transactions']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const scope = within(view.container)
+
+    expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
+
+    fireEvent.click(scope.getByRole('button', { name: /new transaction/i }))
+
+    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialogScope = within(dialog)
+
+    fireEvent.change(dialogScope.getByLabelText(/^account$/i), { target: { value: 'acc-1' } })
+    fireEvent.change(dialogScope.getByLabelText(/^type$/i), { target: { value: 'REDEEM' } })
+
+    const instrumentSelect = dialogScope.getByLabelText(/^instrument$/i) as HTMLSelectElement
+    expect(Array.from(instrumentSelect.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
+      'Not required',
+      'EDO0336',
+    ])
+
+    fireEvent.change(instrumentSelect, { target: { value: 'ins-2' } })
+
+    expect(await dialogScope.findByText(/active edo lots/i)).toBeInTheDocument()
+    expect(dialogScope.getAllByRole('button', { name: /redeem this lot/i })).toHaveLength(2)
+    expect(dialogScope.getByText(/70 units .*cost/i)).toBeInTheDocument()
+    expect(dialogScope.getByText(/30 units .*cost/i)).toBeInTheDocument()
+    expect(dialogScope.getByText(/available units/i)).toBeInTheDocument()
+    expect(dialogScope.getByText(/^100$/)).toBeInTheDocument()
+
+    fireEvent.change(dialogScope.getByLabelText(/^quantity$/i), { target: { value: '80' } })
+    expect(await dialogScope.findByText(/fully consumed in fifo/i)).toBeInTheDocument()
+    expect(dialogScope.getByText(/fifo: 10 units/i)).toBeInTheDocument()
+
+    fireEvent.click(dialogScope.getAllByRole('button', { name: /redeem this lot/i })[0])
+    expect(dialogScope.getByLabelText(/^quantity$/i)).toHaveValue('70')
+
+    fireEvent.click(dialogScope.getByRole('button', { name: /redeem all/i }))
+    expect(dialogScope.getByLabelText(/^quantity$/i)).toHaveValue('100')
   })
 
   it('shows a dashboard error state instead of empty onboarding when overview fails', async () => {

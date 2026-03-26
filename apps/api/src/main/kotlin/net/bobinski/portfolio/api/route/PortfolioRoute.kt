@@ -282,7 +282,21 @@ data class HoldingResponse(
     val valuedAt: String?,
     val valuationStatus: String,
     val valuationIssue: String?,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val edoLots: List<HoldingEdoLotResponse> = emptyList()
+)
+
+@Serializable
+data class HoldingEdoLotResponse(
+    val purchaseDate: String,
+    val quantity: String,
+    val costBasisPln: String,
+    val currentPricePln: String?,
+    val currentValuePln: String?,
+    val unrealizedGainPln: String?,
+    val valuedAt: String?,
+    val valuationStatus: String,
+    val valuationIssue: String?
 )
 
 @Serializable
@@ -790,7 +804,20 @@ private fun HoldingSnapshot.toResponse(): HoldingResponse = HoldingResponse(
     valuedAt = valuedAt?.toString(),
     valuationStatus = valuationStatus.name,
     valuationIssue = valuationIssue,
-    transactionCount = transactionCount
+    transactionCount = transactionCount,
+    edoLots = edoLots.map { lot ->
+        HoldingEdoLotResponse(
+            purchaseDate = lot.purchaseDate.toString(),
+            quantity = lot.quantity.toPlainString(),
+            costBasisPln = lot.costBasisPln.toPlainString(),
+            currentPricePln = lot.currentPricePln?.toPlainString(),
+            currentValuePln = lot.currentValuePln?.toPlainString(),
+            unrealizedGainPln = lot.unrealizedGainPln?.toPlainString(),
+            valuedAt = lot.valuedAt?.toString(),
+            valuationStatus = lot.valuationStatus.name,
+            valuationIssue = lot.valuationIssue
+        )
+    }
 )
 
 private fun PortfolioAccountSummary.toResponse(): PortfolioAccountResponse = PortfolioAccountResponse(

@@ -3,7 +3,7 @@ import { DangerConfirmInline } from './DangerConfirmInline'
 import { ImportAuditPanel } from './ImportAuditPanel'
 import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { Modal } from './ui/Modal'
-import { usePortfolioAuditEvents } from '../hooks/use-read-model'
+import { usePortfolioAuditEvents, usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrency, formatDate, formatNumber } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAuditOutcome, labelImportRowStatus, labelTransactionType } from '../lib/labels'
@@ -162,6 +162,7 @@ export function TransactionsSection() {
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
   const transactionImportProfilesQuery = useTransactionImportProfiles()
+  const holdingsQuery = usePortfolioHoldings()
   const importEventsQuery = usePortfolioAuditEvents({ limit: 8, category: 'IMPORTS' })
   const createTransactionMutation = useCreateTransaction()
   const updateTransactionMutation = useUpdateTransaction()
@@ -289,6 +290,60 @@ export function TransactionsSection() {
   const instrumentById = useMemo(
     () => new Map(instrumentOptions.map((instrument) => [instrument.id, instrument])),
     [instrumentOptions],
+  )
+  const redeemableEdoHoldings = useMemo(() => {
+    return (holdingsQuery.data ?? [])
+      .filter((holding) => {
+        if (holding.kind !== 'BOND_EDO' || (holding.edoLots ?? []).length === 0) {
+          return false
+        }
+        if (form.accountId === '') {
+          return true
+        }
+        return holding.accountId === form.accountId
+      })
+      .sort((left, right) => {
+        const instrumentComparison = left.instrumentName.localeCompare(right.instrumentName)
+        if (instrumentComparison !== 0) {
+          return instrumentComparison
+        }
+        return left.accountName.localeCompare(right.accountName)
+      })
+  }, [form.accountId, holdingsQuery.data])
+  const redeemableInstrumentIds = useMemo(
+    () => new Set(redeemableEdoHoldings.map((holding) => holding.instrumentId)),
+    [redeemableEdoHoldings],
+  )
+  const selectableInstrumentOptions = useMemo(() => {
+    if (form.type === 'REDEEM') {
+      return sortedInstrumentOptions.filter((instrument) => redeemableInstrumentIds.has(instrument.id))
+    }
+    if (form.type === 'SELL') {
+      return sortedInstrumentOptions.filter((instrument) => instrument.kind !== 'BOND_EDO')
+    }
+    return sortedInstrumentOptions
+  }, [form.type, redeemableInstrumentIds, sortedInstrumentOptions])
+  const selectedRedeemHolding = useMemo(() => {
+    if (form.type !== 'REDEEM' || form.accountId === '' || form.instrumentId === '') {
+      return null
+    }
+
+    return (
+      (holdingsQuery.data ?? []).find(
+        (holding) =>
+          holding.accountId === form.accountId &&
+          holding.instrumentId === form.instrumentId &&
+          holding.kind === 'BOND_EDO',
+      ) ?? null
+    )
+  }, [form.accountId, form.instrumentId, form.type, holdingsQuery.data])
+  const selectedRedeemLots = useMemo(
+    () => [...(selectedRedeemHolding?.edoLots ?? [])].sort(compareEdoLotsByPurchaseDate),
+    [selectedRedeemHolding],
+  )
+  const redeemPreview = useMemo(
+    () => buildRedeemPreview(selectedRedeemLots, form.quantity),
+    [form.quantity, selectedRedeemLots],
   )
 
   const journalRows = useMemo<JournalRow[]>(() => {
@@ -452,6 +507,21 @@ export function TransactionsSection() {
           },
     )
   }, [grossAmountMode, requiresInstrument, suggestedGrossAmount])
+
+  useEffect(() => {
+    if (!requiresInstrument || form.instrumentId === '') {
+      return
+    }
+
+    if (selectableInstrumentOptions.some((instrument) => instrument.id === form.instrumentId)) {
+      return
+    }
+
+    setForm((current) => ({
+      ...current,
+      instrumentId: '',
+    }))
+  }, [form.instrumentId, requiresInstrument, selectableInstrumentOptions])
 
   useEffect(() => {
     if (
@@ -1208,7 +1278,7 @@ export function TransactionsSection() {
                     disabled={!requiresInstrument}
                   >
                     <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
-                    {sortedInstrumentOptions.map((instrument) => (
+                    {selectableInstrumentOptions.map((instrument) => (
                       <option key={instrument.id} value={instrument.id}>
                         {instrument.name}
                       </option>
@@ -1232,6 +1302,171 @@ export function TransactionsSection() {
                     {isPolish ? 'Ręczny formularz przyjmuje tylko całe sztuki.' : 'The manual form accepts whole units only.'}
                   </p>
                 </div>
+
+                {form.type === 'REDEEM' && (
+                  <div className="col-span-full rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200">
+                          {isPolish ? 'Aktywne partie EDO' : 'Active EDO lots'}
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-500">
+                          {isPolish
+                            ? 'Wykup działa FIFO. Podgląd poniżej pokazuje, które partie zostaną skonsumowane dla wpisanej liczby sztuk.'
+                            : 'Redemptions follow FIFO. The preview below shows which lots will be consumed for the entered quantity.'}
+                        </p>
+                      </div>
+
+                      {selectedRedeemLots.length > 0 && (
+                        <button
+                          type="button"
+                          className={btnGhost}
+                          onClick={() => handleQuantityChange(String(redeemPreview.totalAvailableQuantity))}
+                        >
+                          {isPolish ? 'Wykup wszystko' : 'Redeem all'}
+                        </button>
+                      )}
+                    </div>
+
+                    {holdingsQuery.isLoading ? (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        {isPolish ? 'Ładowanie aktywnych partii EDO...' : 'Loading active EDO lots...'}
+                      </p>
+                    ) : holdingsQuery.error ? (
+                      <p className="mt-4 text-sm text-amber-300">
+                        {isPolish
+                          ? `Nie udało się pobrać aktywnych partii EDO: ${holdingsQuery.error.message}`
+                          : `Failed to load active EDO lots: ${holdingsQuery.error.message}`}
+                      </p>
+                    ) : form.accountId === '' ? (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        {isPolish
+                          ? 'Najpierw wybierz konto, aby zobaczyć partie dostępne do wykupu.'
+                          : 'Select an account first to see lots available for redemption.'}
+                      </p>
+                    ) : redeemableEdoHoldings.length === 0 ? (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        {isPolish
+                          ? 'Wybrane konto nie ma aktywnych partii EDO gotowych do wykupu.'
+                          : 'The selected account does not have any active EDO lots ready for redemption.'}
+                      </p>
+                    ) : selectedRedeemHolding == null ? (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        {isPolish
+                          ? 'Wybierz serię EDO, aby zobaczyć rozbicie na partie zakupowe.'
+                          : 'Select an EDO series to inspect its purchase lots.'}
+                      </p>
+                    ) : (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid gap-3 lg:grid-cols-3">
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                            <p className="text-xs uppercase tracking-wider text-zinc-500">
+                              {isPolish ? 'Dostępne sztuki' : 'Available units'}
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-zinc-100">
+                              {formatNumber(redeemPreview.totalAvailableQuantity, { maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                            <p className="text-xs uppercase tracking-wider text-zinc-500">
+                              {isPolish ? 'Wybrane do wykupu' : 'Selected for redemption'}
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-zinc-100">
+                              {formatNumber(redeemPreview.requestedQuantity, { maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                            <p className="text-xs uppercase tracking-wider text-zinc-500">
+                              {isPolish ? 'Niedobór w podglądzie' : 'Preview shortfall'}
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-zinc-100">
+                              {formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {selectedRedeemLots.map((lot) => {
+                            const lotPreview = redeemPreview.byPurchaseDate.get(lot.purchaseDate)
+                            const fullyConsumed =
+                              lotPreview != null &&
+                              lotPreview.consumedQuantity > 0 &&
+                              lotPreview.remainingQuantity === 0
+
+                            return (
+                              <div
+                                key={lot.purchaseDate}
+                                className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3"
+                              >
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-zinc-100">
+                                      {formatDate(lot.purchaseDate)}
+                                    </p>
+                                    <p className="mt-1 text-sm text-zinc-500">
+                                      {isPolish
+                                        ? `${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} szt. · koszt ${formatCurrency(lot.costBasisPln, 'PLN')}`
+                                        : `${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} units · cost ${formatCurrency(lot.costBasisPln, 'PLN')}`}
+                                    </p>
+                                    <p className="mt-1 text-sm text-zinc-500">
+                                      {lot.currentValuePln != null
+                                        ? isPolish
+                                          ? `Bieżąca wartość ${formatCurrency(lot.currentValuePln, 'PLN')} · wynik ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
+                                          : `Current value ${formatCurrency(lot.currentValuePln, 'PLN')} · P/L ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
+                                        : lot.valuationIssue ??
+                                          (isPolish
+                                            ? 'Wycena partii jest chwilowo niedostępna.'
+                                            : 'Lot valuation is currently unavailable.')}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {lotPreview != null && lotPreview.consumedQuantity > 0 && (
+                                      <span className={badge}>
+                                        {fullyConsumed
+                                          ? isPolish
+                                            ? 'W całości w FIFO'
+                                            : 'Fully consumed in FIFO'
+                                          : isPolish
+                                            ? `FIFO: ${formatNumber(lotPreview.consumedQuantity, { maximumFractionDigits: 0 })} szt.`
+                                            : `FIFO: ${formatNumber(lotPreview.consumedQuantity, { maximumFractionDigits: 0 })} units`}
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className={btnGhost}
+                                      onClick={() =>
+                                        handleQuantityChange(String(toWholeUnits(lot.quantity)))
+                                      }
+                                    >
+                                      {isPolish ? 'Wykup tę partię' : 'Redeem this lot'}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {lotPreview != null && lotPreview.consumedQuantity > 0 && (
+                                  <p className="mt-3 text-sm text-zinc-400">
+                                    {isPolish
+                                      ? `Po podglądzie FIFO zostanie ${formatNumber(lotPreview.remainingQuantity, { maximumFractionDigits: 0 })} szt. z tej partii.`
+                                      : `FIFO preview leaves ${formatNumber(lotPreview.remainingQuantity, { maximumFractionDigits: 0 })} units in this lot.`}
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {redeemPreview.unmatchedQuantity > 0 && (
+                          <p className="text-sm text-amber-300">
+                            {isPolish
+                              ? `Wpisana liczba sztuk przekracza dostępne partie o ${formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })} szt.`
+                              : `The entered quantity exceeds available lots by ${formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })} units.`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <label>
                   <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
@@ -2753,6 +2988,13 @@ function compareInstrumentsByName(
   return (left.symbol ?? '').localeCompare(right.symbol ?? '')
 }
 
+function compareEdoLotsByPurchaseDate(
+  left: { purchaseDate: string },
+  right: { purchaseDate: string },
+) {
+  return left.purchaseDate.localeCompare(right.purchaseDate)
+}
+
 function normalizeDecimalInput(value: string): string {
   return value.trim().replace(',', '.')
 }
@@ -2783,6 +3025,55 @@ function multiplyDecimalInputs(left: string, right: string, decimalSeparator: '.
   const unscaled = leftParts.unscaled * rightParts.unscaled
   const scale = leftParts.scale + rightParts.scale
   return formatDecimalInput(unscaled, scale, decimalSeparator, 2)
+}
+
+function buildRedeemPreview(
+  lots: Array<{ purchaseDate: string; quantity: string | number }>,
+  requestedQuantityRaw: string,
+) {
+  const requestedQuantity = toWholeUnits(requestedQuantityRaw)
+  const byPurchaseDate = new Map<
+    string,
+    {
+      consumedQuantity: number
+      remainingQuantity: number
+    }
+  >()
+  let remaining = requestedQuantity
+  let totalAvailableQuantity = 0
+
+  for (const lot of lots) {
+    const availableQuantity = toWholeUnits(lot.quantity)
+    totalAvailableQuantity += availableQuantity
+
+    const consumedQuantity = Math.min(remaining, availableQuantity)
+    const remainingQuantity = Math.max(availableQuantity - consumedQuantity, 0)
+    byPurchaseDate.set(lot.purchaseDate, {
+      consumedQuantity,
+      remainingQuantity,
+    })
+    remaining = Math.max(remaining - consumedQuantity, 0)
+  }
+
+  return {
+    requestedQuantity,
+    totalAvailableQuantity,
+    unmatchedQuantity: remaining,
+    byPurchaseDate,
+  }
+}
+
+function toWholeUnits(value: string | number | null | undefined) {
+  const amount =
+    typeof value === 'number'
+      ? value
+      : Number(normalizeDecimalInput(value == null ? '' : String(value)))
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0
+  }
+
+  return Math.trunc(amount)
 }
 
 function parseDecimalParts(value: string): { unscaled: bigint; scale: number } | null {

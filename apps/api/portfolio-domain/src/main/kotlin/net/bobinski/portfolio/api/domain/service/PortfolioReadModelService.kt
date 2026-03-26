@@ -162,7 +162,8 @@ class PortfolioReadModelService(
                     valuedAt = holding.valuedAt,
                     valuationStatus = holding.valuationStatus,
                     valuationIssue = holding.valuationIssue,
-                    transactionCount = holding.transactionCount
+                    transactionCount = holding.transactionCount,
+                    edoLots = holding.edoLots
                 )
             }
     }
@@ -439,7 +440,28 @@ class PortfolioReadModelService(
                 valuedAt = null,
                 valuationStatus = result.type.toHoldingValuationStatus(),
                 valuationIssue = "EDO lot ${lot.purchaseDate}: ${result.reason}",
-                transactionCount = holding.transactionCount
+                transactionCount = holding.transactionCount,
+                edoLots = lotsByPurchaseDate.map { aggregatedLot ->
+                    EdoLotSnapshot(
+                        purchaseDate = aggregatedLot.purchaseDate,
+                        quantity = aggregatedLot.quantity.quantity(),
+                        costBasisPln = aggregatedLot.costBasisPln.money(),
+                        currentPricePln = null,
+                        currentValuePln = null,
+                        unrealizedGainPln = null,
+                        valuedAt = null,
+                        valuationStatus = if (aggregatedLot.purchaseDate == lot.purchaseDate) {
+                            result.type.toHoldingValuationStatus()
+                        } else {
+                            HoldingValuationStatus.UNAVAILABLE
+                        },
+                        valuationIssue = if (aggregatedLot.purchaseDate == lot.purchaseDate) {
+                            result.reason
+                        } else {
+                            "EDO lot valuation unavailable."
+                        }
+                    )
+                }
             )
         }
 
@@ -465,7 +487,21 @@ class PortfolioReadModelService(
             valuedAt = valuedAt,
             valuationStatus = HoldingValuationStatus.VALUED,
             valuationIssue = null,
-            transactionCount = holding.transactionCount
+            transactionCount = holding.transactionCount,
+            edoLots = successfulResults.map { (lot, valuation) ->
+                val lotCurrentValue = valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT).money()
+                EdoLotSnapshot(
+                    purchaseDate = lot.purchaseDate,
+                    quantity = lot.quantity.quantity(),
+                    costBasisPln = lot.costBasisPln.money(),
+                    currentPricePln = valuation.pricePerUnitPln.money(),
+                    currentValuePln = lotCurrentValue,
+                    unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
+                    valuedAt = valuation.valuedAt,
+                    valuationStatus = HoldingValuationStatus.VALUED,
+                    valuationIssue = null
+                )
+            }
         )
     }
 
@@ -614,7 +650,8 @@ class PortfolioReadModelService(
         val valuedAt: LocalDate?,
         val valuationStatus: HoldingValuationStatus,
         val valuationIssue: String?,
-        val transactionCount: Int
+        val transactionCount: Int,
+        val edoLots: List<EdoLotSnapshot> = emptyList()
     ) {
         fun effectiveCurrentValuePln(): BigDecimal = currentValuePln ?: costBasisPln
     }
@@ -693,7 +730,20 @@ data class HoldingSnapshot(
     val valuedAt: LocalDate?,
     val valuationStatus: HoldingValuationStatus,
     val valuationIssue: String?,
-    val transactionCount: Int
+    val transactionCount: Int,
+    val edoLots: List<EdoLotSnapshot> = emptyList()
+)
+
+data class EdoLotSnapshot(
+    val purchaseDate: LocalDate,
+    val quantity: BigDecimal,
+    val costBasisPln: BigDecimal,
+    val currentPricePln: BigDecimal?,
+    val currentValuePln: BigDecimal?,
+    val unrealizedGainPln: BigDecimal?,
+    val valuedAt: LocalDate?,
+    val valuationStatus: HoldingValuationStatus,
+    val valuationIssue: String?
 )
 
 data class PortfolioAccountSummary(

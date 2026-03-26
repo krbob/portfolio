@@ -1735,6 +1735,18 @@ export interface components {
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
         };
+        /** net.bobinski.portfolio.api.route.HoldingEdoLotResponse */
+        HoldingEdoLotResponse: {
+            purchaseDate: string;
+            quantity: string;
+            costBasisPln: string;
+            currentPricePln?: string | null;
+            currentValuePln?: string | null;
+            unrealizedGainPln?: string | null;
+            valuedAt?: string | null;
+            valuationStatus: string;
+            valuationIssue?: string | null;
+        };
         /** net.bobinski.portfolio.api.route.HoldingResponse */
         HoldingResponse: {
             accountId: string;
@@ -1755,6 +1767,7 @@ export interface components {
             valuationStatus: string;
             valuationIssue?: string | null;
             transactionCount: number;
+            edoLots?: components["schemas"]["HoldingEdoLotResponse"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioAccountResponse */
         PortfolioAccountResponse: {

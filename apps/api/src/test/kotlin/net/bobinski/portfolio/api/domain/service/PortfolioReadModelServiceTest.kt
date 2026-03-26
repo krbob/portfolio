@@ -186,6 +186,59 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `holdings expose EDO lots grouped by purchase date`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val edo = edoInstrument()
+        fixture.instrumentRepository.save(edo)
+        fixture.transactionRepository.save(depositTransaction(grossAmount = "15000.00"))
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = edo.id,
+                quantity = "70",
+                grossAmount = "7000.00",
+                feeAmount = "0.00",
+                tradeDate = LocalDate.parse("2026-03-02")
+            )
+        )
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = edo.id,
+                quantity = "30",
+                grossAmount = "3000.00",
+                feeAmount = "0.00",
+                tradeDate = LocalDate.parse("2026-03-22")
+            )
+        )
+        fixture.edoLotValuationProvider.values[LocalDate.parse("2026-03-02")] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("102.10"),
+                valuedAt = LocalDate.parse("2026-03-13")
+            )
+        )
+        fixture.edoLotValuationProvider.values[LocalDate.parse("2026-03-22")] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("100.40"),
+                valuedAt = LocalDate.parse("2026-03-13")
+            )
+        )
+
+        val holding = fixture.service.holdings().single()
+
+        assertEquals("EDO0336", holding.instrumentName)
+        assertEquals(0, holding.quantity.compareTo(BigDecimal("100")))
+        assertEquals(BigDecimal("101.59"), holding.currentPricePln)
+        assertEquals(BigDecimal("10159.00"), holding.currentValuePln)
+        assertEquals(2, holding.edoLots.size)
+        assertEquals(LocalDate.parse("2026-03-02"), holding.edoLots[0].purchaseDate)
+        assertEquals(0, holding.edoLots[0].quantity.compareTo(BigDecimal("70")))
+        assertEquals(BigDecimal("7147.00"), holding.edoLots[0].currentValuePln)
+        assertEquals(LocalDate.parse("2026-03-22"), holding.edoLots[1].purchaseDate)
+        assertEquals(0, holding.edoLots[1].quantity.compareTo(BigDecimal("30")))
+        assertEquals(BigDecimal("3012.00"), holding.edoLots[1].currentValuePln)
+    }
+
+    @Test
     fun `accounts expose per-account cash weights and gains`() = runBlocking {
         val fixture = portfolioFixture()
         val primary = account()
@@ -264,6 +317,7 @@ class PortfolioReadModelServiceTest {
             instrumentRepository = instrumentRepository,
             transactionRepository = transactionRepository,
             valuationProvider = valuationProvider,
+            edoLotValuationProvider = edoLotValuationProvider,
             fxRateProvider = fxRateProvider
         )
     }
@@ -406,6 +460,7 @@ class PortfolioReadModelServiceTest {
         val instrumentRepository: InMemoryInstrumentRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val valuationProvider: FakeCurrentInstrumentValuationProvider,
+        val edoLotValuationProvider: FakeEdoLotValuationProvider,
         val fxRateProvider: FakeFxRateHistoryProvider
     )
 
