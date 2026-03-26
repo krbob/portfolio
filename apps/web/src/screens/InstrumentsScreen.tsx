@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PortfolioHolding } from '../api/read-model'
 import type { Instrument } from '../api/write-model'
 import { InstrumentsSection } from '../components/InstrumentsSection'
@@ -6,7 +6,7 @@ import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
-import { formatCurrencyPln, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
@@ -19,11 +19,30 @@ export function InstrumentsScreen() {
   const catalog = instrumentsQuery.data ?? []
   const holdings = holdingsQuery.data ?? []
   const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
+  const [selectedInstrumentId, setSelectedInstrumentId] = useState<string | null>(null)
 
   const activeRows = rows.filter((row) => row.accountCount > 0)
   const degradedCount = rows.filter((row) => row.status !== 'VALUED' && row.accountCount > 0).length
   const totalValuePln = rows.reduce((sum, row) => sum + row.totalCurrentValuePln, 0)
   const totalGainPln = rows.reduce((sum, row) => sum + row.totalUnrealizedGainPln, 0)
+  const selectedRow = rows.find((row) => row.instrument.id === selectedInstrumentId) ?? rows[0] ?? null
+  const selectedHoldings = useMemo(
+    () => holdings
+      .filter((holding) => holding.instrumentId === selectedRow?.instrument.id)
+      .sort((left, right) => asNumber(right.currentValuePln ?? right.bookValuePln) - asNumber(left.currentValuePln ?? left.bookValuePln)),
+    [holdings, selectedRow?.instrument.id],
+  )
+
+  useEffect(() => {
+    if (rows.length === 0) {
+      setSelectedInstrumentId(null)
+      return
+    }
+
+    if (!selectedInstrumentId || !rows.some((row) => row.instrument.id === selectedInstrumentId)) {
+      setSelectedInstrumentId(rows[0]?.instrument.id ?? null)
+    }
+  }, [rows, selectedInstrumentId])
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
     return (
@@ -98,110 +117,128 @@ export function InstrumentsScreen() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),26rem]">
-        <Card flush>
-          <div className="border-b border-zinc-800 px-5 py-4">
-            <SectionHeader
-              eyebrow={isPolish ? 'Read model' : 'Read model'}
-              title={isPolish ? 'Przegląd instrumentów' : 'Instrument overview'}
-              description={isPolish
-                ? 'Agregacja pozycji ponad kontami, z zachowaniem katalogu instrumentów nawet bez aktywnych transakcji.'
-                : 'Positions aggregated across accounts while still exposing the canonical instrument catalog.'}
-            />
-          </div>
-
-          {rows.length === 0 ? (
-            <div className="p-5">
-              <EmptyState
-                title={isPolish ? 'Brak instrumentów' : 'No instruments yet'}
+        <div className="grid gap-6">
+          <Card flush>
+            <div className="border-b border-zinc-800 px-5 py-4">
+              <SectionHeader
+                eyebrow={isPolish ? 'Read model' : 'Read model'}
+                title={isPolish ? 'Przegląd instrumentów' : 'Instrument overview'}
                 description={isPolish
-                  ? 'Dodaj pierwszy instrument po prawej stronie, aby zbudować katalog portfela.'
-                  : 'Add the first instrument on the right to build the portfolio catalog.'}
+                  ? 'Agregacja pozycji ponad kontami, z zachowaniem katalogu instrumentów nawet bez aktywnych transakcji.'
+                  : 'Positions aggregated across accounts while still exposing the canonical instrument catalog.'}
               />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-zinc-950/30">
-                  <tr>
-                    <th className={th}>{isPolish ? 'Instrument' : 'Instrument'}</th>
-                    <th className={th}>{isPolish ? 'Katalog' : 'Catalog'}</th>
-                    <th className={thRight}>{isPolish ? 'Konta' : 'Accounts'}</th>
-                    <th className={thRight}>{isPolish ? 'Ilość' : 'Quantity'}</th>
-                    <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
-                    <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
-                    <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr className={tr} key={row.instrument.id}>
-                      <td className={td}>
-                        <div>
-                          <p className="font-medium text-zinc-100">{row.instrument.name}</p>
-                          <p className="text-xs text-zinc-500">
-                            {row.instrument.symbol ? `${row.instrument.symbol} · ` : ''}
-                            {row.instrument.currency}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={td}>
-                        <div>
-                          <p className="text-zinc-200">
-                            {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {labelValuationSource(row.instrument.valuationSource)}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={tdRight}>
-                        <div>
-                          <p className="tabular-nums text-zinc-100">{row.accountCount}</p>
-                          <p className="text-xs text-zinc-500">
-                            {row.accountCount === 0
-                              ? (isPolish ? 'tylko katalog' : 'catalog only')
-                              : (isPolish ? 'aktywnych rachunków' : 'active accounts')}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={tdRight}>
-                        <div>
-                          <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatNumber(row.quantity, { maximumFractionDigits: 4 })}</p>
-                          <p className="text-xs text-zinc-500">
-                            {row.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={tdRight}>
-                        <div>
-                          <p className="tabular-nums text-zinc-100">{formatCurrencyPln(row.totalCurrentValuePln)}</p>
-                          <p className="text-xs text-zinc-500">
-                            {isPolish ? 'Koszt' : 'Cost basis'} {formatCurrencyPln(row.totalBookValuePln)}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={tdRight}>
-                        <div>
-                          <p className={`tabular-nums ${row.totalUnrealizedGainPln >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatSignedCurrencyPln(row.totalUnrealizedGainPln)}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {row.gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(row.gainPct, { signed: true })}
-                          </p>
-                        </div>
-                      </td>
-                      <td className={tdRight}>
-                        <span className={`${badge} ${statusVariant(row.status)}`}>
-                          {labelInstrumentStatus(row.status, isPolish)}
-                        </span>
-                      </td>
+
+            {rows.length === 0 ? (
+              <div className="p-5">
+                <EmptyState
+                  title={isPolish ? 'Brak instrumentów' : 'No instruments yet'}
+                  description={isPolish
+                    ? 'Dodaj pierwszy instrument po prawej stronie, aby zbudować katalog portfela.'
+                    : 'Add the first instrument on the right to build the portfolio catalog.'}
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-zinc-950/30">
+                    <tr>
+                      <th className={th}>{isPolish ? 'Instrument' : 'Instrument'}</th>
+                      <th className={th}>{isPolish ? 'Katalog' : 'Catalog'}</th>
+                      <th className={thRight}>{isPolish ? 'Konta' : 'Accounts'}</th>
+                      <th className={thRight}>{isPolish ? 'Ilość' : 'Quantity'}</th>
+                      <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
+                      <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
+                      <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => {
+                      const isSelected = selectedRow?.instrument.id === row.instrument.id
+                      return (
+                        <tr
+                          className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                          key={row.instrument.id}
+                          aria-selected={isSelected}
+                          onClick={() => setSelectedInstrumentId(row.instrument.id)}
+                        >
+                          <td className={td}>
+                            <div>
+                              <p className="font-medium text-zinc-100">{row.instrument.name}</p>
+                              <p className="text-xs text-zinc-500">
+                                {row.instrument.symbol ? `${row.instrument.symbol} · ` : ''}
+                                {row.instrument.currency}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={td}>
+                            <div>
+                              <p className="text-zinc-200">
+                                {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {labelValuationSource(row.instrument.valuationSource)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{row.accountCount}</p>
+                              <p className="text-xs text-zinc-500">
+                                {row.accountCount === 0
+                                  ? (isPolish ? 'tylko katalog' : 'catalog only')
+                                  : (isPolish ? 'aktywnych rachunków' : 'active accounts')}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatNumber(row.quantity, { maximumFractionDigits: 4 })}</p>
+                              <p className="text-xs text-zinc-500">
+                                {row.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{formatCurrencyPln(row.totalCurrentValuePln)}</p>
+                              <p className="text-xs text-zinc-500">
+                                {isPolish ? 'Koszt' : 'Cost basis'} {formatCurrencyPln(row.totalBookValuePln)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className={`tabular-nums ${row.totalUnrealizedGainPln >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {formatSignedCurrencyPln(row.totalUnrealizedGainPln)}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {row.gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(row.gainPct, { signed: true })}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <span className={`${badge} ${statusVariant(row.status)}`}>
+                              {labelInstrumentStatus(row.status, isPolish)}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {selectedRow && (
+            <InstrumentDetailsCard
+              row={selectedRow}
+              holdings={selectedHoldings}
+              isPolish={isPolish}
+            />
           )}
-        </Card>
+        </div>
 
         <InstrumentsSection />
       </div>
@@ -230,6 +267,150 @@ function InstrumentSummaryTile({
       </p>
       {detail && <p className="mt-2 text-sm text-zinc-500">{detail}</p>}
     </Card>
+  )
+}
+
+function InstrumentDetailsCard({
+  row,
+  holdings,
+  isPolish,
+}: {
+  row: InstrumentRow
+  holdings: PortfolioHolding[]
+  isPolish: boolean
+}) {
+  const edoLots = holdings.flatMap((holding) => (holding.edoLots ?? []).map((lot) => ({
+    accountId: holding.accountId,
+    accountName: holding.accountName,
+    ...lot,
+  }))).sort((left, right) => left.purchaseDate.localeCompare(right.purchaseDate))
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            {isPolish ? 'Wybrany instrument' : 'Selected instrument'}
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-zinc-50">{row.instrument.name}</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)} · {row.instrument.currency}
+          </p>
+        </div>
+        <span className={`${badge} ${statusVariant(row.status)}`}>
+          {labelInstrumentStatus(row.status, isPolish)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <InstrumentDetailMetric
+          label={isPolish ? 'Konta aktywne' : 'Active accounts'}
+          value={String(row.accountCount)}
+          detail={row.accountCount === 0
+            ? (isPolish ? 'Instrument tylko w katalogu' : 'Catalog only')
+            : `${row.transactionCount} ${isPolish ? 'transakcji' : 'transactions'}`}
+        />
+        <InstrumentDetailMetric
+          label={isPolish ? 'Łączna ilość' : 'Total quantity'}
+          value={row.accountCount === 0 ? '0' : formatNumber(row.quantity, { maximumFractionDigits: 4 })}
+          detail={isPolish ? `Koszt ${formatCurrencyPln(row.totalBookValuePln)}` : `Cost ${formatCurrencyPln(row.totalBookValuePln)}`}
+        />
+        <InstrumentDetailMetric
+          label={isPolish ? 'Bieżąca wartość' : 'Current value'}
+          value={formatCurrencyPln(row.totalCurrentValuePln)}
+          detail={row.gainPct == null ? undefined : formatPercent(row.gainPct, { signed: true })}
+          tone={row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
+        />
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Rozbicie per konto' : 'Account split'}</h4>
+          <p className="text-xs text-zinc-500">{labelValuationSource(row.instrument.valuationSource)}</p>
+        </div>
+
+        {holdings.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            {isPolish
+              ? 'Instrument jest w katalogu, ale nie ma jeszcze aktywnych pozycji.'
+              : 'The instrument is in the catalog but does not have active holdings yet.'}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {holdings.map((holding) => (
+              <div
+                key={`${holding.accountId}-${holding.instrumentId}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+              >
+                <div>
+                  <p className="font-medium text-zinc-100">{holding.accountName}</p>
+                  <p className="text-xs text-zinc-500">
+                    {holding.quantity} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
+                  <p className="text-xs text-zinc-500">
+                    {formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {edoLots.length > 0 && (
+        <div className="mt-6">
+          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Loty EDO' : 'EDO lots'}</h4>
+          <div className="mt-3 space-y-2">
+            {edoLots.map((lot) => (
+              <div
+                key={`${lot.accountId}-${lot.purchaseDate}-${lot.quantity}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+              >
+                <div>
+                  <p className="font-medium text-zinc-100">{lot.accountName}</p>
+                  <p className="text-xs text-zinc-500">
+                    {formatDate(lot.purchaseDate)} · {lot.quantity} {isPolish ? 'szt.' : 'units'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
+                  <p className="text-xs text-zinc-500">
+                    {formatSignedCurrencyPln(lot.unrealizedGainPln ?? '0')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function InstrumentDetailMetric({
+  label,
+  value,
+  detail,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  detail?: string
+  tone?: 'default' | 'success' | 'warning'
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className={`mt-2 text-xl font-semibold ${
+        tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
+      }`}>
+        {value}
+      </p>
+      {detail && <p className="mt-1 text-xs text-zinc-500">{detail}</p>}
+    </div>
   )
 }
 

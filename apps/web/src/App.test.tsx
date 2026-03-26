@@ -674,6 +674,34 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              quantity: '10',
+              averageCostPerUnitPln: '100.50',
+              costBasisPln: '1005.00',
+              bookValuePln: '1005.00',
+              currentPricePln: '120.00',
+              currentValuePln: '1200.00',
+              unrealizedGainPln: '195.00',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 2,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -704,6 +732,12 @@ describe('App', () => {
     expect(await screen.findByText(/cash on accounts/i)).toBeInTheDocument()
     expect(await screen.findByText(/81.45% of portfolio/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/top positions/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/largest line/i)).length).toBeGreaterThan(0)
+
+    fireEvent.click(await screen.findByText(/^reserve$/i))
+
+    expect(await screen.findByText(/has no active positions yet/i)).toBeInTheDocument()
   })
 
   it('renders instrument summaries on the dedicated instruments screen', async () => {
@@ -796,6 +830,39 @@ describe('App', () => {
               valuationIssue: null,
               transactionCount: 1,
             },
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-2',
+              instrumentName: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              currency: 'PLN',
+              quantity: '70',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '7000.00',
+              bookValuePln: '7000.00',
+              currentPricePln: '101.37',
+              currentValuePln: '7095.90',
+              unrealizedGainPln: '95.90',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 1,
+              edoLots: [
+                {
+                  purchaseDate: '2026-03-03',
+                  quantity: '70',
+                  costBasisPln: '7000.00',
+                  currentPricePln: '101.37',
+                  currentValuePln: '7095.90',
+                  unrealizedGainPln: '95.90',
+                  valuedAt: '2026-03-20',
+                  valuationStatus: 'VALUED',
+                  valuationIssue: null,
+                },
+              ],
+            },
           ]),
           { status: 200 },
         )
@@ -834,6 +901,19 @@ describe('App', () => {
               createdAt: '2026-03-02T00:00:00Z',
               updatedAt: '2026-03-02T00:00:00Z',
             },
+            {
+              id: 'ins-3',
+              name: 'SGOV',
+              kind: 'ETF',
+              assetClass: 'BONDS',
+              symbol: 'SGOV',
+              currency: 'USD',
+              valuationSource: 'STOCK_ANALYST',
+              edoTerms: null,
+              isActive: true,
+              createdAt: '2026-03-03T00:00:00Z',
+              updatedAt: '2026-03-03T00:00:00Z',
+            },
           ]),
           { status: 200 },
         )
@@ -862,9 +942,16 @@ describe('App', () => {
     expect(await screen.findByText(/instrument overview/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/vwra/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/edo0336/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/sgov/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/catalog only/i)).toBeInTheDocument()
-    expect(await screen.findByText(/1 active in portfolio/i)).toBeInTheDocument()
-    expect((await screen.findAllByText(/\+.*177.50/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/2 active in portfolio/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/\+.*273.40/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/edo lots/i)).toBeInTheDocument()
+
+    fireEvent.click((await screen.findAllByText(/^vwra$/i))[0]!)
+
+    expect(await screen.findByText(/account split/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/reserve/i)).length).toBeGreaterThan(0)
   })
 
   it('shows percentage pnl for valued holdings', async () => {
@@ -2476,6 +2563,10 @@ describe('App', () => {
 
       if (url.includes('/api/v1/portfolio/accounts')) {
         return new Response(JSON.stringify(portfolioAccounts), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([]), { status: 200 })
       }
 
       if (url.includes('/api/v1/accounts')) {

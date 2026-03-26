@@ -1,34 +1,55 @@
-import { useEffect, useState } from 'react'
-import type { PortfolioAccountSummary } from '../api/read-model'
+import { useEffect, useMemo, useState } from 'react'
+import type { PortfolioAccountSummary, PortfolioHolding } from '../api/read-model'
 import { AccountsSection } from '../components/AccountsSection'
 import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
-import { usePortfolioAccounts } from '../hooks/use-read-model'
+import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
-import { labelAccountType } from '../lib/labels'
+import { labelAccountType, labelAssetClass } from '../lib/labels'
 import { badge, badgeVariants, btnGhost, td, tdRight, th, thRight, tr } from '../lib/styles'
 
 export function AccountsScreen() {
   const { isPolish } = useI18n()
   const accountsQuery = usePortfolioAccounts()
+  const holdingsQuery = usePortfolioHoldings()
   const reorderAccountsMutation = useReorderAccounts()
   const accounts = accountsQuery.data ?? []
+  const holdings = holdingsQuery.data ?? []
   const [orderedAccounts, setOrderedAccounts] = useState(accounts)
   const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null)
   const [dropTargetAccountId, setDropTargetAccountId] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const totalValuePln = accounts.reduce((sum, account) => sum + asNumber(account.totalCurrentValuePln), 0)
   const totalCashPln = accounts.reduce((sum, account) => sum + asNumber(account.cashBalancePln), 0)
   const totalGainPln = accounts.reduce((sum, account) => sum + asNumber(account.totalUnrealizedGainPln), 0)
   const degradedCount = accounts.filter((account) => account.valuationState !== 'MARK_TO_MARKET').length
   const totalHoldings = accounts.reduce((sum, account) => sum + account.activeHoldingCount, 0)
+  const selectedAccount = orderedAccounts.find((account) => account.accountId === selectedAccountId) ?? orderedAccounts[0] ?? null
+  const selectedAccountHoldings = useMemo(
+    () => holdings
+      .filter((holding) => holding.accountId === selectedAccount?.accountId)
+      .sort((left, right) => asNumber(right.currentValuePln ?? right.bookValuePln) - asNumber(left.currentValuePln ?? left.bookValuePln)),
+    [holdings, selectedAccount?.accountId],
+  )
 
   useEffect(() => {
     setOrderedAccounts(accounts)
   }, [accounts])
 
-  if (accountsQuery.isLoading) {
+  useEffect(() => {
+    if (orderedAccounts.length === 0) {
+      setSelectedAccountId(null)
+      return
+    }
+
+    if (!selectedAccountId || !orderedAccounts.some((account) => account.accountId === selectedAccountId)) {
+      setSelectedAccountId(orderedAccounts[0]?.accountId ?? null)
+    }
+  }, [orderedAccounts, selectedAccountId])
+
+  if (accountsQuery.isLoading || holdingsQuery.isLoading) {
     return (
       <>
         <PageHeader title={isPolish ? 'Konta' : 'Accounts'} />
@@ -43,7 +64,7 @@ export function AccountsScreen() {
     )
   }
 
-  if (accountsQuery.isError) {
+  if (accountsQuery.isError || holdingsQuery.isError) {
     return (
       <>
         <PageHeader title={isPolish ? 'Konta' : 'Accounts'} />
@@ -99,165 +120,184 @@ export function AccountsScreen() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),26rem]">
-        <Card flush>
-          <div className="border-b border-zinc-800 px-5 py-4">
-            <SectionHeader
-              eyebrow={isPolish ? 'Read model' : 'Read model'}
-              title={isPolish ? 'Przegląd rachunków' : 'Account overview'}
-              description={isPolish
-                ? 'Wartość, gotówka i bieżący wynik rozbite na rachunki z ręcznym sterowaniem kolejnością.'
-                : 'Value, cash and current P/L split by account, with manual ordering controlled from this view.'}
-            />
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-              <span>
-                {isPolish
-                  ? 'Przeciągnij wiersz albo użyj przycisków W górę / W dół, aby ustawić kolejność kont.'
-                  : 'Drag a row or use Move up / Move down to set the account order.'}
-              </span>
-              {reorderAccountsMutation.isPending && (
-                <span className="text-blue-400">
-                  {isPolish ? 'Zapisywanie kolejności...' : 'Saving order...'}
-                </span>
-              )}
-              {reorderAccountsMutation.error && (
-                <span className="text-red-400">{reorderAccountsMutation.error.message}</span>
-              )}
-            </div>
-          </div>
-
-          {accounts.length === 0 ? (
-            <div className="p-5">
-              <EmptyState
-                title={isPolish ? 'Brak kont' : 'No accounts yet'}
+        <div className="grid gap-6">
+          <Card flush>
+            <div className="border-b border-zinc-800 px-5 py-4">
+              <SectionHeader
+                eyebrow={isPolish ? 'Read model' : 'Read model'}
+                title={isPolish ? 'Przegląd rachunków' : 'Account overview'}
                 description={isPolish
-                  ? 'Dodaj pierwszy rachunek po prawej stronie, aby zacząć przypisywać do niego transakcje.'
-                  : 'Add the first account on the right to start assigning transactions to it.'}
+                  ? 'Wartość, gotówka i bieżący wynik rozbite na rachunki z ręcznym sterowaniem kolejnością.'
+                  : 'Value, cash and current P/L split by account, with manual ordering controlled from this view.'}
               />
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                <span>
+                  {isPolish
+                    ? 'Przeciągnij wiersz albo użyj przycisków W górę / W dół, aby ustawić kolejność kont.'
+                    : 'Drag a row or use Move up / Move down to set the account order.'}
+                </span>
+                {reorderAccountsMutation.isPending && (
+                  <span className="text-blue-400">
+                    {isPolish ? 'Zapisywanie kolejności...' : 'Saving order...'}
+                  </span>
+                )}
+                {reorderAccountsMutation.error && (
+                  <span className="text-red-400">{reorderAccountsMutation.error.message}</span>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-zinc-950/30">
-                  <tr>
-                    <th className={th}>{isPolish ? 'Kolejność' : 'Order'}</th>
-                    <th className={th}>{isPolish ? 'Konto' : 'Account'}</th>
-                    <th className={th}>{isPolish ? 'Typ' : 'Type'}</th>
-                    <th className={thRight}>{isPolish ? 'Pozycje' : 'Holdings'}</th>
-                    <th className={thRight}>{isPolish ? 'Gotówka' : 'Cash'}</th>
-                    <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
-                    <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
-                    <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderedAccounts.map((account, index) => {
-                    const gainPct = toGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
-                    return (
-                      <tr
-                        className={`${tr} ${draggedAccountId === account.accountId ? 'opacity-60' : ''} ${dropTargetAccountId === account.accountId ? 'bg-zinc-950/30' : ''}`}
-                        key={account.accountId}
-                        draggable={!reorderAccountsMutation.isPending}
-                        onDragStart={() => setDraggedAccountId(account.accountId)}
-                        onDragEnd={() => {
-                          setDraggedAccountId(null)
-                          setDropTargetAccountId(null)
-                        }}
-                        onDragOver={(event) => {
-                          event.preventDefault()
-                          if (draggedAccountId && draggedAccountId !== account.accountId) {
-                            setDropTargetAccountId(account.accountId)
-                          }
-                        }}
-                        onDrop={(event) => {
-                          event.preventDefault()
-                          handleDrop(account.accountId)
-                        }}
-                      >
-                        <td className={td}>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              className={btnGhost}
-                              onClick={() => moveAccountByOffset(account.accountId, -1)}
-                              disabled={reorderAccountsMutation.isPending || index === 0}
-                              aria-label={isPolish ? `Przesuń ${account.accountName} w górę` : `Move ${account.accountName} up`}
-                            >
-                              {isPolish ? 'W górę' : 'Up'}
-                            </button>
-                            <button
-                              type="button"
-                              className={btnGhost}
-                              onClick={() => moveAccountByOffset(account.accountId, 1)}
-                              disabled={reorderAccountsMutation.isPending || index === orderedAccounts.length - 1}
-                              aria-label={isPolish ? `Przesuń ${account.accountName} w dół` : `Move ${account.accountName} down`}
-                            >
-                              {isPolish ? 'W dół' : 'Down'}
-                            </button>
-                          </div>
-                        </td>
-                        <td className={td}>
-                          <div>
-                            <p className="font-medium text-zinc-100">{account.accountName}</p>
-                            <p className="text-xs text-zinc-500">
-                              {account.institution} · {account.baseCurrency}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={td}>
-                          <div>
-                            <p className="text-zinc-200">{labelAccountType(account.type)}</p>
-                            <p className="text-xs text-zinc-500">
-                              {formatPercent(account.portfolioWeightPct)} {isPolish ? 'portfela' : 'of portfolio'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={tdRight}>
-                          <div>
-                            <p className="tabular-nums text-zinc-100">{account.activeHoldingCount}</p>
-                            <p className="text-xs text-zinc-500">
-                              {account.valuedHoldingCount}/{account.activeHoldingCount} {isPolish ? 'wycen' : 'valued'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={tdRight}>
-                          <div>
-                            <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.cashBalancePln)}</p>
-                            <p className="text-xs text-zinc-500">
-                              {isPolish ? 'Wpłaty netto' : 'Net contributions'} {formatCurrencyPln(account.netContributionsPln)}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={tdRight}>
-                          <div>
-                            <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.totalCurrentValuePln)}</p>
-                            <p className="text-xs text-zinc-500">
-                              {isPolish ? 'Zainwestowane' : 'Invested'} {formatCurrencyPln(account.investedCurrentValuePln)}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={tdRight}>
-                          <div>
-                            <p className={`tabular-nums ${asNumber(account.totalUnrealizedGainPln) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {formatSignedCurrencyPln(account.totalUnrealizedGainPln)}
-                            </p>
-                            <p className="text-xs text-zinc-500">
-                              {gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={tdRight}>
-                          <span className={`${badge} ${valuationStateVariant(account.valuationState)}`}>
-                            {labelValuationState(account.valuationState, isPolish)}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+
+            {accounts.length === 0 ? (
+              <div className="p-5">
+                <EmptyState
+                  title={isPolish ? 'Brak kont' : 'No accounts yet'}
+                  description={isPolish
+                    ? 'Dodaj pierwszy rachunek po prawej stronie, aby zacząć przypisywać do niego transakcje.'
+                    : 'Add the first account on the right to start assigning transactions to it.'}
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-zinc-950/30">
+                    <tr>
+                      <th className={th}>{isPolish ? 'Kolejność' : 'Order'}</th>
+                      <th className={th}>{isPolish ? 'Konto' : 'Account'}</th>
+                      <th className={th}>{isPolish ? 'Typ' : 'Type'}</th>
+                      <th className={thRight}>{isPolish ? 'Pozycje' : 'Holdings'}</th>
+                      <th className={thRight}>{isPolish ? 'Gotówka' : 'Cash'}</th>
+                      <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
+                      <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
+                      <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderedAccounts.map((account, index) => {
+                      const gainPct = toGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
+                      const isSelected = selectedAccount?.accountId === account.accountId
+                      return (
+                        <tr
+                          className={`${tr} cursor-pointer ${draggedAccountId === account.accountId ? 'opacity-60' : ''} ${dropTargetAccountId === account.accountId ? 'bg-zinc-950/30' : ''} ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                          key={account.accountId}
+                          draggable={!reorderAccountsMutation.isPending}
+                          aria-selected={isSelected}
+                          onClick={() => setSelectedAccountId(account.accountId)}
+                          onDragStart={() => setDraggedAccountId(account.accountId)}
+                          onDragEnd={() => {
+                            setDraggedAccountId(null)
+                            setDropTargetAccountId(null)
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault()
+                            if (draggedAccountId && draggedAccountId !== account.accountId) {
+                              setDropTargetAccountId(account.accountId)
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault()
+                            handleDrop(account.accountId)
+                          }}
+                        >
+                          <td className={td}>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                className={btnGhost}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  moveAccountByOffset(account.accountId, -1)
+                                }}
+                                disabled={reorderAccountsMutation.isPending || index === 0}
+                                aria-label={isPolish ? `Przesuń ${account.accountName} w górę` : `Move ${account.accountName} up`}
+                              >
+                                {isPolish ? 'W górę' : 'Up'}
+                              </button>
+                              <button
+                                type="button"
+                                className={btnGhost}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  moveAccountByOffset(account.accountId, 1)
+                                }}
+                                disabled={reorderAccountsMutation.isPending || index === orderedAccounts.length - 1}
+                                aria-label={isPolish ? `Przesuń ${account.accountName} w dół` : `Move ${account.accountName} down`}
+                              >
+                                {isPolish ? 'W dół' : 'Down'}
+                              </button>
+                            </div>
+                          </td>
+                          <td className={td}>
+                            <div>
+                              <p className="font-medium text-zinc-100">{account.accountName}</p>
+                              <p className="text-xs text-zinc-500">
+                                {account.institution} · {account.baseCurrency}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={td}>
+                            <div>
+                              <p className="text-zinc-200">{labelAccountType(account.type)}</p>
+                              <p className="text-xs text-zinc-500">
+                                {formatPercent(account.portfolioWeightPct)} {isPolish ? 'portfela' : 'of portfolio'}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{account.activeHoldingCount}</p>
+                              <p className="text-xs text-zinc-500">
+                                {account.valuedHoldingCount}/{account.activeHoldingCount} {isPolish ? 'wycen' : 'valued'}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.cashBalancePln)}</p>
+                              <p className="text-xs text-zinc-500">
+                                {isPolish ? 'Wpłaty netto' : 'Net contributions'} {formatCurrencyPln(account.netContributionsPln)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.totalCurrentValuePln)}</p>
+                              <p className="text-xs text-zinc-500">
+                                {isPolish ? 'Zainwestowane' : 'Invested'} {formatCurrencyPln(account.investedCurrentValuePln)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <div>
+                              <p className={`tabular-nums ${asNumber(account.totalUnrealizedGainPln) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {formatSignedCurrencyPln(account.totalUnrealizedGainPln)}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })}
+                              </p>
+                            </div>
+                          </td>
+                          <td className={tdRight}>
+                            <span className={`${badge} ${valuationStateVariant(account.valuationState)}`}>
+                              {labelValuationState(account.valuationState, isPolish)}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {selectedAccount && (
+            <AccountDetailsCard
+              account={selectedAccount}
+              holdings={selectedAccountHoldings}
+              isPolish={isPolish}
+            />
           )}
-        </Card>
+        </div>
 
         <AccountsSection />
       </div>
@@ -344,6 +384,129 @@ function AccountSummaryTile({
       </p>
       {detail && <p className="mt-2 text-sm text-zinc-500">{detail}</p>}
     </Card>
+  )
+}
+
+function AccountDetailsCard({
+  account,
+  holdings,
+  isPolish,
+}: {
+  account: PortfolioAccountSummary
+  holdings: PortfolioHolding[]
+  isPolish: boolean
+}) {
+  const largestHolding = holdings[0] ?? null
+  const cashSharePct = asNumber(account.totalCurrentValuePln) > 0
+    ? (asNumber(account.cashBalancePln) / asNumber(account.totalCurrentValuePln)) * 100
+    : 0
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            {isPolish ? 'Wybrane konto' : 'Selected account'}
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-zinc-50">{account.accountName}</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            {account.institution} · {labelAccountType(account.type)} · {account.baseCurrency}
+          </p>
+        </div>
+        <span className={`${badge} ${valuationStateVariant(account.valuationState)}`}>
+          {labelValuationState(account.valuationState, isPolish)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <AccountDetailMetric
+          label={isPolish ? 'Gotówka' : 'Cash'}
+          value={formatCurrencyPln(account.cashBalancePln)}
+          detail={formatPercent(cashSharePct)}
+        />
+        <AccountDetailMetric
+          label={isPolish ? 'Zainwestowane' : 'Invested'}
+          value={formatCurrencyPln(account.investedCurrentValuePln)}
+          detail={isPolish ? `${account.activeHoldingCount} pozycji` : `${account.activeHoldingCount} holdings`}
+        />
+        <AccountDetailMetric
+          label={isPolish ? 'Wpłaty netto' : 'Net contributions'}
+          value={formatCurrencyPln(account.netContributionsPln)}
+          detail={formatSignedCurrencyPln(account.totalUnrealizedGainPln)}
+          tone={asNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
+        />
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Top pozycje' : 'Top positions'}</h4>
+          {largestHolding && (
+            <p className="text-xs text-zinc-500">
+              {isPolish ? 'Największa linia' : 'Largest line'}: {largestHolding.instrumentName}
+            </p>
+          )}
+        </div>
+
+        {holdings.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            {isPolish
+              ? 'Na tym rachunku nie ma jeszcze aktywnych pozycji. Wartość pochodzi wyłącznie z gotówki.'
+              : 'This account has no active positions yet. Its value currently comes from cash only.'}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {holdings.slice(0, 5).map((holding) => {
+              const weightPct = asNumber(account.totalCurrentValuePln) > 0
+                ? (asNumber(holding.currentValuePln ?? holding.bookValuePln) / asNumber(account.totalCurrentValuePln)) * 100
+                : 0
+              return (
+                <div
+                  key={`${holding.accountId}-${holding.instrumentId}`}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-zinc-100">{holding.instrumentName}</p>
+                    <p className="text-xs text-zinc-500">
+                      {labelAssetClass(holding.assetClass)} · {holding.quantity} {isPolish ? 'szt.' : 'units'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
+                    <p className="text-xs text-zinc-500">
+                      {formatPercent(weightPct)} · {formatSignedCurrencyPln(holding.unrealizedGainPln ?? '0')}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function AccountDetailMetric({
+  label,
+  value,
+  detail,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  detail?: string
+  tone?: 'default' | 'success' | 'warning'
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className={`mt-2 text-xl font-semibold ${
+        tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
+      }`}>
+        {value}
+      </p>
+      {detail && <p className="mt-1 text-xs text-zinc-500">{detail}</p>}
+    </div>
   )
 }
 
