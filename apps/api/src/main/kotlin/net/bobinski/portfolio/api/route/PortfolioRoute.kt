@@ -55,6 +55,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
 import net.bobinski.portfolio.api.domain.service.ImportMode
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
+import net.bobinski.portfolio.api.domain.service.ReturnBreakdown
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioRebalancingSettingsCommand
@@ -453,7 +454,21 @@ data class PortfolioReturnPeriodResponse(
     val inflationFrom: String?,
     val inflationUntil: String?,
     val inflationMultiplier: String?,
+    val breakdown: ReturnBreakdownResponse?,
     val benchmarks: Array<BenchmarkComparisonResponse>
+)
+
+@Serializable
+data class ReturnBreakdownResponse(
+    val openingValuePln: String,
+    val closingValuePln: String,
+    val netChangePln: String,
+    val netExternalFlowsPln: String,
+    val interestAndCouponsPln: String,
+    val feesPln: String,
+    val taxesPln: String,
+    val marketAndFxPln: String,
+    val netInvestmentResultPln: String
 )
 
 @Serializable
@@ -975,7 +990,20 @@ private fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = 
     inflationFrom = inflation?.from?.toString(),
     inflationUntil = inflation?.until?.toString(),
     inflationMultiplier = inflation?.multiplier?.toPlainString(),
+    breakdown = breakdown?.toResponse(),
     benchmarks = benchmarks.map { it.toResponse() }.toTypedArray()
+)
+
+private fun ReturnBreakdown.toResponse(): ReturnBreakdownResponse = ReturnBreakdownResponse(
+    openingValuePln = openingValuePln.toPlainString(),
+    closingValuePln = closingValuePln.toPlainString(),
+    netChangePln = netChangePln.toPlainString(),
+    netExternalFlowsPln = netExternalFlowsPln.toPlainString(),
+    interestAndCouponsPln = interestAndCouponsPln.toPlainString(),
+    feesPln = feesPln.toPlainString(),
+    taxesPln = taxesPln.toPlainString(),
+    marketAndFxPln = marketAndFxPln.toPlainString(),
+    netInvestmentResultPln = netInvestmentResultPln.toPlainString()
 )
 
 private fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricResponse(

@@ -12,6 +12,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
+import net.bobinski.portfolio.api.domain.service.ReturnBreakdown
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
@@ -23,6 +24,7 @@ import net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse
 import net.bobinski.portfolio.api.route.PortfolioDailyHistoryResponse
 import net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse
 import net.bobinski.portfolio.api.route.PortfolioReturnsResponse
+import net.bobinski.portfolio.api.route.ReturnBreakdownResponse
 import net.bobinski.portfolio.api.route.ReturnMetricResponse
 
 class ReadModelRefreshService(
@@ -241,7 +243,20 @@ private fun PortfolioReturnPeriod.toRefreshResponse(): PortfolioReturnPeriodResp
     inflationFrom = inflation?.from?.toString(),
     inflationUntil = inflation?.until?.toString(),
     inflationMultiplier = inflation?.multiplier?.toPlainString(),
+    breakdown = breakdown?.toRefreshResponse(),
     benchmarks = benchmarks.map(BenchmarkComparison::toRefreshResponse).toTypedArray()
+)
+
+private fun ReturnBreakdown.toRefreshResponse(): ReturnBreakdownResponse = ReturnBreakdownResponse(
+    openingValuePln = openingValuePln.toPlainString(),
+    closingValuePln = closingValuePln.toPlainString(),
+    netChangePln = netChangePln.toPlainString(),
+    netExternalFlowsPln = netExternalFlowsPln.toPlainString(),
+    interestAndCouponsPln = interestAndCouponsPln.toPlainString(),
+    feesPln = feesPln.toPlainString(),
+    taxesPln = taxesPln.toPlainString(),
+    marketAndFxPln = marketAndFxPln.toPlainString(),
+    netInvestmentResultPln = netInvestmentResultPln.toPlainString()
 )
 
 private fun ReturnMetric.toRefreshResponse(): ReturnMetricResponse = ReturnMetricResponse(

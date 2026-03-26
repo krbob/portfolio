@@ -252,6 +252,55 @@ class PortfolioReturnsServiceTest {
         assertEquals(YearMonth.parse("2026-03"), oneYearInflation.until)
     }
 
+    @Test
+    fun `returns expose period breakdown across flows income and costs`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(interestTransaction(amount = "100.00"))
+        fixture.transactionRepository.save(feeTransaction())
+        fixture.transactionRepository.save(taxTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Failure("Equity benchmark not required.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.05")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.05")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+        val breakdown = requireNotNull(oneYear.breakdown)
+
+        assertBigDecimalValue("0.00", breakdown.openingValuePln)
+        assertBigDecimalValue("1075.00", breakdown.closingValuePln)
+        assertBigDecimalValue("1075.00", breakdown.netChangePln)
+        assertBigDecimalValue("1000.00", breakdown.netExternalFlowsPln)
+        assertBigDecimalValue("100.00", breakdown.interestAndCouponsPln)
+        assertBigDecimalValue("-10.00", breakdown.feesPln)
+        assertBigDecimalValue("-15.00", breakdown.taxesPln)
+        assertBigDecimalValue("0.00", breakdown.marketAndFxPln)
+        assertBigDecimalValue("75.00", breakdown.netInvestmentResultPln)
+    }
+
+    private fun assertBigDecimalValue(expected: String, actual: BigDecimal) {
+        assertTrue(
+            actual.compareTo(BigDecimal(expected)) == 0,
+            "Expected <$expected> but was <${actual.toPlainString()}>"
+        )
+    }
+
     private fun returnsFixture(
         clock: Clock = Clock.fixed(Instant.parse("2026-03-01T12:00:00Z"), ZoneOffset.UTC)
     ): ReturnsFixture {
@@ -363,6 +412,50 @@ class PortfolioReturnsServiceTest {
         notes = "",
         createdAt = CREATED_AT.plusSeconds(1),
         updatedAt = CREATED_AT.plusSeconds(1)
+    )
+
+    private fun feeTransaction(
+        tradeDate: String = "2026-03-01",
+        amount: String = "10.00"
+    ): Transaction = Transaction(
+        id = UUID.nameUUIDFromBytes("returns-fee".toByteArray()),
+        accountId = ACCOUNT_ID,
+        instrumentId = null,
+        type = TransactionType.FEE,
+        tradeDate = LocalDate.parse(tradeDate),
+        settlementDate = LocalDate.parse(tradeDate),
+        quantity = null,
+        unitPrice = null,
+        grossAmount = BigDecimal(amount),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal.ZERO,
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "",
+        createdAt = CREATED_AT.plusSeconds(2),
+        updatedAt = CREATED_AT.plusSeconds(2)
+    )
+
+    private fun taxTransaction(
+        tradeDate: String = "2026-03-01",
+        amount: String = "15.00"
+    ): Transaction = Transaction(
+        id = UUID.nameUUIDFromBytes("returns-tax".toByteArray()),
+        accountId = ACCOUNT_ID,
+        instrumentId = null,
+        type = TransactionType.TAX,
+        tradeDate = LocalDate.parse(tradeDate),
+        settlementDate = LocalDate.parse(tradeDate),
+        quantity = null,
+        unitPrice = null,
+        grossAmount = BigDecimal(amount),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal.ZERO,
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "",
+        createdAt = CREATED_AT.plusSeconds(3),
+        updatedAt = CREATED_AT.plusSeconds(3)
     )
 
     private fun pricePoint(date: String, closePricePln: String) =

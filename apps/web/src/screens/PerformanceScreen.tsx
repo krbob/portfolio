@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { PortfolioDailyHistoryPoint, BenchmarkComparison, PortfolioReturnPeriod } from '../api/read-model'
 import { PortfolioValueChart, AllocationTimeChart, BenchmarkChart } from '../components/charts'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, StatePanel, TabBar, SegmentedControl } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
-import { formatCurrencyPln, formatPercent, formatYearMonth } from '../lib/format'
+import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { card, th, thRight, td, tdRight, tr } from '../lib/styles'
 import { isMarketValuationState } from '../lib/valuation'
@@ -158,7 +158,12 @@ export function PerformanceScreen() {
             id="performance-workspace-panel-returns"
             aria-labelledby="performance-workspace-tab-returns"
           >
-            <ReturnsTab returnsQuery={returnsQuery} returnsDisplayAvailable={returnsDisplayAvailable} />
+            <ReturnsTab
+              returnsQuery={returnsQuery}
+              returnsDisplayAvailable={returnsDisplayAvailable}
+              period={period}
+              onPeriodChange={setPeriod}
+            />
           </section>
         )}
       </div>
@@ -278,9 +283,13 @@ function ChartsTab({
 function ReturnsTab({
   returnsQuery,
   returnsDisplayAvailable,
+  period,
+  onPeriodChange,
 }: {
   returnsQuery: ReturnType<typeof usePortfolioReturns>
   returnsDisplayAvailable: boolean
+  period: Period
+  onPeriodChange: (period: Period) => void
 }) {
   const { isPolish } = useI18n()
   const data = returnsQuery.data
@@ -321,24 +330,8 @@ function ReturnsTab({
   }
 
   const realCoverageUntil = findRealPlnCoverageMonth(data.periods)
-  const benchmarkPeriods = data.periods.filter((period) => period.benchmarks.length > 0)
-  const [selectedBenchmarkPeriodKey, setSelectedBenchmarkPeriodKey] = useState<string | null>(benchmarkPeriods[0]?.key ?? null)
-
-  useEffect(() => {
-    if (benchmarkPeriods.length === 0) {
-      if (selectedBenchmarkPeriodKey != null) {
-        setSelectedBenchmarkPeriodKey(null)
-      }
-      return
-    }
-
-    if (!selectedBenchmarkPeriodKey || !benchmarkPeriods.some((period) => period.key === selectedBenchmarkPeriodKey)) {
-      setSelectedBenchmarkPeriodKey(benchmarkPeriods[0].key)
-    }
-  }, [benchmarkPeriods, selectedBenchmarkPeriodKey])
-
-  const selectedBenchmarkPeriod =
-    benchmarkPeriods.find((period) => period.key === selectedBenchmarkPeriodKey) ?? benchmarkPeriods[0] ?? null
+  const selectedPeriod = findSelectedReturnPeriod(data.periods, period)
+  const selectedBenchmarkPeriod = selectedPeriod?.benchmarks.length ? selectedPeriod : null
 
   return (
     <div className="space-y-4">
@@ -349,6 +342,15 @@ function ReturnsTab({
           description={isPolish
             ? 'Historia portfela nie ma obecnie wystarczającego pokrycia wyceną rynkową, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.'
             : 'Portfolio history currently lacks enough market valuation coverage, so return metrics are shown as N/A instead of pretending they are 0.00%.'}
+        />
+      ) : null}
+
+      {selectedPeriod ? (
+        <ReturnsBreakdownCard
+          period={selectedPeriod}
+          returnsDisplayAvailable={returnsDisplayAvailable}
+          selectedPeriod={period}
+          onPeriodChange={onPeriodChange}
         />
       ) : null}
 
@@ -370,7 +372,7 @@ function ReturnsTab({
             {data.periods.map((p) => (
               <tr
                 key={p.key}
-                className={`${tr} ${p.key === selectedBenchmarkPeriod?.key ? 'bg-zinc-800/30' : p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
+                className={`${tr} ${p.key === selectedPeriod?.key ? 'bg-zinc-800/30' : p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
               >
                 <td className={`${td} font-medium text-zinc-200`}>
                   {p.label}
@@ -417,23 +419,12 @@ function ReturnsTab({
               <h3 className="text-sm font-semibold text-zinc-200">
                 {isPolish ? 'Benchmarki' : 'Benchmarks'}
               </h3>
-              <p className="mt-1 text-sm text-zinc-500">
-                {isPolish
-                  ? `Nadwyżka TWR względem wybranego okresu. Szczegóły poniżej dla ${selectedBenchmarkPeriod.label}.`
-                  : `Time-weighted excess return versus the selected period. Details below for ${selectedBenchmarkPeriod.label}.`}
-              </p>
-            </div>
-            {benchmarkPeriods.length > 1 ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Okres' : 'Period'}</span>
-                <SegmentedControl
-                  options={benchmarkPeriods.map((period) => ({ value: period.key, label: period.label }))}
-                  value={selectedBenchmarkPeriod.key}
-                  onChange={setSelectedBenchmarkPeriodKey}
-                  ariaLabel={isPolish ? 'Okres benchmarków' : 'Benchmark period'}
-                />
-              </div>
-            ) : null}
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {isPolish
+                      ? `Nadwyżka TWR względem wybranego okresu. Szczegóły poniżej dla ${selectedBenchmarkPeriod.label}.`
+                      : `Time-weighted excess return versus the selected period. Details below for ${selectedBenchmarkPeriod.label}.`}
+                  </p>
+                </div>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {selectedBenchmarkPeriod.benchmarks.map((benchmark) => (
@@ -474,6 +465,139 @@ function BenchmarkCard({
       <p className="mt-0.5 text-xs text-zinc-600">
         {isPolish ? 'TWR benchmarku' : 'Bench TWR'} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
+    </div>
+  )
+}
+
+function ReturnsBreakdownCard({
+  period,
+  returnsDisplayAvailable,
+  selectedPeriod,
+  onPeriodChange,
+}: {
+  period: PortfolioReturnPeriod
+  returnsDisplayAvailable: boolean
+  selectedPeriod: Period
+  onPeriodChange: (period: Period) => void
+}) {
+  const { isPolish } = useI18n()
+  const breakdown = period.breakdown
+
+  return (
+    <div className={card}>
+      <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-200">{isPolish ? 'Most zmiany wartości' : 'Value-change bridge'}</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            {returnsDisplayAvailable
+              ? (isPolish
+                ? `Otwarcie, przepływy zewnętrzne, dochód, koszty i reszta przypisana do rynku + FX dla okresu ${period.label}.`
+                : `Opening value, external flows, income, costs and the residual attributed to market + FX for ${period.label}.`)
+              : (isPolish
+                ? `Otwarcie i zamknięcie są dostępne, ale reszta nadal używa bieżącej podstawy wyceny dla okresu ${period.label}.`
+                : `Opening and closing values are available, but the residual still follows the current valuation basis for ${period.label}.`)}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Okres' : 'Period'}</span>
+          <SegmentedControl
+            options={PERIODS.map((value) => ({ value, label: value }))}
+            value={selectedPeriod}
+            onChange={(value) => onPeriodChange(value as Period)}
+            ariaLabel={isPolish ? 'Okres mostu wyniku' : 'Value bridge period'}
+          />
+        </div>
+      </div>
+
+      {breakdown ? (
+        <>
+          <div className="mb-4 flex flex-wrap gap-3 text-xs text-zinc-500 sm:text-sm">
+            <span>{isPolish ? 'Od' : 'From'} {period.from}</span>
+            <span>{isPolish ? 'Do' : 'Until'} {period.until}</span>
+            <span>{isPolish ? 'Zmiana netto' : 'Net change'} {formatSignedCurrencyPln(breakdown.netChangePln)}</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <BreakdownMetric
+              label={isPolish ? 'Otwarcie' : 'Opening value'}
+              value={formatCurrencyPln(breakdown.openingValuePln)}
+              tone="neutral"
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Wpłaty / wypłaty' : 'Deposits / withdrawals'}
+              value={formatSignedCurrencyPln(breakdown.netExternalFlowsPln)}
+              tone={numericTone(breakdown.netExternalFlowsPln)}
+              subtitle={isPolish ? 'Przepływy zewnętrzne' : 'External cash flows'}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Odsetki / kupony' : 'Interest / coupons'}
+              value={formatSignedCurrencyPln(breakdown.interestAndCouponsPln)}
+              tone={numericTone(breakdown.interestAndCouponsPln)}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Opłaty' : 'Fees'}
+              value={formatSignedCurrencyPln(breakdown.feesPln)}
+              tone={numericTone(breakdown.feesPln)}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Podatki' : 'Taxes'}
+              value={formatSignedCurrencyPln(breakdown.taxesPln)}
+              tone={numericTone(breakdown.taxesPln)}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Rynek + FX' : 'Market + FX'}
+              value={formatSignedCurrencyPln(breakdown.marketAndFxPln)}
+              tone={numericTone(breakdown.marketAndFxPln)}
+              subtitle={isPolish ? 'Reszta po przepływach i kosztach' : 'Residual after flows and costs'}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Wynik netto' : 'Net investment result'}
+              value={formatSignedCurrencyPln(breakdown.netInvestmentResultPln)}
+              tone={numericTone(breakdown.netInvestmentResultPln)}
+              subtitle={isPolish ? 'Bez wpłat i wypłat' : 'Excluding deposits and withdrawals'}
+            />
+            <BreakdownMetric
+              label={isPolish ? 'Zamknięcie' : 'Closing value'}
+              value={formatCurrencyPln(breakdown.closingValuePln)}
+              tone="neutral"
+            />
+          </div>
+        </>
+      ) : (
+        <StatePanel
+          eyebrow={isPolish ? 'Most wyniku' : 'Value bridge'}
+          title={isPolish ? 'Brak rozbicia dla tego okresu' : 'No bridge available for this period'}
+          description={isPolish
+            ? 'Nie udało się złożyć rozbicia przepływów i kosztów dla wybranego okresu.'
+            : 'The app could not assemble a flow-and-cost bridge for the selected period.'}
+        />
+      )}
+    </div>
+  )
+}
+
+function BreakdownMetric({
+  label,
+  value,
+  tone,
+  subtitle,
+}: {
+  label: string
+  value: string
+  tone: 'positive' | 'negative' | 'neutral'
+  subtitle?: string
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <p
+        className={`mt-2 text-lg font-semibold tabular-nums ${
+          tone === 'positive' ? 'text-emerald-400' : tone === 'negative' ? 'text-red-400' : 'text-zinc-100'
+        }`}
+      >
+        {value}
+      </p>
+      {subtitle ? <p className="mt-1 text-xs text-zinc-600">{subtitle}</p> : null}
     </div>
   )
 }
@@ -521,6 +645,44 @@ function findReturnPeriod(
   key: PortfolioReturnPeriod['key'],
 ) {
   return periods.find((period) => period.key === key)
+}
+
+function findSelectedReturnPeriod(periods: PortfolioReturnPeriod[], period: Period) {
+  const selectedKey = periodToReturnKey(period)
+  return periods.find((candidate) => candidate.key === selectedKey) ?? periods.find((candidate) => candidate.key === 'MAX') ?? periods[0] ?? null
+}
+
+function periodToReturnKey(period: Period): PortfolioReturnPeriod['key'] {
+  switch (period) {
+    case 'YTD':
+      return 'YTD'
+    case '1Y':
+      return 'ONE_YEAR'
+    case '3Y':
+      return 'THREE_YEARS'
+    case '5Y':
+      return 'FIVE_YEARS'
+    case 'MAX':
+      return 'MAX'
+  }
+}
+
+function numericTone(value: string | null | undefined): 'positive' | 'negative' | 'neutral' {
+  if (value == null) {
+    return 'neutral'
+  }
+
+  const numericValue = Number(value)
+  if (Number.isNaN(numericValue)) {
+    return 'neutral'
+  }
+  if (numericValue > 0) {
+    return 'positive'
+  }
+  if (numericValue < 0) {
+    return 'negative'
+  }
+  return 'neutral'
 }
 
 function formatReturn(

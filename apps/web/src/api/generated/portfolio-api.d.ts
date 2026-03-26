@@ -1845,6 +1845,18 @@ export interface components {
             timeWeightedReturn?: string | null;
             annualizedTimeWeightedReturn?: string | null;
         };
+        /** net.bobinski.portfolio.api.route.ReturnBreakdownResponse */
+        ReturnBreakdownResponse: {
+            openingValuePln: string;
+            closingValuePln: string;
+            netChangePln: string;
+            netExternalFlowsPln: string;
+            interestAndCouponsPln: string;
+            feesPln: string;
+            taxesPln: string;
+            marketAndFxPln: string;
+            netInvestmentResultPln: string;
+        };
         /** net.bobinski.portfolio.api.route.BenchmarkComparisonResponse */
         BenchmarkComparisonResponse: {
             key: string;
@@ -1869,6 +1881,7 @@ export interface components {
             inflationFrom?: string | null;
             inflationUntil?: string | null;
             inflationMultiplier?: string | null;
+            breakdown?: components["schemas"]["ReturnBreakdownResponse"] | null;
             benchmarks: components["schemas"]["BenchmarkComparisonResponse"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioReturnsResponse */

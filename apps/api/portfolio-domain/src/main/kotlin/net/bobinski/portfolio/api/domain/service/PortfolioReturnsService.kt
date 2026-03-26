@@ -44,7 +44,7 @@ class PortfolioReturnsService(
         val transactions = transactionRepository.list()
             .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
         val externalTransactions = transactions.filter { it.type == TransactionType.DEPOSIT || it.type == TransactionType.WITHDRAWAL }
-        val fxLookups = transactionFxConversionService.loadLookups(externalTransactions)
+        val fxLookups = transactionFxConversionService.loadLookups(transactions)
         val usdPlnLookup = loadUsdPlnLookup(from = history.from, to = history.until)
         val externalCashFlows = externalTransactions.map { transaction ->
             ExternalCashFlow(
@@ -72,6 +72,8 @@ class PortfolioReturnsService(
                             requestedFrom = requestedFrom,
                             effectiveFrom = effectiveFrom,
                             history = history,
+                            transactions = transactions,
+                            fxLookups = fxLookups,
                             externalCashFlows = externalCashFlows,
                             referenceBenchmarks = referenceBenchmarks,
                             benchmarkSettings = benchmarkSettings
@@ -92,6 +94,8 @@ class PortfolioReturnsService(
         requestedFrom: LocalDate,
         effectiveFrom: LocalDate,
         history: PortfolioDailyHistory,
+        transactions: List<Transaction>,
+        fxLookups: TransactionFxLookups,
         externalCashFlows: List<ExternalCashFlow>,
         referenceBenchmarks: List<ReferenceBenchmarkSeries>,
         benchmarkSettings: PortfolioBenchmarkSettings
@@ -191,6 +195,13 @@ class PortfolioReturnsService(
             nominalUsd = nominalUsd,
             realPln = realPlnAdjustment?.metric,
             inflation = realPlnAdjustment?.inflationWindow,
+            breakdown = calculateBreakdown(
+                start = effectiveFrom,
+                end = history.until,
+                values = history.points.map { ValuationPoint(date = it.date, value = it.totalCurrentValuePln) },
+                transactions = transactions,
+                fxLookups = fxLookups
+            ),
             benchmarks = benchmarkComparisons
         )
     }
@@ -419,6 +430,79 @@ class PortfolioReturnsService(
             annualizedMoneyWeightedReturn = annualizedReturn.toRate(),
             timeWeightedReturn = timeWeighted?.totalReturn,
             annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
+        )
+    }
+
+    private fun calculateBreakdown(
+        start: LocalDate,
+        end: LocalDate,
+        values: List<ValuationPoint>,
+        transactions: List<Transaction>,
+        fxLookups: TransactionFxLookups
+    ): ReturnBreakdown? {
+        if (values.isEmpty()) {
+            return null
+        }
+
+        val closingValue = values.valueOnOrBefore(end)?.scaleMoney(2) ?: return null
+        val sinceInception = values.none { it.date < start }
+        val openingValue = if (sinceInception) {
+            BigDecimal.ZERO.scaleMoney(2)
+        } else {
+            values.valueOnOrBefore(start)?.scaleMoney(2) ?: return null
+        }
+
+        val periodTransactions = transactions.filter { transaction ->
+            if (sinceInception) {
+                !transaction.tradeDate.isBefore(start) && !transaction.tradeDate.isAfter(end)
+            } else {
+                transaction.tradeDate.isAfter(start) && !transaction.tradeDate.isAfter(end)
+            }
+        }
+
+        var netExternalFlows = BigDecimal.ZERO.scaleMoney(2)
+        var interestAndCoupons = BigDecimal.ZERO.scaleMoney(2)
+        var fees = BigDecimal.ZERO.scaleMoney(2)
+        var taxes = BigDecimal.ZERO.scaleMoney(2)
+
+        for (transaction in periodTransactions) {
+            val converted = fxLookups.convertedAmountsOrNull(transaction) ?: return null
+
+            when (transaction.type) {
+                TransactionType.DEPOSIT -> netExternalFlows = netExternalFlows.add(converted.grossPln).scaleMoney(2)
+                TransactionType.WITHDRAWAL -> netExternalFlows = netExternalFlows.subtract(converted.grossPln).scaleMoney(2)
+                TransactionType.INTEREST -> interestAndCoupons = interestAndCoupons.add(converted.grossPln).scaleMoney(2)
+                TransactionType.FEE -> fees = fees.subtract(converted.grossPln).scaleMoney(2)
+                TransactionType.TAX -> taxes = taxes.subtract(converted.grossPln).scaleMoney(2)
+                else -> Unit
+            }
+
+            if (converted.feePln.signum() > 0) {
+                fees = fees.subtract(converted.feePln).scaleMoney(2)
+            }
+            if (converted.taxPln.signum() > 0) {
+                taxes = taxes.subtract(converted.taxPln).scaleMoney(2)
+            }
+        }
+
+        val netChange = closingValue.subtract(openingValue).scaleMoney(2)
+        val marketAndFx = netChange
+            .subtract(netExternalFlows)
+            .subtract(interestAndCoupons)
+            .subtract(fees)
+            .subtract(taxes)
+            .scaleMoney(2)
+
+        return ReturnBreakdown(
+            openingValuePln = openingValue,
+            closingValuePln = closingValue,
+            netChangePln = netChange,
+            netExternalFlowsPln = netExternalFlows,
+            interestAndCouponsPln = interestAndCoupons,
+            feesPln = fees,
+            taxesPln = taxes,
+            marketAndFxPln = marketAndFx,
+            netInvestmentResultPln = netChange.subtract(netExternalFlows).scaleMoney(2)
         )
     }
 
@@ -743,7 +827,20 @@ data class PortfolioReturnPeriod(
     val nominalUsd: ReturnMetric?,
     val realPln: ReturnMetric?,
     val inflation: InflationWindow?,
+    val breakdown: ReturnBreakdown?,
     val benchmarks: List<BenchmarkComparison>
+)
+
+data class ReturnBreakdown(
+    val openingValuePln: BigDecimal,
+    val closingValuePln: BigDecimal,
+    val netChangePln: BigDecimal,
+    val netExternalFlowsPln: BigDecimal,
+    val interestAndCouponsPln: BigDecimal,
+    val feesPln: BigDecimal,
+    val taxesPln: BigDecimal,
+    val marketAndFxPln: BigDecimal,
+    val netInvestmentResultPln: BigDecimal
 )
 
 data class ReturnMetric(

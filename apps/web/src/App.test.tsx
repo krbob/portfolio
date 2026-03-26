@@ -2769,6 +2769,285 @@ describe('App', () => {
     expect(await screen.findByText(/instead of pretending they are 0\.00%/i)).toBeInTheDocument()
   })
 
+  it('shows a value-change bridge for the selected performance period', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            from: '2026-01-01',
+            until: '2026-03-13',
+            valuationState: 'MARK_TO_MARKET',
+            instrumentHistoryIssueCount: 0,
+            referenceSeriesIssueCount: 0,
+            benchmarkSeriesIssueCount: 0,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+            points: [
+              {
+                date: '2026-01-01',
+                totalBookValuePln: '1000.00',
+                totalCurrentValuePln: '1000.00',
+                netContributionsPln: '1000.00',
+                cashBalancePln: '1000.00',
+                totalCurrentValueUsd: '250.00',
+                netContributionsUsd: '250.00',
+                cashBalanceUsd: '250.00',
+                totalCurrentValueAu: '0.50',
+                netContributionsAu: '0.50',
+                cashBalanceAu: '0.50',
+                equityCurrentValuePln: '0.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '1000.00',
+                equityAllocationPct: '0.00',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '100.00',
+                portfolioPerformanceIndex: '1.00',
+                equityBenchmarkIndex: '1.00',
+                inflationBenchmarkIndex: '1.00',
+                targetMixBenchmarkIndex: '1.00',
+                activeHoldingCount: 0,
+                valuedHoldingCount: 0,
+              },
+              {
+                date: '2026-03-13',
+                totalBookValuePln: '1075.00',
+                totalCurrentValuePln: '1075.00',
+                netContributionsPln: '1000.00',
+                cashBalancePln: '1075.00',
+                totalCurrentValueUsd: '268.75',
+                netContributionsUsd: '250.00',
+                cashBalanceUsd: '268.75',
+                totalCurrentValueAu: '0.54',
+                netContributionsAu: '0.50',
+                cashBalanceAu: '0.54',
+                equityCurrentValuePln: '0.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '1075.00',
+                equityAllocationPct: '0.00',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '100.00',
+                portfolioPerformanceIndex: '1.08',
+                equityBenchmarkIndex: '1.03',
+                inflationBenchmarkIndex: '1.01',
+                targetMixBenchmarkIndex: '1.02',
+                activeHoldingCount: 0,
+                valuedHoldingCount: 0,
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13',
+            periods: [
+              {
+                key: 'YTD',
+                label: 'YTD',
+                requestedFrom: '2026-01-01',
+                from: '2026-01-01',
+                until: '2026-03-13',
+                clippedToInception: false,
+                dayCount: 72,
+                nominalPln: {
+                  moneyWeightedReturn: '0.075',
+                  annualizedMoneyWeightedReturn: '0.075',
+                  timeWeightedReturn: '0.075',
+                  annualizedTimeWeightedReturn: '0.075',
+                },
+                nominalUsd: null,
+                realPln: {
+                  moneyWeightedReturn: '0.05',
+                  annualizedMoneyWeightedReturn: '0.05',
+                  timeWeightedReturn: '0.05',
+                  annualizedTimeWeightedReturn: '0.05',
+                },
+                inflationFrom: '2026-01',
+                inflationUntil: '2026-03',
+                inflationMultiplier: '1.02',
+                breakdown: {
+                  openingValuePln: '0.00',
+                  closingValuePln: '1075.00',
+                  netChangePln: '1075.00',
+                  netExternalFlowsPln: '1000.00',
+                  interestAndCouponsPln: '100.00',
+                  feesPln: '-10.00',
+                  taxesPln: '-15.00',
+                  marketAndFxPln: '0.00',
+                  netInvestmentResultPln: '75.00',
+                },
+                benchmarks: [],
+              },
+              {
+                key: 'ONE_YEAR',
+                label: '1Y',
+                requestedFrom: '2025-03-13',
+                from: '2025-03-13',
+                until: '2026-03-13',
+                clippedToInception: false,
+                dayCount: 365,
+                nominalPln: {
+                  moneyWeightedReturn: '0.12',
+                  annualizedMoneyWeightedReturn: '0.12',
+                  timeWeightedReturn: '0.12',
+                  annualizedTimeWeightedReturn: '0.12',
+                },
+                nominalUsd: null,
+                realPln: {
+                  moneyWeightedReturn: '0.09',
+                  annualizedMoneyWeightedReturn: '0.09',
+                  timeWeightedReturn: '0.09',
+                  annualizedTimeWeightedReturn: '0.09',
+                },
+                inflationFrom: '2025-03',
+                inflationUntil: '2026-03',
+                inflationMultiplier: '1.04',
+                breakdown: {
+                  openingValuePln: '500.00',
+                  closingValuePln: '1325.00',
+                  netChangePln: '825.00',
+                  netExternalFlowsPln: '600.00',
+                  interestAndCouponsPln: '150.00',
+                  feesPln: '-15.00',
+                  taxesPln: '-10.00',
+                  marketAndFxPln: '100.00',
+                  netInvestmentResultPln: '225.00',
+                },
+                benchmarks: [],
+              },
+              {
+                key: 'MAX',
+                label: 'MAX',
+                requestedFrom: '2025-01-01',
+                from: '2025-01-01',
+                until: '2026-03-13',
+                clippedToInception: false,
+                dayCount: 437,
+                nominalPln: {
+                  moneyWeightedReturn: '0.14',
+                  annualizedMoneyWeightedReturn: '0.14',
+                  timeWeightedReturn: '0.14',
+                  annualizedTimeWeightedReturn: '0.14',
+                },
+                nominalUsd: null,
+                realPln: {
+                  moneyWeightedReturn: '0.1',
+                  annualizedMoneyWeightedReturn: '0.1',
+                  timeWeightedReturn: '0.1',
+                  annualizedTimeWeightedReturn: '0.1',
+                },
+                inflationFrom: '2025-01',
+                inflationUntil: '2026-03',
+                inflationMultiplier: '1.06',
+                breakdown: {
+                  openingValuePln: '250.00',
+                  closingValuePln: '1325.00',
+                  netChangePln: '1075.00',
+                  netExternalFlowsPln: '900.00',
+                  interestAndCouponsPln: '120.00',
+                  feesPln: '-20.00',
+                  taxesPln: '-15.00',
+                  marketAndFxPln: '90.00',
+                  netInvestmentResultPln: '175.00',
+                },
+                benchmarks: [],
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in performance breakdown test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/performance']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^performance$/i })).toBeInTheDocument()
+
+    fireEvent.click(await screen.findByRole('tab', { name: /^returns$/i }))
+
+    expect(await screen.findByRole('heading', { name: /value-change bridge/i })).toBeInTheDocument()
+    expect(screen.getByText(/deposits \/ withdrawals/i)).toBeInTheDocument()
+    expect(screen.getByText(/interest \/ coupons/i)).toBeInTheDocument()
+    expect(screen.getByText(/^market \+ fx$/i)).toBeInTheDocument()
+    expect(screen.getByText(/net investment result/i)).toBeInTheDocument()
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes('2025-01-01') ?? false).length).toBeGreaterThan(0)
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes('2026-03-13') ?? false).length).toBeGreaterThan(0)
+    expect(screen.getAllByText((content) => content.includes('1,325.00')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText((content) => content.includes('175.00')).length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('button', { name: '1Y' }))
+
+    await waitFor(() => {
+      expect(screen.getAllByText((_, element) => element?.textContent?.includes('2025-03-13') ?? false).length).toBeGreaterThan(0)
+      expect(screen.getAllByText((content) => content.includes('1,325.00')).length).toBeGreaterThan(0)
+      expect(screen.getAllByText((content) => content.includes('225.00')).length).toBeGreaterThan(0)
+    })
+  })
+
   it('scrolls to hash targets inside settings', async () => {
     const scrollIntoViewMock = vi.fn()
     const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
