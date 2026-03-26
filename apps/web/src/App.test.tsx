@@ -2437,7 +2437,7 @@ describe('App', () => {
       if (originalScrollIntoView) {
         Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoView)
       } else {
-        delete Element.prototype.scrollIntoView
+        Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
       }
     }
   })
