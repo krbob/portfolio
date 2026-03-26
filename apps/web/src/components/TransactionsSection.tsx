@@ -191,10 +191,10 @@ export function TransactionsSection() {
         title={isPolish ? 'Brak jeszcze kont' : 'No accounts available yet'}
         description={
           isPolish
-            ? 'Utwórz konta maklerskie albo rejestry obligacji w Ustawieniach, zanim zaczniesz zapisywać transakcje.'
-            : 'Create your brokerage or bond accounts in Settings before recording transactions.'
+            ? 'Utwórz konto maklerskie albo rejestr obligacji na ekranie Konta, zanim zaczniesz zapisywać transakcje.'
+            : 'Create your brokerage or bond account on the Accounts screen before recording transactions.'
         }
-        action={{ label: isPolish ? 'Przejdź do Ustawień' : 'Go to Settings', to: '/settings' }}
+        action={{ label: isPolish ? 'Przejdź do Kont' : 'Go to Accounts', to: '/accounts' }}
       />
     )
   }

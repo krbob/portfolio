@@ -150,9 +150,9 @@ export function DashboardScreen() {
         <EmptyState
           title={isPolish ? 'Witaj w Portfolio' : 'Welcome to Portfolio'}
           description={isPolish
-            ? 'Dodaj konta i instrumenty, aby rozpocząć śledzenie portfela.'
-            : 'Connect your accounts and add instruments to get started with portfolio tracking.'}
-          action={{ label: isPolish ? 'Przejdź do ustawień' : 'Go to Settings', to: '/settings' }}
+            ? 'Dodaj konto na ekranie Konta, instrument na ekranie Instrumenty i zapisz pierwszą transakcję, aby rozpocząć śledzenie portfela.'
+            : 'Add an account on the Accounts screen, add an instrument on the Instruments screen, and record your first transaction to start tracking the portfolio.'}
+          action={{ label: isPolish ? 'Przejdź do Kont' : 'Go to Accounts', to: '/accounts' }}
         />
       </>
     )

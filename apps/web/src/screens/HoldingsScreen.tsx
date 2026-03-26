@@ -174,9 +174,9 @@ export function HoldingsScreen() {
         <EmptyState
           title={isPolish ? 'Brak pozycji' : 'No holdings yet'}
           description={isPolish
-            ? 'Dodaj konta i instrumenty w Ustawieniach, a potem zapisz transakcje, aby zobaczyć tu pozycje.'
-            : 'Add accounts and instruments in Settings, then record transactions to see your positions here.'}
-          action={{ label: isPolish ? 'Przejdź do ustawień' : 'Go to Settings', to: '/settings' }}
+            ? 'Portfel nie ma teraz aktywnych pozycji. Ten widok zapełni się po zapisaniu transakcji, które zostawiają otwartą pozycję; jeśli masz tylko gotówkę albo wszystko zostało już zamknięte, pozostanie pusty.'
+            : 'The portfolio has no active holdings right now. This view fills after recording transactions that leave an open position; if you only hold cash or have already closed everything, it will stay empty.'}
+          action={{ label: isPolish ? 'Przejdź do Transakcji' : 'Go to Transactions', to: '/transactions' }}
         />
       </>
     )
