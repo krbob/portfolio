@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
@@ -7,6 +7,7 @@ import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
+import { usePersistentState } from '../lib/persistence'
 import type { TransactionRouteState } from '../lib/transaction-composer'
 import { isMarketValuedStatus } from '../lib/valuation'
 import {
@@ -32,17 +33,25 @@ interface SortState {
 
 const defaultSort: SortState = { field: 'currentValuePln', direction: 'desc' }
 
+const HOLDINGS_PREFERENCE_KEYS = {
+  accountFilter: 'portfolio:view:holdings:account-filter',
+  assetClassFilter: 'portfolio:view:holdings:asset-class-filter',
+  statusFilter: 'portfolio:view:holdings:status-filter',
+  searchQuery: 'portfolio:view:holdings:search-query',
+  sortState: 'portfolio:view:holdings:sort-state',
+} as const
+
 export function HoldingsScreen() {
   const { isPolish } = useI18n()
   const navigate = useNavigate()
   const holdingsQuery = usePortfolioHoldings()
   const holdings = holdingsQuery.data ?? []
-  const [accountFilter, setAccountFilter] = useState('ALL')
-  const [assetClassFilter, setAssetClassFilter] = useState('ALL')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [accountFilter, setAccountFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.accountFilter, 'ALL', { validate: isStringValue })
+  const [assetClassFilter, setAssetClassFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.assetClassFilter, 'ALL', { validate: isStringValue })
+  const [statusFilter, setStatusFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.statusFilter, 'ALL', { validate: isStringValue })
+  const [searchQuery, setSearchQuery] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.searchQuery, '', { validate: isStringValue })
   const [selectedHoldingKey, setSelectedHoldingKey] = useState<string | null>(null)
-  const [sortState, setSortState] = useState<SortState>(defaultSort)
+  const [sortState, setSortState] = usePersistentState<SortState>(HOLDINGS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase())
 
   const filterOptions = useMemo(
@@ -53,6 +62,36 @@ export function HoldingsScreen() {
     }),
     [holdings],
   )
+
+  useEffect(() => {
+    if (holdingsQuery.isLoading) {
+      return
+    }
+
+    if (accountFilter !== 'ALL' && !filterOptions.accounts.includes(accountFilter)) {
+      setAccountFilter('ALL')
+    }
+  }, [accountFilter, filterOptions.accounts, holdingsQuery.isLoading, setAccountFilter])
+
+  useEffect(() => {
+    if (holdingsQuery.isLoading) {
+      return
+    }
+
+    if (assetClassFilter !== 'ALL' && !filterOptions.assetClasses.includes(assetClassFilter)) {
+      setAssetClassFilter('ALL')
+    }
+  }, [assetClassFilter, filterOptions.assetClasses, holdingsQuery.isLoading, setAssetClassFilter])
+
+  useEffect(() => {
+    if (holdingsQuery.isLoading) {
+      return
+    }
+
+    if (statusFilter !== 'ALL' && !filterOptions.statuses.includes(statusFilter)) {
+      setStatusFilter('ALL')
+    }
+  }, [filterOptions.statuses, holdingsQuery.isLoading, setStatusFilter, statusFilter])
 
   const activeFilterCount =
     (accountFilter !== 'ALL' ? 1 : 0) +
@@ -619,6 +658,33 @@ function SortableHeader({
 }
 
 // --- Utilities ---
+
+function isStringValue(value: unknown): value is string {
+  return typeof value === 'string'
+}
+
+function isSortField(value: unknown): value is SortField {
+  return value === 'instrumentName'
+    || value === 'accountName'
+    || value === 'assetClass'
+    || value === 'quantity'
+    || value === 'currentValuePln'
+    || value === 'unrealizedGainPln'
+    || value === 'valuationStatus'
+}
+
+function isSortDirection(value: unknown): value is SortDirection {
+  return value === 'asc' || value === 'desc'
+}
+
+function isSortState(value: unknown): value is SortState {
+  if (typeof value !== 'object' || value == null) {
+    return false
+  }
+
+  const candidate = value as Partial<SortState>
+  return isSortField(candidate.field) && isSortDirection(candidate.direction)
+}
 
 function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortState) {
   const f = sort.direction === 'asc' ? 1 : -1

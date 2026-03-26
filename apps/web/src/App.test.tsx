@@ -1,10 +1,23 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
 describe('App', () => {
+  beforeEach(() => {
+    cleanup()
+    const storage = createStorageMock()
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      configurable: true,
+    })
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: storage,
+      configurable: true,
+    })
+  })
+
   it('renders dashboard shell with API data', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
@@ -1238,7 +1251,7 @@ describe('App', () => {
       },
     })
 
-    render(
+    const view = render(
       <MemoryRouter initialEntries={['/instruments']}>
         <QueryClientProvider client={queryClient}>
           <App />
@@ -1251,7 +1264,6 @@ describe('App', () => {
 
     const quantityToggle = screen.getAllByRole('button', { name: /^quantity/i })[0]!
     fireEvent.click(quantityToggle)
-    fireEvent.click(quantityToggle)
 
     await waitFor(() => {
       const rows = screen.getAllByRole('row')
@@ -1262,6 +1274,128 @@ describe('App', () => {
       expect(edoRow).toBeDefined()
       expect(rows.indexOf(vwraRow!)).toBeLessThan(rows.indexOf(edoRow!))
     })
+
+    view.unmount()
+
+    const persistedQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/instruments']}>
+        <QueryClientProvider client={persistedQueryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row')
+      const vwraRow = rows.find((row) => within(row).queryByText('VWRA'))
+      const edoRow = rows.find((row) => within(row).queryByText('EDO0336'))
+
+      expect(vwraRow).toBeDefined()
+      expect(edoRow).toBeDefined()
+      expect(rows.indexOf(vwraRow!)).toBeLessThan(rows.indexOf(edoRow!))
+    })
+  })
+
+  it('restores persisted holdings filters from local storage', async () => {
+    window.localStorage.setItem('portfolio:view:holdings:account-filter', JSON.stringify('Reserve'))
+    window.localStorage.setItem('portfolio:view:holdings:asset-class-filter', JSON.stringify('ALL'))
+    window.localStorage.setItem('portfolio:view:holdings:status-filter', JSON.stringify('ALL'))
+    window.localStorage.setItem('portfolio:view:holdings:search-query', JSON.stringify(''))
+    window.localStorage.setItem(
+      'portfolio:view:holdings:sort-state',
+      JSON.stringify({ field: 'instrumentName', direction: 'asc' }),
+    )
+
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            buildHoldingFixture('acc-primary', 'Primary', 'ins-1', 'Alpha Growth'),
+            buildHoldingFixture('acc-primary', 'Primary', 'ins-2', 'Bravo Equity'),
+            buildHoldingFixture('acc-primary', 'Primary', 'ins-3', 'Charlie Income'),
+            buildHoldingFixture('acc-reserve', 'Reserve', 'ins-4', 'Delta Bonds'),
+            buildHoldingFixture('acc-reserve', 'Reserve', 'ins-5', 'Echo Value'),
+            buildHoldingFixture('acc-reserve', 'Reserve', 'ins-6', 'Foxtrot Cash'),
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in holdings persistence test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/holdings']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(await screen.findByText('Delta Bonds')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha Growth')).not.toBeInTheDocument()
   })
 
   it('shows percentage pnl for valued holdings', async () => {
@@ -3171,6 +3305,48 @@ describe('App', () => {
     })
   })
 })
+
+function createStorageMock() {
+  const store = new Map<string, string>()
+
+  return {
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value)
+    },
+    removeItem(key: string) {
+      store.delete(key)
+    },
+    clear() {
+      store.clear()
+    },
+  }
+}
+
+function buildHoldingFixture(accountId: string, accountName: string, instrumentId: string, instrumentName: string) {
+  return {
+    accountId,
+    accountName,
+    instrumentId,
+    instrumentName,
+    kind: 'ETF',
+    assetClass: 'EQUITIES',
+    currency: 'USD',
+    quantity: '5',
+    averageCostPerUnitPln: '100.00',
+    costBasisPln: '500.00',
+    bookValuePln: '500.00',
+    currentPricePln: '110.00',
+    currentValuePln: '550.00',
+    unrealizedGainPln: '50.00',
+    valuedAt: '2026-03-20',
+    valuationStatus: 'VALUED',
+    valuationIssue: null,
+    transactionCount: 1,
+  }
+}
 
 function appearsBefore(left: HTMLElement, right: HTMLElement) {
   return Boolean(left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING)

@@ -9,6 +9,7 @@ import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
+import { usePersistentState } from '../lib/persistence'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
 import { isMarketValuedStatus } from '../lib/valuation'
 
@@ -30,6 +31,10 @@ interface SortState {
 
 const defaultSort: SortState = { field: 'instrumentName', direction: 'asc' }
 
+const INSTRUMENTS_PREFERENCE_KEYS = {
+  sortState: 'portfolio:view:instruments:sort-state',
+} as const
+
 export function InstrumentsScreen() {
   const { isPolish } = useI18n()
   const instrumentsQuery = useInstruments()
@@ -38,7 +43,7 @@ export function InstrumentsScreen() {
   const catalog = instrumentsQuery.data ?? []
   const holdings = holdingsQuery.data ?? []
   const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
-  const [sortState, setSortState] = useState<SortState>(defaultSort)
+  const [sortState, setSortState] = usePersistentState<SortState>(INSTRUMENTS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string | null>(null)
   const sortedRows = useMemo(() => [...rows].sort((left, right) => compareRows(left, right, sortState)), [rows, sortState])
 
@@ -487,6 +492,29 @@ function SortableHeader({
       </button>
     </th>
   )
+}
+
+function isSortField(value: unknown): value is SortField {
+  return value === 'instrumentName'
+    || value === 'catalog'
+    || value === 'accountCount'
+    || value === 'quantity'
+    || value === 'totalCurrentValuePln'
+    || value === 'totalUnrealizedGainPln'
+    || value === 'status'
+}
+
+function isSortDirection(value: unknown): value is SortDirection {
+  return value === 'asc' || value === 'desc'
+}
+
+function isSortState(value: unknown): value is SortState {
+  if (typeof value !== 'object' || value == null) {
+    return false
+  }
+
+  const candidate = value as Partial<SortState>
+  return isSortField(candidate.field) && isSortDirection(candidate.direction)
 }
 
 interface InstrumentRow {
