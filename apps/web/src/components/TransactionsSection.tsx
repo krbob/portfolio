@@ -123,6 +123,12 @@ export function TransactionsSection() {
     }
   }, [activeWorkspace, location.state])
 
+  useEffect(() => {
+    if (activeWorkspace !== 'journal') {
+      setFilteredJournalRowCount(null)
+    }
+  }, [activeWorkspace])
+
   const handleFilteredRowCountChange = useCallback((count: number) => {
     setFilteredJournalRowCount(count)
   }, [])

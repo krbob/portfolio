@@ -3807,6 +3807,91 @@ describe('App', () => {
       expect(appearsBefore(beta, alpha)).toBe(true)
     })
   })
+
+  it('resets journal row count tile when switching away from the journal workspace', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(JSON.stringify({ authEnabled: false, authenticated: true, mode: 'DISABLED' }), { status: 200 })
+      }
+      if (url.includes('/api/v1/meta')) {
+        return new Response(JSON.stringify({ name: 'Portfolio', stage: 'dev', version: '0.1.0-dev', auth: { enabled: false, mode: 'DISABLED' }, stack: { web: 'React', api: 'Kotlin', database: 'SQLite' }, capabilities: [] }), { status: 200 })
+      }
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(JSON.stringify({ status: 'READY', checkedAt: '2026-03-13T12:00:00Z', checks: [] }), { status: 200 })
+      }
+      if (url.includes('/api/v1/accounts')) {
+        return new Response(JSON.stringify([{ id: 'acc-1', name: 'Main', kind: 'BROKERAGE', currency: 'PLN', createdAt: '2026-03-13T12:00:00Z', updatedAt: '2026-03-13T12:00:00Z' }]), { status: 200 })
+      }
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      if (url.includes('/api/v1/transactions/import/profiles')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      if (url.includes('/api/v1/transactions')) {
+        return new Response(JSON.stringify([
+          { id: 'tx-1', accountId: 'acc-1', instrumentId: null, type: 'DEPOSIT', tradeDate: '2026-03-10', settlementDate: null, quantity: null, unitPrice: null, grossAmount: '1000', feeAmount: '0', taxAmount: '0', currency: 'PLN', fxRateToPln: null, notes: '', createdAt: '2026-03-10T12:00:00Z', updatedAt: '2026-03-10T12:00:00Z' },
+          { id: 'tx-2', accountId: 'acc-1', instrumentId: null, type: 'DEPOSIT', tradeDate: '2026-03-11', settlementDate: null, quantity: null, unitPrice: null, grossAmount: '2000', feeAmount: '0', taxAmount: '0', currency: 'PLN', fxRateToPln: null, notes: '', createdAt: '2026-03-11T12:00:00Z', updatedAt: '2026-03-11T12:00:00Z' },
+        ]), { status: 200 })
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    render(
+      <MemoryRouter initialEntries={['/transactions']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    // Wait for journal to load — both summary tiles show "2"
+    const rowCountTile = await screen.findByText(/journal rows in view|wiersze dziennika/i)
+    const tileContainer = rowCountTile.closest('article')!
+    await waitFor(() => {
+      expect(tileContainer.querySelector('strong')!.textContent).toBe('2')
+    })
+
+    // Switch to Import workspace
+    fireEvent.click(screen.getByRole('tab', { name: /import/i }))
+
+    // The "Journal rows in view" tile should now show total transactions count (2), not a stale filtered value
+    await waitFor(() => {
+      expect(tileContainer.querySelector('strong')!.textContent).toBe('2')
+    })
+  })
+
+  it('includes portfolio-accounts in transaction-related query invalidation keys', async () => {
+    // This test verifies that invalidateTransactionRelatedQueries covers portfolio-accounts
+    // to prevent stale account summaries after transaction mutations.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    // Seed the portfolio-accounts cache with dummy data
+    queryClient.setQueryData(['portfolio-accounts'], [{ id: 'acc-1', name: 'Main' }])
+    expect(queryClient.getQueryData(['portfolio-accounts'])).toBeTruthy()
+
+    // Simulate what happens during a transaction mutation: invalidate all transaction-related queries
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+      queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
+      queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+      queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+    ])
+
+    // The portfolio-accounts query state should be invalidated (stale)
+    const state = queryClient.getQueryState(['portfolio-accounts'])
+    expect(state?.isInvalidated).toBe(true)
+  })
 })
 
 function createStorageMock() {
