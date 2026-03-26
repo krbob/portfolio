@@ -56,6 +56,15 @@ The product is optimized for:
 - the supported self-hosted runtime is SQLite plus JSON backups, with optional market-data integrations and optional single-user auth
 - Docker and compose-based deployment are part of the product surface, not afterthought tooling
 
+## Delivered hardening
+
+- added `ErrorBoundary` for graceful crash recovery instead of white screens
+- decomposed `TransactionsSection` (3 k lines) into workspace components: journal, import, profiles, and helpers
+- split `PortfolioRoute` (1.6 k lines) into metrics, settings, and operations route files
+- introduced ESLint with `typescript-eslint` and `eslint-plugin-react-hooks`, integrated into CI
+- added unit tests for formatting utilities, label mappings, and portfolio-presentation helpers
+- configured `QueryClient` defaults (staleTime, retry, refetchOnWindowFocus) for LAN deployment
+
 ## Current focus
 
 - Keep the SQLite self-hosted path reliable and well-documented.

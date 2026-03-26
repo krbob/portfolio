@@ -43,8 +43,10 @@ This keeps rebuilds and redeploys predictable and makes market-data behavior a d
 - React Router and TanStack Query
 - browser-driven `pl` / `en` localization in the SPA
 - lightweight PWA shell for self-hosted mobile use
+- ESLint with `typescript-eslint` and `eslint-plugin-react-hooks`
 - Vitest + Testing Library
 - OpenAPI-generated TypeScript contract definitions consumed by the web client
+- global `ErrorBoundary` wrapping all routes for graceful crash recovery
 
 ### Backend
 
@@ -56,6 +58,7 @@ This keeps rebuilds and redeploys predictable and makes market-data behavior a d
 - multi-project Gradle build with:
   - API module for HTTP, persistence, integrations, and operational services
   - `portfolio-domain` for domain models, repository/provider interfaces, and portfolio calculations
+- API routes split by concern: metrics, settings, and operations
 - optional single-user password auth with signed session cookies
 
 ### Persistence and runtime
@@ -77,8 +80,8 @@ This keeps rebuilds and redeploys predictable and makes market-data behavior a d
 The verification strategy is split across unit, UI, and runtime levels:
 
 - backend tests cover domain and API behavior through Gradle
-- web tests cover screen-level flows plus shared presentation helpers through Vitest
-- PR CI runs the fast, deterministic path: API tests, web tests/build, generated API-client sync, and SQLite Docker smoke
+- web tests cover screen-level flows, shared presentation helpers, formatting, and label mappings through Vitest
+- PR CI runs the fast, deterministic path: API tests, ESLint, web tests/build, generated API-client sync, and SQLite Docker smoke
 - `main` CI additionally runs the self-hosted market-data smoke test before publishing images
 - the remote market-data smoke test stays manual because it requires deployment-specific upstreams
 
