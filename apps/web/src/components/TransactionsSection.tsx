@@ -641,7 +641,7 @@ export function TransactionsSection() {
   function handleQuantityChange(nextQuantity: string) {
     setForm((current) => ({
       ...current,
-      quantity: nextQuantity,
+      quantity: normalizeIntegerInput(nextQuantity),
     }))
   }
 
@@ -1216,17 +1216,22 @@ export function TransactionsSection() {
                   </select>
                 </label>
 
-                <label>
+                <div>
+                  <label>
                   <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
                   <input
                     className={input}
-                    inputMode="decimal"
+                    inputMode="numeric"
                     value={form.quantity}
                     onChange={(event) => handleQuantityChange(event.target.value)}
                     placeholder="10"
                     disabled={!requiresInstrument}
                   />
-                </label>
+                  </label>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {isPolish ? 'Ręczny formularz przyjmuje tylko całe sztuki.' : 'The manual form accepts whole units only.'}
+                  </p>
+                </div>
 
                 <label>
                   <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
@@ -2750,6 +2755,12 @@ function compareInstrumentsByName(
 
 function normalizeDecimalInput(value: string): string {
   return value.trim().replace(',', '.')
+}
+
+function normalizeIntegerInput(value: string): string {
+  const normalized = value.trim().replace(',', '.')
+  const match = normalized.match(/^\d+/)
+  return match?.[0] ?? ''
 }
 
 function normalizeDecimalForPayload(value: string): string {

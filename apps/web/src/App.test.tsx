@@ -1301,7 +1301,9 @@ describe('App', () => {
     fireEvent.change(accountSelect, { target: { value: 'acc-1' } })
     fireEvent.change(dialogScope.getByLabelText(/^type$/i), { target: { value: 'BUY' } })
     fireEvent.change(dialogScope.getByLabelText(/^instrument$/i), { target: { value: 'ins-1' } })
-    fireEvent.change(dialogScope.getByLabelText(/^quantity$/i), { target: { value: '2' } })
+    const quantityInput = dialogScope.getByLabelText(/^quantity$/i)
+    fireEvent.change(quantityInput, { target: { value: '2,5' } })
+    expect(quantityInput).toHaveValue('2')
     fireEvent.change(dialogScope.getByLabelText(/^unit price$/i), { target: { value: '123,45' } })
     const grossAmountInput = dialogScope.getByPlaceholderText('246.90')
 
