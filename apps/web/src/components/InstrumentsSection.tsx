@@ -87,10 +87,10 @@ export function InstrumentsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow="Write model"
+        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
         title={isPolish ? 'Instrumenty' : 'Instruments'}
         description={isPolish
-          ? 'Trzymaj ETF-y, benchmarki i miesięczne serie EDO w jednym kanonicznym katalogu.'
+          ? 'Trzymaj ETF-y, benchmarki i miesięczne serie EDO w jednym katalogu instrumentów.'
           : 'Keep ETF, benchmark, and monthly EDO series in one canonical catalog.'}
       />
 

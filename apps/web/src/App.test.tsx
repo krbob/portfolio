@@ -3581,8 +3581,10 @@ describe('App', () => {
 
       expect(await screen.findByRole('heading', { name: /next steps|następne kroki/i })).toBeInTheDocument()
       expect(await within(targetsSection).findByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).toBeInTheDocument()
-      expect(await within(targetsSection).findByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
-      expect(await within(targetsSection).findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
+      expect(await within(targetsSection).findByText(/edited mix|edytowany podział/i)).toBeInTheDocument()
+      expect(
+        await within(targetsSection).findByText(/no targets are saved yet|brak zapisanej alokacji docelowej/i),
+      ).toBeInTheDocument()
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled()

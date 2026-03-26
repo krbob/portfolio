@@ -302,13 +302,13 @@ function buildRefreshCheck({
     refreshStatus.lastFailureAt &&
     (!lastSuccessfulRefreshAt || compareTimestamps(refreshStatus.lastFailureAt, lastSuccessfulRefreshAt) > 0)
   ) {
-    const failureMessage = refreshStatus.lastFailureMessage ?? (isPolish ? 'Ostatni refresh zakończył się błędem.' : 'The latest refresh failed.')
+    const failureMessage = refreshStatus.lastFailureMessage ?? (isPolish ? 'Ostatnie odświeżenie zakończyło się błędem.' : 'The latest refresh failed.')
     return {
       key: 'refresh',
-      label: isPolish ? 'Odświeżanie read modeli' : 'Read-model refresh',
+      label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
       status: 'WARN',
       message: isPolish
-        ? `Ostatni refresh nie powiódł się ${refreshStatus.lastFailureAt}: ${failureMessage}`
+        ? `Ostatnie odświeżenie nie powiodło się ${refreshStatus.lastFailureAt}: ${failureMessage}`
         : `The latest refresh failed at ${refreshStatus.lastFailureAt}: ${failureMessage}`,
     }
   }
@@ -316,7 +316,7 @@ function buildRefreshCheck({
   if (lastSuccessfulRefreshAt) {
     return {
       key: 'refresh',
-      label: isPolish ? 'Odświeżanie read modeli' : 'Read-model refresh',
+      label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
       status: 'PASS',
       message: isPolish
         ? `Ostatnie udane odświeżenie: ${lastSuccessfulRefreshAt}.`
@@ -326,10 +326,10 @@ function buildRefreshCheck({
 
   return {
     key: 'refresh',
-    label: isPolish ? 'Odświeżanie read modeli' : 'Read-model refresh',
+    label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
     status: 'INFO',
     message: isPolish
-      ? 'Read modele nie były jeszcze odświeżane w tle.'
+      ? 'Modele odczytowe nie były jeszcze odświeżane w tle.'
       : 'Read models have not been refreshed in the background yet.',
   }
 }

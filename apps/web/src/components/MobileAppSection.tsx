@@ -57,7 +57,7 @@ export function MobileAppSection() {
       return {
         title: isPolish ? 'Aplikacja jest zainstalowana' : 'App is installed',
         description: isPolish
-          ? 'Uruchamiasz Portfolio w trybie przypominającym natywną aplikację.'
+          ? 'Portfolio działa teraz jak osobna aplikacja uruchamiana z ekranu głównego.'
           : 'Portfolio is running in an app-like standalone mode.',
       }
     }
@@ -65,7 +65,7 @@ export function MobileAppSection() {
     return {
       title: isPolish ? 'Możesz dodać aplikację do ekranu głównego' : 'You can install this app',
       description: isPolish
-        ? 'Po instalacji shell interfejsu otwiera się szybciej na telefonie, ale bieżące dane portfela nadal wymagają połączenia z API.'
+        ? 'Po dodaniu do ekranu głównego aplikacja szybciej otwiera interfejs na telefonie, ale bieżące dane portfela nadal wymagają połączenia z API.'
         : 'Installing the app keeps the shell handy on mobile, but live portfolio data still requires API connectivity.',
     }
   }, [isPolish, isStandalone])
@@ -89,7 +89,7 @@ export function MobileAppSection() {
         eyebrow={isPolish ? 'Aplikacja' : 'App'}
         title={isPolish ? 'Instalacja na telefonie' : 'Install on mobile'}
         description={isPolish
-          ? 'Portfolio działa jako PWA: możesz przypiąć je do ekranu głównego i korzystać z szybszego, cache’owanego shellu interfejsu.'
+          ? 'Portfolio możesz dodać do ekranu głównego telefonu, aby szybciej wracać do aplikacji i korzystać z prostszego trybu pełnoekranowego.'
           : 'Portfolio supports a lightweight PWA flow, so you can pin it to your home screen and reopen a cached app shell faster.'}
         actions={
           installPrompt ? (
@@ -113,7 +113,7 @@ export function MobileAppSection() {
           {installResult === 'dismissed' && (
             <p className="mt-3 text-xs text-zinc-500">
               {isPolish
-                ? 'Prompt instalacji został zamknięty. Możesz wrócić do tej sekcji później.'
+                ? 'Okno instalacji zostało zamknięte. Możesz wrócić do tej sekcji później.'
                 : 'The install prompt was dismissed. You can come back to this section later.'}
             </p>
           )}
@@ -132,7 +132,7 @@ export function MobileAppSection() {
                     ? 'Na iPhonie lub iPadzie użyj Udostępnij, a potem Dodaj do ekranu głównego.'
                     : 'On iPhone or iPad, use Share and then Add to Home Screen.'
                   : isPolish
-                    ? 'Jeśli przeglądarka nie pokazuje promptu, użyj jej menu i wybierz opcję zainstalowania aplikacji.'
+                    ? 'Jeśli przeglądarka nie pokazuje okna instalacji, użyj jej menu i wybierz opcję dodania aplikacji.'
                     : 'If the browser does not show an install prompt, use its menu and choose the install option.'}
             </p>
           </div>
@@ -142,10 +142,10 @@ export function MobileAppSection() {
             <p className="mt-1 leading-6">
               {canRegisterServiceWorker
                 ? isPolish
-                  ? 'Manifest, ikony i ostatnio zapisany shell interfejsu są cache’owane po pierwszej wizycie. Dane portfela nadal są pobierane na żywo z API.'
+                  ? 'Manifest, ikony i ostatnio zapisany interfejs są zapisywane lokalnie po pierwszej wizycie. Dane portfela nadal są pobierane na żywo z API.'
                   : 'The manifest, icons and last loaded app shell are cached after the first visit. Portfolio data is still fetched live from the API.'
                 : isPolish
-                  ? 'Ta przeglądarka nie udostępnia service workera, więc aplikacja działa wyłącznie online.'
+                  ? 'Ta przeglądarka nie obsługuje mechanizmu offline, więc aplikacja działa wyłącznie online.'
                   : 'This browser does not expose a service worker, so the app remains online-only.'}
             </p>
           </div>

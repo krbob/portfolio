@@ -18,9 +18,9 @@ const SETTINGS_SECTIONS = [
   { id: 'data-quality', label: { en: 'Data quality', pl: 'Jakość danych' } },
   { id: 'targets', label: { en: 'Targets', pl: 'Cele' } },
   { id: 'benchmarks', label: { en: 'Benchmarks', pl: 'Benchmarki' } },
-  { id: 'transfer', label: { en: 'Transfer', pl: 'Transfer' } },
-  { id: 'backups', label: { en: 'Backups', pl: 'Kopie' } },
-  { id: 'cache', label: { en: 'Cache', pl: 'Cache' } },
+  { id: 'transfer', label: { en: 'Transfer', pl: 'Import / eksport' } },
+  { id: 'backups', label: { en: 'Backups', pl: 'Kopie zapasowe' } },
+  { id: 'cache', label: { en: 'Cache', pl: 'Pamięć podręczna' } },
   { id: 'audit', label: { en: 'Audit', pl: 'Audyt' } },
   { id: 'mobile-app', label: { en: 'Mobile app', pl: 'Aplikacja mobilna' } },
 ] as const
@@ -29,30 +29,30 @@ const SETTINGS_GROUPS = [
   {
     id: 'portfolio',
     eyebrow: { en: 'Portfolio', pl: 'Portfolio' },
-    title: { en: 'Portfolio policy', pl: 'Polityka portfela' },
+    title: { en: 'Portfolio policy', pl: 'Cele portfela i benchmarki' },
     description: {
       en: 'Target allocation and benchmark policy after account and instrument setup moves into dedicated screens.',
-      pl: 'Alokacja docelowa i polityka benchmarków po wyniesieniu kont i instrumentów do osobnych widoków.',
+      pl: 'Ustaw cele portfela i benchmarki. Konta oraz instrumenty mają już osobne widoki.',
     },
     sectionIds: ['targets', 'benchmarks'] as const,
   },
   {
     id: 'operations',
     eyebrow: { en: 'Operations', pl: 'Operacje' },
-    title: { en: 'Transfer and server workflows', pl: 'Transfer i workflowy serwerowe' },
+    title: { en: 'Transfer and server workflows', pl: 'Import, eksport i procesy serwerowe' },
     description: {
       en: 'State transfer, backups and cached read models.',
-      pl: 'Transfer stanu, backupy i cache read modeli.',
+      pl: 'Import i eksport stanu, kopie zapasowe oraz pamięć podręczna modeli odczytowych.',
     },
     sectionIds: ['transfer', 'backups', 'cache'] as const,
   },
   {
     id: 'diagnostics',
     eyebrow: { en: 'Diagnostics', pl: 'Diagnostyka' },
-    title: { en: 'System health and data trust', pl: 'Stan systemu i zaufanie do danych' },
+    title: { en: 'System health and data trust', pl: 'Stan systemu i wiarygodność danych' },
     description: {
       en: 'Runtime readiness, data quality and operational audit.',
-      pl: 'Gotowość runtime, jakość danych i audyt operacyjny.',
+      pl: 'Gotowość środowiska, jakość danych i dziennik operacyjny.',
     },
     sectionIds: ['health', 'data-quality', 'audit'] as const,
   },
@@ -62,7 +62,7 @@ const SETTINGS_GROUPS = [
     title: { en: 'Install and access', pl: 'Instalacja i dostęp' },
     description: {
       en: 'Mobile install guidance and access ergonomics.',
-      pl: 'Wskazówki instalacji mobilnej i ergonomia dostępu.',
+      pl: 'Wskazówki dotyczące instalacji mobilnej i wygodnego dostępu.',
     },
     sectionIds: ['mobile-app'] as const,
   },
@@ -172,10 +172,10 @@ export function SettingsScreen() {
             <Card as="section" id="audit" className="scroll-mt-24">
               <SectionHeader
                 eyebrow={isPolish ? 'Audyt' : 'Audit'}
-                title={isPolish ? 'Aktywność operacyjna' : 'Operational activity'}
+                title={isPolish ? 'Dziennik operacyjny' : 'Operational activity'}
                 description={
                   isPolish
-                    ? 'Sprawdź ostatnie backupy, restore, importy i inne operacje zmieniające stan poza przestrzenią transakcji.'
+                    ? 'Sprawdź ostatnie kopie zapasowe, odtworzenia, importy i inne operacje zmieniające stan poza dziennikiem transakcji.'
                     : 'Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace.'
                 }
               />

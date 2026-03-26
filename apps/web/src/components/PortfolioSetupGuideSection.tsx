@@ -85,7 +85,7 @@ export function PortfolioSetupGuideSection() {
       loadingDescription: isPolish ? 'Sprawdzanie dziennika transakcji...' : 'Checking transaction journal...',
       successDescription: (count) =>
         isPolish
-          ? `${count} ${count === 1 ? 'transakcja zasila read modele' : 'transakcji zasila read modele'}.`
+          ? `${count} ${count === 1 ? 'transakcja zasila modele odczytowe' : 'transakcji zasila modele odczytowe'}.`
           : `${count} ${count === 1 ? 'transaction feeds' : 'transactions feed'} the read models.`,
       emptyDescription: isPolish
         ? 'Zapisz pierwszą transakcję, aby portfolio zaczęło budować pozycje i historię.'
@@ -122,10 +122,10 @@ export function PortfolioSetupGuideSection() {
         ? (isPolish ? 'Sprawdzanie aktywnych benchmarków...' : 'Checking active benchmarks...')
         : (benchmarkSettingsQuery.data?.enabledKeys.length ?? 0) > 0
           ? isPolish
-            ? `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarków jest aktywnych w wynikach.`
+            ? `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarków jest aktywnych w zakładce Wyniki.`
             : `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarks are active in Performance.`
           : isPolish
-            ? 'Włącz benchmarki, aby porównywać portfel z rynkiem, inflacją i target mix.'
+            ? 'Włącz benchmarki, aby porównywać portfel z rynkiem, inflacją i benchmarkiem alokacji docelowej.'
             : 'Enable benchmarks to compare the portfolio against markets, inflation and target mix.',
       status: benchmarkSettingsQuery.isLoading
         ? 'info'
@@ -232,12 +232,12 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
     return {
       key: 'readiness',
       title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
-      description: isPolish ? 'Sprawdzanie zależności runtime...' : 'Checking runtime dependencies...',
+      description: isPolish ? 'Sprawdzanie usług i zależności...' : 'Checking runtime dependencies...',
       status: 'info',
       action: {
         kind: 'hash',
         to: '#health',
-        label: isPolish ? 'Otwórz health' : 'Open health',
+        label: isPolish ? 'Otwórz stan systemu' : 'Open health',
       },
     }
   }
@@ -247,13 +247,13 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
       key: 'readiness',
       title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
       description: isPolish
-        ? 'Najpierw usuń blokery lub ostrzeżenia runtime, inaczej kolejne sygnały mogą być mylące.'
+        ? 'Najpierw usuń blokery lub ostrzeżenia systemowe, inaczej kolejne sygnały mogą być mylące.'
         : 'Resolve runtime blockers or warnings first, otherwise the downstream signals may be misleading.',
       status: 'warning',
       action: {
         kind: 'hash',
         to: '#health',
-        label: isPolish ? 'Otwórz health' : 'Open health',
+        label: isPolish ? 'Otwórz stan systemu' : 'Open health',
       },
     }
   }
@@ -261,12 +261,12 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
   return {
     key: 'readiness',
     title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
-    description: isPolish ? 'Runtime jest gotowy do pracy z wyceną i read modelami.' : 'Runtime is ready for valuation and read-model workflows.',
+    description: isPolish ? 'System jest gotowy do pracy z wycenami i modelami odczytowymi.' : 'Runtime is ready for valuation and read-model workflows.',
     status: 'done',
     action: {
       kind: 'hash',
       to: '#health',
-      label: isPolish ? 'Otwórz health' : 'Open health',
+      label: isPolish ? 'Otwórz stan systemu' : 'Open health',
     },
   }
 }

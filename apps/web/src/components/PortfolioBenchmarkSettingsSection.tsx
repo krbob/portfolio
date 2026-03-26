@@ -115,7 +115,7 @@ export function PortfolioBenchmarkSettingsSection() {
         <form id="portfolio-benchmark-settings-form" className="space-y-6" onSubmit={handleSubmit}>
           <BenchmarkGroup
             title={isPolish ? 'Systemowe' : 'System'}
-            description={isPolish ? 'Benchmark portfela, inflacji i miksu docelowego.' : 'Portfolio, inflation and target-mix references.'}
+            description={isPolish ? 'Benchmark portfela, inflacji i alokacji docelowej.' : 'Portfolio, inflation and target-mix references.'}
             options={groupedOptions.system}
             enabledKeys={enabledKeys}
             pinnedKeys={pinnedKeys}
@@ -125,7 +125,7 @@ export function PortfolioBenchmarkSettingsSection() {
           />
 
           <BenchmarkGroup
-            title={isPolish ? 'Wieloassetowe ETF-y' : 'Multi-asset ETFs'}
+            title={isPolish ? 'ETF-y wieloassetowe' : 'Multi-asset ETFs'}
             description={isPolish ? 'Gotowe portfele 80/20, 60/40, 40/60 i 20/80 do porównań strategii.' : 'Ready-made 80/20, 60/40, 40/60 and 20/80 portfolios for strategy comparisons.'}
             options={groupedOptions.multiAsset}
             enabledKeys={enabledKeys}
@@ -290,7 +290,7 @@ function translateBenchmarkLabel(label: string, isPolish: boolean) {
     case 'Inflation benchmark':
       return 'Benchmark inflacji'
     case 'Configured target mix':
-      return 'Skonfigurowany miks docelowy'
+      return 'Skonfigurowany podział docelowy'
     case 'Custom benchmark':
       return 'Własny benchmark'
     default:

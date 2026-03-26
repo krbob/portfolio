@@ -127,11 +127,11 @@ export function PortfolioTargetsSection() {
       const result = await replaceTargetsMutation.mutateAsync({ items })
       setFeedback(
         isPolish
-          ? `Zapisano miks docelowy: ${result.map((item) => `${labelAssetClass(item.assetClass)} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`
+          ? `Zapisano alokację docelową: ${result.map((item) => `${labelAssetClass(item.assetClass)} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`
           : `Saved target mix: ${result.map((item) => `${item.assetClass} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`,
       )
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Nie udało się zapisać targetów.' : 'Saving targets failed.')
+      setActionError(error instanceof Error ? error.message : isPolish ? 'Nie udało się zapisać celów.' : 'Saving targets failed.')
     }
   }
 
@@ -185,7 +185,7 @@ export function PortfolioTargetsSection() {
         eyebrow={isPolish ? 'Strategia' : 'Strategy'}
         title={isPolish ? 'Alokacja docelowa' : 'Target allocation'}
         description={isPolish
-          ? 'Skonfiguruj miks docelowy używany do odchyleń alokacji, sugestii rebalansowania przez wpłaty i syntetycznego benchmarku target mix w Wynikach.'
+          ? 'Skonfiguruj docelowy podział portfela używany do diagnozy odchyleń, sugestii rebalansowania wpłatami i benchmarku alokacji docelowej w zakładce Wyniki.'
           : 'Configure the target mix used for allocation drift, contribution-first rebalance suggestions and the synthetic target-mix benchmark in Performance.'}
         actions={(
           <>
@@ -194,7 +194,7 @@ export function PortfolioTargetsSection() {
               className={btnSecondary}
               onClick={() => applyPreset(PRESET_80_20_INPUTS)}
             >
-              {isPolish ? 'Preset 80/20' : 'Preset 80/20'}
+              {isPolish ? 'Ustaw 80/20' : 'Preset 80/20'}
             </button>
             <button
               type="submit"
@@ -202,7 +202,7 @@ export function PortfolioTargetsSection() {
               className={btnPrimary}
               disabled={replaceTargetsMutation.isPending || !totalIsValid}
             >
-              {replaceTargetsMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Zapisz targety' : 'Save targets')}
+              {replaceTargetsMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Zapisz cele' : 'Save targets')}
             </button>
           </>
         )}
@@ -234,16 +234,16 @@ export function PortfolioTargetsSection() {
           <span className={`${badge} ${totalIsValid ? badgeVariants.success : badgeVariants.warning}`}>
             {isPolish ? 'Suma' : 'Sum'} {formatPercent(totalPct, { maximumFractionDigits: 2 })}
           </span>
-          <span className="text-sm text-zinc-500">{isPolish ? 'Edytowany miks' : 'Edited mix'}: {editedMixLabel}</span>
+          <span className="text-sm text-zinc-500">{isPolish ? 'Edytowany podział' : 'Edited mix'}: {editedMixLabel}</span>
           {savedMixLabel ? (
-            <span className="text-sm text-zinc-500">{isPolish ? 'Zapisany miks' : 'Saved mix'}: {savedMixLabel}</span>
+            <span className="text-sm text-zinc-500">{isPolish ? 'Zapisany podział' : 'Saved mix'}: {savedMixLabel}</span>
           ) : null}
         </div>
 
         {targetsQuery.data?.length === 0 ? (
           <p className="text-sm text-amber-400">
             {isPolish
-              ? 'Brak zapisanych targetów. Uzupełnij pola albo użyj presetu, a potem kliknij Zapisz targety.'
+              ? 'Brak zapisanej alokacji docelowej. Uzupełnij pola albo użyj gotowego układu, a potem kliknij Zapisz cele.'
               : 'No targets are saved yet. Fill in the weights or use the preset, then click Save targets.'}
           </p>
         ) : null}
@@ -323,10 +323,10 @@ export function PortfolioTargetsSection() {
         <>
           {!allocation.configured ? (
             <StatePanel
-              eyebrow={isPolish ? 'Targety' : 'Targets'}
+              eyebrow={isPolish ? 'Cele' : 'Targets'}
               title={isPolish ? 'Brak skonfigurowanej alokacji docelowej' : 'No target allocation configured yet'}
               description={isPolish
-                ? 'Zapisz powyżej wagi docelowe, aby odblokować diagnostykę odchyleń i benchmark target mix.'
+                ? 'Zapisz powyżej wagi docelowe, aby odblokować diagnostykę odchyleń i benchmark alokacji docelowej.'
                 : 'Save target weights above to unlock drift diagnostics and the target-mix benchmark.'}
               className="mt-5"
             />
@@ -334,7 +334,7 @@ export function PortfolioTargetsSection() {
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Suma targetów' : 'Target sum'}</span>
+                  <span className="text-xs text-zinc-500">{isPolish ? 'Suma wag docelowych' : 'Target sum'}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {formatPercent(allocation.targetWeightSumPct, { maximumFractionDigits: 2 })}
                   </strong>
@@ -399,7 +399,7 @@ export function PortfolioTargetsSection() {
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocation.requiresSelling
                       ? isPolish
-                        ? 'Przywrócenie miksu do celu wymaga także sprzedaży/przycięć.'
+                        ? 'Powrót do celu wymaga także sprzedaży lub przycięć.'
                         : 'Restoring the target mix requires trims or sells in addition to cash deployment.'
                       : isPolish
                         ? 'Do celu można wrócić samą gotówką lub nową wpłatą.'

@@ -14,7 +14,7 @@ export function PortfolioDataQualitySection() {
         eyebrow={isPolish ? 'Jakość danych' : 'Data quality'}
         title={isPolish ? 'Zaufanie do danych portfela' : 'Portfolio data trust'}
         description={isPolish
-          ? 'Sprawdź pokrycie wyceny, benchmarków, CPI oraz ostatnie odświeżenie ciężkich read modeli.'
+          ? 'Sprawdź pokrycie wyceny, benchmarków, CPI oraz ostatnie odświeżenie większych modeli odczytowych.'
           : 'Inspect valuation coverage, benchmark coverage, CPI coverage and the latest heavy read-model refresh.'}
       />
 
@@ -22,7 +22,7 @@ export function PortfolioDataQualitySection() {
         <LoadingState
           title={isPolish ? 'Ładowanie jakości danych' : 'Loading data quality'}
           description={isPolish
-            ? 'Składanie sygnałów z wyceny, historii, benchmarków i cache read modeli.'
+            ? 'Składanie sygnałów z wyceny, historii, benchmarków i pamięci modeli odczytowych.'
             : 'Combining valuation, history, benchmark and read-model cache signals.'}
           variant="inline"
           blocks={3}

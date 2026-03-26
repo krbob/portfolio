@@ -1088,7 +1088,7 @@ export function TransactionsSection() {
         title={isPolish ? 'Transakcje niedostępne' : 'Transactions unavailable'}
         description={
           isPolish
-            ? 'Nie udało się załadować kanonicznego obszaru transakcji. Spróbuj ponownie albo sprawdź health w Ustawieniach.'
+            ? 'Nie udało się załadować obszaru transakcji. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.'
             : 'The canonical transaction workspace could not load. Retry now or verify runtime health in Settings.'
         }
         onRetry={handleRetryWorkspace}
@@ -1113,11 +1113,11 @@ export function TransactionsSection() {
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow={isPolish ? 'Write model' : 'Write model'}
+        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
         title={isPolish ? 'Transakcje' : 'Transactions'}
         description={
           isPolish
-            ? 'Trzymaj kanoniczny strumień zdarzeń w jednym miejscu, ale pracuj osobno na dzienniku, imporcie i profilach.'
+            ? 'Prowadź jeden rejestr transakcji, ale pracuj osobno na dzienniku, imporcie i profilach.'
             : 'Keep the canonical event stream in one place, but work through journal, import and profile flows separately.'
         }
         className="mb-2"
@@ -1894,7 +1894,7 @@ export function TransactionsSection() {
             <div className="col-span-full">
               <div className="mb-3">
                 <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Mapowanie nagłówków' : 'Header mappings'}</p>
-                <h5 className="mt-1 text-sm font-semibold text-zinc-100">{isPolish ? 'Dopasuj kolumny CSV do kanonicznych pól transakcji' : 'Match CSV columns to canonical transaction fields'}</h5>
+                <h5 className="mt-1 text-sm font-semibold text-zinc-100">{isPolish ? 'Dopasuj kolumny CSV do pól transakcji' : 'Match CSV columns to canonical transaction fields'}</h5>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {localizedImportMappingFields.map((field) => (
@@ -1980,7 +1980,7 @@ export function TransactionsSection() {
             <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Podgląd i import paczek transakcji' : 'Preview and import transaction batches'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? 'Użyj zapisanych profili CSV dla eksportów od brokera albo wyślij kanoniczne paczki JSON bezpośrednio na endpoint importu transakcji.'
+                ? 'Użyj zapisanych profili CSV dla eksportów od brokera albo wyślij paczkę JSON bezpośrednio do importu transakcji.'
                 : 'Use saved CSV profiles for broker exports or post canonical JSON batches directly against the transaction import endpoint.'}
             </p>
           </div>
@@ -2136,7 +2136,7 @@ export function TransactionsSection() {
               <div className="space-y-1">
                 <p className="text-sm text-zinc-500">
                   {isPolish
-                    ? 'Wklej albo kanoniczną tablicę JSON z wierszami transakcji, albo pełny payload importu z polem `rows`.'
+                    ? 'Wklej tablicę JSON z wierszami transakcji albo pełny obiekt importu z polem `rows`.'
                     : 'Paste either a canonical JSON array of transaction rows or a full import payload with `rows`.'}
                 </p>
                 <p className="text-sm text-zinc-500">
@@ -2501,7 +2501,7 @@ export function TransactionsSection() {
                   }
                   description={
                     isPolish
-                      ? 'To usuwa kanoniczne zdarzenie z dziennika i od razu zmienia wycenę, historię, alokację i zwroty.'
+                      ? 'To usuwa wpis z dziennika i od razu zmienia wycenę, historię, alokację oraz zwroty.'
                       : 'This removes the canonical event from the journal and immediately changes valuation, history, allocation and returns.'
                   }
                   confirmLabel={isPolish ? 'Usuń transakcję' : 'Delete transaction'}
@@ -2559,7 +2559,7 @@ function createInitialImportProfileForm(): ImportProfileFormState {
   return {
     name: isPolish ? 'Kanoniczny CSV' : 'Canonical CSV',
     description: isPolish
-      ? 'Domyślny profil dla kanonicznego formatu CSV transakcji.'
+      ? 'Domyślny profil dla standardowego formatu CSV transakcji.'
       : 'Default profile for the canonical transaction CSV format.',
     delimiter: 'COMMA',
     dateFormat: 'ISO_LOCAL_DATE',
@@ -2744,7 +2744,7 @@ function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): Imp
   if (trimmed === '') {
     throw new Error(
       isPolish
-        ? 'Najpierw wklej tablicę JSON z wierszami transakcji albo pełny payload importu.'
+        ? 'Najpierw wklej tablicę JSON z wierszami transakcji albo pełny obiekt importu.'
         : 'Paste a JSON array of transaction rows or a full import payload first.',
     )
   }
@@ -2772,7 +2772,7 @@ function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): Imp
     if (!Array.isArray(rows)) {
       throw new Error(
         isPolish
-          ? 'Payload strukturalnego importu musi udostępniać tablicę "rows".'
+          ? 'Obiekt importu strukturalnego musi zawierać tablicę "rows".'
           : 'Structured import payload must expose a "rows" array.',
       )
     }
@@ -2785,7 +2785,7 @@ function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): Imp
 
   throw new Error(
     isPolish
-      ? 'Strukturalny import oczekuje tablicy JSON z wierszami albo obiektu z tablicą "rows".'
+      ? 'Import strukturalny oczekuje tablicy JSON z wierszami albo obiektu z tablicą "rows".'
       : 'Structured import expects either a JSON array of rows or an object with a "rows" array.',
   )
 }

@@ -29,7 +29,7 @@ export function AccountsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Write model' : 'Write model'}
+        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
         title={isPolish ? 'Konta' : 'Accounts'}
         description={isPolish
           ? 'Zapisz miejsca przechowywania aktywów, zanim nałożysz na nie analitykę portfela.'

@@ -42,7 +42,7 @@ export function PortfolioStateSection() {
       downloadSnapshot(snapshot)
       setImportFeedback(
         isPolish
-          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.appPreferences?.length ?? 0} ustawień aplikacji, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} targetów, ${snapshot.transactions.length} transakcji i ${snapshot.importProfiles?.length ?? 0} profili importu.`
+          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.appPreferences?.length ?? 0} ustawień aplikacji, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} celów, ${snapshot.transactions.length} transakcji i ${snapshot.importProfiles?.length ?? 0} profili importu.`
           : `Exported ${snapshot.accounts.length} accounts, ${snapshot.appPreferences?.length ?? 0} app settings, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets, ${snapshot.transactions.length} transactions and ${snapshot.importProfiles?.length ?? 0} import profiles.`,
       )
     } catch (error) {
@@ -55,13 +55,13 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError(isPolish ? 'Najpierw wybierz plik ze snapshotem JSON.' : 'Choose a JSON snapshot file first.')
+      setImportError(isPolish ? 'Najpierw wybierz plik zrzutu stanu w formacie JSON.' : 'Choose a JSON snapshot file first.')
       setPreviewResult(null)
       return
     }
 
     try {
-      const snapshot = parseSelectedSnapshot(selectedFileContent)
+      const snapshot = parseSelectedSnapshot(selectedFileContent, isPolish)
       const result = await previewMutation.mutateAsync({
         mode: importMode,
         snapshot,
@@ -70,7 +70,7 @@ export function PortfolioStateSection() {
       setImportFeedback(
         result.isValid
           ? isPolish
-            ? 'Podgląd gotowy. Snapshot przeszedł walidację.'
+            ? 'Podgląd gotowy. Zrzut stanu przeszedł walidację.'
             : 'Preview ready. The snapshot passed validation.'
           : isPolish
             ? 'Podgląd gotowy. Rozwiąż blokujące problemy przed importem.'
@@ -78,7 +78,7 @@ export function PortfolioStateSection() {
       )
     } catch (error) {
       setPreviewResult(null)
-      setImportError(error instanceof Error ? error.message : isPolish ? 'Podgląd nie powiódł się.' : 'Preview failed.')
+      setImportError(error instanceof Error ? error.message : isPolish ? 'Nie udało się przygotować podglądu.' : 'Preview failed.')
     }
   }
 
@@ -104,26 +104,26 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError(isPolish ? 'Najpierw wybierz plik ze snapshotem JSON.' : 'Choose a JSON snapshot file first.')
+      setImportError(isPolish ? 'Najpierw wybierz plik zrzutu stanu w formacie JSON.' : 'Choose a JSON snapshot file first.')
       return
     }
 
     if (previewResult == null) {
-      setImportError(isPolish ? 'Najpierw uruchom podgląd wybranego snapshotu.' : 'Preview the selected snapshot before importing.')
+      setImportError(isPolish ? 'Najpierw uruchom podgląd wybranego zrzutu stanu.' : 'Preview the selected snapshot before importing.')
       return
     }
 
     if (!previewResult.isValid) {
       setImportError(
         isPolish
-          ? 'Wybrany snapshot ma blokujące problemy. Napraw je przed importem.'
+          ? 'Wybrany zrzut stanu ma blokujące problemy. Napraw je przed importem.'
           : 'The selected snapshot has blocking issues. Fix them before importing.',
       )
       return
     }
 
     try {
-      const snapshot = parseSelectedSnapshot(selectedFileContent)
+      const snapshot = parseSelectedSnapshot(selectedFileContent, isPolish)
       const result = await importMutation.mutateAsync({
         mode: importMode,
         confirmation: importMode === 'REPLACE' ? replaceConfirmation : undefined,
@@ -132,7 +132,7 @@ export function PortfolioStateSection() {
       setPreviewResult(null)
       setImportFeedback(
         isPolish
-          ? `Zaimportowano ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} targetów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu w trybie ${result.mode}.${result.safetyBackupFileName ? ` Backup bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
+          ? `Zaimportowano ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} celów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu w trybie ${result.mode}.${result.safetyBackupFileName ? ` Kopia bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
           : `Imported ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
       )
       setReplaceConfirmation('')
@@ -144,11 +144,11 @@ export function PortfolioStateSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Transfer' : 'Transfer'}
-        title={isPolish ? 'Backup i odtwarzanie' : 'Backup and restore'}
+        eyebrow={isPolish ? 'Import / eksport' : 'Transfer'}
+        title={isPolish ? 'Eksport i przywracanie stanu' : 'Backup and restore'}
         description={
           isPolish
-            ? 'Wyeksportuj kanoniczny write model jako snapshot JSON albo zaimportuj wcześniej wyeksportowany snapshot w trybie merge lub replace.'
+            ? 'Wyeksportuj kompletny stan aplikacji do pliku JSON albo przywróć wcześniej zapisany zrzut w trybie MERGE lub REPLACE.'
             : 'Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode.'
         }
       />
@@ -163,7 +163,7 @@ export function PortfolioStateSection() {
           <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Targety' : 'Targets'}</span>
+          <span className="text-xs text-zinc-500">{isPolish ? 'Cele' : 'Targets'}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{targetsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -180,10 +180,10 @@ export function PortfolioStateSection() {
         <div className="rounded-lg border border-zinc-800/50 p-4">
           <div className="mb-3">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Eksport' : 'Export'}</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Pobierz snapshot' : 'Download snapshot'}</h4>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Pobierz zrzut stanu' : 'Download snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? 'Generuje kanoniczny snapshot JSON zawierający ledger, ustawienia aplikacji i profile importu z oryginalnymi identyfikatorami i timestampami.'
+                ? 'Generuje kompletny plik JSON z kontami, instrumentami, transakcjami, ustawieniami aplikacji i profilami importu wraz z oryginalnymi identyfikatorami oraz znacznikami czasu.'
                 : 'Generates a canonical JSON snapshot that includes the ledger, app settings and import profiles with original ids and timestamps.'}
             </p>
           </div>
@@ -204,15 +204,15 @@ export function PortfolioStateSection() {
         <form className="rounded-lg border border-zinc-800/50 p-4" onSubmit={handleImportSubmit}>
           <div className="mb-3">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Import' : 'Import'}</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Odtwórz snapshot' : 'Restore snapshot'}</h4>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Przywróć zrzut stanu' : 'Restore snapshot'}</h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? '`MERGE` wykonuje upsert po id/kluczu. `REPLACE` czyści bieżący write model, ustawienia aplikacji i profile importu przed załadowaniem snapshotu.'
+                ? '`MERGE` aktualizuje istniejące rekordy po identyfikatorach i kluczach. `REPLACE` czyści bieżący stan, ustawienia aplikacji i profile importu przed wczytaniem pliku.'
                 : '`MERGE` upserts by id/key. `REPLACE` clears the current write model, app settings and import profiles before loading the snapshot.'}
             </p>
             <p className="mt-1 text-sm text-zinc-500">
               {isPolish
-                ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy backup bezpieczeństwa.'
+                ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy kopię bezpieczeństwa.'
                 : '`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.'}
             </p>
           </div>
@@ -250,7 +250,7 @@ export function PortfolioStateSection() {
             )}
 
             <div>
-              <span className={labelClass}>{isPolish ? 'Plik snapshotu' : 'Snapshot file'}</span>
+              <span className={labelClass}>{isPolish ? 'Plik zrzutu stanu' : 'Snapshot file'}</span>
               <input
                 type="file"
                 accept="application/json,.json"
@@ -266,14 +266,14 @@ export function PortfolioStateSection() {
                 ? `Wybrany plik: ${selectedFileName}`
                 : `Selected file: ${selectedFileName}`
               : isPolish
-                ? 'Nie wybrano jeszcze pliku snapshotu.'
+                ? 'Nie wybrano jeszcze pliku zrzutu stanu.'
                 : 'No snapshot file selected yet.'}
           </p>
 
           {previewResult && (
             <div className="mt-4 rounded-lg border border-zinc-800/50 p-4">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-semibold text-zinc-100">{isPolish ? 'Podsumowanie podglądu' : 'Preview summary'}</h5>
+                <h5 className="text-sm font-semibold text-zinc-100">{isPolish ? 'Podsumowanie podglądu importu' : 'Preview summary'}</h5>
                 <span className={`${badge} ${previewResult.isValid ? badgeVariants.success : badgeVariants.error}`}>
                   {previewResult.isValid
                     ? isPolish
@@ -305,7 +305,7 @@ export function PortfolioStateSection() {
                   matchingCount={previewResult.matchingInstrumentCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Targety' : 'Targets'}
+                  label={isPolish ? 'Cele' : 'Targets'}
                   snapshotCount={previewResult.snapshotTargetCount}
                   existingCount={previewResult.existingTargetCount}
                   matchingCount={previewResult.matchingTargetCount}
@@ -327,10 +327,10 @@ export function PortfolioStateSection() {
               <p className="text-sm text-zinc-500 mt-3">
                 {previewResult.mode === 'REPLACE'
                   ? isPolish
-                    ? `REPLACE najpierw wyczyści bieżący stan: ${previewResult.existingAccountCount} kont, ${previewResult.existingAppPreferenceCount} ustawień aplikacji, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} targetów, ${previewResult.existingTransactionCount} transakcji i ${previewResult.existingImportProfileCount} profili importu.`
+                    ? `REPLACE najpierw wyczyści bieżący stan: ${previewResult.existingAccountCount} kont, ${previewResult.existingAppPreferenceCount} ustawień aplikacji, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} celów, ${previewResult.existingTransactionCount} transakcji i ${previewResult.existingImportProfileCount} profili importu.`
                     : `REPLACE will clear the current state first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingAppPreferenceCount} app settings, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets, ${previewResult.existingTransactionCount} transactions and ${previewResult.existingImportProfileCount} import profiles.`
                   : isPolish
-                    ? `MERGE wykona upsert po id/kluczu dla ${previewResult.matchingAccountCount} kont, ${previewResult.matchingAppPreferenceCount} ustawień aplikacji, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} targetów, ${previewResult.matchingTransactionCount} transakcji i ${previewResult.matchingImportProfileCount} profili importu.`
+                    ? `MERGE zaktualizuje po identyfikatorach i kluczach: ${previewResult.matchingAccountCount} kont, ${previewResult.matchingAppPreferenceCount} ustawień aplikacji, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} celów, ${previewResult.matchingTransactionCount} transakcji i ${previewResult.matchingImportProfileCount} profili importu.`
                     : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingAppPreferenceCount} app settings, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets, ${previewResult.matchingTransactionCount} transactions and ${previewResult.matchingImportProfileCount} import profiles by id/key.`}
               </p>
 
@@ -357,7 +357,7 @@ export function PortfolioStateSection() {
                   ? 'Przygotowywanie podglądu...'
                   : 'Previewing...'
                 : isPolish
-                  ? 'Podgląd snapshotu'
+                  ? 'Podgląd importu'
                   : 'Preview snapshot'}
             </button>
             <button
@@ -415,7 +415,7 @@ function PreviewMetricCard({
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       <dl className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{isPolish ? 'Snapshot' : 'Snapshot'}</dt>
+          <dt className="text-zinc-500">{isPolish ? 'Zrzut stanu' : 'Snapshot'}</dt>
           <dd className="text-zinc-100 tabular-nums">{snapshotCount}</dd>
         </div>
         <div className="flex justify-between">
@@ -444,10 +444,10 @@ function downloadSnapshot(snapshot: PortfolioStateSnapshot) {
   window.URL.revokeObjectURL(objectUrl)
 }
 
-function parseSelectedSnapshot(rawSnapshot: string): PortfolioStateSnapshot {
+function parseSelectedSnapshot(rawSnapshot: string, isPolish: boolean): PortfolioStateSnapshot {
   try {
     return JSON.parse(rawSnapshot) as PortfolioStateSnapshot
   } catch {
-    throw new Error('Snapshot file must contain valid JSON.')
+    throw new Error(isPolish ? 'Plik zrzutu stanu musi zawierać poprawny JSON.' : 'Snapshot file must contain valid JSON.')
   }
 }
