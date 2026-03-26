@@ -320,6 +320,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List target allocation weights
+         * @description Returns the saved portfolio target allocation weights.
+         */
+        get: operations["listPortfolioTargets"];
+        put?: never;
+        /**
+         * Replace target allocation weights
+         * @description Replaces the saved portfolio target allocation with the provided set of weights.
+         */
+        post: operations["replacePortfolioTargets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolio/benchmark-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get benchmark settings
+         * @description Returns enabled, pinned and custom benchmark settings for the portfolio.
+         */
+        get: operations["getPortfolioBenchmarkSettings"];
+        put?: never;
+        /**
+         * Save benchmark settings
+         * @description Saves enabled, pinned and optional custom benchmark configuration.
+         */
+        post: operations["savePortfolioBenchmarkSettings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolio/rebalancing-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get rebalancing settings
+         * @description Returns current tolerance band and rebalancing mode settings.
+         */
+        get: operations["getPortfolioRebalancingSettings"];
+        put?: never;
+        /**
+         * Save rebalancing settings
+         * @description Saves the portfolio tolerance band and rebalancing mode configuration.
+         */
+        post: operations["savePortfolioRebalancingSettings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/read-model-cache": {
         parameters: {
             query?: never;
@@ -414,78 +486,6 @@ export interface paths {
         get: operations["listPortfolioAuditEvents"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/portfolio/targets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List target allocation weights
-         * @description Returns the saved portfolio target allocation weights.
-         */
-        get: operations["listPortfolioTargets"];
-        put?: never;
-        /**
-         * Replace target allocation weights
-         * @description Replaces the saved portfolio target allocation with the provided set of weights.
-         */
-        post: operations["replacePortfolioTargets"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/portfolio/benchmark-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get benchmark settings
-         * @description Returns enabled, pinned and custom benchmark settings for the portfolio.
-         */
-        get: operations["getPortfolioBenchmarkSettings"];
-        put?: never;
-        /**
-         * Save benchmark settings
-         * @description Saves enabled, pinned and optional custom benchmark configuration.
-         */
-        post: operations["savePortfolioBenchmarkSettings"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/portfolio/rebalancing-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get rebalancing settings
-         * @description Returns current tolerance band and rebalancing mode settings.
-         */
-        get: operations["getPortfolioRebalancingSettings"];
-        put?: never;
-        /**
-         * Save rebalancing settings
-         * @description Saves the portfolio tolerance band and rebalancing mode configuration.
-         */
-        post: operations["savePortfolioRebalancingSettings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1148,58 +1148,6 @@ export interface components {
             requiresSelling: boolean;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.ReadModelCacheSnapshotResponse */
-        ReadModelCacheSnapshotResponse: {
-            cacheKey: string;
-            modelName: string;
-            modelVersion: number;
-            inputsFrom?: string | null;
-            inputsTo?: string | null;
-            sourceUpdatedAt?: string | null;
-            generatedAt: string;
-            invalidationReason: string;
-            payloadSizeBytes: number;
-        };
-        /** net.bobinski.portfolio.api.route.ReadModelCacheInvalidationResponse */
-        ReadModelCacheInvalidationResponse: {
-            clearedSnapshotCount: number;
-        };
-        /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
-        ReadModelRefreshStatusResponse: {
-            schedulerEnabled: boolean;
-            intervalMinutes: number;
-            runOnStart: boolean;
-            running: boolean;
-            lastRunAt?: string | null;
-            lastSuccessAt?: string | null;
-            lastFailureAt?: string | null;
-            lastFailureMessage?: string | null;
-            lastTrigger?: string | null;
-            lastDurationMs?: number | null;
-            modelNames: string[];
-        };
-        /** net.bobinski.portfolio.api.route.ReadModelRefreshRunResponse */
-        ReadModelRefreshRunResponse: {
-            trigger: string;
-            completedAt: string;
-            durationMs: number;
-            refreshedModelCount: number;
-            modelNames: string[];
-        };
-        /** net.bobinski.portfolio.api.route.AuditEventResponse */
-        AuditEventResponse: {
-            id: string;
-            category: string;
-            action: string;
-            outcome: string;
-            entityType?: string | null;
-            entityId?: string | null;
-            message: string;
-            metadata: {
-                [key: string]: string;
-            };
-            occurredAt: string;
-        };
         /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
@@ -1251,6 +1199,58 @@ export interface components {
         SavePortfolioRebalancingSettingsRequest: {
             toleranceBandPctPoints: string;
             mode: string;
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelCacheSnapshotResponse */
+        ReadModelCacheSnapshotResponse: {
+            cacheKey: string;
+            modelName: string;
+            modelVersion: number;
+            inputsFrom?: string | null;
+            inputsTo?: string | null;
+            sourceUpdatedAt?: string | null;
+            generatedAt: string;
+            invalidationReason: string;
+            payloadSizeBytes: number;
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelCacheInvalidationResponse */
+        ReadModelCacheInvalidationResponse: {
+            clearedSnapshotCount: number;
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
+        ReadModelRefreshStatusResponse: {
+            schedulerEnabled: boolean;
+            intervalMinutes: number;
+            runOnStart: boolean;
+            running: boolean;
+            lastRunAt?: string | null;
+            lastSuccessAt?: string | null;
+            lastFailureAt?: string | null;
+            lastFailureMessage?: string | null;
+            lastTrigger?: string | null;
+            lastDurationMs?: number | null;
+            modelNames: string[];
+        };
+        /** net.bobinski.portfolio.api.route.ReadModelRefreshRunResponse */
+        ReadModelRefreshRunResponse: {
+            trigger: string;
+            completedAt: string;
+            durationMs: number;
+            refreshedModelCount: number;
+            modelNames: string[];
+        };
+        /** net.bobinski.portfolio.api.route.AuditEventResponse */
+        AuditEventResponse: {
+            id: string;
+            category: string;
+            action: string;
+            outcome: string;
+            entityType?: string | null;
+            entityId?: string | null;
+            message: string;
+            metadata: {
+                [key: string]: string;
+            };
+            occurredAt: string;
         };
         /** net.bobinski.portfolio.api.route.PortfolioBackupRecordResponse */
         PortfolioBackupRecordResponse: {
@@ -1970,104 +1970,6 @@ export interface operations {
             };
         };
     };
-    listReadModelCacheSnapshots: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReadModelCacheSnapshotResponse"][];
-                };
-            };
-        };
-    };
-    invalidateReadModelCache: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReadModelCacheInvalidationResponse"];
-                };
-            };
-        };
-    };
-    getReadModelRefreshStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReadModelRefreshStatusResponse"];
-                };
-            };
-        };
-    };
-    runReadModelRefresh: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReadModelRefreshRunResponse"];
-                };
-            };
-        };
-    };
-    listPortfolioAuditEvents: {
-        parameters: {
-            query?: {
-                limit?: string;
-                category?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuditEventResponse"][];
-                };
-            };
-        };
-    };
     listPortfolioTargets: {
         parameters: {
             query?: never;
@@ -2190,6 +2092,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                };
+            };
+        };
+    };
+    listReadModelCacheSnapshots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelCacheSnapshotResponse"][];
+                };
+            };
+        };
+    };
+    invalidateReadModelCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelCacheInvalidationResponse"];
+                };
+            };
+        };
+    };
+    getReadModelRefreshStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelRefreshStatusResponse"];
+                };
+            };
+        };
+    };
+    runReadModelRefresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadModelRefreshRunResponse"];
+                };
+            };
+        };
+    };
+    listPortfolioAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: string;
+                category?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventResponse"][];
                 };
             };
         };
