@@ -29,7 +29,12 @@ fun Route.systemRoute(application: Application) {
                     authEnabled = authConfig.enabled
                 )
             )
-        }
+        }.documented(
+            operationId = "getHealth",
+            summary = "Get the API health status",
+            description = "Returns the basic liveness payload with application name, stage, version and auth mode.",
+            tag = "System"
+        )
 
         get("/meta") {
             call.respond(
@@ -56,11 +61,21 @@ fun Route.systemRoute(application: Application) {
                     )
                 )
             )
-        }
+        }.documented(
+            operationId = "getAppMeta",
+            summary = "Get application metadata",
+            description = "Returns application metadata, stack details and high-level feature capabilities.",
+            tag = "System"
+        )
 
         get("/readiness") {
             call.respond(readinessService.current().toResponse())
-        }
+        }.documented(
+            operationId = "getReadiness",
+            summary = "Get system readiness checks",
+            description = "Returns the latest readiness evaluation for storage, market data, backups and authentication.",
+            tag = "System"
+        )
     }
 }
 

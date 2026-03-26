@@ -28,13 +28,23 @@ fun Route.transactionRoute() {
     route("/v1/transactions") {
         get {
             call.respond(transactionService.list().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listTransactions",
+            summary = "List transactions",
+            description = "Returns the canonical transaction ledger in chronological order.",
+            tag = "Transactions"
+        )
 
         post {
             val request = call.receive<CreateTransactionRequest>()
             val transaction = transactionService.create(request.toCommand())
             call.respond(HttpStatusCode.Created, transaction.toResponse())
-        }
+        }.documented(
+            operationId = "createTransaction",
+            summary = "Create a transaction",
+            description = "Creates a single transaction in the canonical portfolio ledger.",
+            tag = "Transactions"
+        )
 
         post("/import") {
             val request = call.receive<ImportTransactionsRequest>()
@@ -46,14 +56,24 @@ fun Route.transactionRoute() {
                 HttpStatusCode.Created,
                 result.toResponse()
             )
-        }
+        }.documented(
+            operationId = "importTransactions",
+            summary = "Import a structured transaction batch",
+            description = "Imports a batch of transactions provided as structured JSON rows.",
+            tag = "Transactions"
+        )
 
         post("/import/preview") {
             val request = call.receive<ImportTransactionsRequest>()
             call.respond(
                 transactionService.previewImport(request.rows.map { it.toCommand() }).toResponse()
             )
-        }
+        }.documented(
+            operationId = "previewTransactionImport",
+            summary = "Preview a structured transaction batch",
+            description = "Validates a structured transaction batch and returns row-level preview results without importing.",
+            tag = "Transactions"
+        )
 
         route("/{id}") {
             put {
@@ -61,14 +81,24 @@ fun Route.transactionRoute() {
                     ?: throw IllegalArgumentException("id path parameter is required.")
                 val request = call.receive<CreateTransactionRequest>()
                 call.respond(transactionService.update(id, request.toCommand()).toResponse())
-            }
+            }.documented(
+                operationId = "updateTransaction",
+                summary = "Update a transaction",
+                description = "Updates an existing transaction selected by its identifier.",
+                tag = "Transactions"
+            )
 
             delete {
                 val id = call.parameters["id"]?.let { parseUuid(it, "id") }
                     ?: throw IllegalArgumentException("id path parameter is required.")
                 transactionService.delete(id)
                 call.respond(HttpStatusCode.NoContent)
-            }
+            }.documented(
+                operationId = "deleteTransaction",
+                summary = "Delete a transaction",
+                description = "Deletes an existing transaction selected by its identifier.",
+                tag = "Transactions"
+            )
         }
     }
 }

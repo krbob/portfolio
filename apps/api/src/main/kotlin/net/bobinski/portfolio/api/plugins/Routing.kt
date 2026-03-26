@@ -10,6 +10,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.openapi.OpenApiDocSource
+import net.bobinski.portfolio.api.route.documented
 import net.bobinski.portfolio.api.route.authRoute
 import net.bobinski.portfolio.api.route.accountRoute
 import net.bobinski.portfolio.api.route.instrumentRoute
@@ -22,7 +23,12 @@ fun Application.configureRouting() {
     routing {
         get("/") {
             call.respondText("Portfolio API")
-        }
+        }.documented(
+            operationId = "getApiBanner",
+            summary = "Get the API root banner",
+            description = "Returns a plain-text banner confirming that the Portfolio API is reachable.",
+            tag = "System"
+        )
 
         get("/v1/openapi.json") {
             val source = OpenApiDocSource.Routing(
@@ -33,18 +39,25 @@ fun Application.configureRouting() {
                 OpenApiDoc(
                     info = OpenApiInfo(
                         title = "Portfolio API",
-                        version = "0.1.0"
+                        version = "0.1.0",
+                        description = "Portfolio accounting, valuation, history, rebalancing and operational workflows API."
                     )
                 )
             )
             call.respondText(document.content, document.contentType)
-        }
+        }.documented(
+            operationId = "getOpenApiDocument",
+            summary = "Export the OpenAPI document",
+            description = "Returns the generated OpenAPI specification for the Portfolio API as JSON.",
+            tag = "System"
+        )
 
         if (this@configureRouting.openApiUiEnabled()) {
             openAPI("/openapi") {
                 info = OpenApiInfo(
                     title = "Portfolio API",
-                    version = "0.1.0"
+                    version = "0.1.0",
+                    description = "Portfolio accounting, valuation, history, rebalancing and operational workflows API."
                 )
                 outputPath = "build/openapi-ui"
                 source = OpenApiDocSource.Routing(

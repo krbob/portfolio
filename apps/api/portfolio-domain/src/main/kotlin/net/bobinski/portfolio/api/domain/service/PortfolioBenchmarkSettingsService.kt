@@ -84,8 +84,8 @@ class PortfolioBenchmarkSettingsService(
         val customDefinition = if (customConfigured) {
             BenchmarkOptionDefinition(
                 key = BenchmarkKey.CUSTOM,
-                label = stored.customLabel!!,
-                symbol = stored.customSymbol!!,
+                label = stored.customLabel,
+                symbol = stored.customSymbol,
                 kind = BenchmarkOptionKind.CUSTOM,
                 configurable = true,
                 defaultEnabled = false,

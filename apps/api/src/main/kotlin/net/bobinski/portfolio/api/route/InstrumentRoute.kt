@@ -24,7 +24,12 @@ fun Route.instrumentRoute() {
     route("/v1/instruments") {
         get {
             call.respond(instrumentService.list().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listInstruments",
+            summary = "List instruments",
+            description = "Returns the full instrument catalog used by the portfolio ledger and read models.",
+            tag = "Instruments"
+        )
 
         post {
             val request = call.receive<CreateInstrumentRequest>()
@@ -41,7 +46,12 @@ fun Route.instrumentRoute() {
             )
 
             call.respond(HttpStatusCode.Created, instrument.toResponse())
-        }
+        }.documented(
+            operationId = "createInstrument",
+            summary = "Create an instrument",
+            description = "Creates a new instrument definition, including valuation source and optional EDO terms.",
+            tag = "Instruments"
+        )
     }
 }
 

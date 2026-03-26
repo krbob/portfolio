@@ -35,7 +35,12 @@ fun Route.authRoute(application: Application) {
                     mode = authConfig.modeName()
                 )
             )
-        }
+        }.documented(
+            operationId = "getAuthSession",
+            summary = "Get current authentication session",
+            description = "Returns whether password authentication is enabled and whether the current session is authenticated.",
+            tag = "Authentication"
+        )
 
         post("/session") {
             if (!authConfig.enabled) {
@@ -63,7 +68,12 @@ fun Route.authRoute(application: Application) {
                     mode = authConfig.modeName()
                 )
             )
-        }
+        }.documented(
+            operationId = "createAuthSession",
+            summary = "Create an authentication session",
+            description = "Authenticates the current client using the configured password and creates a session cookie.",
+            tag = "Authentication"
+        )
 
         delete("/session") {
             call.sessions.clear<PortfolioSession>()
@@ -74,7 +84,12 @@ fun Route.authRoute(application: Application) {
                     mode = authConfig.modeName()
                 )
             )
-        }
+        }.documented(
+            operationId = "deleteAuthSession",
+            summary = "Clear the authentication session",
+            description = "Clears the current session cookie and returns the resulting authentication state.",
+            tag = "Authentication"
+        )
     }
 }
 

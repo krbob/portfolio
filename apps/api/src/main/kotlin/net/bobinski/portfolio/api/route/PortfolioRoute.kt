@@ -63,6 +63,7 @@ import net.bobinski.portfolio.api.readmodel.ReadModelRefreshRunResult
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshStatus
 import org.koin.ktor.ext.inject
+import kotlin.reflect.typeOf
 
 fun Route.portfolioRoute() {
     val portfolioReadModelService: PortfolioReadModelService by inject()
@@ -82,15 +83,30 @@ fun Route.portfolioRoute() {
     route("/v1/portfolio") {
         get("/overview") {
             call.respond(portfolioReadModelService.overview().toResponse())
-        }
+        }.documented(
+            operationId = "getPortfolioOverview",
+            summary = "Get portfolio overview",
+            description = "Returns the current overview totals, valuation basis and top-level portfolio metrics.",
+            tag = "Portfolio"
+        )
 
         get("/holdings") {
             call.respond(portfolioReadModelService.holdings().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listPortfolioHoldings",
+            summary = "List portfolio holdings",
+            description = "Returns current holdings with valuation, gains and optional EDO lot details.",
+            tag = "Portfolio"
+        )
 
         get("/accounts") {
             call.respond(portfolioReadModelService.accounts().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listPortfolioAccounts",
+            summary = "List portfolio account summaries",
+            description = "Returns read-model account summaries with balances, valuation status and allocation details.",
+            tag = "Portfolio"
+        )
 
         get("/history/daily") {
             val descriptor = portfolioReadModelCacheDescriptorService.dailyHistoryDescriptor()
@@ -102,7 +118,12 @@ fun Route.portfolioRoute() {
                     portfolioHistoryService.dailyHistory().toResponse()
                 }
             )
-        }
+        }.documented(
+            operationId = "getPortfolioDailyHistory",
+            summary = "Get daily portfolio history",
+            description = "Returns the cached or freshly computed daily portfolio history read model.",
+            tag = "Portfolio"
+        )
 
         get("/returns") {
             val descriptor = portfolioReadModelCacheDescriptorService.returnsDescriptor()
@@ -114,23 +135,48 @@ fun Route.portfolioRoute() {
                     portfolioReturnsService.returns().toResponse()
                 }
             )
-        }
+        }.documented(
+            operationId = "getPortfolioReturns",
+            summary = "Get portfolio returns",
+            description = "Returns aggregated portfolio return metrics and benchmark comparisons.",
+            tag = "Portfolio"
+        )
 
         get("/allocation") {
             call.respond(portfolioAllocationService.summary().toResponse())
-        }
+        }.documented(
+            operationId = "getPortfolioAllocation",
+            summary = "Get allocation summary",
+            description = "Returns current allocation, target mix drift and rebalancing guidance.",
+            tag = "Portfolio"
+        )
 
         get("/read-model-cache") {
             call.respond(readModelCacheService.list().map(ReadModelCacheSnapshot::toResponse))
-        }
+        }.documented(
+            operationId = "listReadModelCacheSnapshots",
+            summary = "List read-model cache snapshots",
+            description = "Returns cached read-model snapshots and their invalidation metadata.",
+            tag = "Portfolio"
+        )
 
         get("/read-model-refresh") {
             call.respond(readModelRefreshService.status().toResponse())
-        }
+        }.documented(
+            operationId = "getReadModelRefreshStatus",
+            summary = "Get read-model refresh status",
+            description = "Returns the status of background refresh jobs for read models.",
+            tag = "Portfolio"
+        )
 
         post("/read-model-refresh/run") {
             call.respond(readModelRefreshService.runManualRefresh().toResponse())
-        }
+        }.documented(
+            operationId = "runReadModelRefresh",
+            summary = "Run a manual read-model refresh",
+            description = "Triggers an immediate refresh of portfolio read models and returns the result.",
+            tag = "Portfolio"
+        )
 
         post("/read-model-cache/invalidate") {
             val clearedSnapshotCount = readModelCacheService.clearAll()
@@ -148,44 +194,89 @@ fun Route.portfolioRoute() {
                     clearedSnapshotCount = clearedSnapshotCount
                 )
             )
-        }
+        }.documented(
+            operationId = "invalidateReadModelCache",
+            summary = "Invalidate read-model cache",
+            description = "Clears all cached read-model snapshots so they are rebuilt on the next access.",
+            tag = "Portfolio"
+        )
 
         get("/audit/events") {
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 12
             val category = call.request.queryParameters["category"]?.let(::parseAuditEventCategory)
             call.respond(auditLogService.list(limit = limit, category = category).map(AuditEvent::toResponse))
-        }
+        }.documented(
+            operationId = "listPortfolioAuditEvents",
+            summary = "List portfolio audit events",
+            description = "Returns recent operational audit events with optional category filtering.",
+            tag = "Portfolio"
+        )
 
         get("/targets") {
             call.respond(portfolioTargetService.list().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listPortfolioTargets",
+            summary = "List target allocation weights",
+            description = "Returns the saved portfolio target allocation weights.",
+            tag = "Portfolio"
+        )
 
         post("/targets") {
             val request = call.receive<ReplacePortfolioTargetsRequest>()
             call.respond(portfolioTargetService.replace(request.toDomain()).map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "replacePortfolioTargets",
+            summary = "Replace target allocation weights",
+            description = "Replaces the saved portfolio target allocation with the provided set of weights.",
+            tag = "Portfolio"
+        )
 
         get("/benchmark-settings") {
             call.respond(portfolioBenchmarkSettingsService.settings().toResponse())
-        }
+        }.documented(
+            operationId = "getPortfolioBenchmarkSettings",
+            summary = "Get benchmark settings",
+            description = "Returns enabled, pinned and custom benchmark settings for the portfolio.",
+            tag = "Portfolio"
+        )
 
         post("/benchmark-settings") {
             val request = call.receive<SavePortfolioBenchmarkSettingsRequest>()
             call.respond(portfolioBenchmarkSettingsService.update(request.toDomain()).toResponse())
-        }
+        }.documented(
+            operationId = "savePortfolioBenchmarkSettings",
+            summary = "Save benchmark settings",
+            description = "Saves enabled, pinned and optional custom benchmark configuration.",
+            tag = "Portfolio"
+        )
 
         get("/rebalancing-settings") {
             call.respond(portfolioRebalancingSettingsService.settings().toResponse())
-        }
+        }.documented(
+            operationId = "getPortfolioRebalancingSettings",
+            summary = "Get rebalancing settings",
+            description = "Returns current tolerance band and rebalancing mode settings.",
+            tag = "Portfolio"
+        )
 
         post("/rebalancing-settings") {
             val request = call.receive<SavePortfolioRebalancingSettingsRequest>()
             call.respond(portfolioRebalancingSettingsService.update(request.toDomain()).toResponse())
-        }
+        }.documented(
+            operationId = "savePortfolioRebalancingSettings",
+            summary = "Save rebalancing settings",
+            description = "Saves the portfolio tolerance band and rebalancing mode configuration.",
+            tag = "Portfolio"
+        )
 
         get("/backups") {
             call.respond(portfolioBackupService.status().toResponse())
-        }
+        }.documented(
+            operationId = "getPortfolioBackupStatus",
+            summary = "Get backup status",
+            description = "Returns server backup status, retention settings and stored backup records.",
+            tag = "Portfolio"
+        )
 
         get("/backups/download") {
             val fileName = call.request.queryParameters["fileName"]
@@ -199,27 +290,65 @@ fun Route.portfolioRoute() {
                 text = backup.content,
                 contentType = ContentType.Application.Json
             )
+        }.documented(
+            operationId = "downloadPortfolioBackup",
+            summary = "Download a portfolio backup",
+            description = "Downloads a stored portfolio backup as a JSON attachment.",
+            tag = "Portfolio"
+        ) {
+            responses {
+                response(200) {
+                    description = "JSON backup file."
+                    headers {
+                        header(HttpHeaders.ContentDisposition) {
+                            description = "Attachment header containing the backup file name."
+                            required = true
+                            schema = buildSchema(typeOf<String>())
+                        }
+                    }
+                }
+            }
         }
 
         post("/backups/run") {
             call.respond(portfolioBackupService.createBackup().toResponse())
-        }
+        }.documented(
+            operationId = "runPortfolioBackup",
+            summary = "Create a portfolio backup",
+            description = "Triggers an on-demand portfolio backup and returns the created backup metadata.",
+            tag = "Portfolio"
+        )
 
         post("/backups/restore") {
             val request = call.receive<RestorePortfolioBackupRequest>()
             requireReplaceConfirmation(mode = request.mode, confirmation = request.confirmation)
             call.respond(portfolioBackupService.restoreBackup(request.toDomain()).toResponse())
-        }
+        }.documented(
+            operationId = "restorePortfolioBackup",
+            summary = "Restore a portfolio backup",
+            description = "Restores a stored portfolio backup in merge or replace mode.",
+            tag = "Portfolio"
+        )
 
         get("/state/export") {
             call.respond(portfolioTransferService.exportState().toResponse())
-        }
+        }.documented(
+            operationId = "exportPortfolioState",
+            summary = "Export portfolio state",
+            description = "Exports the canonical portfolio state as structured JSON.",
+            tag = "Portfolio"
+        )
 
         post("/state/preview") {
             val request = call.receive<ImportPortfolioStateRequest>()
             val result = portfolioTransferService.previewImport(request.toDomain())
             call.respond(result.toResponse())
-        }
+        }.documented(
+            operationId = "previewPortfolioStateImport",
+            summary = "Preview portfolio state import",
+            description = "Validates an incoming portfolio state snapshot and returns a preview of the import impact.",
+            tag = "Portfolio"
+        )
 
         post("/state/import") {
             val request = call.receive<ImportPortfolioStateRequest>()
@@ -234,7 +363,12 @@ fun Route.portfolioRoute() {
                 safetyBackupFileName = safetyBackup?.fileName
             )
             call.respond(result.toResponse())
-        }
+        }.documented(
+            operationId = "importPortfolioState",
+            summary = "Import portfolio state",
+            description = "Imports a portfolio state snapshot in merge or replace mode.",
+            tag = "Portfolio"
+        )
     }
 }
 

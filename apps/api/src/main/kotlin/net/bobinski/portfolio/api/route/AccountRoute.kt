@@ -23,7 +23,12 @@ fun Route.accountRoute() {
     route("/v1/accounts") {
         get {
             call.respond(accountService.list().map { it.toResponse() })
-        }
+        }.documented(
+            operationId = "listAccounts",
+            summary = "List accounts",
+            description = "Returns all configured portfolio accounts ordered by their display order.",
+            tag = "Accounts"
+        )
 
         post {
             val request = call.receive<CreateAccountRequest>()
@@ -37,7 +42,12 @@ fun Route.accountRoute() {
             )
 
             call.respond(HttpStatusCode.Created, account.toResponse())
-        }
+        }.documented(
+            operationId = "createAccount",
+            summary = "Create an account",
+            description = "Creates a new portfolio account with its institution, type and base currency.",
+            tag = "Accounts"
+        )
 
         put("/order") {
             val request = call.receive<ReorderAccountsRequest>()
@@ -48,7 +58,12 @@ fun Route.accountRoute() {
                     )
                 ).map { it.toResponse() }
             )
-        }
+        }.documented(
+            operationId = "reorderAccounts",
+            summary = "Reorder accounts",
+            description = "Updates the display order for accounts using the supplied ordered list of account IDs.",
+            tag = "Accounts"
+        )
     }
 }
 

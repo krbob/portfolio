@@ -35,12 +35,22 @@ fun Route.transactionImportRoute() {
         route("/profiles") {
             get {
                 call.respond(profileService.list().map(TransactionImportProfile::toResponse))
-            }
+            }.documented(
+                operationId = "listTransactionImportProfiles",
+                summary = "List transaction import profiles",
+                description = "Returns saved CSV import profiles used for broker exports.",
+                tag = "Transactions"
+            )
 
             post {
                 val request = call.receive<SaveTransactionImportProfileRequest>()
                 call.respond(HttpStatusCode.Created, profileService.create(request.toCommand()).toResponse())
-            }
+            }.documented(
+                operationId = "createTransactionImportProfile",
+                summary = "Create a transaction import profile",
+                description = "Creates a new CSV import profile with delimiter, mappings and defaults.",
+                tag = "Transactions"
+            )
 
             route("/{id}") {
                 put {
@@ -48,26 +58,46 @@ fun Route.transactionImportRoute() {
                         ?: throw IllegalArgumentException("id path parameter is required.")
                     val request = call.receive<SaveTransactionImportProfileRequest>()
                     call.respond(profileService.update(id, request.toCommand()).toResponse())
-                }
+                }.documented(
+                    operationId = "updateTransactionImportProfile",
+                    summary = "Update a transaction import profile",
+                    description = "Updates an existing CSV import profile selected by its identifier.",
+                    tag = "Transactions"
+                )
 
                 delete {
                     val id = call.parameters["id"]?.let(::parseUuid)
                         ?: throw IllegalArgumentException("id path parameter is required.")
                     profileService.delete(id)
                     call.respond(HttpStatusCode.NoContent)
-                }
+                }.documented(
+                    operationId = "deleteTransactionImportProfile",
+                    summary = "Delete a transaction import profile",
+                    description = "Deletes an existing CSV import profile selected by its identifier.",
+                    tag = "Transactions"
+                )
             }
         }
 
         post("/csv/preview") {
             val request = call.receive<CsvTransactionsImportRequest>()
             call.respond(csvImportService.preview(request.toPreviewCommand()).toResponse())
-        }
+        }.documented(
+            operationId = "previewTransactionCsvImport",
+            summary = "Preview a CSV transaction import",
+            description = "Parses the provided CSV payload with a saved import profile and returns row-level validation results.",
+            tag = "Transactions"
+        )
 
         post("/csv") {
             val request = call.receive<CsvTransactionsImportRequest>()
             call.respond(HttpStatusCode.Created, csvImportService.import(request.toImportCommand()).toResponse())
-        }
+        }.documented(
+            operationId = "importTransactionCsv",
+            summary = "Import transactions from CSV",
+            description = "Imports transactions from the provided CSV payload using the selected saved profile.",
+            tag = "Transactions"
+        )
     }
 }
 
