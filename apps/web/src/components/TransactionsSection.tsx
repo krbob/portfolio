@@ -51,6 +51,7 @@ export function TransactionsSection() {
   const [importProfileDirty, setImportProfileDirty] = useState(false)
   const [importProfileTemplate, setImportProfileTemplate] = useState('')
   const [activeWorkspace, setActiveWorkspace] = useState<TransactionsWorkspace>('journal')
+  const [filteredJournalRowCount, setFilteredJournalRowCount] = useState<number | null>(null)
 
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
@@ -103,7 +104,7 @@ export function TransactionsSection() {
   const latestImportEvent = importEvents[0] ?? null
 
   const journalRowCount = transactions.length
-  const sortedRowCount = transactions.length
+  const sortedRowCount = filteredJournalRowCount ?? transactions.length
   const importProfileCount = importProfiles.length
 
   useEffect(() => {
@@ -111,6 +112,10 @@ export function TransactionsSection() {
       setSelectedImportProfileId(importProfiles[0]?.id ?? NEW_IMPORT_PROFILE_ID)
     }
   }, [importProfiles, selectedImportProfileId])
+
+  const handleFilteredRowCountChange = useCallback((count: number) => {
+    setFilteredJournalRowCount(count)
+  }, [])
 
   const handleImportProfileDirtyChange = useCallback((dirty: boolean) => {
     setImportProfileDirty(dirty)
@@ -245,6 +250,7 @@ export function TransactionsSection() {
           createTransactionMutation={createTransactionMutation}
           updateTransactionMutation={updateTransactionMutation}
           deleteTransactionMutation={deleteTransactionMutation}
+          onFilteredRowCountChange={handleFilteredRowCountChange}
         />
       )}
 

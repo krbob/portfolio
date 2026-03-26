@@ -161,6 +161,15 @@ export function TransactionImport({
   const [structuredImportPreviewStatusFilter, setStructuredImportPreviewStatusFilter] =
     useState<ImportPreviewStatusFilter>('ALL')
 
+  // Sync importSkipDuplicates with the profile's default when the profile changes
+  const profileSyncKey = selectedImportProfile?.id ?? null
+  const [prevProfileSyncKey, setPrevProfileSyncKey] = useState(profileSyncKey)
+  if (prevProfileSyncKey !== profileSyncKey) {
+    setPrevProfileSyncKey(profileSyncKey)
+    const nextDefault = selectedImportProfile?.skipDuplicatesByDefault ?? true
+    if (importSkipDuplicates !== nextDefault) setImportSkipDuplicates(nextDefault)
+  }
+
   const importBlockedByPreview = Boolean(
     importPreview &&
       (importPreview.invalidRowCount > 0 || (!importSkipDuplicates && importPreview.duplicateRowCount > 0)),

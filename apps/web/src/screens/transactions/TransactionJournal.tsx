@@ -48,6 +48,7 @@ export interface TransactionJournalProps {
   createTransactionMutation: UseMutationResult<Transaction, Error, CreateTransactionPayload>
   updateTransactionMutation: UseMutationResult<Transaction, Error, UpdateTransactionPayload>
   deleteTransactionMutation: UseMutationResult<void, Error, string>
+  onFilteredRowCountChange?: (count: number) => void
 }
 
 function JournalSummaryTile({
@@ -76,6 +77,7 @@ export function TransactionJournal({
   createTransactionMutation,
   updateTransactionMutation,
   deleteTransactionMutation,
+  onFilteredRowCountChange,
 }: TransactionJournalProps) {
   const { isPolish } = useI18n()
   const location = useLocation()
@@ -246,6 +248,10 @@ export function TransactionJournal({
     rows.sort((left, right) => compareJournalRows(left, right, journalFilters.sort))
     return rows
   }, [filteredRows, journalFilters.sort])
+
+  useEffect(() => {
+    onFilteredRowCountChange?.(sortedRows.length)
+  }, [sortedRows.length, onFilteredRowCountChange])
 
   const pageSize = Number(journalFilters.pageSize)
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize))
