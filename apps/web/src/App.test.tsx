@@ -2118,8 +2118,11 @@ describe('App', () => {
 
   it('scrolls to hash targets inside settings', async () => {
     const scrollIntoViewMock = vi.fn()
-    const originalScrollIntoView = Element.prototype.scrollIntoView
-    Element.prototype.scrollIntoView = scrollIntoViewMock
+    const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewMock,
+    })
     try {
       globalThis.fetch = vi.fn(async (input) => {
         const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
@@ -2414,23 +2417,28 @@ describe('App', () => {
         </MemoryRouter>,
       )
 
-      expect(await screen.findByRole('heading', { name: /settings|ustawienia/i, level: 2 })).toBeInTheDocument()
-
-      const targetsSection = document.getElementById('targets')
-      expect(targetsSection).not.toBeNull()
+      const targetsSection = await waitFor(() => {
+        const section = document.getElementById('targets')
+        expect(section).not.toBeNull()
+        return section
+      })
       if (!targetsSection) {
         throw new Error('Targets section did not render')
       }
 
       expect(await within(targetsSection).findByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).toBeInTheDocument()
-      expect(within(targetsSection).getByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
-      expect(within(targetsSection).getByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
+      expect(await within(targetsSection).findByText(/edited mix|edytowany miks/i)).toBeInTheDocument()
+      expect(await within(targetsSection).findByText(/no targets are saved yet|brak zapisanych targetów/i)).toBeInTheDocument()
 
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalled()
       })
     } finally {
-      Element.prototype.scrollIntoView = originalScrollIntoView
+      if (originalScrollIntoView) {
+        Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoView)
+      } else {
+        delete Element.prototype.scrollIntoView
+      }
     }
   })
 

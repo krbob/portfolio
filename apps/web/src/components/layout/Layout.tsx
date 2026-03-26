@@ -53,7 +53,16 @@ export function Layout({ children }: { children: ReactNode }) {
     const scrollToHashTarget = () => {
       const target = document.getElementById(hash)
       if (target) {
-        target.scrollIntoView({ block: 'start', behavior: 'auto' })
+        if (typeof target.scrollIntoView === 'function') {
+          target.scrollIntoView({ block: 'start', behavior: 'auto' })
+        } else if (mainRef.current) {
+          const top = target instanceof HTMLElement ? target.offsetTop : 0
+          if (typeof mainRef.current.scrollTo === 'function') {
+            mainRef.current.scrollTo({ top, behavior: 'auto' })
+          } else {
+            mainRef.current.scrollTop = top
+          }
+        }
         previousPathRef.current = location.pathname
         return
       }
