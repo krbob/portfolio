@@ -399,6 +399,7 @@ describe('App', () => {
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^accounts$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^instruments$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
 
     // Sidebar runtime status
@@ -705,6 +706,167 @@ describe('App', () => {
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
   })
 
+  it('renders instrument summaries on the dedicated instruments screen', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({
+            authEnabled: false,
+            authenticated: true,
+            mode: 'DISABLED',
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio',
+            stage: 'dev',
+            version: '0.1.0-dev',
+            auth: {
+              enabled: false,
+              mode: 'DISABLED',
+            },
+            stack: {
+              web: 'React 19 + TypeScript + Vite',
+              api: 'Kotlin 2.3 + Ktor 3',
+              database: 'SQLite',
+            },
+            capabilities: ['Transaction-based portfolio accounting'],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({
+            status: 'READY',
+            checkedAt: '2026-03-13T12:00:00Z',
+            checks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/holdings')) {
+        return new Response(
+          JSON.stringify([
+            {
+              accountId: 'acc-1',
+              accountName: 'Primary',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              quantity: '10',
+              averageCostPerUnitPln: '100.00',
+              costBasisPln: '1000.00',
+              bookValuePln: '1000.00',
+              currentPricePln: '112.50',
+              currentValuePln: '1125.00',
+              unrealizedGainPln: '125.00',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 2,
+            },
+            {
+              accountId: 'acc-2',
+              accountName: 'Reserve',
+              instrumentId: 'ins-1',
+              instrumentName: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              currency: 'USD',
+              quantity: '5',
+              averageCostPerUnitPln: '102.00',
+              costBasisPln: '510.00',
+              bookValuePln: '510.00',
+              currentPricePln: '112.50',
+              currentValuePln: '562.50',
+              unrealizedGainPln: '52.50',
+              valuedAt: '2026-03-20',
+              valuationStatus: 'VALUED',
+              valuationIssue: null,
+              transactionCount: 1,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(
+          JSON.stringify([
+            {
+              id: 'ins-1',
+              name: 'VWRA',
+              kind: 'ETF',
+              assetClass: 'EQUITIES',
+              symbol: 'VWRA.L',
+              currency: 'USD',
+              valuationSource: 'STOCK_ANALYST',
+              edoTerms: null,
+              isActive: true,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+            },
+            {
+              id: 'ins-2',
+              name: 'EDO0336',
+              kind: 'BOND_EDO',
+              assetClass: 'BONDS',
+              symbol: null,
+              currency: 'PLN',
+              valuationSource: 'EDO_CALCULATOR',
+              edoTerms: {
+                seriesMonth: '2026-03',
+                firstPeriodRateBps: 500,
+                marginBps: 150,
+              },
+              isActive: true,
+              createdAt: '2026-03-02T00:00:00Z',
+              updatedAt: '2026-03-02T00:00:00Z',
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in instruments screen test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/instruments']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { name: /^instruments$/i })).toBeInTheDocument()
+    expect(await screen.findByText(/instrument overview/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/vwra/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/edo0336/i)).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/catalog only/i)).toBeInTheDocument()
+    expect(await screen.findByText(/1 active in portfolio/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/\+.*177.50/i)).length).toBeGreaterThan(0)
+  })
+
   it('shows percentage pnl for valued holdings', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
@@ -802,7 +964,10 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
     expect(await screen.findByText('+12.50%')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText('VWRA'))
+    const vwraRow = (await screen.findAllByRole('row')).find((row) => within(row).queryByText('VWRA'))
+
+    expect(vwraRow).toBeDefined()
+    fireEvent.click(vwraRow!)
 
     expect((await screen.findAllByText(/\+.*125\.00/)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText('+12.50%')).length).toBeGreaterThan(0)

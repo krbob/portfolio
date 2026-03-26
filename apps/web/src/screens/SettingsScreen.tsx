@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { InstrumentsSection } from '../components/InstrumentsSection'
 import { MobileAppSection } from '../components/MobileAppSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
@@ -16,7 +15,6 @@ import { useI18n } from '../lib/i18n'
 const SETTINGS_SECTIONS = [
   { id: 'health', label: { en: 'Health', pl: 'Stan systemu' } },
   { id: 'data-quality', label: { en: 'Data quality', pl: 'Jakość danych' } },
-  { id: 'setup', label: { en: 'Setup', pl: 'Konfiguracja' } },
   { id: 'targets', label: { en: 'Targets', pl: 'Cele' } },
   { id: 'benchmarks', label: { en: 'Benchmarks', pl: 'Benchmarki' } },
   { id: 'transfer', label: { en: 'Transfer', pl: 'Transfer' } },
@@ -30,12 +28,12 @@ const SETTINGS_GROUPS = [
   {
     id: 'portfolio',
     eyebrow: { en: 'Portfolio', pl: 'Portfolio' },
-    title: { en: 'Setup and portfolio policy', pl: 'Konfiguracja i polityka portfela' },
+    title: { en: 'Portfolio policy', pl: 'Polityka portfela' },
     description: {
-      en: 'Instrument catalog, target allocation and benchmark policy.',
-      pl: 'Katalog instrumentów, alokacja docelowa i polityka benchmarków.',
+      en: 'Target allocation and benchmark policy after account and instrument setup moves into dedicated screens.',
+      pl: 'Alokacja docelowa i polityka benchmarków po wyniesieniu kont i instrumentów do osobnych widoków.',
     },
-    sectionIds: ['setup', 'targets', 'benchmarks'] as const,
+    sectionIds: ['targets', 'benchmarks'] as const,
   },
   {
     id: 'operations',
@@ -126,10 +124,6 @@ export function SettingsScreen() {
             title={isPolish ? SETTINGS_GROUPS[0].title.pl : SETTINGS_GROUPS[0].title.en}
             description={isPolish ? SETTINGS_GROUPS[0].description.pl : SETTINGS_GROUPS[0].description.en}
           >
-            <section id="setup" className="scroll-mt-24">
-              <InstrumentsSection />
-            </section>
-
             <section id="targets" className="scroll-mt-24">
               <PortfolioTargetsSection />
             </section>

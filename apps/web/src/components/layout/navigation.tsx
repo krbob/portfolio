@@ -41,6 +41,15 @@ export const investingNav: NavItem[] = [
     ),
   },
   {
+    to: '/instruments',
+    label: { en: 'Instruments', pl: 'Instrumenty' },
+    icon: (
+      <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5M3.75 18.75h16.5M5.25 5.25v13.5m13.5-13.5v13.5M8.25 9.75h7.5m-7.5 4.5h7.5" />
+      </svg>
+    ),
+  },
+  {
     to: '/performance',
     label: { en: 'Performance', pl: 'Wyniki' },
     aliases: ['/returns', '/charts'],
