@@ -9,6 +9,13 @@ import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory 
 import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass } from '../lib/labels'
+import {
+  describeAssetSliceValuation,
+  describePortfolioValuationBasis,
+  describePrimaryPortfolioValue,
+  labelPortfolioValuationBasis,
+  labelPrimaryPortfolioValueMetric,
+} from '../lib/portfolio-presentation'
 import { card } from '../lib/styles'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
 
@@ -155,7 +162,7 @@ export function DashboardScreen() {
       <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'}>
         {latestPoint && (
           <span className="text-xs text-zinc-500">
-            {isPolish ? 'Stan na' : 'As of'} {latestPoint.date} · {labelValuationBasis(valuationState, isPolish)}
+            {isPolish ? 'Stan na' : 'As of'} {latestPoint.date} · {labelPortfolioValuationBasis(valuationState, isPolish)}
           </span>
         )}
       </PageHeader>
@@ -163,9 +170,9 @@ export function DashboardScreen() {
       {/* Hero stats */}
       <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label={labelPrimaryValueMetric(valuationState, isPolish)}
+          label={labelPrimaryPortfolioValueMetric(valuationState, isPolish)}
           value={formatCurrencyPln(displayedTotalValuePln)}
-          subtitle={primaryValueSubtitle(overview, valuationState, isPolish)}
+          subtitle={describePrimaryPortfolioValue(overview, valuationState, isPolish)}
           hero
         />
         <StatCard
@@ -185,13 +192,13 @@ export function DashboardScreen() {
         <StatCard
           label={isPolish ? 'Akcje' : 'Equities'}
           value={formatCurrencyPln(displayedEquityValuePln)}
-          subtitle={assetSliceSubtitle(equityPct, valuationState, isPolish)}
+          subtitle={describeAssetSliceValuation(equityPct, valuationState, isPolish)}
           dot="equity"
         />
         <StatCard
           label={isPolish ? 'Obligacje' : 'Bonds'}
           value={formatCurrencyPln(displayedBondValuePln)}
-          subtitle={assetSliceSubtitle(bondPct, valuationState, isPolish)}
+          subtitle={describeAssetSliceValuation(bondPct, valuationState, isPolish)}
           dot="bond"
         />
       </div>
@@ -219,7 +226,7 @@ export function DashboardScreen() {
         <div className={`${card} lg:col-span-2`}>
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryValueMetric(historyValuationState, isPolish)}</h3>
+              <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, isPolish)}</h3>
               {historyValuationState !== 'MARK_TO_MARKET' ? (
                 <p className="mt-1 text-xs text-zinc-500">
                   {historyValuationState === 'BOOK_ONLY'
@@ -470,8 +477,8 @@ export function DashboardScreen() {
         />
         <StatCard
           label={isPolish ? 'Podstawa wyceny' : 'Valuation basis'}
-          value={labelValuationBasis(valuationState, isPolish)}
-          subtitle={valuationBasisSubtitle(overview, isPolish)}
+          value={labelPortfolioValuationBasis(valuationState, isPolish)}
+          subtitle={describePortfolioValuationBasis(overview, isPolish)}
         />
       </div>
     </>
@@ -570,92 +577,4 @@ function filterHistoryPoints(points: PortfolioDailyHistoryPoint[], range: Dashbo
   cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1)
   const cutoffString = cutoff.toISOString().slice(0, 10)
   return points.filter((p) => p.date >= cutoffString)
-}
-
-function labelPrimaryValueMetric(valuationState: string, isPolish: boolean) {
-  if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? 'Wartość księgowa' : 'Book Value'
-  }
-  if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? 'Wartość szacunkowa' : 'Estimated Value'
-  }
-  return isPolish ? 'Wartość portfela' : 'Portfolio Value'
-}
-
-function labelValuationBasis(valuationState: string, isPolish: boolean) {
-  if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? 'Księgowa' : 'Book basis'
-  }
-  if (valuationState === 'STALE') {
-    return isPolish ? 'Rynkowa z opóźnieniem' : 'Stale market'
-  }
-  if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? 'Częściowa' : 'Partial'
-  }
-  return isPolish ? 'Rynkowa' : 'Market'
-}
-
-function primaryValueSubtitle(
-  overview: NonNullable<ReturnType<typeof usePortfolioOverview>['data']>,
-  valuationState: string,
-  isPolish: boolean,
-) {
-  if (valuationState === 'BOOK_ONLY') {
-    return isPolish
-      ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji · wycena księgowa`
-      : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings · book basis`
-  }
-
-  if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish
-      ? `${overview.accountCount} kont · ${overview.valuedHoldingCount}/${overview.activeHoldingCount} pozycji wycenionych`
-      : `${overview.accountCount} accounts · ${overview.valuedHoldingCount}/${overview.activeHoldingCount} holdings valued`
-  }
-
-  if (valuationState === 'STALE') {
-    return isPolish
-      ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji · ostatnie dostępne ceny`
-      : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings · latest available prices`
-  }
-
-  return isPolish
-    ? `${overview.accountCount} kont · ${overview.activeHoldingCount} pozycji`
-    : `${overview.accountCount} accounts · ${overview.activeHoldingCount} holdings`
-}
-
-function assetSliceSubtitle(pct: number, valuationState: string, isPolish: boolean) {
-  const base = isPolish ? `${formatPercent(pct)} portfela` : `${formatPercent(pct)} of portfolio`
-
-  if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? `${base} · wycena księgowa` : `${base} · book basis`
-  }
-
-  if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? `${base} · wycena częściowa` : `${base} · partially valued`
-  }
-
-  if (valuationState === 'STALE') {
-    return isPolish ? `${base} · ceny z opóźnieniem` : `${base} · stale pricing`
-  }
-
-  return base
-}
-
-function valuationBasisSubtitle(
-  overview: NonNullable<ReturnType<typeof usePortfolioOverview>['data']>,
-  isPolish: boolean,
-) {
-  if (overview.activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji do wyceny' : 'No active holdings to value'
-  }
-
-  if (overview.valuationState === 'STALE') {
-    return isPolish
-      ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma ostatnią dostępną wycenę rynkową`
-      : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have the latest available market valuation`
-  }
-
-  return isPolish
-    ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji ma wycenę rynkową`
-    : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have market valuations`
 }

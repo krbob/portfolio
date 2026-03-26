@@ -5,10 +5,22 @@ import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useReorderAccounts } from '../hooks/use-write-model'
-import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatNumber, formatPercent, formatSignedCurrencyPln, hasMeaningfulCurrencyBreakdown } from '../lib/format'
+import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType, labelAssetClass } from '../lib/labels'
-import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
+import {
+  calculateGainPct,
+  describeHoldingGainRate,
+  describeHoldingGainValue,
+  describePortfolioGain,
+  formatHoldingGainPreview,
+  formatHoldingQuantity,
+  formatPortfolioGainDisplay,
+  labelPortfolioValuationState,
+  parsePortfolioNumber,
+  portfolioValuationStateVariant,
+} from '../lib/portfolio-presentation'
+import { badge, td, tdRight, th, thRight, tr } from '../lib/styles'
 import { isMarketValuedStatus } from '../lib/valuation'
 
 export function AccountsScreen() {
@@ -22,9 +34,9 @@ export function AccountsScreen() {
   const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null)
   const [dropTargetAccountId, setDropTargetAccountId] = useState<string | null>(null)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
-  const totalValuePln = accounts.reduce((sum, account) => sum + asNumber(account.totalCurrentValuePln), 0)
-  const totalCashPln = accounts.reduce((sum, account) => sum + asNumber(account.cashBalancePln), 0)
-  const totalGainPln = accounts.reduce((sum, account) => sum + asNumber(account.totalUnrealizedGainPln), 0)
+  const totalValuePln = accounts.reduce((sum, account) => sum + parsePortfolioNumber(account.totalCurrentValuePln), 0)
+  const totalCashPln = accounts.reduce((sum, account) => sum + parsePortfolioNumber(account.cashBalancePln), 0)
+  const totalGainPln = accounts.reduce((sum, account) => sum + parsePortfolioNumber(account.totalUnrealizedGainPln), 0)
   const degradedCount = accounts.filter((account) => account.valuationState !== 'MARK_TO_MARKET').length
   const totalHoldings = accounts.reduce((sum, account) => sum + account.activeHoldingCount, 0)
   const totalValuedHoldings = accounts.reduce((sum, account) => sum + account.valuedHoldingCount, 0)
@@ -32,7 +44,7 @@ export function AccountsScreen() {
   const selectedAccountHoldings = useMemo(
     () => holdings
       .filter((holding) => holding.accountId === selectedAccount?.accountId)
-      .sort((left, right) => asNumber(right.currentValuePln ?? right.bookValuePln) - asNumber(left.currentValuePln ?? left.bookValuePln)),
+      .sort((left, right) => parsePortfolioNumber(right.currentValuePln ?? right.bookValuePln) - parsePortfolioNumber(left.currentValuePln ?? left.bookValuePln)),
     [holdings, selectedAccount?.accountId],
   )
 
@@ -106,8 +118,8 @@ export function AccountsScreen() {
           />
           <AccountSummaryTile
             label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
-            value={formatGainDisplay(totalGainPln, totalValuedHoldings, isPolish)}
-            detail={describePortfolioGain(totalHoldings, totalValuedHoldings, isPolish)}
+            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldings, isPolish)}
+            detail={describePortfolioGain(totalHoldings, totalValuedHoldings, isPolish, { cashExcluded: true })}
             tone={totalValuedHoldings === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <AccountSummaryTile
@@ -177,7 +189,7 @@ export function AccountsScreen() {
                   </thead>
                   <tbody>
                     {orderedAccounts.map((account) => {
-                      const gainPct = toGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
+                      const gainPct = calculateGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
                       const isSelected = selectedAccount?.accountId === account.accountId
                       const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
                       return (
@@ -272,20 +284,20 @@ export function AccountsScreen() {
                               <p className={`tabular-nums ${
                                 account.valuedHoldingCount === 0
                                   ? 'text-zinc-500'
-                                  : asNumber(account.totalUnrealizedGainPln) >= 0
+                                  : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
-                                {formatGainDisplay(asNumber(account.totalUnrealizedGainPln), account.valuedHoldingCount, isPolish)}
+                                {formatPortfolioGainDisplay(parsePortfolioNumber(account.totalUnrealizedGainPln), account.valuedHoldingCount, isPolish)}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {describeAccountGain(account.activeHoldingCount, account.valuedHoldingCount, gainPct, isPolish)}
+                                {describeHoldingGainRate(account.activeHoldingCount, account.valuedHoldingCount, gainPct, isPolish)}
                               </p>
                             </div>
                           </td>
                           <td className={tdRight}>
-                            <span className={`${badge} ${valuationStateVariant(account.valuationState)}`}>
-                              {labelValuationState(account.valuationState, isPolish)}
+                            <span className={`${badge} ${portfolioValuationStateVariant(account.valuationState)}`}>
+                              {labelPortfolioValuationState(account.valuationState, isPolish)}
                             </span>
                           </td>
                         </tr>
@@ -388,8 +400,8 @@ function AccountDetailsCard({
   const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
   const contributionBreakdown = formatCurrencyBreakdown(account.netContributionBalances)
   const largestHolding = holdings[0] ?? null
-  const cashSharePct = asNumber(account.totalCurrentValuePln) > 0
-    ? (asNumber(account.cashBalancePln) / asNumber(account.totalCurrentValuePln)) * 100
+  const cashSharePct = parsePortfolioNumber(account.totalCurrentValuePln) > 0
+    ? (parsePortfolioNumber(account.cashBalancePln) / parsePortfolioNumber(account.totalCurrentValuePln)) * 100
     : 0
   const showBreakdownPanels =
     hasMeaningfulCurrencyBreakdown(account.cashBalances) ||
@@ -407,8 +419,8 @@ function AccountDetailsCard({
             {account.institution} · {labelAccountType(account.type)} · {account.baseCurrency}
           </p>
         </div>
-        <span className={`${badge} ${valuationStateVariant(account.valuationState)}`}>
-          {labelValuationState(account.valuationState, isPolish)}
+        <span className={`${badge} ${portfolioValuationStateVariant(account.valuationState)}`}>
+          {labelPortfolioValuationState(account.valuationState, isPolish)}
         </span>
       </div>
 
@@ -426,8 +438,8 @@ function AccountDetailsCard({
         <AccountDetailMetric
           label={isPolish ? 'Wpłaty netto' : 'Net contributions'}
           value={formatCurrencyPln(account.netContributionsPln)}
-          detail={contributionBreakdown ?? describeAccountMetricGain(account, isPolish)}
-          tone={account.valuedHoldingCount === 0 ? 'default' : asNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
+          detail={contributionBreakdown ?? describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, isPolish)}
+          tone={account.valuedHoldingCount === 0 ? 'default' : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
         />
       </div>
 
@@ -465,8 +477,8 @@ function AccountDetailsCard({
         ) : (
           <div className="mt-3 space-y-2">
             {holdings.slice(0, 5).map((holding) => {
-              const weightPct = asNumber(account.totalCurrentValuePln) > 0
-                ? (asNumber(holding.currentValuePln ?? holding.bookValuePln) / asNumber(account.totalCurrentValuePln)) * 100
+              const weightPct = parsePortfolioNumber(account.totalCurrentValuePln) > 0
+                ? (parsePortfolioNumber(holding.currentValuePln ?? holding.bookValuePln) / parsePortfolioNumber(account.totalCurrentValuePln)) * 100
                 : 0
               return (
                 <div
@@ -577,134 +589,6 @@ function DragHandleIcon() {
       />
     </svg>
   )
-}
-
-function formatGainDisplay(value: number, valuedHoldingCount: number, isPolish: boolean) {
-  if (valuedHoldingCount === 0) {
-    return isPolish ? 'b/d' : 'N/A'
-  }
-
-  return formatSignedCurrencyPln(value)
-}
-
-function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: number, isPolish: boolean) {
-  if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
-  }
-
-  if (valuedHoldingCount === 0) {
-    return isPolish
-      ? 'Brak wyceny rynkowej aktywnych pozycji'
-      : 'No market valuation for active holdings'
-  }
-
-  if (valuedHoldingCount < activeHoldingCount) {
-    return isPolish
-      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową · bez gotówki`
-      : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation · cash excluded`
-  }
-
-  return isPolish ? 'Tylko aktywne pozycje · bez gotówki' : 'Active holdings only · cash excluded'
-}
-
-function describeAccountGain(
-  activeHoldingCount: number,
-  valuedHoldingCount: number,
-  gainPct: number | null,
-  isPolish: boolean,
-) {
-  if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
-  }
-
-  if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej' : 'No market valuation'
-  }
-
-  if (valuedHoldingCount < activeHoldingCount) {
-    return isPolish
-      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji wycenionych`
-      : `${valuedHoldingCount}/${activeHoldingCount} holdings valued`
-  }
-
-  return gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })
-}
-
-function describeAccountMetricGain(account: PortfolioAccountSummary, isPolish: boolean) {
-  if (account.activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
-  }
-
-  if (account.valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej pozycji' : 'No market valuation for holdings'
-  }
-
-  return formatSignedCurrencyPln(account.totalUnrealizedGainPln)
-}
-
-function formatHoldingGainPreview(value: string | null | undefined, isPolish: boolean) {
-  return value == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(value)
-}
-
-function formatHoldingQuantity(value: string | number) {
-  const amount = typeof value === 'number' ? value : Number(value)
-
-  if (!Number.isFinite(amount)) {
-    return formatNumber(value, { maximumFractionDigits: 2 })
-  }
-
-  if (Number.isInteger(amount)) {
-    return formatNumber(amount, { maximumFractionDigits: 0 })
-  }
-
-  return formatNumber(amount, { maximumFractionDigits: 2 })
-}
-
-function toGainPct(currentValuePln: string, bookValuePln: string) {
-  const current = asNumber(currentValuePln)
-  const book = asNumber(bookValuePln)
-  if (book <= 0) {
-    return null
-  }
-  return ((current - book) / book) * 100
-}
-
-function labelValuationState(valuationState: string, isPolish: boolean) {
-  switch (valuationState) {
-    case 'MARK_TO_MARKET':
-      return isPolish ? 'Rynkowa' : 'Market'
-    case 'STALE':
-      return isPolish ? 'Opóźniona' : 'Stale'
-    case 'PARTIALLY_VALUED':
-      return isPolish ? 'Niepełna' : 'Partial'
-    case 'BOOK_ONLY':
-      return isPolish ? 'Księgowa' : 'Book'
-    default:
-      return valuationState
-  }
-}
-
-function valuationStateVariant(valuationState: string) {
-  switch (valuationState) {
-    case 'MARK_TO_MARKET':
-      return badgeVariants.success
-    case 'STALE':
-      return badgeVariants.info
-    case 'PARTIALLY_VALUED':
-      return badgeVariants.warning
-    case 'BOOK_ONLY':
-      return badgeVariants.warning
-    default:
-      return badgeVariants.default
-  }
-}
-
-function asNumber(value: string | number | null | undefined) {
-  if (value == null || value === '') {
-    return 0
-  }
-
-  return typeof value === 'number' ? value : Number(value)
 }
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {

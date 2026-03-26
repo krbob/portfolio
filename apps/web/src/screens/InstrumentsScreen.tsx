@@ -6,10 +6,18 @@ import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
-import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrencyPln, formatDate } from '../lib/format'
 import { getActiveUiLanguage, useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { usePersistentState } from '../lib/persistence'
+import {
+  describeHoldingGainRate,
+  describePortfolioGain,
+  formatHoldingGainPreview,
+  formatHoldingQuantity,
+  formatPortfolioGainDisplay,
+  parsePortfolioNumber,
+} from '../lib/portfolio-presentation'
 import { badge, badgeVariants, td, tdRight, th, thRight, tr } from '../lib/styles'
 import { isMarketValuedStatus } from '../lib/valuation'
 
@@ -58,7 +66,7 @@ export function InstrumentsScreen() {
   const selectedHoldings = useMemo(
     () => holdings
       .filter((holding) => holding.instrumentId === selectedRow?.instrument.id)
-      .sort((left, right) => asNumber(right.currentValuePln ?? right.bookValuePln) - asNumber(left.currentValuePln ?? left.bookValuePln)),
+      .sort((left, right) => parsePortfolioNumber(right.currentValuePln ?? right.bookValuePln) - parsePortfolioNumber(left.currentValuePln ?? left.bookValuePln)),
     [holdings, selectedRow?.instrument.id],
   )
 
@@ -130,7 +138,7 @@ export function InstrumentsScreen() {
           />
           <InstrumentSummaryTile
             label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
-            value={formatGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
+            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
             detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, isPolish)}
             tone={totalValuedHoldingCount === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
@@ -226,7 +234,7 @@ export function InstrumentsScreen() {
                           </td>
                           <td className={tdRight}>
                             <div>
-                              <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatQuantity(row.quantity)}</p>
+                              <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatHoldingQuantity(row.quantity)}</p>
                               <p className="text-xs text-zinc-500">
                                 {row.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
                               </p>
@@ -249,10 +257,10 @@ export function InstrumentsScreen() {
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
-                                {formatGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, isPolish)}
+                                {formatPortfolioGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, isPolish)}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {describeInstrumentGain(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
+                                {describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
                               </p>
                             </div>
                           </td>
@@ -351,13 +359,13 @@ function InstrumentDetailsCard({
         />
         <InstrumentDetailMetric
           label={isPolish ? 'Łączna ilość' : 'Total quantity'}
-          value={row.accountCount === 0 ? '0' : formatQuantity(row.quantity)}
+          value={row.accountCount === 0 ? '0' : formatHoldingQuantity(row.quantity)}
           detail={isPolish ? `Koszt ${formatCurrencyPln(row.totalBookValuePln)}` : `Cost ${formatCurrencyPln(row.totalBookValuePln)}`}
         />
         <InstrumentDetailMetric
           label={isPolish ? 'Bieżąca wartość' : 'Current value'}
           value={formatCurrencyPln(row.totalCurrentValuePln)}
-          detail={describeInstrumentGain(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
+          detail={describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
           tone={row.valuedHoldingCount === 0 ? 'default' : row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
         />
       </div>
@@ -384,7 +392,7 @@ function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{holding.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                    {formatHoldingQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -415,7 +423,7 @@ function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{lot.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatDate(lot.purchaseDate)} · {formatQuantity(lot.quantity)} {isPolish ? 'szt.' : 'units'}
+                    {formatDate(lot.purchaseDate)} · {formatHoldingQuantity(lot.quantity)} {isPolish ? 'szt.' : 'units'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -548,14 +556,14 @@ function buildInstrumentRows(
       const accountIds = new Set(instrumentHoldings.map((holding) => holding.accountId))
       const valuedHoldingCount = instrumentHoldings.filter((holding) => isMarketValuedStatus(holding.valuationStatus)).length
       const staleHoldingCount = instrumentHoldings.filter((holding) => holding.valuationStatus === 'STALE').length
-      const quantity = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.quantity), 0)
-      const totalBookValuePln = instrumentHoldings.reduce((sum, holding) => sum + asNumber(holding.bookValuePln), 0)
+      const quantity = instrumentHoldings.reduce((sum, holding) => sum + parsePortfolioNumber(holding.quantity), 0)
+      const totalBookValuePln = instrumentHoldings.reduce((sum, holding) => sum + parsePortfolioNumber(holding.bookValuePln), 0)
       const totalCurrentValuePln = instrumentHoldings.reduce(
-        (sum, holding) => sum + asNumber(holding.currentValuePln ?? holding.bookValuePln),
+        (sum, holding) => sum + parsePortfolioNumber(holding.currentValuePln ?? holding.bookValuePln),
         0,
       )
       const totalUnrealizedGainPln = instrumentHoldings.reduce(
-        (sum, holding) => sum + asNumber(holding.unrealizedGainPln),
+        (sum, holding) => sum + parsePortfolioNumber(holding.unrealizedGainPln),
         0,
       )
       const gainPct = totalBookValuePln > 0 ? ((totalCurrentValuePln - totalBookValuePln) / totalBookValuePln) * 100 : null
@@ -639,81 +647,4 @@ function labelInstrumentStatus(status: InstrumentRow['status'], isPolish: boolea
     case 'CATALOG_ONLY':
       return isPolish ? 'Tylko w katalogu' : 'Catalog'
   }
-}
-
-function formatGainDisplay(value: number, valuedHoldingCount: number, isPolish: boolean) {
-  if (valuedHoldingCount === 0) {
-    return isPolish ? 'b/d' : 'N/A'
-  }
-
-  return formatSignedCurrencyPln(value)
-}
-
-function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: number, isPolish: boolean) {
-  if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
-  }
-
-  if (valuedHoldingCount === 0) {
-    return isPolish
-      ? 'Brak wyceny rynkowej aktywnych pozycji'
-      : 'No market valuation for active holdings'
-  }
-
-  if (valuedHoldingCount < activeHoldingCount) {
-    return isPolish
-      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową`
-      : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation`
-  }
-
-  return isPolish ? 'Tylko aktywne pozycje' : 'Active holdings only'
-}
-
-function describeInstrumentGain(
-  holdingCount: number,
-  valuedHoldingCount: number,
-  gainPct: number | null,
-  isPolish: boolean,
-) {
-  if (holdingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
-  }
-
-  if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej' : 'No market valuation'
-  }
-
-  if (valuedHoldingCount < holdingCount) {
-    return isPolish
-      ? `${valuedHoldingCount}/${holdingCount} pozycji wycenionych`
-      : `${valuedHoldingCount}/${holdingCount} holdings valued`
-  }
-
-  return gainPct == null ? (isPolish ? 'n/d' : 'n/a') : formatPercent(gainPct, { signed: true })
-}
-
-function formatQuantity(value: string | number) {
-  const amount = typeof value === 'number' ? value : Number(value)
-
-  if (!Number.isFinite(amount)) {
-    return formatNumber(value, { maximumFractionDigits: 2 })
-  }
-
-  if (Number.isInteger(amount)) {
-    return formatNumber(amount, { maximumFractionDigits: 0 })
-  }
-
-  return formatNumber(amount, { maximumFractionDigits: 2 })
-}
-
-function formatHoldingGainPreview(value: string | null | undefined, isPolish: boolean) {
-  return value == null ? (isPolish ? 'b/d' : 'N/A') : formatSignedCurrencyPln(value)
-}
-
-function asNumber(value: string | number | null | undefined) {
-  if (value == null || value === '') {
-    return 0
-  }
-
-  return typeof value === 'number' ? value : Number(value)
 }
