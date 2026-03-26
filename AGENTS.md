@@ -37,8 +37,9 @@ The product is optimized for:
 - Keep technical diagnostics and operational tooling out of the main dashboard unless they are actionable for day-to-day portfolio review.
 - Prefer a small set of shared UI primitives over ad-hoc section-specific styling.
 - Use localized formatting consistently; avoid hard-coded `en-US` and `en-GB` formatting in the web app.
+- Keep deployment-specific hostnames, upstream URLs, and API keys out of the repo; document only generic `.env` placeholders.
 
-## Initial architecture
+## Repository shape
 
 - `apps/web`: React SPA for the self-hosted UI
 - `apps/api`: Ktor API for routing, persistence, integrations, and operational services
@@ -47,19 +48,18 @@ The product is optimized for:
 - optional signed-cookie auth spans the SPA and API, but should stay thin and operational rather than becoming a full identity system
 - target self-hosted persistence is a single local SQLite database plus JSON backups
 
-## Delivered milestones
+## Current product shape
 
-1. Bootstrap project structure and toolchain.
-2. Add app shell, health endpoints, and configuration surfaces.
-3. Define the core domain model, persistence schema, and extracted `portfolio-domain`.
-4. Implement write-model APIs for accounts, instruments, targets, transactions, import profiles, and application settings.
-5. Rebuild overview, holdings, daily history, returns, benchmarks, drift, and read-model cache on top of canonical transactions.
-6. Replace PostgreSQL with a SQLite-native runtime and keep the Docker/self-hosted path production-grade.
-7. Rebuild the web UI into a calmer investor product with responsive navigation, localized copy, and PWA support.
+- canonical write-model APIs cover accounts, instruments, targets, transactions, import profiles, and application settings
+- analytical read models cover overview, holdings, accounts, daily history, returns, benchmarks, allocation, audit, and operational diagnostics
+- backup, restore, export, and import are first-class operational workflows
+- the supported self-hosted runtime is SQLite plus JSON backups, with optional market-data integrations and optional single-user auth
+- Docker and compose-based deployment are part of the product surface, not afterthought tooling
 
 ## Current focus
 
 - Keep the SQLite self-hosted path reliable and well-documented.
 - Prefer incremental product work over broad architectural refactors.
 - Keep `docs/architecture.md`, `docs/domain-model.md`, and `docs/roadmap.md` short and current.
+- Keep CI split pragmatic: deterministic PR checks, deeper self-hosted smoke before image publish, and environment-specific remote smoke outside default CI.
 - Do not keep historical backlog or superseded redesign plans in active docs; rely on Git history instead.
