@@ -69,7 +69,7 @@ export function PerformanceScreen() {
         <ErrorState
           title={isPolish ? 'Wyniki niedostępne' : 'Performance unavailable'}
           description={isPolish
-            ? 'Nie udało się wczytać modeli historii i zwrotów. Spróbuj ponownie albo sprawdź storage i gotowość danych rynkowych.'
+            ? 'Nie udało się wczytać historii i zwrotów. Spróbuj ponownie albo sprawdź bazę danych oraz gotowość źródeł rynkowych.'
             : 'History and return read models could not load. Retry now or inspect storage and market-data readiness.'}
           onRetry={handleRetry}
         />
@@ -362,7 +362,7 @@ function ReturnsTab({
               <th className={th}>{isPolish ? 'Okres' : 'Period'}</th>
               <th className={thRight}>PLN MWRR</th>
               <th className={thRight}>PLN TWR</th>
-              <th className={thRight}>{isPolish ? 'Realny PLN' : 'Real PLN'}</th>
+              <th className={thRight}>{isPolish ? 'PLN po inflacji' : 'Real PLN'}</th>
               <th className={thRight}>USD MWRR</th>
               <th className={thRight}>{isPolish ? 'Rocznie' : 'Annualized'}</th>
               <th className={thRight}>{isPolish ? 'Dni' : 'Days'}</th>
@@ -421,7 +421,7 @@ function ReturnsTab({
               </h3>
                   <p className="mt-1 text-sm text-zinc-500">
                     {isPolish
-                      ? `Nadwyżka TWR względem wybranego okresu. Szczegóły poniżej dla ${selectedBenchmarkPeriod.label}.`
+                      ? `Nadwyżka TWR względem benchmarków dla okresu ${selectedBenchmarkPeriod.label}.`
                       : `Time-weighted excess return versus the selected period. Details below for ${selectedBenchmarkPeriod.label}.`}
                   </p>
                 </div>
@@ -487,7 +487,7 @@ function ReturnsBreakdownCard({
     <div className={card}>
       <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-200">{isPolish ? 'Most zmiany wartości' : 'Value-change bridge'}</h3>
+          <h3 className="text-sm font-semibold text-zinc-200">{isPolish ? 'Rozbicie zmiany wartości' : 'Value-change bridge'}</h3>
           <p className="mt-1 text-sm text-zinc-500">
             {returnsDisplayAvailable
               ? (isPolish
@@ -545,7 +545,7 @@ function ReturnsBreakdownCard({
               tone={numericTone(breakdown.taxesPln)}
             />
             <BreakdownMetric
-              label={isPolish ? 'Rynek + FX' : 'Market + FX'}
+              label={isPolish ? 'Rynek i waluty' : 'Market + FX'}
               value={formatSignedCurrencyPln(breakdown.marketAndFxPln)}
               tone={numericTone(breakdown.marketAndFxPln)}
               subtitle={isPolish ? 'Reszta po przepływach i kosztach' : 'Residual after flows and costs'}
@@ -565,7 +565,7 @@ function ReturnsBreakdownCard({
         </>
       ) : (
         <StatePanel
-          eyebrow={isPolish ? 'Most wyniku' : 'Value bridge'}
+          eyebrow={isPolish ? 'Rozbicie wyniku' : 'Value bridge'}
           title={isPolish ? 'Brak rozbicia dla tego okresu' : 'No bridge available for this period'}
           description={isPolish
             ? 'Nie udało się złożyć rozbicia przepływów i kosztów dla wybranego okresu.'

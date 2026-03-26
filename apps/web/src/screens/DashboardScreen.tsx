@@ -112,7 +112,7 @@ export function DashboardScreen() {
         <LoadingState
           title={isPolish ? 'Ładowanie pulpitu' : 'Loading dashboard'}
           description={isPolish
-            ? 'Przygotowywanie bieżącej wartości portfela, alokacji i najnowszej historii opartej o dane rynkowe.'
+            ? 'Przygotowywanie bieżącej wartości portfela, alokacji i najnowszej historii rynkowej.'
             : 'Preparing the current portfolio value, allocation and latest market-backed history.'}
           blocks={4}
         />
@@ -175,7 +175,7 @@ export function DashboardScreen() {
             ? formatPercent(dailyChangePct, { signed: true })
             : hasMarketBackedCurrentValuation
               ? isPolish
-                ? 'Oczekiwanie na dane'
+                ? 'Czekamy na komplet danych'
                 : 'Waiting for data'
               : isPolish
                 ? 'Wymaga pełnej wyceny rynkowej'
@@ -224,14 +224,14 @@ export function DashboardScreen() {
                 <p className="mt-1 text-xs text-zinc-500">
                   {historyValuationState === 'BOOK_ONLY'
                     ? isPolish
-                      ? 'Wykres opiera się na koszcie księgowym.'
+                      ? 'Wykres opiera się na wycenie księgowej.'
                       : 'This chart is based on book basis.'
                     : historyValuationState === 'STALE'
                       ? isPolish
                         ? 'Wykres korzysta z ostatnich dostępnych cen rynkowych.'
                         : 'This chart uses the latest available market prices.'
                     : isPolish
-                      ? 'Wykres łączy ceny rynkowe z kosztem księgowym.'
+                      ? 'Wykres łączy wyceny rynkowe z wyceną księgową.'
                       : 'This chart mixes market prices with book basis.'}
                 </p>
               ) : null}
@@ -257,7 +257,7 @@ export function DashboardScreen() {
             <LoadingState
               title={isPolish ? 'Ładowanie historii' : 'Loading history'}
               description={isPolish
-                ? 'Pobieranie dziennej krzywej portfela dla tego zakresu pulpitu.'
+                ? 'Pobieranie dziennej historii portfela dla wybranego zakresu.'
                 : 'Fetching the daily portfolio curve for this dashboard range.'}
               variant="inline"
               blocks={2}
@@ -266,7 +266,7 @@ export function DashboardScreen() {
             <ErrorState
               title={isPolish ? 'Historia niedostępna' : 'History unavailable'}
               description={isPolish
-                ? 'Pulpit nadal może pokazać bieżącą wartość, ale nie udało się wczytać wykresu historycznego.'
+                ? 'Pulpit może pokazać bieżącą wartość, ale nie udało się wczytać wykresu historycznego.'
                 : 'The dashboard can still show current value, but the historical chart did not load.'}
               onRetry={() => void historyQuery.refetch()}
               className="border-0 bg-transparent px-0 py-8"
@@ -296,14 +296,14 @@ export function DashboardScreen() {
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocationQuery.data?.valuationState === 'BOOK_ONLY'
                       ? isPolish
-                        ? 'Sygnał alokacji opiera się na koszcie księgowym.'
+                        ? 'Sygnał alokacji opiera się na wycenie księgowej.'
                         : 'Allocation signal is based on book basis.'
                       : allocationQuery.data?.valuationState === 'STALE'
                         ? isPolish
                           ? 'Sygnał alokacji korzysta z ostatnich dostępnych cen rynkowych.'
                           : 'Allocation signal uses the latest available market prices.'
                       : isPolish
-                        ? 'Sygnał alokacji łączy ceny rynkowe z kosztem księgowym.'
+                        ? 'Sygnał alokacji łączy wyceny rynkowe z księgową.'
                         : 'Allocation signal mixes market prices with book basis.'}
                   </p>
                 ) : null}
@@ -342,7 +342,7 @@ export function DashboardScreen() {
                 eyebrow={isPolish ? 'Strategia' : 'Strategy'}
                 title={isPolish ? 'Brak skonfigurowanej alokacji docelowej' : 'No target allocation configured'}
                 description={isPolish
-                  ? 'Ustaw wagi docelowe, aby odblokować diagnostykę odchyleń, sugestie rebalansowania i benchmark target mix.'
+                  ? 'Ustaw wagi docelowe, aby odblokować diagnostykę odchyleń, sugestie rebalansowania i benchmark alokacji docelowej.'
                   : 'Set target weights to unlock drift diagnostics, rebalance suggestions and the target-mix benchmark.'}
                 className="border-0 bg-transparent px-0 py-8"
               />
@@ -537,13 +537,13 @@ function labelAllocationAction(action: string, isPolish: boolean) {
   if (isPolish) {
     switch (action) {
       case 'WITHIN_TOLERANCE':
-        return 'W paśmie'
+        return 'W tolerancji'
       case 'DEPLOY_EXISTING_CASH':
-        return 'Przekieruj gotówkę'
+        return 'Wykorzystaj gotówkę'
       case 'WAIT_FOR_NEXT_CONTRIBUTION':
-        return 'Poczekaj na wpłatę'
+        return 'Poczekaj na kolejną wpłatę'
       case 'FULL_REBALANCE':
-        return 'Pełny rebalance'
+        return 'Pełny rebalancing'
       default:
         return 'Brak konfiguracji'
     }
@@ -587,7 +587,7 @@ function labelValuationBasis(valuationState: string, isPolish: boolean) {
     return isPolish ? 'Księgowa' : 'Book basis'
   }
   if (valuationState === 'STALE') {
-    return isPolish ? 'Rynkowa opóźniona' : 'Stale market'
+    return isPolish ? 'Rynkowa z opóźnieniem' : 'Stale market'
   }
   if (valuationState === 'PARTIALLY_VALUED') {
     return isPolish ? 'Częściowa' : 'Partial'
@@ -627,15 +627,15 @@ function assetSliceSubtitle(pct: number, valuationState: string, isPolish: boole
   const base = isPolish ? `${formatPercent(pct)} portfela` : `${formatPercent(pct)} of portfolio`
 
   if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? `${base} · księgowo` : `${base} · book basis`
+    return isPolish ? `${base} · wycena księgowa` : `${base} · book basis`
   }
 
   if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? `${base} · częściowo wycenione` : `${base} · partially valued`
+    return isPolish ? `${base} · wycena częściowa` : `${base} · partially valued`
   }
 
   if (valuationState === 'STALE') {
-    return isPolish ? `${base} · wycena opóźniona` : `${base} · stale pricing`
+    return isPolish ? `${base} · ceny z opóźnieniem` : `${base} · stale pricing`
   }
 
   return base

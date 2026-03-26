@@ -77,7 +77,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
       <div className="px-5 py-6">
         <h1 className="text-xl font-bold tracking-tight text-zinc-100">Portfolio</h1>
         <p className="mt-1 text-xs text-zinc-600">
-          {isPolish ? 'Przestrzeń do długoterminowego inwestowania' : 'Long-term investing workspace'}
+          {isPolish ? 'Przestrzeń inwestora długoterminowego' : 'Long-term investing workspace'}
         </p>
       </div>
 
@@ -97,14 +97,14 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
           <div className="flex items-center gap-2">
             <StatusDot status={systemStatus.dot} />
             <span className="text-xs font-medium text-zinc-400">
-              {isPolish ? 'Stan środowiska' : 'Runtime health'}
+              {isPolish ? 'Stan systemu' : 'Runtime health'}
             </span>
           </div>
           <span className="text-xs text-zinc-500">{systemStatus.label}</span>
         </div>
         <p className="mt-1 text-xs text-zinc-600">
           {readinessQuery.isLoading
-            ? (isPolish ? 'Sprawdzanie zależności...' : 'Checking dependencies...')
+            ? (isPolish ? 'Sprawdzanie usług i zależności...' : 'Checking dependencies...')
             : readinessQuery.isError
               ? (isPolish ? 'Nie udało się odpytać endpointu gotowości.' : 'Could not reach readiness endpoint.')
               : isPolish

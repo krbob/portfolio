@@ -73,10 +73,10 @@ function RouteLoadingState({ isPolish }: { isPolish: boolean }) {
         {isPolish ? 'Ładowanie' : 'Loading'}
       </p>
       <h2 className="text-lg font-semibold text-zinc-300">
-        {isPolish ? 'Przygotowywanie widoku' : 'Preparing workspace'}
+        {isPolish ? 'Przygotowujemy ekran' : 'Preparing workspace'}
       </h2>
       <p className="text-sm text-zinc-500">
-        {isPolish ? 'Podłączanie kolejnego ekranu i jego danych portfela.' : 'Attaching the next screen and its portfolio data.'}
+        {isPolish ? 'Wczytujemy widok i związane z nim dane portfela.' : 'Attaching the next screen and its portfolio data.'}
       </p>
     </div>
   )

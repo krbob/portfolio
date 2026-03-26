@@ -39,7 +39,7 @@ export function LoadingState({
         </h3>
         <p className="mt-2 text-sm text-zinc-500">
           {description ?? (isPolish
-            ? 'Pobieranie najnowszych pozycji, wyceny i modeli odczytowych portfela.'
+            ? 'Pobieranie najnowszych pozycji, wycen i modeli odczytowych portfela.'
             : 'Fetching the latest holdings, valuation and portfolio read models.')}
         </p>
       </div>

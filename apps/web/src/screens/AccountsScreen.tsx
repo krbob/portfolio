@@ -58,7 +58,7 @@ export function AccountsScreen() {
         <LoadingState
           title={isPolish ? 'Ładowanie kont' : 'Loading accounts'}
           description={isPolish
-            ? 'Budowanie widoku rachunków, sald gotówki i bieżącej wartości.'
+            ? 'Budowanie widoku rachunków, sald gotówkowych i bieżącej wartości.'
             : 'Building the account view, cash balances and current value.'}
           blocks={4}
         />
@@ -73,7 +73,7 @@ export function AccountsScreen() {
         <ErrorState
           title={isPolish ? 'Konta niedostępne' : 'Accounts unavailable'}
           description={isPolish
-            ? 'Nie udało się wczytać agregatów per rachunek. Spróbuj ponownie albo sprawdź stan systemu.'
+            ? 'Nie udało się wczytać podsumowania rachunków. Spróbuj ponownie albo sprawdź stan systemu.'
             : 'Per-account aggregates could not load. Retry now or inspect system health.'}
           onRetry={() => void accountsQuery.refetch()}
         />
@@ -105,17 +105,17 @@ export function AccountsScreen() {
             detail={totalValuePln > 0 ? `${formatPercent((totalCashPln / totalValuePln) * 100)} ${isPolish ? 'portfela' : 'of portfolio'}` : undefined}
           />
           <AccountSummaryTile
-            label={isPolish ? 'Niezrealizowany P/L pozycji' : 'Unrealized holdings P/L'}
+            label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
             value={formatGainDisplay(totalGainPln, totalValuedHoldings, isPolish)}
             detail={describePortfolioGain(totalHoldings, totalValuedHoldings, isPolish)}
             tone={totalValuedHoldings === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <AccountSummaryTile
-            label={isPolish ? 'Konta zdegradowane' : 'Degraded accounts'}
+            label={isPolish ? 'Konta bez pełnej wyceny' : 'Degraded accounts'}
             value={String(degradedCount)}
             detail={degradedCount === 0
               ? (isPolish ? 'Pełna wycena na wszystkich rachunkach' : 'Full valuation on every account')
-              : (isPolish ? 'Część rachunków używa wyceny opóźnionej albo księgowej' : 'Some accounts use stale or book valuation')}
+              : (isPolish ? 'Część rachunków korzysta z wyceny opóźnionej lub księgowej' : 'Some accounts use stale or book valuation')}
             tone={degradedCount === 0 ? 'success' : 'warning'}
           />
         </div>
@@ -126,10 +126,10 @@ export function AccountsScreen() {
           <Card flush>
             <div className="border-b border-zinc-800 px-5 py-4">
               <SectionHeader
-                eyebrow={isPolish ? 'Read model' : 'Read model'}
+                eyebrow={isPolish ? 'Model odczytowy' : 'Read model'}
                 title={isPolish ? 'Przegląd rachunków' : 'Account overview'}
                 description={isPolish
-                  ? 'Wartość, gotówka i status wyceny rozbite na rachunki z ręcznym sterowaniem kolejnością.'
+                  ? 'Wartość, gotówka i status wyceny w podziale na rachunki. Kolejność możesz ustawić ręcznie.'
                   : 'Value, cash and valuation status split by account, with manual ordering controlled from this view.'}
               />
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
@@ -434,7 +434,7 @@ function AccountDetailsCard({
       {showBreakdownPanels && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <CurrencyBreakdownCard
-            title={isPolish ? 'Salda natywne' : 'Native cash balances'}
+            title={isPolish ? 'Salda według walut' : 'Native cash balances'}
             items={account.cashBalances}
             isPolish={isPolish}
           />
@@ -448,10 +448,10 @@ function AccountDetailsCard({
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Top pozycje' : 'Top positions'}</h4>
+          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Największe pozycje' : 'Top positions'}</h4>
           {largestHolding && (
             <p className="text-xs text-zinc-500">
-              {isPolish ? 'Największa linia' : 'Largest line'}: {largestHolding.instrumentName}
+              {isPolish ? 'Największa pozycja' : 'Largest line'}: {largestHolding.instrumentName}
             </p>
           )}
         </div>
@@ -459,7 +459,7 @@ function AccountDetailsCard({
         {holdings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">
             {isPolish
-              ? 'Na tym rachunku nie ma jeszcze aktywnych pozycji. Wartość pochodzi wyłącznie z gotówki.'
+              ? 'Na tym rachunku nie ma jeszcze aktywnych pozycji. Jego wartość pochodzi na razie wyłącznie z gotówki.'
               : 'This account has no active positions yet. Its value currently comes from cash only.'}
           </p>
         ) : (
@@ -484,7 +484,7 @@ function AccountDetailsCard({
                     <p className="text-xs text-zinc-500">
                       {isMarketValuedStatus(holding.valuationStatus)
                         ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)}`
-                        : `${formatPercent(weightPct)} · ${isPolish ? 'księgowo' : 'book basis'}`}
+                        : `${formatPercent(weightPct)} · ${isPolish ? 'wycena księgowa' : 'book basis'}`}
                     </p>
                   </div>
                 </div>
@@ -537,7 +537,7 @@ function CurrencyBreakdownCard({
       <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</p>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-zinc-500">
-          {isPolish ? 'Brak danych walutowych.' : 'No currency data yet.'}
+          {isPolish ? 'Brak rozbicia walutowego.' : 'No currency data yet.'}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
@@ -549,7 +549,7 @@ function CurrencyBreakdownCard({
                   {formatCurrency(row.amount, row.currency)}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  {isPolish ? 'księgowo' : 'book'} {formatCurrencyPln(row.bookValuePln)}
+                  {isPolish ? 'wartość księgowa' : 'book'} {formatCurrencyPln(row.bookValuePln)}
                 </p>
               </div>
             </div>
@@ -600,11 +600,11 @@ function describePortfolioGain(activeHoldingCount: number, valuedHoldingCount: n
 
   if (valuedHoldingCount < activeHoldingCount) {
     return isPolish
-      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową · gotówka wyłączona`
+      ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową · bez gotówki`
       : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation · cash excluded`
   }
 
-  return isPolish ? 'Tylko aktywne pozycje · gotówka wyłączona' : 'Active holdings only · cash excluded'
+  return isPolish ? 'Tylko aktywne pozycje · bez gotówki' : 'Active holdings only · cash excluded'
 }
 
 function describeAccountGain(
@@ -676,7 +676,7 @@ function labelValuationState(valuationState: string, isPolish: boolean) {
     case 'STALE':
       return isPolish ? 'Opóźniona' : 'Stale'
     case 'PARTIALLY_VALUED':
-      return isPolish ? 'Częściowa' : 'Partial'
+      return isPolish ? 'Niepełna' : 'Partial'
     case 'BOOK_ONLY':
       return isPolish ? 'Księgowa' : 'Book'
     default:

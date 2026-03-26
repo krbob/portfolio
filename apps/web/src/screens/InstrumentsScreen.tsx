@@ -80,7 +80,7 @@ export function InstrumentsScreen() {
         <LoadingState
           title={isPolish ? 'Ładowanie instrumentów' : 'Loading instruments'}
           description={isPolish
-            ? 'Składanie katalogu instrumentów i ich ekspozycji ponad rachunkami.'
+            ? 'Budowanie widoku instrumentów i ekspozycji na rachunkach.'
             : 'Combining the instrument catalog with exposure across accounts.'}
           blocks={4}
         />
@@ -126,23 +126,23 @@ export function InstrumentsScreen() {
           <InstrumentSummaryTile
             label={isPolish ? 'Łączna wartość' : 'Total value'}
             value={formatCurrencyPln(totalValuePln)}
-            detail={isPolish ? `${activeRows.length} agregatów ponad kontami` : `${activeRows.length} aggregates across accounts`}
+            detail={isPolish ? `${activeRows.length} pozycji po zsumowaniu wszystkich rachunków` : `${activeRows.length} aggregates across accounts`}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Niezrealizowany P/L pozycji' : 'Unrealized holdings P/L'}
+            label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
             value={formatGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
             detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, isPolish)}
             tone={totalValuedHoldingCount === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Instrumenty zdegradowane' : 'Degraded instruments'}
+            label={isPolish ? 'Instrumenty bez pełnej wyceny' : 'Degraded instruments'}
             value={String(degradedCount)}
             detail={degradedCount === 0
               ? staleCount === 0
                 ? (isPolish ? 'Każdy aktywny instrument ma świeżą wycenę rynkową' : 'Every active instrument has fresh market valuation')
-                : (isPolish ? `${staleCount} ma opóźnioną wycenę rynkową` : `${staleCount} have stale market valuation`)
+                : (isPolish ? `${staleCount} ma wycenę rynkową z opóźnieniem` : `${staleCount} have stale market valuation`)
               : (isPolish
-                  ? `Część serii spada do podstawy księgowej${staleCount > 0 ? ` · ${staleCount} opóźnione` : ''}`
+                  ? `Część instrumentów korzysta z niepełnej lub księgowej wyceny${staleCount > 0 ? ` · ${staleCount} z opóźnieniem` : ''}`
                   : `Some series fall back to book basis${staleCount > 0 ? ` · ${staleCount} stale` : ''}`)}
             tone={degradedCount === 0 && staleCount === 0 ? 'success' : 'warning'}
           />
@@ -154,10 +154,10 @@ export function InstrumentsScreen() {
           <Card flush>
             <div className="border-b border-zinc-800 px-5 py-4">
               <SectionHeader
-                eyebrow={isPolish ? 'Read model' : 'Read model'}
+                eyebrow={isPolish ? 'Model odczytowy' : 'Read model'}
                 title={isPolish ? 'Przegląd instrumentów' : 'Instrument overview'}
                 description={isPolish
-                  ? 'Agregacja pozycji ponad kontami, z zachowaniem katalogu instrumentów nawet bez aktywnych transakcji.'
+                  ? 'Pozycje zebrane ponad wszystkimi rachunkami, z zachowaniem pełnego katalogu instrumentów także bez aktywnych transakcji.'
                   : 'Positions aggregated across accounts while still exposing the canonical instrument catalog.'}
               />
             </div>
@@ -220,7 +220,7 @@ export function InstrumentsScreen() {
                               <p className="text-xs text-zinc-500">
                                 {row.accountCount === 0
                                   ? (isPolish ? 'tylko katalog' : 'catalog only')
-                                  : (isPolish ? 'aktywnych rachunków' : 'active accounts')}
+                                  : (isPolish ? 'rachunków z pozycją' : 'active accounts')}
                               </p>
                             </div>
                           </td>
@@ -236,7 +236,7 @@ export function InstrumentsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(row.totalCurrentValuePln)}</p>
                               <p className="text-xs text-zinc-500">
-                                {isPolish ? 'Koszt' : 'Cost basis'} {formatCurrencyPln(row.totalBookValuePln)}
+                                {isPolish ? 'Koszt nabycia' : 'Cost basis'} {formatCurrencyPln(row.totalBookValuePln)}
                               </p>
                             </div>
                           </td>
@@ -364,7 +364,7 @@ function InstrumentDetailsCard({
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Rozbicie per konto' : 'Account split'}</h4>
+          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Podział na rachunki' : 'Account split'}</h4>
           <p className="text-xs text-zinc-500">{labelValuationSource(row.instrument.valuationSource)}</p>
         </div>
 
@@ -393,7 +393,7 @@ function InstrumentDetailsCard({
                     {isMarketValuedStatus(holding.valuationStatus)
                       ? formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)
                       : isPolish
-                        ? 'Księgowo'
+                        ? 'Wycena księgowa'
                         : 'Book basis'}
                   </p>
                 </div>
@@ -424,7 +424,7 @@ function InstrumentDetailsCard({
                     {isMarketValuedStatus(lot.valuationStatus)
                       ? formatHoldingGainPreview(lot.unrealizedGainPln, isPolish)
                       : isPolish
-                        ? 'Księgowo'
+                        ? 'Wycena księgowa'
                         : 'Book basis'}
                   </p>
                 </div>
@@ -631,13 +631,13 @@ function statusVariant(status: InstrumentRow['status']) {
 function labelInstrumentStatus(status: InstrumentRow['status'], isPolish: boolean) {
   switch (status) {
     case 'VALUED':
-      return isPolish ? 'Aktywny' : 'Active'
+      return isPolish ? 'Pełna wycena' : 'Active'
     case 'STALE':
-      return isPolish ? 'Opóźniony' : 'Stale'
+      return isPolish ? 'Wycena z opóźnieniem' : 'Stale'
     case 'DEGRADED':
-      return isPolish ? 'Częściowy' : 'Degraded'
+      return isPolish ? 'Wycena niepełna' : 'Degraded'
     case 'CATALOG_ONLY':
-      return isPolish ? 'Katalog' : 'Catalog'
+      return isPolish ? 'Tylko w katalogu' : 'Catalog'
   }
 }
 
