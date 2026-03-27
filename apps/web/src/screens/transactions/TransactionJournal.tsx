@@ -1361,7 +1361,7 @@ export function TransactionJournal({
               <div className="flex flex-wrap gap-2 mt-1">
                 {transaction.quantity ? (
                   <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                    {isPolish ? 'ilość' : 'qty'} {formatNumber(transaction.quantity, { maximumFractionDigits: 6 })}
+                    {isPolish ? 'ilość' : 'qty'} {formatNumber(transaction.quantity, { maximumFractionDigits: 0 })}
                   </span>
                 ) : null}
                 {transaction.unitPrice ? (

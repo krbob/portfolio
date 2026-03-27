@@ -346,7 +346,7 @@ export function HoldingsScreen() {
                         <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 ${assetClassDot(holding.assetClass)}`} />
                         <span className="text-zinc-400">{labelAssetClass(holding.assetClass)}</span>
                       </td>
-                      <td className={tdRight}>{formatNumber(holding.quantity, { maximumFractionDigits: 6 })}</td>
+                      <td className={tdRight}>{formatNumber(holding.quantity, { maximumFractionDigits: 0 })}</td>
                       <td className={`${tdRight} font-medium text-zinc-100`}>
                         {formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}
                       </td>
@@ -397,7 +397,7 @@ export function HoldingsScreen() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <DetailStat label={isPolish ? 'Ilość' : 'Quantity'} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 6 })} />
+            <DetailStat label={isPolish ? 'Ilość' : 'Quantity'} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} />
             <DetailStat label={isPolish ? 'Śr. koszt' : 'Avg Cost'} value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)} />
             <DetailStat label={isPolish ? 'Bieżąca cena' : 'Current Price'} value={formatCurrencyPln(selectedHolding.currentPricePln)} />
             <DetailStat label={isPolish ? 'Bieżąca wartość' : 'Current Value'} value={formatCurrencyPln(selectedHolding.currentValuePln ?? selectedHolding.bookValuePln)} />
