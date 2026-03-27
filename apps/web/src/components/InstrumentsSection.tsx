@@ -7,12 +7,28 @@ import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '..
 
 const currentSeriesMonth = new Date().toISOString().slice(0, 7)
 
-function seriesMonthToDate(seriesMonth: string): string {
-  return `${seriesMonth}-01`
-}
+const MONTHS = [
+  { value: '01', pl: 'Styczeń', en: 'January' },
+  { value: '02', pl: 'Luty', en: 'February' },
+  { value: '03', pl: 'Marzec', en: 'March' },
+  { value: '04', pl: 'Kwiecień', en: 'April' },
+  { value: '05', pl: 'Maj', en: 'May' },
+  { value: '06', pl: 'Czerwiec', en: 'June' },
+  { value: '07', pl: 'Lipiec', en: 'July' },
+  { value: '08', pl: 'Sierpień', en: 'August' },
+  { value: '09', pl: 'Wrzesień', en: 'September' },
+  { value: '10', pl: 'Październik', en: 'October' },
+  { value: '11', pl: 'Listopad', en: 'November' },
+  { value: '12', pl: 'Grudzień', en: 'December' },
+] as const
 
-function dateToSeriesMonth(date: string): string {
-  return date.slice(0, 7)
+function edoYearOptions(): string[] {
+  const currentYear = new Date().getFullYear()
+  const years: string[] = []
+  for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+    years.push(String(y))
+  }
+  return years
 }
 
 function buildEdoSeriesName(seriesMonth: string): string {
@@ -187,20 +203,34 @@ export function InstrumentsSection() {
           <>
             <div>
               <span className={labelClass}>{isPolish ? 'Miesiąc serii' : 'Series month'}</span>
-              <input
-                className={input}
-                type="date"
-                value={seriesMonthToDate(form.seriesMonth)}
-                onChange={(event) => {
-                  const month = dateToSeriesMonth(event.target.value)
-                  setForm((current) => ({
-                    ...current,
-                    seriesMonth: month,
-                    name: buildEdoSeriesName(month),
-                  }))
-                }}
-                required
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className={input}
+                  value={form.seriesMonth.split('-')[1] ?? '01'}
+                  onChange={(event) => {
+                    const year = form.seriesMonth.split('-')[0]
+                    const next = `${year}-${event.target.value}`
+                    setForm((current) => ({ ...current, seriesMonth: next, name: buildEdoSeriesName(next) }))
+                  }}
+                >
+                  {MONTHS.map((m) => (
+                    <option key={m.value} value={m.value}>{isPolish ? m.pl : m.en}</option>
+                  ))}
+                </select>
+                <select
+                  className={input}
+                  value={form.seriesMonth.split('-')[0]}
+                  onChange={(event) => {
+                    const month = form.seriesMonth.split('-')[1] ?? '01'
+                    const next = `${event.target.value}-${month}`
+                    setForm((current) => ({ ...current, seriesMonth: next, name: buildEdoSeriesName(next) }))
+                  }}
+                >
+                  {edoYearOptions().map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
