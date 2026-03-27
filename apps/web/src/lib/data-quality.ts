@@ -7,6 +7,8 @@ import type {
 } from '../api/read-model'
 import type { ReadModelRefreshStatus } from '../api/write-model'
 import { formatYearMonth } from './format'
+import type { UiLanguage } from './i18n'
+import { tFor } from './messages'
 
 export type DataQualityStatus = 'PASS' | 'WARN' | 'INFO'
 
@@ -57,6 +59,8 @@ export function buildPortfolioDataQualitySummary({
     return null
   }
 
+  const lang = toLanguage(isPolish)
+
   const latestPoint = history.points.at(-1)
   const usdSeriesAvailable = Boolean(latestPoint?.totalCurrentValueUsd && latestPoint?.netContributionsUsd)
   const goldSeriesAvailable = Boolean(latestPoint?.totalCurrentValueAu && latestPoint?.netContributionsAu)
@@ -83,22 +87,22 @@ export function buildPortfolioDataQualitySummary({
   ])
 
   const checks: PortfolioDataQualityCheck[] = [
-    buildValuationCheck(overview, isPolish),
-    buildInstrumentHistoryCheck(history.instrumentHistoryIssueCount, isPolish),
-    buildFxCheck(overview.missingFxTransactions, usdSeriesAvailable, isPolish),
-    buildGoldCheck(goldSeriesAvailable, isPolish),
+    buildValuationCheck(overview, lang),
+    buildInstrumentHistoryCheck(history.instrumentHistoryIssueCount, lang),
+    buildFxCheck(overview.missingFxTransactions, usdSeriesAvailable, lang),
+    buildGoldCheck(goldSeriesAvailable, lang),
     buildBenchmarkCheck({
       issueCount: history.benchmarkSeriesIssueCount,
       availableBenchmarkCount,
       totalBenchmarkCount,
-      isPolish,
+      lang,
     }),
-    buildCpiCheck(cpiCoverageThroughMonth, isPolish),
+    buildCpiCheck(cpiCoverageThroughMonth, lang),
     buildRefreshCheck({
       historyRefreshAt: historySnapshot?.generatedAt ?? null,
       returnsRefreshAt: returnsSnapshot?.generatedAt ?? null,
       refreshStatus,
-      isPolish,
+      lang,
     }),
   ]
 
@@ -126,22 +130,28 @@ export function buildPortfolioDataQualitySummary({
   }
 }
 
-function buildValuationCheck(overview: PortfolioOverview, isPolish: boolean): PortfolioDataQualityCheck {
+function toLanguage(isPolish: boolean): UiLanguage {
+  return isPolish ? 'pl' : 'en'
+}
+
+function buildValuationCheck(overview: PortfolioOverview, lang: UiLanguage): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.valuationCoverage', lang)
+
   if (overview.activeHoldingCount === 0) {
     return {
       key: 'valuation',
-      label: isPolish ? 'Pokrycie wyceny' : 'Valuation coverage',
+      label,
       status: 'INFO',
-      message: isPolish ? 'Brak aktywnych pozycji do zweryfikowania.' : 'No active holdings to validate yet.',
+      message: tFor('dataQualityLib.noActiveHoldings', lang),
     }
   }
 
   if (overview.valuedHoldingCount === overview.activeHoldingCount && overview.valuationIssueCount === 0) {
     return {
       key: 'valuation',
-      label: isPolish ? 'Pokrycie wyceny' : 'Valuation coverage',
+      label,
       status: 'PASS',
-      message: isPolish
+      message: lang === 'pl'
         ? `Wszystkie ${overview.activeHoldingCount} pozycje mają bieżącą wycenę.`
         : `All ${overview.activeHoldingCount} holdings have current valuations.`,
     }
@@ -149,73 +159,71 @@ function buildValuationCheck(overview: PortfolioOverview, isPolish: boolean): Po
 
   return {
     key: 'valuation',
-    label: isPolish ? 'Pokrycie wyceny' : 'Valuation coverage',
+    label,
     status: 'WARN',
-    message: isPolish
+    message: lang === 'pl'
       ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji jest wycenionych; otwarte luki: ${overview.valuationIssueCount}.`
       : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings are valued; open valuation gaps: ${overview.valuationIssueCount}.`,
   }
 }
 
-function buildInstrumentHistoryCheck(issueCount: number, isPolish: boolean): PortfolioDataQualityCheck {
+function buildInstrumentHistoryCheck(issueCount: number, lang: UiLanguage): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.instrumentHistory', lang)
+
   return issueCount === 0
     ? {
         key: 'instrument-history',
-        label: isPolish ? 'Historia instrumentów' : 'Instrument history',
+        label,
         status: 'PASS',
-        message: isPolish
-          ? 'Historia instrumentów odtwarza się bez luk wyceny.'
-          : 'Instrument history rebuilds without valuation gaps.',
+        message: tFor('dataQualityLib.instrumentHistoryPass', lang),
       }
     : {
         key: 'instrument-history',
-        label: isPolish ? 'Historia instrumentów' : 'Instrument history',
+        label,
         status: 'WARN',
-        message: isPolish
+        message: lang === 'pl'
           ? `Problemy z historią wyceny instrumentów: ${issueCount}.`
           : `Instrument valuation history issues: ${issueCount}.`,
       }
 }
 
-function buildFxCheck(missingFxTransactions: number, usdSeriesAvailable: boolean, isPolish: boolean): PortfolioDataQualityCheck {
+function buildFxCheck(missingFxTransactions: number, usdSeriesAvailable: boolean, lang: UiLanguage): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.fxAndUsd', lang)
+
   if (missingFxTransactions === 0 && usdSeriesAvailable) {
     return {
       key: 'fx',
-      label: isPolish ? 'FX i USD' : 'FX and USD',
+      label,
       status: 'PASS',
-      message: isPolish
-        ? 'Przeliczenia FX i referencyjny widok USD są dostępne.'
-        : 'FX conversions and the USD reference view are available.',
+      message: tFor('dataQualityLib.fxPass', lang),
     }
   }
 
   return {
     key: 'fx',
-    label: isPolish ? 'FX i USD' : 'FX and USD',
+    label,
     status: 'WARN',
-    message: isPolish
+    message: lang === 'pl'
       ? `Brakujące przeliczenia FX: ${missingFxTransactions}. Widok USD ${usdSeriesAvailable ? 'działa częściowo' : 'jest niedostępny'}.`
       : `Missing FX conversions: ${missingFxTransactions}. USD view is ${usdSeriesAvailable ? 'partially available' : 'unavailable'}.`,
   }
 }
 
-function buildGoldCheck(goldSeriesAvailable: boolean, isPolish: boolean): PortfolioDataQualityCheck {
+function buildGoldCheck(goldSeriesAvailable: boolean, lang: UiLanguage): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.gold', lang)
+
   return goldSeriesAvailable
     ? {
         key: 'gold',
-        label: isPolish ? 'Złoto' : 'Gold',
+        label,
         status: 'PASS',
-        message: isPolish
-          ? 'Referencyjny widok złota jest dostępny dla bieżącego zakresu.'
-          : 'The gold reference view is available for the current window.',
+        message: tFor('dataQualityLib.goldPass', lang),
       }
     : {
         key: 'gold',
-        label: isPolish ? 'Złoto' : 'Gold',
+        label,
         status: 'WARN',
-        message: isPolish
-          ? 'Referencyjny widok złota jest obecnie niedostępny dla bieżącego zakresu.'
-          : 'The gold reference view is currently unavailable for the active window.',
+        message: tFor('dataQualityLib.goldWarn', lang),
       }
 }
 
@@ -223,28 +231,30 @@ function buildBenchmarkCheck({
   issueCount,
   availableBenchmarkCount,
   totalBenchmarkCount,
-  isPolish,
+  lang,
 }: {
   issueCount: number
   availableBenchmarkCount: number
   totalBenchmarkCount: number
-  isPolish: boolean
+  lang: UiLanguage
 }): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.benchmarks', lang)
+
   if (totalBenchmarkCount === 0) {
     return {
       key: 'benchmarks',
-      label: isPolish ? 'Benchmarki' : 'Benchmarks',
+      label,
       status: 'INFO',
-      message: isPolish ? 'Nie skonfigurowano jeszcze benchmarków.' : 'No benchmarks are configured yet.',
+      message: tFor('dataQualityLib.noBenchmarksConfigured', lang),
     }
   }
 
   if (issueCount === 0 && availableBenchmarkCount === totalBenchmarkCount) {
     return {
       key: 'benchmarks',
-      label: isPolish ? 'Benchmarki' : 'Benchmarks',
+      label,
       status: 'PASS',
-      message: isPolish
+      message: lang === 'pl'
         ? `Dostępne benchmarki: ${availableBenchmarkCount} z ${totalBenchmarkCount}.`
         : `Available benchmarks: ${availableBenchmarkCount} of ${totalBenchmarkCount}.`,
     }
@@ -252,21 +262,23 @@ function buildBenchmarkCheck({
 
   return {
     key: 'benchmarks',
-    label: isPolish ? 'Benchmarki' : 'Benchmarks',
+    label,
     status: 'WARN',
-    message: isPolish
+    message: lang === 'pl'
       ? `Dostępne benchmarki: ${availableBenchmarkCount} z ${totalBenchmarkCount}; problemy serii: ${issueCount}.`
       : `Available benchmarks: ${availableBenchmarkCount} of ${totalBenchmarkCount}; series issues: ${issueCount}.`,
   }
 }
 
-function buildCpiCheck(cpiCoverageThroughMonth: string | null, isPolish: boolean): PortfolioDataQualityCheck {
+function buildCpiCheck(cpiCoverageThroughMonth: string | null, lang: UiLanguage): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.cpi', lang)
+
   if (cpiCoverageThroughMonth) {
     return {
       key: 'cpi',
-      label: isPolish ? 'CPI' : 'CPI',
+      label,
       status: 'PASS',
-      message: isPolish
+      message: lang === 'pl'
         ? `Pokrycie CPI do ${formatYearMonth(cpiCoverageThroughMonth)}.`
         : `CPI coverage through ${formatYearMonth(cpiCoverageThroughMonth)}.`,
     }
@@ -274,11 +286,9 @@ function buildCpiCheck(cpiCoverageThroughMonth: string | null, isPolish: boolean
 
   return {
     key: 'cpi',
-    label: isPolish ? 'CPI' : 'CPI',
+    label,
     status: 'WARN',
-    message: isPolish
-      ? 'Brak dostępnego okna CPI dla realnego PLN.'
-      : 'No CPI coverage window is currently available for real PLN.',
+    message: tFor('dataQualityLib.noCpiCoverage', lang),
   }
 }
 
@@ -286,13 +296,14 @@ function buildRefreshCheck({
   historyRefreshAt,
   returnsRefreshAt,
   refreshStatus,
-  isPolish,
+  lang,
 }: {
   historyRefreshAt: string | null
   returnsRefreshAt: string | null
   refreshStatus: ReadModelRefreshStatus
-  isPolish: boolean
+  lang: UiLanguage
 }): PortfolioDataQualityCheck {
+  const label = tFor('dataQualityLib.refreshLabel', lang)
   const lastSuccessfulRefreshAt = latestTimestamp([
     refreshStatus.lastSuccessAt,
     historyRefreshAt,
@@ -303,12 +314,12 @@ function buildRefreshCheck({
     refreshStatus.lastFailureAt &&
     (!lastSuccessfulRefreshAt || compareTimestamps(refreshStatus.lastFailureAt, lastSuccessfulRefreshAt) > 0)
   ) {
-    const failureMessage = refreshStatus.lastFailureMessage ?? (isPolish ? 'Ostatnie odświeżenie zakończyło się błędem.' : 'The latest refresh failed.')
+    const failureMessage = refreshStatus.lastFailureMessage ?? tFor('dataQualityLib.refreshFallbackFailure', lang)
     return {
       key: 'refresh',
-      label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
+      label,
       status: 'WARN',
-      message: isPolish
+      message: lang === 'pl'
         ? `Ostatnie odświeżenie nie powiodło się ${refreshStatus.lastFailureAt}: ${failureMessage}`
         : `The latest refresh failed at ${refreshStatus.lastFailureAt}: ${failureMessage}`,
     }
@@ -317,9 +328,9 @@ function buildRefreshCheck({
   if (lastSuccessfulRefreshAt) {
     return {
       key: 'refresh',
-      label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
+      label,
       status: 'PASS',
-      message: isPolish
+      message: lang === 'pl'
         ? `Ostatnie udane odświeżenie: ${lastSuccessfulRefreshAt}.`
         : `Last successful refresh: ${lastSuccessfulRefreshAt}.`,
     }
@@ -327,11 +338,9 @@ function buildRefreshCheck({
 
   return {
     key: 'refresh',
-    label: isPolish ? 'Odświeżanie modeli odczytowych' : 'Read-model refresh',
+    label,
     status: 'INFO',
-    message: isPolish
-      ? 'Modele odczytowe nie były jeszcze odświeżane w tle.'
-      : 'Read models have not been refreshed in the background yet.',
+    message: tFor('dataQualityLib.noRefreshYet', lang),
   }
 }
 

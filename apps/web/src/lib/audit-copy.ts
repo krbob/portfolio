@@ -5,6 +5,8 @@ import {
   labelTransactionType,
   labelValuationSource,
 } from './labels'
+import { tFor } from './messages'
+import type { UiLanguage } from './i18n'
 
 interface AuditEventLike {
   action: string
@@ -119,6 +121,7 @@ export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean
 }
 
 export function buildAuditMetadataSummary(metadata: Record<string, string>, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
   const parts: string[] = []
 
   const source = formatAuditSource(metadata)
@@ -127,91 +130,93 @@ export function buildAuditMetadataSummary(metadata: Record<string, string>, isPo
   }
 
   if (metadata.mode) {
-    parts.push(isPolish ? `tryb ${metadata.mode}` : `mode ${metadata.mode}`)
+    parts.push(`${tFor('auditCopy.modePrefix', lang)} ${metadata.mode}`)
   }
 
   if (metadata.trigger) {
-    parts.push(isPolish ? `uruchomienie: ${labelAuditTrigger(metadata.trigger)}` : `trigger ${metadata.trigger}`)
+    parts.push(`${tFor('auditCopy.triggerPrefix', lang)} ${labelAuditTrigger(metadata.trigger)}`)
   }
 
   if (metadata.profileName) {
-    parts.push(isPolish ? `profil ${metadata.profileName}` : `profile ${metadata.profileName}`)
+    parts.push(`${tFor('auditCopy.profilePrefix', lang)} ${metadata.profileName}`)
   }
 
-  pushCount(parts, metadata.createdCount, isPolish ? 'utworzono' : 'created')
-  pushCount(parts, metadata.skippedDuplicateCount, isPolish ? 'pominięto duplikaty' : 'skipped duplicates')
-  pushCount(parts, metadata.invalidRowCount, isPolish ? 'błędne wiersze' : 'invalid rows')
-  pushCount(parts, metadata.duplicateExistingCount, isPolish ? 'duplikaty istniejące' : 'existing duplicates')
-  pushCount(parts, metadata.duplicateBatchCount, isPolish ? 'duplikaty w paczce' : 'batch duplicates')
-  pushCount(parts, metadata.rowCount, isPolish ? 'wiersze' : 'rows')
-  pushCount(parts, metadata.transactionCount, isPolish ? 'transakcje' : 'transactions')
-  pushCount(parts, metadata.accountCount, isPolish ? 'konta' : 'accounts')
-  pushCount(parts, metadata.instrumentCount, isPolish ? 'instrumenty' : 'instruments')
-  pushCount(parts, metadata.targetCount, isPolish ? 'cele' : 'targets')
-  pushCount(parts, metadata.appPreferenceCount, isPolish ? 'ustawienia aplikacji' : 'app settings')
-  pushCount(parts, metadata.importProfileCount, isPolish ? 'profile importu' : 'import profiles')
-  pushCount(parts, metadata.retentionCount, isPolish ? 'retencja' : 'retention')
+  pushCount(parts, metadata.createdCount, tFor('auditCopy.countCreated', lang))
+  pushCount(parts, metadata.skippedDuplicateCount, tFor('auditCopy.countSkippedDuplicates', lang))
+  pushCount(parts, metadata.invalidRowCount, tFor('auditCopy.countInvalidRows', lang))
+  pushCount(parts, metadata.duplicateExistingCount, tFor('auditCopy.countExistingDuplicates', lang))
+  pushCount(parts, metadata.duplicateBatchCount, tFor('auditCopy.countBatchDuplicates', lang))
+  pushCount(parts, metadata.rowCount, tFor('auditCopy.countRows', lang))
+  pushCount(parts, metadata.transactionCount, tFor('auditCopy.countTransactions', lang))
+  pushCount(parts, metadata.accountCount, tFor('auditCopy.countAccounts', lang))
+  pushCount(parts, metadata.instrumentCount, tFor('auditCopy.countInstruments', lang))
+  pushCount(parts, metadata.targetCount, tFor('auditCopy.countTargets', lang))
+  pushCount(parts, metadata.appPreferenceCount, tFor('auditCopy.countAppSettings', lang))
+  pushCount(parts, metadata.importProfileCount, tFor('auditCopy.countImportProfiles', lang))
+  pushCount(parts, metadata.retentionCount, tFor('auditCopy.countRetention', lang))
 
   if (metadata.safetyBackupFileName && metadata.safetyBackupFileName !== 'none') {
-    parts.push(isPolish ? `kopia bezpieczeństwa ${metadata.safetyBackupFileName}` : `safety backup ${metadata.safetyBackupFileName}`)
+    parts.push(`${tFor('auditCopy.safetyBackupPrefix', lang)} ${metadata.safetyBackupFileName}`)
   }
 
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
 export function buildAuditMetadataEntries(metadata: Record<string, string>, isPolish: boolean): Array<[string, string]> {
+  const lang = toLanguage(isPolish)
+
   const labels: Record<string, string> = {
-    upstream: isPolish ? 'Usługa' : 'Upstream',
-    operation: isPolish ? 'Operacja' : 'Operation',
-    symbol: isPolish ? 'Symbol' : 'Symbol',
-    instrumentName: isPolish ? 'Instrument' : 'Instrument',
-    valuationSource: isPolish ? 'Źródło wyceny' : 'Valuation source',
-    purchaseDate: isPolish ? 'Data zakupu' : 'Purchase date',
-    from: isPolish ? 'Od' : 'From',
-    to: isPolish ? 'Do' : 'To',
-    statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
-    responseBodyPreview: isPolish ? 'Treść odpowiedzi' : 'Response body',
-    reason: isPolish ? 'Powód' : 'Reason',
-    exceptionType: isPolish ? 'Typ wyjątku' : 'Exception type',
-    mode: isPolish ? 'Tryb' : 'Mode',
-    trigger: isPolish ? 'Uruchomienie' : 'Trigger',
-    sourceLabel: isPolish ? 'Źródło' : 'Source',
-    sourceFileName: isPolish ? 'Plik źródłowy' : 'Source file',
-    profileName: isPolish ? 'Profil' : 'Profile',
-    createdCount: isPolish ? 'Utworzono' : 'Created',
-    skippedDuplicateCount: isPolish ? 'Pominięte duplikaty' : 'Skipped duplicates',
-    invalidRowCount: isPolish ? 'Błędne wiersze' : 'Invalid rows',
-    duplicateExistingCount: isPolish ? 'Duplikaty istniejące' : 'Existing duplicates',
-    duplicateBatchCount: isPolish ? 'Duplikaty w paczce' : 'Batch duplicates',
-    rowCount: isPolish ? 'Liczba wierszy' : 'Row count',
-    transactionCount: isPolish ? 'Transakcje' : 'Transactions',
-    accountCount: isPolish ? 'Konta' : 'Accounts',
-    appPreferenceCount: isPolish ? 'Ustawienia aplikacji' : 'App settings',
-    instrumentCount: isPolish ? 'Instrumenty' : 'Instruments',
-    targetCount: isPolish ? 'Cele' : 'Targets',
-    importProfileCount: isPolish ? 'Profile importu' : 'Import profiles',
-    retentionCount: isPolish ? 'Retencja' : 'Retention',
-    safetyBackupFileName: isPolish ? 'Kopia bezpieczeństwa' : 'Safety backup',
-    error: isPolish ? 'Błąd' : 'Error',
-    failureMessage: isPolish ? 'Komunikat błędu' : 'Failure message',
-    name: isPolish ? 'Nazwa' : 'Name',
-    delimiter: isPolish ? 'Separator kolumn' : 'Delimiter',
-    dateFormat: isPolish ? 'Format daty' : 'Date format',
-    decimalSeparator: isPolish ? 'Separator dziesiętny' : 'Decimal separator',
-    institution: isPolish ? 'Instytucja' : 'Institution',
-    type: isPolish ? 'Typ' : 'Type',
-    baseCurrency: isPolish ? 'Waluta bazowa' : 'Base currency',
-    displayOrder: isPolish ? 'Kolejność' : 'Display order',
-    orderedAccountIds: isPolish ? 'Id kont w kolejności' : 'Ordered account ids',
-    kind: isPolish ? 'Rodzaj instrumentu' : 'Instrument kind',
-    assetClass: isPolish ? 'Klasa aktywów' : 'Asset class',
-    currency: isPolish ? 'Waluta' : 'Currency',
-    accountId: isPolish ? 'Id konta' : 'Account id',
-    instrumentId: isPolish ? 'Id instrumentu' : 'Instrument id',
-    tradeDate: isPolish ? 'Data transakcji' : 'Trade date',
-    settlementDate: isPolish ? 'Data rozliczenia' : 'Settlement date',
-    grossAmount: isPolish ? 'Kwota brutto' : 'Gross amount',
-    sizeBytes: isPolish ? 'Rozmiar w bajtach' : 'Size bytes',
+    upstream: tFor('auditCopy.metaUpstream', lang),
+    operation: tFor('auditCopy.metaOperation', lang),
+    symbol: tFor('auditCopy.metaSymbol', lang),
+    instrumentName: tFor('auditCopy.metaInstrumentName', lang),
+    valuationSource: tFor('auditCopy.metaValuationSource', lang),
+    purchaseDate: tFor('auditCopy.metaPurchaseDate', lang),
+    from: tFor('auditCopy.metaFrom', lang),
+    to: tFor('auditCopy.metaTo', lang),
+    statusCode: tFor('auditCopy.metaStatusCode', lang),
+    responseBodyPreview: tFor('auditCopy.metaResponseBodyPreview', lang),
+    reason: tFor('auditCopy.metaReason', lang),
+    exceptionType: tFor('auditCopy.metaExceptionType', lang),
+    mode: tFor('auditCopy.metaMode', lang),
+    trigger: tFor('auditCopy.metaTrigger', lang),
+    sourceLabel: tFor('auditCopy.metaSourceLabel', lang),
+    sourceFileName: tFor('auditCopy.metaSourceFileName', lang),
+    profileName: tFor('auditCopy.metaProfileName', lang),
+    createdCount: tFor('auditCopy.metaCreatedCount', lang),
+    skippedDuplicateCount: tFor('auditCopy.metaSkippedDuplicateCount', lang),
+    invalidRowCount: tFor('auditCopy.metaInvalidRowCount', lang),
+    duplicateExistingCount: tFor('auditCopy.metaDuplicateExistingCount', lang),
+    duplicateBatchCount: tFor('auditCopy.metaDuplicateBatchCount', lang),
+    rowCount: tFor('auditCopy.metaRowCount', lang),
+    transactionCount: tFor('auditCopy.metaTransactionCount', lang),
+    accountCount: tFor('auditCopy.metaAccountCount', lang),
+    appPreferenceCount: tFor('auditCopy.metaAppPreferenceCount', lang),
+    instrumentCount: tFor('auditCopy.metaInstrumentCount', lang),
+    targetCount: tFor('auditCopy.metaTargetCount', lang),
+    importProfileCount: tFor('auditCopy.metaImportProfileCount', lang),
+    retentionCount: tFor('auditCopy.metaRetentionCount', lang),
+    safetyBackupFileName: tFor('auditCopy.metaSafetyBackupFileName', lang),
+    error: tFor('auditCopy.metaError', lang),
+    failureMessage: tFor('auditCopy.metaFailureMessage', lang),
+    name: tFor('auditCopy.metaName', lang),
+    delimiter: tFor('auditCopy.metaDelimiter', lang),
+    dateFormat: tFor('auditCopy.metaDateFormat', lang),
+    decimalSeparator: tFor('auditCopy.metaDecimalSeparator', lang),
+    institution: tFor('auditCopy.metaInstitution', lang),
+    type: tFor('auditCopy.metaType', lang),
+    baseCurrency: tFor('auditCopy.metaBaseCurrency', lang),
+    displayOrder: tFor('auditCopy.metaDisplayOrder', lang),
+    orderedAccountIds: tFor('auditCopy.metaOrderedAccountIds', lang),
+    kind: tFor('auditCopy.metaKind', lang),
+    assetClass: tFor('auditCopy.metaAssetClass', lang),
+    currency: tFor('auditCopy.metaCurrency', lang),
+    accountId: tFor('auditCopy.metaAccountId', lang),
+    instrumentId: tFor('auditCopy.metaInstrumentId', lang),
+    tradeDate: tFor('auditCopy.metaTradeDate', lang),
+    settlementDate: tFor('auditCopy.metaSettlementDate', lang),
+    grossAmount: tFor('auditCopy.metaGrossAmount', lang),
+    sizeBytes: tFor('auditCopy.metaSizeBytes', lang),
   }
 
   return Object.entries(metadata)
@@ -222,6 +227,10 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, isPo
 
 export function isHighImpactAuditAction(action: string) {
   return ['DELETED', 'RESTORED', 'IMPORTED', 'PRUNED', 'FAILED'].some((marker) => action.includes(marker))
+}
+
+function toLanguage(isPolish: boolean): UiLanguage {
+  return isPolish ? 'pl' : 'en'
 }
 
 function pushCount(parts: string[], value: string | undefined, label: string) {

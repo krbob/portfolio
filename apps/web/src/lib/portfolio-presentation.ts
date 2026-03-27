@@ -4,6 +4,8 @@ import {
   notApplicableLabel,
 } from './availability'
 import { formatNumber, formatPercent, formatSignedCurrencyPln } from './format'
+import type { UiLanguage } from './i18n'
+import { tFor } from './messages'
 import { badgeVariants } from './styles'
 
 interface PortfolioGainDescriptionOptions {
@@ -45,14 +47,14 @@ export function describePortfolioGain(
   isPolish: boolean,
   options: PortfolioGainDescriptionOptions = {},
 ) {
+  const lang = toLanguage(isPolish)
+
   if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
+    return tFor('presentation.noActiveHoldings', lang)
   }
 
   if (valuedHoldingCount === 0) {
-    return isPolish
-      ? 'Brak wyceny rynkowej aktywnych pozycji'
-      : 'No market valuation for active holdings'
+    return tFor('presentation.noMarketValuationActive', lang)
   }
 
   if (valuedHoldingCount < activeHoldingCount) {
@@ -60,14 +62,14 @@ export function describePortfolioGain(
       isPolish
         ? `${valuedHoldingCount}/${activeHoldingCount} pozycji z wyceną rynkową`
         : `${valuedHoldingCount}/${activeHoldingCount} holdings with market valuation`,
-      isPolish,
+      lang,
       options,
     )
   }
 
   return withGainScope(
-    isPolish ? 'Tylko aktywne pozycje' : 'Active holdings only',
-    isPolish,
+    tFor('presentation.activeHoldingsOnly', lang),
+    lang,
     options,
   )
 }
@@ -78,12 +80,14 @@ export function describeHoldingGainRate(
   gainPct: number | null,
   isPolish: boolean,
 ) {
+  const lang = toLanguage(isPolish)
+
   if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
+    return tFor('presentation.noActiveHoldings', lang)
   }
 
   if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej' : 'No market valuation'
+    return tFor('presentation.noMarketValuation', lang)
   }
 
   if (valuedHoldingCount < activeHoldingCount) {
@@ -101,12 +105,14 @@ export function describeHoldingGainValue(
   value: string | number | null | undefined,
   isPolish: boolean,
 ) {
+  const lang = toLanguage(isPolish)
+
   if (activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji' : 'No active holdings'
+    return tFor('presentation.noActiveHoldings', lang)
   }
 
   if (valuedHoldingCount === 0) {
-    return isPolish ? 'Brak wyceny rynkowej pozycji' : 'No market valuation for holdings'
+    return tFor('presentation.noMarketValuationHoldings', lang)
   }
 
   return formatSignedCurrencyPln(value ?? 0)
@@ -131,15 +137,17 @@ export function formatHoldingQuantity(value: string | number) {
 }
 
 export function labelPortfolioValuationState(valuationState: string, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
+
   switch (valuationState) {
     case 'MARK_TO_MARKET':
-      return isPolish ? 'Rynkowa' : 'Market'
+      return tFor('presentation.valuationMarket', lang)
     case 'STALE':
-      return isPolish ? 'Opóźniona' : 'Stale'
+      return tFor('presentation.valuationStale', lang)
     case 'PARTIALLY_VALUED':
-      return isPolish ? 'Niepełna' : 'Partial'
+      return tFor('presentation.valuationPartial', lang)
     case 'BOOK_ONLY':
-      return isPolish ? 'Księgowa' : 'Book'
+      return tFor('presentation.valuationBook', lang)
     default:
       return valuationState
   }
@@ -161,26 +169,30 @@ export function portfolioValuationStateVariant(valuationState: string) {
 }
 
 export function labelPrimaryPortfolioValueMetric(valuationState: string, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
+
   if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? 'Wartość księgowa' : 'Book Value'
+    return tFor('presentation.metricBookValue', lang)
   }
   if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? 'Wartość szacunkowa' : 'Estimated Value'
+    return tFor('presentation.metricEstimatedValue', lang)
   }
-  return isPolish ? 'Wartość portfela' : 'Portfolio Value'
+  return tFor('presentation.metricPortfolioValue', lang)
 }
 
 export function labelPortfolioValuationBasis(valuationState: string, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
+
   if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? 'Księgowa' : 'Book basis'
+    return tFor('presentation.basisBook', lang)
   }
   if (valuationState === 'STALE') {
-    return isPolish ? 'Rynkowa z opóźnieniem' : 'Stale market'
+    return tFor('presentation.basisStale', lang)
   }
   if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? 'Częściowa' : 'Partial'
+    return tFor('presentation.basisPartial', lang)
   }
-  return isPolish ? 'Rynkowa' : 'Market'
+  return tFor('presentation.basisMarket', lang)
 }
 
 export function describePrimaryPortfolioValue(
@@ -212,26 +224,29 @@ export function describePrimaryPortfolioValue(
 }
 
 export function describeAssetSliceValuation(pct: number, valuationState: string, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
   const base = isPolish ? `${formatPercent(pct)} portfela` : `${formatPercent(pct)} of portfolio`
 
   if (valuationState === 'BOOK_ONLY') {
-    return isPolish ? `${base} · wycena księgowa` : `${base} · book basis`
+    return `${base} · ${tFor('presentation.sliceBookBasis', lang)}`
   }
 
   if (valuationState === 'PARTIALLY_VALUED') {
-    return isPolish ? `${base} · wycena częściowa` : `${base} · partially valued`
+    return `${base} · ${tFor('presentation.slicePartiallyValued', lang)}`
   }
 
   if (valuationState === 'STALE') {
-    return isPolish ? `${base} · ceny z opóźnieniem` : `${base} · stale pricing`
+    return `${base} · ${tFor('presentation.sliceStalePricing', lang)}`
   }
 
   return base
 }
 
 export function describePortfolioValuationBasis(overview: PortfolioOverview, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
+
   if (overview.activeHoldingCount === 0) {
-    return isPolish ? 'Brak aktywnych pozycji do wyceny' : 'No active holdings to value'
+    return tFor('presentation.noActiveHoldingsToValue', lang)
   }
 
   if (overview.valuationState === 'STALE') {
@@ -245,14 +260,18 @@ export function describePortfolioValuationBasis(overview: PortfolioOverview, isP
     : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings have market valuations`
 }
 
+function toLanguage(isPolish: boolean): UiLanguage {
+  return isPolish ? 'pl' : 'en'
+}
+
 function withGainScope(
   message: string,
-  isPolish: boolean,
+  lang: UiLanguage,
   options: PortfolioGainDescriptionOptions,
 ) {
   if (!options.cashExcluded) {
     return message
   }
 
-  return `${message} · ${isPolish ? 'bez gotówki' : 'cash excluded'}`
+  return `${message} · ${tFor('presentation.cashExcluded', lang)}`
 }

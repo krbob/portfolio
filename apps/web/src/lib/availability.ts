@@ -1,4 +1,4 @@
-import { getActiveUiLanguage } from './i18n'
+import { t } from './messages'
 
 export function unavailableLabel(isPolish: boolean) {
   return isPolish ? 'Niedostępne' : 'Unavailable'
@@ -13,13 +13,13 @@ export function missingDataLabel(isPolish: boolean) {
 }
 
 export function activeUnavailableLabel() {
-  return unavailableLabel(getActiveUiLanguage() === 'pl')
+  return t('common.unavailable')
 }
 
 export function activeNotApplicableLabel() {
-  return notApplicableLabel(getActiveUiLanguage() === 'pl')
+  return t('common.na')
 }
 
 export function activeMissingDataLabel() {
-  return missingDataLabel(getActiveUiLanguage() === 'pl')
+  return t('common.missingData')
 }
