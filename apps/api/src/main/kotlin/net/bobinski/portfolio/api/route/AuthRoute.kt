@@ -16,6 +16,7 @@ import io.ktor.server.sessions.sessions
 import io.ktor.server.sessions.set
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.auth.config.AuthConfig
+import net.bobinski.portfolio.api.auth.config.matchesPassword
 import net.bobinski.portfolio.api.auth.config.modeName
 import net.bobinski.portfolio.api.auth.config.passwordFingerprint
 import net.bobinski.portfolio.api.plugins.ErrorResponse
@@ -55,7 +56,7 @@ fun Route.authRoute(application: Application) {
             }
 
             val payload = call.receive<CreateAuthSessionRequest>()
-            if (payload.password != authConfig.password) {
+            if (!authConfig.matchesPassword(payload.password)) {
                 call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid password."))
                 return@post
             }

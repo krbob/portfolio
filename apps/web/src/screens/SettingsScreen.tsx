@@ -10,8 +10,10 @@ import { PortfolioSetupGuideSection } from '../components/PortfolioSetupGuideSec
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
+import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { Card, SectionHeader } from '../components/ui'
+import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { t } from '../lib/messages'
 
 const SETTINGS_SECTIONS = [
@@ -28,9 +30,13 @@ const SETTINGS_SECTIONS = [
 ] as const
 
 export function SettingsScreen() {
+  const staleAlert = useStaleMarketDataAlert()
+
   return (
     <>
       <PageHeader title={t('settings.title')} />
+
+      <StaleMarketDataAlert alert={staleAlert.alert} />
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">
         {SETTINGS_SECTIONS.map((section) => (

@@ -1475,6 +1475,24 @@ export interface components {
             confirmation?: string | null;
             snapshot: components["schemas"]["PortfolioSnapshotResponse"];
         };
+        /** net.bobinski.portfolio.api.route.PortfolioImportEntityDiffResponse */
+        PortfolioImportEntityDiffResponse: {
+            createdCount: number;
+            updatedCount: number;
+            unchangedCount: number;
+            preservedCount: number;
+            deletedCount: number;
+            sectionSkipped: boolean;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioImportDiffResponse */
+        PortfolioImportDiffResponse: {
+            accounts: components["schemas"]["PortfolioImportEntityDiffResponse"];
+            appPreferences: components["schemas"]["PortfolioImportEntityDiffResponse"];
+            instruments: components["schemas"]["PortfolioImportEntityDiffResponse"];
+            targets: components["schemas"]["PortfolioImportEntityDiffResponse"];
+            transactions: components["schemas"]["PortfolioImportEntityDiffResponse"];
+            importProfiles: components["schemas"]["PortfolioImportEntityDiffResponse"];
+        };
         /** net.bobinski.portfolio.api.route.PortfolioImportIssueResponse */
         PortfolioImportIssueResponse: {
             severity: string;
@@ -1506,6 +1524,7 @@ export interface components {
             matchingImportProfileCount: number;
             blockingIssueCount: number;
             warningCount: number;
+            diff: components["schemas"]["PortfolioImportDiffResponse"];
             issues: components["schemas"]["PortfolioImportIssueResponse"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioImportResultResponse */

@@ -13,6 +13,11 @@ class InMemoryAppPreferenceRepository : AppPreferenceRepository {
         .values
         .sortedBy(AppPreference::key)
 
+    override suspend fun listByPrefix(prefix: String): List<AppPreference> = state.get()
+        .values
+        .filter { preference -> preference.key.startsWith(prefix) }
+        .sortedBy(AppPreference::key)
+
     override suspend fun save(preference: AppPreference): AppPreference {
         state.updateAndGet { current ->
             current + (preference.key to preference)

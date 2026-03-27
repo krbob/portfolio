@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
+import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { formatCurrencyBreakdown, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
@@ -27,6 +29,7 @@ export function DashboardScreen() {
   const historyQuery = usePortfolioDailyHistory()
   const allocationQuery = usePortfolioAllocation()
   const dataQuality = usePortfolioDataQuality()
+  const staleAlert = useStaleMarketDataAlert()
   const overview = overviewQuery.data
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
@@ -162,6 +165,8 @@ export function DashboardScreen() {
           </span>
         )}
       </PageHeader>
+
+      <StaleMarketDataAlert alert={staleAlert.alert} />
 
       <DashboardHeroStats
         isPolish={isPolish}

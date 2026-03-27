@@ -30,9 +30,7 @@ class AppPreferenceService(
         serializer: KSerializer<T>
     ): T? {
         val preference = repository.get(key) ?: return null
-        return runCatching {
-            json.decodeFromString(serializer, preference.valueJson)
-        }.getOrNull()
+        return decodeOrNull(preference, serializer)
     }
 
     suspend fun <T> put(
@@ -51,7 +49,14 @@ class AppPreferenceService(
     }
 
     suspend fun listByPrefix(prefix: String): List<AppPreference> =
-        repository.list().filter { preference -> preference.key.startsWith(prefix) }
+        repository.listByPrefix(prefix)
 
     suspend fun delete(key: String): Boolean = repository.delete(key)
+
+    fun <T> decodeOrNull(
+        preference: AppPreference,
+        serializer: KSerializer<T>
+    ): T? = runCatching {
+        json.decodeFromString(serializer, preference.valueJson)
+    }.getOrNull()
 }

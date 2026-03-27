@@ -2,29 +2,23 @@
 
 ## Update an existing deployment
 
-Pull the latest images and restart the stack:
-
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-If you run the self-hosted market-data override on ARM hardware, keep `PORTFOLIO_MARKET_DATA_PLATFORM=linux/amd64` unless the upstream images become multi-arch.
+If you use the self-hosted market-data override on ARM hardware, keep `PORTFOLIO_MARKET_DATA_PLATFORM=linux/amd64` unless the upstream images publish multi-arch images.
 
 ## Fresh start from zero
-
-If you want an empty deployment with no previous SQLite data and no previous backup history:
 
 ```bash
 docker compose down --volumes --remove-orphans
 docker compose up -d
 ```
 
-This removes the named Docker volumes used by the app stack.
+This removes the named volumes used for SQLite data and server backups.
 
-## Health checks after deploy
-
-Minimum verification:
+## Minimum post-deploy verification
 
 ```bash
 curl -sSf http://127.0.0.1:18082/v1/health
@@ -32,29 +26,69 @@ curl -s http://127.0.0.1:18082/v1/readiness
 curl -sSf http://127.0.0.1:4174/api/v1/meta
 ```
 
-When the app uses market-data integrations, degraded or stale readiness is acceptable if the upstreams are reachable but partial coverage exists.
+Then confirm in the UI:
 
-## Backup and restore
+- login still works if auth is enabled
+- `Settings -> Health` is readable
+- `Settings -> Import / export` preview still opens
+- `Settings -> Targets` still shows current target history
 
-- Scheduled JSON backups remain the first recovery path.
-- Canonical export/import remains available for portability and migrations.
-- `REPLACE` restore/import is destructive and should be treated as a maintenance operation.
+## Import and restore workflow
 
-For a safer restore workflow:
+For any non-trivial state change:
 
-1. Download or export the current state first.
-2. Run the restore/import.
-3. Verify `overview`, `holdings`, `accounts`, and `transactions`.
+1. Export the current canonical state or confirm that a recent server backup exists.
+2. Run preview first.
+3. Read blocking issues and warnings, not just the summary badge.
+4. For `REPLACE`, confirm the safety backup was created.
+5. After the operation, verify:
+   - overview
+   - holdings
+   - transactions
+   - targets
+   - import profiles
 
-## Market-data behavior
+Important semantics:
 
-The app now persists last-known-good market-data snapshots for quotes, history, benchmarks, and inflation series.
+- in `MERGE`, missing `targets` means preserve current targets
+- in `MERGE`, present `targets` replace the allocation set
+- in `MERGE`, missing `importProfiles` means preserve current profiles
+- preview and real import should agree on business validation
 
-Operationally this means:
+## Backup and restore posture
 
-- temporary upstream failures can fall back to cached values
-- fallback values are surfaced as `STALE` or degraded coverage, not silently treated as fresh
-- read-model cache invalidation also reacts to market-data snapshot updates
+- scheduled JSON backups are the first recovery path
+- canonical export/import remains the portability path
+- `REPLACE` restore/import is a maintenance action, not a casual edit flow
+
+If a restore is needed, prefer:
+
+1. create or download a fresh backup of the current state
+2. preview the incoming snapshot
+3. restore/import
+4. validate user-facing views
+5. check the audit log for backup and restore events
+
+## Market-data behavior and stale handling
+
+The app can run in three meaningful data states:
+
+- healthy live data
+- fallback data available but stale
+- partial or missing coverage
+
+Operational interpretation:
+
+- `STALE` is acceptable as a temporary degraded mode
+- it is not acceptable if the product keeps staying stale without a known upstream reason
+- fallback snapshots should explain why the app is still usable
+
+When investigating market-data issues:
+
+1. check `Settings -> Health`
+2. check `Settings -> Data quality`
+3. check `Settings -> Market data`
+4. inspect recent audit events for upstream failures
 
 ## Auth guardrails
 
@@ -62,5 +96,8 @@ If password auth is enabled:
 
 - use a real `PORTFOLIO_AUTH_SESSION_SECRET`
 - keep the session secret distinct from the password
-- use a valid cookie name with no spaces or separators
-- prefer `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
+- keep `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
+- keep the cookie name simple and RFC-safe
+- do not expose OpenAPI UI publicly unless you intentionally want it
+
+The auth model is intentionally thin. It is designed for single-user self-hosting, not as a general identity system.

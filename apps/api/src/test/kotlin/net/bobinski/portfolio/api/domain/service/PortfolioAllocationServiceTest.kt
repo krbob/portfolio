@@ -66,6 +66,7 @@ class PortfolioAllocationServiceTest {
         )
         val targetService = PortfolioTargetService(
             portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
             clock = CLOCK
         )
         val allocationService = PortfolioAllocationService(
@@ -162,6 +163,7 @@ class PortfolioAllocationServiceTest {
         )
         val targetService = PortfolioTargetService(
             portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
             clock = CLOCK
         )
         val allocationService = PortfolioAllocationService(

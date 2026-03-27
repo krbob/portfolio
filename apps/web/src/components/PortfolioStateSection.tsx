@@ -11,12 +11,10 @@ import {
   useTransactions,
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
-import { useI18n } from '../lib/i18n'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioStateSection() {
-  const { isPolish } = useI18n()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const targetsQuery = usePortfolioTargets()
@@ -42,9 +40,14 @@ export function PortfolioStateSection() {
       const snapshot = await exportMutation.mutateAsync()
       downloadSnapshot(snapshot)
       setImportFeedback(
-        isPolish
-          ? `Wyeksportowano ${snapshot.accounts.length} kont, ${snapshot.appPreferences?.length ?? 0} ustawień aplikacji, ${snapshot.instruments.length} instrumentów, ${snapshot.targets?.length ?? 0} celów, ${snapshot.transactions.length} transakcji i ${snapshot.importProfiles?.length ?? 0} profili importu.`
-          : `Exported ${snapshot.accounts.length} accounts, ${snapshot.appPreferences?.length ?? 0} app settings, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets, ${snapshot.transactions.length} transactions and ${snapshot.importProfiles?.length ?? 0} import profiles.`,
+        formatMessage(t('state.exportSummary'), {
+          accounts: snapshot.accounts.length,
+          appPreferences: snapshot.appPreferences?.length ?? 0,
+          instruments: snapshot.instruments.length,
+          targets: snapshot.targets?.length ?? 0,
+          transactions: snapshot.transactions.length,
+          importProfiles: snapshot.importProfiles?.length ?? 0,
+        }),
       )
     } catch (error) {
       setImportError(error instanceof Error ? error.message : t('state.exportFailed'))
@@ -124,9 +127,19 @@ export function PortfolioStateSection() {
       })
       setPreviewResult(null)
       setImportFeedback(
-        isPolish
-          ? `Zaimportowano ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} celów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu w trybie ${result.mode}.${result.safetyBackupFileName ? ` Kopia bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
-          : `Imported ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles in ${result.mode} mode.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+        formatMessage(
+          t(result.safetyBackupFileName ? 'state.importSummaryWithBackup' : 'state.importSummary'),
+          {
+            accounts: result.accountCount,
+            appPreferences: result.appPreferenceCount,
+            instruments: result.instrumentCount,
+            targets: result.targetCount,
+            transactions: result.transactionCount,
+            importProfiles: result.importProfileCount,
+            mode: result.mode,
+            backupFile: result.safetyBackupFileName,
+          },
+        ),
       )
       setReplaceConfirmation('')
     } catch (error) {
@@ -241,9 +254,7 @@ export function PortfolioStateSection() {
 
           <p className="text-sm text-zinc-500 mt-2">
             {selectedFileName !== ''
-              ? isPolish
-                ? `Wybrany plik: ${selectedFileName}`
-                : `Selected file: ${selectedFileName}`
+              ? formatMessage(t('state.selectedFile'), { fileName: selectedFileName })
               : t('state.noFileSelected')}
           </p>
 
@@ -297,14 +308,21 @@ export function PortfolioStateSection() {
                 />
               </div>
 
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <PreviewChangeCard label={t('state.accounts')} diff={previewResult.diff.accounts} />
+                <PreviewChangeCard label={t('state.appSettings')} diff={previewResult.diff.appPreferences} />
+                <PreviewChangeCard label={t('state.instruments')} diff={previewResult.diff.instruments} />
+                <PreviewChangeCard label={t('state.targets')} diff={previewResult.diff.targets} />
+                <PreviewChangeCard label={t('state.transactions')} diff={previewResult.diff.transactions} />
+                <PreviewChangeCard label={t('state.importProfiles')} diff={previewResult.diff.importProfiles} />
+              </div>
+
               <p className="text-sm text-zinc-500 mt-3">
-                {previewResult.mode === 'REPLACE'
-                  ? isPolish
-                    ? `REPLACE najpierw wyczyści bieżący stan: ${previewResult.existingAccountCount} kont, ${previewResult.existingAppPreferenceCount} ustawień aplikacji, ${previewResult.existingInstrumentCount} instrumentów, ${previewResult.existingTargetCount} celów, ${previewResult.existingTransactionCount} transakcji i ${previewResult.existingImportProfileCount} profili importu.`
-                    : `REPLACE will clear the current state first: ${previewResult.existingAccountCount} accounts, ${previewResult.existingAppPreferenceCount} app settings, ${previewResult.existingInstrumentCount} instruments, ${previewResult.existingTargetCount} targets, ${previewResult.existingTransactionCount} transactions and ${previewResult.existingImportProfileCount} import profiles.`
-                  : isPolish
-                    ? `MERGE zaktualizuje po identyfikatorach i kluczach: ${previewResult.matchingAccountCount} kont, ${previewResult.matchingAppPreferenceCount} ustawień aplikacji, ${previewResult.matchingInstrumentCount} instrumentów, ${previewResult.matchingTargetCount} celów, ${previewResult.matchingTransactionCount} transakcji i ${previewResult.matchingImportProfileCount} profili importu.`
-                    : `MERGE will upsert ${previewResult.matchingAccountCount} accounts, ${previewResult.matchingAppPreferenceCount} app settings, ${previewResult.matchingInstrumentCount} instruments, ${previewResult.matchingTargetCount} targets, ${previewResult.matchingTransactionCount} transactions and ${previewResult.matchingImportProfileCount} import profiles by id/key.`}
+                {describePreviewMode(previewResult)}
+              </p>
+
+              <p className="text-sm text-zinc-500 mt-2">
+                {describeTargetDiff(previewResult)}
               </p>
 
               {previewResult.issues.length > 0 && (
@@ -393,6 +411,71 @@ function PreviewMetricCard({
       </dl>
     </article>
   )
+}
+
+function PreviewChangeCard({
+  label,
+  diff,
+}: {
+  label: string
+  diff: PreviewPortfolioStateImportResult['diff']['accounts']
+}) {
+  return (
+    <article className="rounded-lg border border-zinc-800/50 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-zinc-400">{label}</span>
+        {diff.sectionSkipped ? (
+          <span className={`${badge} ${badgeVariants.info}`}>{t('state.sectionSkipped')}</span>
+        ) : null}
+      </div>
+      <dl className="mt-2 space-y-1 text-sm">
+        <PreviewDiffRow label={t('state.created')} value={diff.createdCount} />
+        <PreviewDiffRow label={t('state.updated')} value={diff.updatedCount} />
+        <PreviewDiffRow label={t('state.unchanged')} value={diff.unchangedCount} />
+        <PreviewDiffRow label={t('state.preserved')} value={diff.preservedCount} />
+        <PreviewDiffRow label={t('state.deleted')} value={diff.deletedCount} />
+      </dl>
+    </article>
+  )
+}
+
+function PreviewDiffRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between">
+      <dt className="text-zinc-500">{label}</dt>
+      <dd className="text-zinc-100 tabular-nums">{value}</dd>
+    </div>
+  )
+}
+
+function describePreviewMode(previewResult: PreviewPortfolioStateImportResult) {
+  if (previewResult.mode === 'REPLACE') {
+    return formatMessage(t('state.modeReplaceSummary'), {
+      accounts: previewResult.existingAccountCount,
+      appPreferences: previewResult.existingAppPreferenceCount,
+      instruments: previewResult.existingInstrumentCount,
+      targets: previewResult.existingTargetCount,
+      transactions: previewResult.existingTransactionCount,
+      importProfiles: previewResult.existingImportProfileCount,
+    })
+  }
+
+  return formatMessage(t('state.modeMergeSummary'), {
+    accounts: previewResult.matchingAccountCount,
+    appPreferences: previewResult.matchingAppPreferenceCount,
+    instruments: previewResult.matchingInstrumentCount,
+    targets: previewResult.matchingTargetCount,
+    transactions: previewResult.matchingTransactionCount,
+    importProfiles: previewResult.matchingImportProfileCount,
+  })
+}
+
+function describeTargetDiff(previewResult: PreviewPortfolioStateImportResult) {
+  if (previewResult.diff.targets.sectionSkipped) {
+    return t('state.targetsPreservedSummary')
+  }
+
+  return t('state.targetsReplaceSummary')
 }
 
 function downloadSnapshot(snapshot: PortfolioStateSnapshot) {

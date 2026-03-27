@@ -48,6 +48,27 @@ class JdbcAppPreferenceRepository(
             }
         }
 
+    override suspend fun listByPrefix(prefix: String): List<AppPreference> =
+        connectionManager.withConnection { connection ->
+            connection.prepareStatement(
+                """
+                select preference_key, value_json, updated_at
+                from app_preferences
+                where preference_key like ?
+                order by preference_key asc
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, "$prefix%")
+                statement.executeQuery().use { resultSet ->
+                    buildList {
+                        while (resultSet.next()) {
+                            add(resultSet.toPreference())
+                        }
+                    }
+                }
+            }
+        }
+
     override suspend fun save(preference: AppPreference): AppPreference {
         connectionManager.withConnection { connection ->
             connection.prepareStatement(

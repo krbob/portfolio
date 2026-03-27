@@ -226,6 +226,7 @@ fun appModule(
     single {
         PortfolioTargetService(
             portfolioTargetRepository = get(),
+            auditLogService = get(),
             clock = get()
         )
     }

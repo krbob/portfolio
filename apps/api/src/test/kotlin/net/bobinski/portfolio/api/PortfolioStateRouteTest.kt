@@ -179,6 +179,183 @@ class PortfolioStateRouteTest {
     }
 
     @Test
+    fun `merge import preserves targets when snapshot omits the targets section`() = testApplication {
+        application {
+            module()
+        }
+
+        createTargets(
+            """
+            {
+              "items": [
+                { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                { "assetClass": "BONDS", "targetWeight": "0.20" }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        val requestBody =
+            """
+            {
+              "mode": "MERGE",
+              "snapshot": {
+                "schemaVersion": 4,
+                "exportedAt": "2026-03-20T12:00:00Z",
+                "accounts": [],
+                "appPreferences": [],
+                "instruments": [],
+                "targets": [],
+                "importProfiles": [],
+                "transactions": []
+              }
+            }
+            """.trimIndent()
+        val previewResponse = client.post("/v1/portfolio/state/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val targetsResponse = client.get("/v1/portfolio/targets")
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+        val targetsBody = targetsResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status, previewBody)
+        assertTrue(previewBody.contains("\"isValid\": true"), previewBody)
+        assertTrue(previewBody.contains("\"code\": \"TARGETS_SECTION_SKIPPED\""), previewBody)
+        assertTrue(previewBody.contains("\"existingTargetCount\": 2"), previewBody)
+        assertTrue(previewBody.contains("\"preservedCount\": 2"), previewBody)
+        assertTrue(previewBody.contains("\"sectionSkipped\": true"), previewBody)
+        assertEquals(HttpStatusCode.OK, importResponse.status)
+        assertTrue(importBody.contains("\"mode\": \"MERGE\""), importBody)
+        assertTrue(importBody.contains("\"targetCount\": 0"), importBody)
+        assertTrue(targetsBody.contains("\"assetClass\": \"EQUITIES\""), targetsBody)
+        assertTrue(targetsBody.contains("\"targetWeight\": \"0.800000\""), targetsBody)
+        assertTrue(targetsBody.contains("\"assetClass\": \"BONDS\""), targetsBody)
+        assertTrue(targetsBody.contains("\"targetWeight\": \"0.200000\""), targetsBody)
+    }
+
+    @Test
+    fun `portfolio state preview rejects duplicate target asset classes`() = testApplication {
+        application {
+            module()
+        }
+
+        val requestBody =
+            """
+            {
+              "mode": "MERGE",
+              "snapshot": {
+                "schemaVersion": 4,
+                "exportedAt": "2026-03-20T12:00:00Z",
+                "accounts": [],
+                "appPreferences": [],
+                "instruments": [],
+                "targets": [
+                  {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "assetClass": "EQUITIES",
+                    "targetWeight": "0.60",
+                    "createdAt": "2026-03-20T12:00:00Z",
+                    "updatedAt": "2026-03-20T12:00:00Z"
+                  },
+                  {
+                    "id": "22222222-2222-2222-2222-222222222222",
+                    "assetClass": "EQUITIES",
+                    "targetWeight": "0.40",
+                    "createdAt": "2026-03-20T12:00:00Z",
+                    "updatedAt": "2026-03-20T12:00:00Z"
+                  }
+                ],
+                "importProfiles": [],
+                "transactions": []
+              }
+            }
+            """.trimIndent()
+        val previewResponse = client.post("/v1/portfolio/state/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status, previewBody)
+        assertTrue(previewBody.contains("\"isValid\": false"), previewBody)
+        assertTrue(previewBody.contains("\"TARGET_INVALID\""), previewBody)
+        assertTrue(previewBody.contains("Each asset class can only appear once."), previewBody)
+        assertEquals(HttpStatusCode.BadRequest, importResponse.status)
+        assertTrue(importBody.contains("Each asset class can only appear once."), importBody)
+    }
+
+    @Test
+    fun `portfolio state preview rejects duplicate import profile names after merge`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount(name = "Primary")
+        createImportProfile(accountId)
+        val secondProfileResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Secondary CSV",
+                  "description": "Second import profile",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.Created, secondProfileResponse.status)
+        val exportedSnapshot = client.get("/v1/portfolio/state/export").bodyAsText()
+        val duplicateNameSnapshot = exportedSnapshot.replace(
+            "\"name\": \"Secondary CSV\"",
+            "\"name\": \"Interactive Brokers CSV\""
+        )
+
+        val requestBody =
+            """
+            {
+              "mode": "MERGE",
+              "snapshot": $duplicateNameSnapshot
+            }
+            """.trimIndent()
+        val previewResponse = client.post("/v1/portfolio/state/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status, previewBody)
+        assertTrue(previewBody.contains("\"isValid\": false"), previewBody)
+        assertTrue(previewBody.contains("\"IMPORT_PROFILE_NAME_DUPLICATE\""), previewBody)
+        assertTrue(previewBody.contains("Interactive Brokers CSV"), previewBody)
+        assertEquals(HttpStatusCode.BadRequest, importResponse.status)
+        assertTrue(importBody.contains("Interactive Brokers CSV"), importBody)
+    }
+
+    @Test
     fun `portfolio state import preserves fx rates on foreign-currency transactions`() = testApplication {
         application {
             module()

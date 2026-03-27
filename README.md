@@ -2,31 +2,31 @@
 
 Portfolio is a self-hosted portfolio tracker for long-term investors.
 
-It is designed around a simple product stance:
+The product is built around a few explicit rules:
 
-- transactions are the source of truth
-- daily history is rebuilt from transactions and market data
+- transactions are the canonical source of truth
+- analytical views are rebuildable read models
 - SQLite is the runtime database
-- JSON backups remain first-class
+- JSON export, import, backup, and restore remain first-class
 - the product is optimized for a single-user self-hosted setup
 
-## What it already does
+## What the product covers
 
-- accounts, instruments, transactions, targets, and reusable import profiles
-- holdings, allocation, drift, and contribution-first rebalance guidance
-- daily history in `PLN`, `USD`, and `Gold`
-- `MWRR`, `TWR`, real return, and benchmark-relative performance
-- benchmark configuration, including `VWRA`, inflation, target mix, multi-asset ETF benchmarks, and one custom benchmark
-- EDO valuation and inflation via `edo-calculator`
+- accounts, instruments, transactions, targets, and reusable CSV import profiles
+- holdings, allocation drift, and contribution-first rebalance guidance
+- daily history and performance in `PLN`, `USD`, and gold
+- `MWRR`, `TWR`, real return, and benchmark-relative comparison
+- benchmark configuration, including target-mix and custom references
+- EDO valuation via `edo-calculator`
 - ETF, FX, and benchmark history via `stock-analyst`
-- optional spot gold history via `gold-api`, with `GC=F` fallback when no gold API key is configured or spot history is temporarily unavailable
-- last-known-good market-data snapshots for quotes, history, benchmarks, and inflation, surfaced as `STALE` or degraded coverage when live upstreams fail
-- server backups, restore, canonical export/import, audit trail, and read-model cache diagnostics
+- fallback market-data snapshots surfaced as `STALE` or degraded coverage instead of pretending freshness
+- canonical state export/import with preview diff, warnings, and blocking validation
+- server backups, restore workflow, audit trail, and read-model cache diagnostics
+- target-history visibility through audit events
 - optional single-user password auth
-- background refresh for heavy read models
 - installable PWA shell for phone and tablet use
 
-## Project layout
+## Repository layout
 
 ```text
 portfolio/
@@ -45,15 +45,13 @@ portfolio/
 
 ## Quick start
 
-### 1. Run just `portfolio` from this repo
-
-This uses the local Dockerfiles in this repository.
+### 1. Local app stack from this repo
 
 ```bash
 docker compose --profile app up -d --build
 ```
 
-That starts:
+This starts:
 
 - `portfolio-api`
 - `portfolio-web`
@@ -65,18 +63,19 @@ Endpoints:
 - UI: `http://127.0.0.1:4174`
 - API: `http://127.0.0.1:18082`
 
-By default this profile does **not** enable live market data. The app still works, but read models that depend on external pricing stay degraded until you provide market-data configuration.
+In the default local compose mode:
 
-### 2. Run `portfolio` with remote market data
+- live market data is off
+- OpenAPI UI is off
+- auth is off
+- Docker sets `PORTFOLIO_AUTH_SECURE_COOKIE=true`, which is the right default when the app later sits behind HTTPS
 
-If you want the local app stack to use remote market-data services, add the remote override:
+### 2. Local app stack with remote market data
 
 ```dotenv
 PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst.example/api
 PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example
 ```
-
-Then run:
 
 ```bash
 docker compose \
@@ -85,14 +84,7 @@ docker compose \
   --profile app up -d --build
 ```
 
-This keeps the app built from the current repository, but points market data at the remote services you provide through:
-
-- `PORTFOLIO_STOCK_ANALYST_BASE_URL`
-- `PORTFOLIO_EDO_CALCULATOR_BASE_URL`
-
-### 3. Run `portfolio` with self-hosted market data dependencies
-
-If you want the local app stack together with self-hosted market-data containers, add the self-hosted override:
+### 3. Local app stack with self-hosted market-data services
 
 ```bash
 docker compose \
@@ -101,99 +93,22 @@ docker compose \
   --profile app up -d --build
 ```
 
-That starts:
+This adds:
 
-- `portfolio-api`
-- `portfolio-web`
 - `stock-analyst`
 - `stock-analyst-backend-yfinance`
 - `edo-calculator`
 
-The app still uses the local Dockerfiles from this repository, but the market-data services come from their published images.
-Depending on ticker, FX, and CPI coverage exposed by the published upstream images, the portfolio may settle in either:
+On ARM hosts, the override currently pins upstream market-data services to `linux/amd64`. If those images become multi-arch later, remove or override `PORTFOLIO_MARKET_DATA_PLATFORM`.
 
-- `MARK_TO_MARKET` / `STALE`
-- `PARTIALLY_VALUED`
-
-That is expected for this mode. The self-hosted smoke test verifies both the fully valued path and the partial-coverage fallback.
-
-On ARM hosts, the upstream market-data images currently default to `linux/amd64` in [docker-compose.market-data.self-hosted.yml](./docker-compose.market-data.self-hosted.yml). That keeps behavior explicit instead of relying on Docker warnings. If those upstreams publish multi-arch images later, override or remove `PORTFOLIO_MARKET_DATA_PLATFORM`.
-
-### 4. Run the full self-hosted stack from published images
-
-If you want `portfolio` together with its market-data dependencies, use the example stack:
+### 4. Full self-hosted stack from published images
 
 ```bash
 cp docker-compose.full-stack.example.yml docker-compose.full-stack.yml
 docker compose -f docker-compose.full-stack.yml up -d
 ```
 
-This starts:
-
-- `portfolio-api`
-- `portfolio-web`
-- `stock-analyst`
-- `stock-analyst-backend-yfinance`
-- `edo-calculator`
-
-The example uses published images for all services, so it is a better fit for a real self-hosted deployment than the local dev compose.
-The web container serves the built SPA through `nginx` and proxies `/api` internally to `portfolio-api`, so the browser stays on one origin.
-
-## Compose modes
-
-The repository now has three explicit local runtime modes:
-
-- `docker-compose.yml`
-  - local app build, SQLite, backups, no live market data
-- `docker-compose.yml` + `docker-compose.market-data.remote.yml`
-  - local app build with remote market-data upstreams
-- `docker-compose.yml` + `docker-compose.market-data.self-hosted.yml`
-  - local app build with self-hosted `stock-analyst` and `edo-calculator`
-
-This matters because market-data mode is no longer something you need to remember as a one-off shell command. Rebuilds remain in the same mode as long as you keep using the same compose file set.
-
-## Full stack example
-
-The repository includes [docker-compose.full-stack.example.yml](./docker-compose.full-stack.example.yml).
-
-It wires `portfolio` to:
-
-- `http://stock-analyst:8080`
-- `http://edo-calculator:8080`
-
-and keeps:
-
-- the SQLite database on `portfolio-sqlite-data`
-- JSON backups on `portfolio-backup-data`
-
-If you want spot gold history, create a `.env` file next to the compose file and set:
-
-```dotenv
-PORTFOLIO_GOLD_API_KEY=your-gold-api-key
-```
-
-Without that key the app falls back to `GC=F`, which is a futures proxy rather than spot gold.
-
-The production web image does not use `vite preview`. It serves static files through `nginx` and proxies `/api` to `portfolio-api`, so a reverse proxy such as Traefik only needs to publish the web container.
-
-## Production deployment notes
-
-For a real self-hosted deployment:
-
-- keep private upstream URLs, hostnames, and API keys in a local `.env`, not in Git
-- use [docker-compose.full-stack.example.yml](./docker-compose.full-stack.example.yml) as the baseline if you want published images for all services
-- use your own compose file plus `.env` if you want remote market-data services or a reverse proxy such as Traefik or Dockge in front
-
-If you want a completely fresh start with empty SQLite data and empty backup history:
-
-```bash
-docker compose down --volumes --remove-orphans
-docker compose up -d
-```
-
-That removes the named Docker volumes used by the app stack.
-
-For routine operations, smoke checks, backup/restore steps, and auth guardrails, see [docs/runbook.md](./docs/runbook.md).
+Use this path when you want a published-image deployment rather than a repo build.
 
 ## Runtime model
 
@@ -203,25 +118,61 @@ Key invariants:
 
 - one API process per database file
 - transactions remain canonical
-- history and returns cache snapshots stay rebuildable
-- backups and canonical exports remain JSON-based and portable
+- history and returns stay rebuildable
+- market-data snapshots are resilience data, not source of truth
+- backups and exports stay portable JSON
 
-SQLite conventions:
+Default application config in `apps/api/src/main/resources/application.yaml` is conservative:
 
-- IDs as `TEXT`
-- exact financial values as canonical decimal `TEXT`
-- dates and timestamps as ISO-8601 `TEXT`
-- JSON payloads as `TEXT`
-- explicit startup pragmas and durability checks
+- `marketData.enabled=false`
+- `openapi.uiEnabled=false`
+- `auth.enabled=false`
 
-Default runtime settings:
+Compose overrides decide the real runtime mode. That keeps local raw app startup safe by default and makes market-data behavior explicit instead of accidental.
 
-- database path: `./data/portfolio.db` locally or `/srv/portfolio/data/portfolio.db` in Docker
-- journal mode: `WAL`
-- synchronous mode: `FULL`
-- busy timeout: `5000ms`
+## State export, preview, import, and restore
 
-The API fails fast on invalid SQLite pathing and unsafe durability settings.
+Portfolio has two import modes: `MERGE` and `REPLACE`.
+
+### `MERGE`
+
+- accounts, instruments, transactions, and app preferences are upserted by id or key
+- if the snapshot omits `targets`, the current target allocation is preserved
+- if the snapshot contains `targets`, that section replaces the target allocation as one set
+- if the snapshot omits `importProfiles`, current profiles are preserved
+- if the snapshot contains `importProfiles`, they merge by id, but final profile names must stay unique
+
+### `REPLACE`
+
+- requires explicit `REPLACE` confirmation
+- clears the current write model before loading the snapshot
+- creates a safety backup automatically before the destructive step
+
+### Preview behavior
+
+Preview is not a cosmetic dry run. It uses the same validation path as the real import and returns:
+
+- blocking issues
+- warnings
+- section-by-section diff counts
+- skip/preserve semantics for targets and import profiles
+
+If preview says the snapshot is valid, import should not later fail on a hidden business rule that preview skipped.
+
+## Production notes for self-hosting
+
+- keep secrets and upstream URLs in a local `.env`, not in Git
+- prefer the example compose file or your own compose wrapper for real deployment
+- use `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
+- keep `PORTFOLIO_OPENAPI_UI_ENABLED=false` unless you actively need the docs UI
+- treat `REPLACE` import or restore as a maintenance action, not a casual workflow
+
+If you want an empty reset:
+
+```bash
+docker compose down --volumes --remove-orphans
+docker compose up -d
+```
 
 ## Important environment variables
 
@@ -230,7 +181,9 @@ The API fails fast on invalid SQLite pathing and unsafe durability settings.
 - `PORTFOLIO_MARKET_DATA_ENABLED`
 - `PORTFOLIO_STOCK_ANALYST_BASE_URL`
 - `PORTFOLIO_EDO_CALCULATOR_BASE_URL`
+- `PORTFOLIO_GOLD_API_BASE_URL`
 - `PORTFOLIO_GOLD_API_KEY`
+- `PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS`
 
 ### Backups
 
@@ -239,13 +192,13 @@ The API fails fast on invalid SQLite pathing and unsafe durability settings.
 - `PORTFOLIO_BACKUPS_INTERVAL_MINUTES`
 - `PORTFOLIO_BACKUPS_RETENTION_COUNT`
 
-### Background refresh
+### Read-model refresh
 
 - `PORTFOLIO_READ_MODEL_REFRESH_ENABLED`
 - `PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES`
 - `PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START`
 
-### Docs UI
+### OpenAPI UI
 
 - `PORTFOLIO_OPENAPI_UI_ENABLED`
 
@@ -258,105 +211,9 @@ The API fails fast on invalid SQLite pathing and unsafe durability settings.
 - `PORTFOLIO_AUTH_SECURE_COOKIE`
 - `PORTFOLIO_AUTH_SESSION_MAX_AGE_DAYS`
 
-Behavior when auth is enabled:
+## Docs
 
-- `GET /v1/health`, `GET /v1/meta`, and `GET/POST/DELETE /v1/auth/session` stay public
-- everything else stays behind the signed session cookie
-
-## Backups and state portability
-
-The app supports:
-
-- server-side backup scheduling
-- backup download
-- restore with explicit confirmation for destructive `REPLACE`
-- canonical export/import of the application state
-
-Canonical state currently includes:
-
-- accounts
-- instruments
-- targets
-- transactions
-- app preferences
-- benchmark and rebalancing settings
-- reusable import profiles
-
-## Read-model refresh
-
-The API can pre-warm heavy read models such as:
-
-- daily history
-- returns
-- benchmark comparisons
-
-This keeps first-open latency lower on self-hosted installs.
-
-The scheduler is opt-in and does not turn the cache into a second source of truth.
-When live market-data upstreams fail, the app can fall back to persisted last-known-good snapshots, but those values remain visible to the user as `STALE` or degraded coverage.
-
-## API contracts
-
-The API publishes:
-
-- OpenAPI spec at `GET /v1/openapi.json`
-- docs UI at `GET /openapi`
-
-Frontend types are generated from the backend spec:
-
-```bash
-cd apps/web
-npm run generate:api
-```
-
-## Development
-
-### API
-
-```bash
-cd apps/api
-./gradlew run
-```
-
-### Web
-
-```bash
-cd apps/web
-npm install
-npm run dev
-```
-
-`npm run preview` remains available for local preview of a production build, but the Docker image serves the built SPA through `nginx` rather than using Vite as a runtime server.
-
-### Verification
-
-```bash
-cd apps/api
-./gradlew test
-
-cd ../web
-npm test
-npm run build
-
-cd ../..
-./scripts/smoke-test-sqlite-stack.sh
-PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst.example/api \
-PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example \
-./scripts/smoke-test-remote-market-data-stack.sh
-sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
-```
-
-CI coverage is intentionally split by cost and determinism:
-
-- pull requests run API tests, web tests, route-level UI smoke, web build, OpenAPI client sync verification, and the SQLite Docker smoke test
-- pushes to `main` additionally run the self-hosted market-data smoke test before publishing container images
-- the remote market-data smoke test remains manual because it depends on environment-specific upstream URLs and optional external API credentials
-
-## Related services
-
-- [docs/architecture.md](./docs/architecture.md)
-- [docs/domain-model.md](./docs/domain-model.md)
-- [docs/runbook.md](./docs/runbook.md)
-- [docs/roadmap.md](./docs/roadmap.md)
-- [stock-analyst](https://github.com/krbob/stock-analyst)
-- [edo-calculator](https://github.com/krbob/edo-calculator)
+- [docs/architecture.md](./docs/architecture.md): system shape, runtime boundaries, verification model
+- [docs/domain-model.md](./docs/domain-model.md): canonical entities, derived models, and invariants
+- [docs/runbook.md](./docs/runbook.md): deployment, health checks, backup/restore, auth guardrails
+- [docs/roadmap.md](./docs/roadmap.md): short active priorities only

@@ -9,7 +9,7 @@ portfolio:
   name: "Portfolio"
   stage: "dev"
   openapi:
-    uiEnabled: true
+    uiEnabled: false
   persistence:
     databasePath: "./data/portfolio.db"
     journalMode: "WAL"
@@ -32,7 +32,7 @@ portfolio:
     secureCookie: false
     sessionMaxAgeDays: 30
   marketData:
-    enabled: true
+    enabled: false
     stockAnalystBaseUrl: "http://127.0.0.1:18080"
     edoCalculatorBaseUrl: "http://127.0.0.1:18081"
     usdPlnSymbol: "PLN=X"

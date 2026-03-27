@@ -51,9 +51,8 @@ class PortfolioReadModelCacheDescriptorService(
         val instruments = instrumentRepository.list()
         val targets = portfolioTargetRepository.list()
         val transactions = transactionRepository.list()
-        val marketDataSnapshotUpdatedAt = appPreferenceRepository.list()
+        val marketDataSnapshotUpdatedAt = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
             .asSequence()
-            .filter { preference -> preference.key.startsWith(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX) }
             .map { preference -> preference.updatedAt }
             .maxOrNull()
         val today = LocalDate.now(clock)

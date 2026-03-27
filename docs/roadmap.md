@@ -1,44 +1,35 @@
 # Roadmap
 
-This file should stay short.
-Completed work lives in Git, not in a historical backlog document.
+Keep this file short. Active priorities only.
 
-## Current stance
+## Current priorities
 
-`portfolio` is already in a production-usable self-hosted shape.
+### 1. Daily workflow polish
 
-The next steps should stay narrow and usage-driven:
+- keep import, editing, and review flows fast to trust
+- keep mobile usage practical for a self-hosted single-user setup
+- improve user-facing explanations where the product already has strong logic
 
-- polish daily investing workflows based on real use
-- keep operational trust high
-- avoid broad architectural rewrites unless a concrete feature requires them
+### 2. What-if planning
 
-## Active priorities
-
-### 1. Real-world workflow polish
-
-- refine the product based on day-to-day usage rather than speculative backlog items
-- keep mobile, copy, and table interactions easy to trust and easy to act on
-
-### 2. Broker-specific importers
-
-- add real brokerage importers when manual entry stops scaling
-- keep broker-specific parsing isolated from the canonical transaction model
-- fit new importers into the existing preview/import-profile pipeline
+- simulate future contributions and target changes without mutating canonical history
+- compare hypothetical allocation and rebalance outcomes against the current portfolio
+- keep simulations clearly separated from real transactions
 
 ### 3. Operational confidence
 
-- keep deployment docs, smoke coverage, backup/restore, and valuation diagnostics aligned with the actual production path
-- prefer boring, repeatable self-hosted operation over feature sprawl
+- keep deployment docs, smoke coverage, backup/restore, and market-data diagnostics aligned with the real self-hosted path
+- refine actionable stale-data guidance based on real incidents rather than generic monitoring noise
 
-## Explicit non-goals for now
+### 4. Broker-specific importers
+
+- add broker-specific CSV adapters when generic profiles stop being enough
+- keep broker parsing isolated from canonical transaction logic
+
+## Non-goals for now
 
 - multi-user support
-- advanced tax engine work
-- broker sync / live trading integration
-- enterprise-style auth or permissions
-- large architectural rewrites for their own sake
-
-## Documentation rule
-
-If there is no active short-term priority, keep this file minimal instead of rebuilding a speculative backlog.
+- enterprise auth or permissions
+- live broker sync or trading integration
+- broad architectural rewrites without a product driver
+- speculative backlog expansion in docs

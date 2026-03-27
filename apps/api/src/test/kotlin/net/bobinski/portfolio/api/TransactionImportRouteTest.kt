@@ -279,6 +279,185 @@ class TransactionImportRouteTest {
         assertTrue(previewBody.contains("\"status\": \"INVALID\""), previewBody)
     }
 
+    @Test
+    fun `import profile names must stay unique`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount("Primary import account")
+        val firstProfileResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Canonical import",
+                  "description": "First profile",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val secondProfileResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Aux import",
+                  "description": "Second profile",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val secondProfileId = Regex("\"id\":\\s*\"([^\"]+)\"").find(secondProfileResponse.bodyAsText())!!.groupValues[1]
+
+        val duplicateCreateResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Canonical import",
+                  "description": "Conflicting profile",
+                  "delimiter": "SEMICOLON",
+                  "dateFormat": "DMY_DOTS",
+                  "decimalSeparator": "COMMA",
+                  "skipDuplicatesByDefault": false,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val duplicateUpdateResponse = client.put("/v1/transactions/import/profiles/$secondProfileId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Canonical import",
+                  "description": "Conflicting rename",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "defaults": {
+                    "accountId": "$accountId",
+                    "currency": "USD"
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.Created, firstProfileResponse.status)
+        assertEquals(HttpStatusCode.Created, secondProfileResponse.status)
+        assertEquals(HttpStatusCode.BadRequest, duplicateCreateResponse.status)
+        assertTrue(duplicateCreateResponse.bodyAsText().contains("already in use"))
+        assertEquals(HttpStatusCode.BadRequest, duplicateUpdateResponse.status)
+        assertTrue(duplicateUpdateResponse.bodyAsText().contains("already in use"))
+    }
+
+    @Test
+    fun `csv preview rejects ambiguous account and instrument lookups`() = testApplication {
+        application {
+            module()
+        }
+
+        val duplicateAccountA = createAccount("IBKR")
+        createAccount("IBKR")
+        createInstrument(name = "Vanguard FTSE All-World UCITS ETF A", symbol = "VWRA.L", currency = "USD")
+        createInstrument(name = "Vanguard FTSE All-World UCITS ETF B", symbol = "VWRA.L", currency = "USD")
+
+        val profileResponse = client.post("/v1/transactions/import/profiles") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Explicit account mapping",
+                  "delimiter": "COMMA",
+                  "dateFormat": "ISO_LOCAL_DATE",
+                  "decimalSeparator": "DOT",
+                  "skipDuplicatesByDefault": true,
+                  "headerMappings": {
+                    "account": "account",
+                    "type": "type",
+                    "tradeDate": "tradeDate",
+                    "settlementDate": null,
+                    "instrument": "instrument",
+                    "quantity": "quantity",
+                    "unitPrice": "unitPrice",
+                    "grossAmount": "grossAmount",
+                    "feeAmount": "feeAmount",
+                    "taxAmount": null,
+                    "currency": "currency",
+                    "fxRateToPln": null,
+                    "notes": null
+                  },
+                  "defaults": {
+                    "accountId": null,
+                    "currency": null
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val profileId = Regex("\"id\":\\s*\"([^\"]+)\"").find(profileResponse.bodyAsText())!!.groupValues[1]
+        val csv = """
+            account,type,tradeDate,instrument,quantity,unitPrice,grossAmount,feeAmount,currency
+            IBKR,BUY,2026-03-10,VWRA.L,1,100.00,100.00,0,USD
+            $duplicateAccountA,BUY,2026-03-11,VWRA.L,1,101.00,101.00,0,USD
+        """.trimIndent()
+
+        val previewResponse = client.post("/v1/transactions/import/csv/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "profileId": "$profileId",
+                  "csv": ${jsonString(csv)}
+                }
+                """.trimIndent()
+            )
+        }
+        val importResponse = client.post("/v1/transactions/import/csv") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "profileId": "$profileId",
+                  "csv": ${jsonString(csv)}
+                }
+                """.trimIndent()
+            )
+        }
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status)
+        assertTrue(previewBody.contains("\"totalRowCount\": 2"), previewBody)
+        assertTrue(previewBody.contains("\"invalidRowCount\": 2"), previewBody)
+        assertTrue(previewBody.contains("account 'IBKR' is ambiguous"), previewBody)
+        assertTrue(previewBody.contains("instrument 'VWRA.L' is ambiguous"), previewBody)
+        assertEquals(HttpStatusCode.BadRequest, importResponse.status)
+        assertTrue(importBody.contains("ambiguous"), importBody)
+    }
+
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(name: String): String {
         val response = client.post("/v1/accounts") {
             contentType(ContentType.Application.Json)

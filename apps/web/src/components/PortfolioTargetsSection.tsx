@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { usePortfolioAllocation } from '../hooks/use-read-model'
+import { usePortfolioAllocation, usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   usePortfolioRebalancingSettings,
   usePortfolioTargets,
   useReplacePortfolioTargets,
   useSavePortfolioRebalancingSettings,
 } from '../hooks/use-write-model'
+import { formatDateTime } from '../lib/format'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAssetClass } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import {
   badge,
   badgeVariants,
@@ -23,11 +25,7 @@ import { Badge, Card, SectionHeader, SegmentedControl, StatePanel } from './ui'
 type AssetClass = 'EQUITIES' | 'BONDS' | 'CASH'
 type RebalancingMode = 'CONTRIBUTIONS_ONLY' | 'ALLOW_TRIMS'
 
-const TARGET_FIELDS: Array<{ assetClass: AssetClass; label: string }> = [
-  { assetClass: 'EQUITIES', label: 'Equities' },
-  { assetClass: 'BONDS', label: 'Bonds' },
-  { assetClass: 'CASH', label: 'Cash' },
-]
+const TARGET_FIELDS: AssetClass[] = ['EQUITIES', 'BONDS', 'CASH']
 
 const EMPTY_TARGET_INPUTS: Record<AssetClass, string> = {
   EQUITIES: '0',
@@ -44,6 +42,7 @@ const PRESET_80_20_INPUTS: Record<AssetClass, string> = {
 export function PortfolioTargetsSection() {
   const { isPolish } = useI18n()
   const targetsQuery = usePortfolioTargets()
+  const targetEventsQuery = usePortfolioAuditEvents({ limit: 8, category: 'TARGETS' })
   const allocationQuery = usePortfolioAllocation()
   const rebalancingSettingsQuery = usePortfolioRebalancingSettings()
   const replaceTargetsMutation = useReplacePortfolioTargets()
@@ -84,22 +83,22 @@ export function PortfolioTargetsSection() {
   }, [rebalancingSettingsQuery.data])
 
   const totalPct = useMemo(
-    () => TARGET_FIELDS.reduce((sum, field) => sum + toNumber(inputs[field.assetClass]), 0),
+    () => TARGET_FIELDS.reduce((sum, assetClass) => sum + toNumber(inputs[assetClass]), 0),
     [inputs],
   )
   const totalIsValid = Math.abs(totalPct - 100) < 0.0001
   const editedMixLabel = TARGET_FIELDS
-    .map((field) => `${formatPercent(inputs[field.assetClass], { maximumFractionDigits: 2 })} ${isPolish ? labelAssetClass(field.assetClass).toLowerCase() : field.label.toLowerCase()}`)
+    .map((assetClass) => `${formatPercent(inputs[assetClass], { maximumFractionDigits: 2 })} ${labelAssetClass(assetClass).toLowerCase()}`)
     .join(' / ')
   const savedMixLabel = targetsQuery.data == null
     ? null
     : targetsQuery.data.length === 0
       ? t('targets.notConfigured')
       : TARGET_FIELDS
-        .map((field) => {
-          const savedTarget = targetsQuery.data.find((target) => target.assetClass === field.assetClass)
+        .map((assetClass) => {
+          const savedTarget = targetsQuery.data.find((target) => target.assetClass === assetClass)
           const savedPct = savedTarget == null ? '0' : String(Number(savedTarget.targetWeight) * 100)
-          return `${formatPercent(savedPct, { maximumFractionDigits: 2 })} ${isPolish ? labelAssetClass(field.assetClass).toLowerCase() : field.label.toLowerCase()}`
+          return `${formatPercent(savedPct, { maximumFractionDigits: 2 })} ${labelAssetClass(assetClass).toLowerCase()}`
         })
         .join(' / ')
 
@@ -115,9 +114,9 @@ export function PortfolioTargetsSection() {
 
     try {
       const items = TARGET_FIELDS
-        .map((field) => ({
-          assetClass: field.assetClass,
-          value: toNumber(inputs[field.assetClass]),
+        .map((assetClass) => ({
+          assetClass,
+          value: toNumber(inputs[assetClass]),
         }))
         .filter((item) => item.value > 0)
         .map((item) => ({
@@ -127,9 +126,9 @@ export function PortfolioTargetsSection() {
 
       const result = await replaceTargetsMutation.mutateAsync({ items })
       setFeedback(
-        isPolish
-          ? `Zapisano alokację docelową: ${result.map((item) => `${labelAssetClass(item.assetClass)} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`
-          : `Saved target mix: ${result.map((item) => `${item.assetClass} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`,
+        formatMessage(t('targets.saveTargetsFeedback'), {
+          mix: formatSavedTargetMix(result),
+        }),
       )
     } catch (error) {
       setActionError(error instanceof Error ? error.message : t('targets.saveFailed'))
@@ -153,9 +152,10 @@ export function PortfolioTargetsSection() {
         mode: rebalancingMode,
       })
       setSettingsFeedback(
-        isPolish
-          ? `Zapisano pasmo tolerancji ±${formatPercent(result.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} i tryb ${labelRebalancingMode(result.mode, true).toLowerCase()}.`
-          : `Saved a ±${formatPercent(result.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} tolerance band and ${labelRebalancingMode(result.mode, false).toLowerCase()} mode.`,
+        formatMessage(t('targets.savePolicyFeedback'), {
+          band: formatPercent(result.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' }),
+          mode: labelRebalancingMode(result.mode).toLowerCase(),
+        }),
       )
     } catch (error) {
       setSettingsActionError(
@@ -207,16 +207,16 @@ export function PortfolioTargetsSection() {
 
       <form id="portfolio-targets-form" className="space-y-5" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {TARGET_FIELDS.map((field) => (
-            <label key={field.assetClass}>
-              <span className={labelClass}>{isPolish ? labelAssetClass(field.assetClass) : field.label}</span>
+          {TARGET_FIELDS.map((assetClass) => (
+            <label key={assetClass}>
+              <span className={labelClass}>{labelAssetClass(assetClass)}</span>
               <div className="relative">
                 <input
                   className={`${input} pr-10`}
                   inputMode="decimal"
-                  value={inputs[field.assetClass]}
+                  value={inputs[assetClass]}
                   onChange={(event) =>
-                    setInputs((current) => ({ ...current, [field.assetClass]: sanitizePercentInput(event.target.value) }))
+                    setInputs((current) => ({ ...current, [assetClass]: sanitizePercentInput(event.target.value) }))
                   }
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
@@ -298,13 +298,57 @@ export function PortfolioTargetsSection() {
           <Badge variant="info">
             {t('targets.band')} ±{formatPercent(toleranceBandInput || '0', { maximumFractionDigits: 2, suffix: ' pp' })}
           </Badge>
-          <Badge variant="default">{labelRebalancingMode(rebalancingMode, isPolish)}</Badge>
+          <Badge variant="default">{labelRebalancingMode(rebalancingMode)}</Badge>
         </div>
 
         {settingsFeedback && <p className="text-sm text-emerald-400">{settingsFeedback}</p>}
         {settingsActionError && <p className="text-sm text-red-400">{settingsActionError}</p>}
         {rebalancingSettingsQuery.isError && <p className="text-sm text-red-400">{rebalancingSettingsQuery.error.message}</p>}
       </form>
+
+      <section className="mt-5 rounded-lg border border-zinc-800/50 p-4">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-zinc-100">{t('targets.historyTitle')}</h4>
+            <p className="mt-1 text-sm text-zinc-500">{t('targets.historyDescription')}</p>
+          </div>
+          <Badge variant="default">{targetEventsQuery.data?.length ?? 0}</Badge>
+        </div>
+
+        {targetEventsQuery.isLoading ? <p className="mt-4 text-sm text-zinc-500">{t('targets.loadingHistory')}</p> : null}
+        {targetEventsQuery.isError ? <p className="mt-4 text-sm text-red-400">{targetEventsQuery.error.message}</p> : null}
+
+        {!targetEventsQuery.isLoading && !targetEventsQuery.isError && (targetEventsQuery.data?.length ?? 0) === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500">{t('targets.noHistory')}</p>
+        ) : null}
+
+        {!targetEventsQuery.isLoading && !targetEventsQuery.isError && (targetEventsQuery.data?.length ?? 0) > 0 ? (
+          <div className="mt-4 space-y-3">
+            {targetEventsQuery.data?.map((event) => (
+              <article key={event.id} className="rounded-lg border border-zinc-800/50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
+                    <p className="mt-1 text-sm text-zinc-500">{formatAuditEventMessage(event, isPolish)}</p>
+                  </div>
+                  <span className="text-xs text-zinc-500">{formatDateTime(event.occurredAt)}</span>
+                </div>
+
+                <dl className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                  <div>
+                    <dt className="text-zinc-500">{t('targets.previousMix')}</dt>
+                    <dd className="mt-1 text-zinc-100">{formatMixSummary(event.metadata.previousMix)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">{t('targets.newMix')}</dt>
+                    <dd className="mt-1 text-zinc-100">{formatMixSummary(event.metadata.newMix)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
       {targetsQuery.isLoading || allocationQuery.isLoading || rebalancingSettingsQuery.isLoading ? (
         <p className="mt-5 text-sm text-zinc-500">{t('targets.loading')}</p>
@@ -338,9 +382,9 @@ export function PortfolioTargetsSection() {
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
                   <span className="text-xs text-zinc-500">{t('targets.strategyAction')}</span>
-                  <strong className="mt-1 block text-sm text-zinc-100">{labelAllocationAction(allocation.recommendedAction, isPolish)}</strong>
+                  <strong className="mt-1 block text-sm text-zinc-100">{labelAllocationAction(allocation.recommendedAction)}</strong>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {labelRebalancingMode(allocation.rebalancingMode, isPolish)}
+                    {labelRebalancingMode(allocation.rebalancingMode)}
                   </p>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -517,40 +561,22 @@ function labelTargetStatus(status: string) {
   }
 }
 
-function labelRebalancingMode(mode: string, isPolish: boolean) {
-  if (isPolish) {
-    return mode === 'ALLOW_TRIMS' ? t('targets.modeAllowTrims') : t('targets.modeContributions')
-  }
-  return mode === 'ALLOW_TRIMS' ? 'Allow trims and redeploy' : 'New contributions only'
+function labelRebalancingMode(mode: string) {
+  return mode === 'ALLOW_TRIMS' ? t('targets.modeAllowTrims') : t('targets.modeContributions')
 }
 
-function labelAllocationAction(action: string, isPolish: boolean) {
-  if (isPolish) {
-    switch (action) {
-      case 'WITHIN_TOLERANCE':
-        return t('targets.actionWithinTolerance')
-      case 'DEPLOY_EXISTING_CASH':
-        return t('targets.actionDeployCash')
-      case 'WAIT_FOR_NEXT_CONTRIBUTION':
-        return t('targets.actionWait')
-      case 'FULL_REBALANCE':
-        return t('targets.actionFullRebalance')
-      default:
-        return t('targets.actionNotConfigured')
-    }
-  }
-
+function labelAllocationAction(action: string) {
   switch (action) {
     case 'WITHIN_TOLERANCE':
-      return 'Within tolerance'
+      return t('targets.actionWithinTolerance')
     case 'DEPLOY_EXISTING_CASH':
-      return 'Deploy existing cash'
+      return t('targets.actionDeployCash')
     case 'WAIT_FOR_NEXT_CONTRIBUTION':
-      return 'Wait for the next contribution'
+      return t('targets.actionWait')
     case 'FULL_REBALANCE':
-      return 'Full rebalance'
+      return t('targets.actionFullRebalance')
     default:
-      return 'Not configured'
+      return t('targets.actionNotConfigured')
   }
 }
 
@@ -565,4 +591,30 @@ function labelBucketAction(action: string) {
     default:
       return t('targets.bucketNa')
   }
+}
+
+function formatMixSummary(rawMix: string | undefined) {
+  if (!rawMix) {
+    return t('targets.historyEmptyMix')
+  }
+
+  return rawMix
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [assetClass, weight] = entry.split('=')
+      const label = labelAssetClass(assetClass)
+      const pct = Number(weight) * 100
+      return Number.isFinite(pct)
+        ? `${label} ${formatPercent(String(pct), { maximumFractionDigits: 2 })}`
+        : label
+    })
+    .join(' · ')
+}
+
+function formatSavedTargetMix(items: Array<{ assetClass: string; targetWeight: string }>) {
+  return items
+    .map((item) => `${labelAssetClass(item.assetClass)} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`)
+    .join(' · ')
 }

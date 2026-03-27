@@ -23,6 +23,7 @@ class TransactionImportProfileService(
     suspend fun list(): List<TransactionImportProfile> = repository.list()
 
     suspend fun create(command: SaveTransactionImportProfileCommand): TransactionImportProfile {
+        validateUniqueName(name = command.name)
         validateDefaults(command.defaults)
         val timestamp = Instant.now(clock)
         val profile = repository.save(
@@ -47,6 +48,7 @@ class TransactionImportProfileService(
     suspend fun update(id: UUID, command: SaveTransactionImportProfileCommand): TransactionImportProfile {
         val existing = repository.get(id)
             ?: throw ResourceNotFoundException("Transaction import profile $id was not found.")
+        validateUniqueName(name = command.name, excludedId = id)
         validateDefaults(command.defaults)
         val profile = repository.save(
             existing.copy(
@@ -87,6 +89,20 @@ class TransactionImportProfileService(
         }
         accountRepository.get(parsedAccountId)
             ?: throw ResourceNotFoundException("Account $parsedAccountId was not found.")
+    }
+
+    private suspend fun validateUniqueName(name: String, excludedId: UUID? = null) {
+        val normalizedName = name.trim()
+        require(normalizedName.isNotBlank()) {
+            "Import profile name is required."
+        }
+        require(
+            repository.list().none { profile ->
+                profile.name == normalizedName && profile.id != excludedId
+            }
+        ) {
+            "Import profile name '$normalizedName' is already in use."
+        }
     }
 
     private suspend fun recordAudit(

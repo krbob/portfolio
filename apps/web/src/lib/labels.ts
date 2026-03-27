@@ -368,6 +368,8 @@ export function labelAuditAction(value: string) {
         return 'Błąd pobierania danych rynkowych'
       case 'PORTFOLIO_STATE_IMPORTED':
         return 'Zaimportowano stan portfela'
+      case 'PORTFOLIO_TARGETS_REPLACED':
+        return 'Zapisano alokację docelową'
       case 'READ_MODEL_CACHE_INVALIDATED':
         return 'Wyczyszczono pamięć modeli odczytowych'
       case 'READ_MODEL_REFRESH_COMPLETED':

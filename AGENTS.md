@@ -1,74 +1,62 @@
 # Portfolio Agents
 
-## Goal
+## Product stance
 
-`portfolio` is a self-hosted web application for long-term portfolio tracking.
+`portfolio` is a self-hosted portfolio tracker for one user.
 
-The product is optimized for:
+The core product rules are not negotiable:
 
-- transaction-based portfolio accounting
-- full daily history reconstruction
-- ETF + EDO support
-- performance reporting in PLN, USD, and gold
-- allocation monitoring for a Boglehead-style portfolio
+- transactions are the source of truth
+- analytical views are rebuildable read models
+- SQLite is the runtime database
+- JSON backup, export, import, and restore remain first-class
+- the product optimizes for long-term investing workflows, not generic bookkeeping
 
-## Non-negotiable product decisions
+## Architecture guardrails
 
-- Web-first product.
-- Frontend in React + TypeScript.
-- Backend in Kotlin + Ktor.
-- Transactions are the source of truth.
-- Daily snapshots are rebuildable cache, not canonical data.
-- Historical FX comes from `stock-analyst`.
-- EDO is modeled as a separate instrument per purchase.
-- The target runtime database is SQLite, not PostgreSQL.
+- frontend: React + TypeScript SPA
+- backend: Kotlin + Ktor
+- core domain logic lives in `apps/api/portfolio-domain`
+- portfolio calculations stay on the backend, not in browser code
+- read-model logic stays separate from canonical write-model logic
+- market-data snapshots are a resilience layer, not canonical state
 
-## Engineering rules
+## Domain and workflow rules
 
-- Keep changes scoped and commit each meaningful step separately.
-- Preserve a clean separation between read models and write models.
-- Put portfolio calculation logic on the backend, not in the browser.
-- Prefer explicit domain names over spreadsheet-shaped naming.
-- Avoid binding new code to the legacy Google Sheets model unless it clearly improves the product.
-- Treat `REPLACE` import/restore as destructive operations: require explicit confirmation and preserve a safety backup first.
-- Keep password auth optional and single-user oriented; if it is enabled, `health`, `meta`, and `auth/session` stay public while the rest of the API remains protected.
-- Treat SQLite as a first-class storage engine: explicit encoding, explicit transactions, explicit startup pragmas.
-- Favor investor-product clarity over technical exposition in the UI.
-- Keep technical diagnostics and operational tooling out of the main dashboard unless they are actionable for day-to-day portfolio review.
-- Prefer a small set of shared UI primitives over ad-hoc section-specific styling.
-- Use localized formatting consistently; avoid hard-coded `en-US` and `en-GB` formatting in the web app.
-- Keep deployment-specific hostnames, upstream URLs, and API keys out of the repo; document only generic `.env` placeholders.
+- keep account, instrument, transaction, target, and import-profile semantics explicit
+- EDO stays modeled as a dedicated instrument with typed terms, not a special-case blob
+- `MERGE` import must preserve omitted `targets` and omitted `importProfiles`
+- when `MERGE` includes a `targets` section, that section replaces the target set as one allocation
+- preview and real import must share the same business validation path
+- ambiguous CSV lookup by account name, instrument name, or symbol must fail explicitly instead of guessing
+- destructive `REPLACE` flows require explicit confirmation and a safety backup first
 
-## Repository shape
+## Runtime assumptions
 
-- `apps/web`: React SPA for the self-hosted UI
-- `apps/api`: Ktor API for routing, persistence, integrations, and operational services
-- `apps/api/portfolio-domain`: extracted domain module for portfolio models, repository/provider interfaces, and calculation services
-- `docs`: architecture notes, roadmap, product decisions
-- optional signed-cookie auth spans the SPA and API, but should stay thin and operational rather than becoming a full identity system
-- target self-hosted persistence is a single local SQLite database plus JSON backups
+- supported persistence is one local SQLite database plus JSON backups
+- background refresh and market-data mode must be explicit and documented
+- keep deployment-specific hostnames, secrets, and upstream URLs out of the repo
+- keep OpenAPI UI off by default unless explicitly enabled
+- password auth stays optional and single-user oriented
+- when auth is enabled, `health`, `meta`, and `auth/session` remain public bootstrap routes
 
-## Current product shape
+## Quality bar
 
-- canonical write-model APIs cover accounts, instruments, targets, transactions, import profiles, and application settings
-- analytical read models cover overview, holdings, accounts, daily history, returns, benchmarks, allocation, audit, and operational diagnostics
-- backup, restore, export, and import are first-class operational workflows
-- the supported self-hosted runtime is SQLite plus JSON backups, with optional market-data integrations and optional single-user auth
-- Docker and compose-based deployment are part of the product surface, not afterthought tooling
+- prefer boring, testable flows over speculative abstractions
+- preserve auditability for state-changing operations
+- favor clear investor-facing copy over technical exposition in the main UI
+- diagnostics should be actionable; do not surface operational noise without a decision attached
+- keep docs current when changing runtime modes, transfer semantics, or operational behavior
 
-## Delivered hardening
+## Repository map
 
-- added `ErrorBoundary` for graceful crash recovery instead of white screens
-- decomposed `TransactionsSection` (3 k lines) into workspace components: journal, import, profiles, and helpers
-- split `PortfolioRoute` (1.6 k lines) into metrics, settings, and operations route files
-- introduced ESLint with `typescript-eslint` and `eslint-plugin-react-hooks`, integrated into CI
-- added unit tests for formatting utilities, label mappings, and portfolio-presentation helpers
-- configured `QueryClient` defaults (staleTime, retry, refetchOnWindowFocus) for LAN deployment
+- `apps/web`: SPA, route screens, API client, UI primitives
+- `apps/api`: Ktor routes, persistence, integrations, operational services
+- `apps/api/portfolio-domain`: domain models, repositories, services, calculations
+- `docs`: short current architecture, domain, runbook, and roadmap notes
 
-## Current focus
+## Documentation rule
 
-- Keep the SQLite self-hosted path reliable and well-documented.
-- Prefer incremental product work over broad architectural refactors.
-- Keep `docs/architecture.md`, `docs/domain-model.md`, and `docs/roadmap.md` short and current.
-- Keep CI split pragmatic: deterministic PR checks, deeper self-hosted smoke before image publish, and environment-specific remote smoke outside default CI.
-- Do not keep historical backlog or superseded redesign plans in active docs; rely on Git history instead.
+Keep `README.md`, `docs/architecture.md`, `docs/domain-model.md`, `docs/runbook.md`, and `docs/roadmap.md` aligned with the actual product.
+
+Do not keep stale redesign plans or dead backlog documents in active docs. If something is no longer current, delete it and rely on Git history.

@@ -159,7 +159,28 @@ data class PortfolioImportPreviewResponse(
     val matchingImportProfileCount: Int,
     val blockingIssueCount: Int,
     val warningCount: Int,
+    val diff: PortfolioImportDiffResponse,
     val issues: List<PortfolioImportIssueResponse>
+)
+
+@Serializable
+data class PortfolioImportDiffResponse(
+    val accounts: PortfolioImportEntityDiffResponse,
+    val appPreferences: PortfolioImportEntityDiffResponse,
+    val instruments: PortfolioImportEntityDiffResponse,
+    val targets: PortfolioImportEntityDiffResponse,
+    val transactions: PortfolioImportEntityDiffResponse,
+    val importProfiles: PortfolioImportEntityDiffResponse
+)
+
+@Serializable
+data class PortfolioImportEntityDiffResponse(
+    val createdCount: Int,
+    val updatedCount: Int,
+    val unchangedCount: Int,
+    val preservedCount: Int,
+    val deletedCount: Int,
+    val sectionSkipped: Boolean
 )
 
 @Serializable
@@ -629,7 +650,28 @@ internal fun PortfolioImportPreview.toResponse(): PortfolioImportPreviewResponse
         matchingImportProfileCount = matchingImportProfileCount,
         blockingIssueCount = blockingIssueCount,
         warningCount = warningCount,
+        diff = diff.toResponse(),
         issues = issues.map(PortfolioImportIssue::toResponse)
+    )
+
+internal fun net.bobinski.portfolio.api.domain.service.PortfolioImportDiff.toResponse(): PortfolioImportDiffResponse =
+    PortfolioImportDiffResponse(
+        accounts = accounts.toResponse(),
+        appPreferences = appPreferences.toResponse(),
+        instruments = instruments.toResponse(),
+        targets = targets.toResponse(),
+        transactions = transactions.toResponse(),
+        importProfiles = importProfiles.toResponse()
+    )
+
+internal fun net.bobinski.portfolio.api.domain.service.PortfolioImportEntityDiff.toResponse(): PortfolioImportEntityDiffResponse =
+    PortfolioImportEntityDiffResponse(
+        createdCount = createdCount,
+        updatedCount = updatedCount,
+        unchangedCount = unchangedCount,
+        preservedCount = preservedCount,
+        deletedCount = deletedCount,
+        sectionSkipped = sectionSkipped
     )
 
 internal fun PortfolioImportIssue.toResponse(): PortfolioImportIssueResponse = PortfolioImportIssueResponse(

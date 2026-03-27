@@ -18,22 +18,14 @@ class MarketDataSnapshotCacheService(
                 val key = preference.key.removePrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
                 val type = key.substringBefore('.', missingDelimiterValue = "")
                 when (type) {
-                    "quote" -> appPreferenceService.getOrNull(
-                        key = preference.key,
-                        serializer = StoredQuoteSnapshot.serializer()
-                    )?.toSummary(preference.updatedAt)
-                    "series" -> appPreferenceService.getOrNull(
-                        key = preference.key,
-                        serializer = StoredSeriesSnapshot.serializer()
-                    )?.toSummary(preference.updatedAt)
-                    "inflation-monthly" -> appPreferenceService.getOrNull(
-                        key = preference.key,
-                        serializer = StoredMonthlyInflationSnapshot.serializer()
-                    )?.toSummary(preference.updatedAt)
-                    "inflation-window" -> appPreferenceService.getOrNull(
-                        key = preference.key,
-                        serializer = StoredInflationWindow.serializer()
-                    )?.toSummary(preference.updatedAt)
+                    "quote" -> appPreferenceService.decodeOrNull(preference, StoredQuoteSnapshot.serializer())
+                        ?.toSummary(preference.updatedAt)
+                    "series" -> appPreferenceService.decodeOrNull(preference, StoredSeriesSnapshot.serializer())
+                        ?.toSummary(preference.updatedAt)
+                    "inflation-monthly" -> appPreferenceService.decodeOrNull(preference, StoredMonthlyInflationSnapshot.serializer())
+                        ?.toSummary(preference.updatedAt)
+                    "inflation-window" -> appPreferenceService.decodeOrNull(preference, StoredInflationWindow.serializer())
+                        ?.toSummary(preference.updatedAt)
                     else -> null
                 }
             }

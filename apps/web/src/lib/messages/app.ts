@@ -127,6 +127,37 @@ export const appMessages = {
   },
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
+  'staleAlert.badge': { pl: 'STALE', en: 'STALE' },
+  'staleAlert.title': { pl: 'Wycena działa na danych rynkowych z opóźnieniem', en: 'Valuation is running on stale market data' },
+  'staleAlert.messageBase': {
+    pl: 'Bieżąca wycena portfela korzysta z ostatnich poprawnych danych rynkowych zamiast świeżego odczytu.',
+    en: 'The current portfolio valuation is using last-known-good market data instead of a fresh upstream read.',
+  },
+  'staleAlert.messageSnapshot': {
+    pl: 'Najnowszy zapis fallbacku pochodzi z {timestamp}.',
+    en: 'The latest fallback snapshot was cached at {timestamp}.',
+  },
+  'staleAlert.messageSnapshotMissing': {
+    pl: 'Brakuje informacji o czasie ostatniego poprawnego zapisu fallbacku.',
+    en: 'No timestamp is available for the latest fallback snapshot.',
+  },
+  'staleAlert.messageUpstream': {
+    pl: 'Najbardziej podejrzany upstream: {upstream}.',
+    en: 'Most likely upstream under pressure: {upstream}.',
+  },
+  'staleAlert.messageIssues': {
+    pl: 'Otwarte luki wyceny: {count}.',
+    en: 'Open valuation gaps: {count}.',
+  },
+  'staleAlert.openDataQuality': { pl: 'Otwórz jakość danych', en: 'Open data quality' },
+  'staleAlert.openMarketData': { pl: 'Otwórz dane rynkowe', en: 'Open market data' },
+  'staleAlert.openHealth': { pl: 'Otwórz stan systemu', en: 'Open system health' },
+  'staleAlert.valuationCoverage': { pl: 'Pokrycie wyceny', en: 'Valuation coverage' },
+  'staleAlert.latestSnapshot': { pl: 'Najnowszy snapshot', en: 'Latest snapshot' },
+  'staleAlert.primaryUpstream': { pl: 'Główny upstream', en: 'Primary upstream' },
+  'staleAlert.upstreamStockAnalyst': { pl: 'Stock Analyst', en: 'Stock Analyst' },
+  'staleAlert.upstreamEdoCalculator': { pl: 'Kalkulator EDO', en: 'EDO calculator' },
+  'staleAlert.upstreamGold': { pl: 'Dane o złocie', en: 'Gold market data' },
   'ui.unavailable': { pl: 'Niedostępne', en: 'Unavailable' },
   'ui.errorTitle': { pl: 'Coś poszło nie tak', en: 'Something went wrong' },
   'ui.errorDescription': {

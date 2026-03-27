@@ -153,8 +153,8 @@ class TransactionCsvImportService(
         rowNumber: Int,
         headerLookup: Map<String, Int>,
         profile: TransactionImportProfile,
-        accountLookup: Map<String, UUID>,
-        instrumentLookup: Map<String, UUID>
+        accountLookup: Map<String, Set<UUID>>,
+        instrumentLookup: Map<String, Set<UUID>>
     ): CreateTransactionCommand {
         fun valueFor(columnName: String?): String? {
             if (columnName.isNullOrBlank()) {
@@ -177,8 +177,12 @@ class TransactionCsvImportService(
         val accountId = when (val rawAccount = valueFor(profile.headerMappings.account)) {
             null -> profile.defaults.accountId?.let(UUID::fromString)
                 ?: throw IllegalArgumentException("Row $rowNumber: account is required.")
-            else -> accountLookup[rawAccount.lowercase()]
-                ?: throw IllegalArgumentException("Row $rowNumber: unknown account '$rawAccount'.")
+            else -> resolveLookup(
+                rawValue = rawAccount,
+                rowNumber = rowNumber,
+                entityName = "account",
+                lookup = accountLookup
+            )
         }
 
         val rawType = valueFor(profile.headerMappings.type)
@@ -203,8 +207,12 @@ class TransactionCsvImportService(
 
         val rawInstrument = valueFor(profile.headerMappings.instrument)
         val instrumentId = rawInstrument?.let { raw ->
-            instrumentLookup[raw.lowercase()]
-                ?: throw IllegalArgumentException("Row $rowNumber: unknown instrument '$raw'.")
+            resolveLookup(
+                rawValue = raw,
+                rowNumber = rowNumber,
+                entityName = "instrument",
+                lookup = instrumentLookup
+            )
         }
 
         val currency = (valueFor(profile.headerMappings.currency) ?: profile.defaults.currency)
@@ -229,20 +237,47 @@ class TransactionCsvImportService(
         )
     }
 
-    private fun buildAccountLookup(accounts: List<Account>): Map<String, UUID> = buildMap {
+    private fun buildAccountLookup(accounts: List<Account>): Map<String, Set<UUID>> = buildMap<String, MutableSet<UUID>> {
         accounts.forEach { account ->
-            put(account.id.toString().lowercase(), account.id)
-            put(account.name.trim().lowercase(), account.id)
+            appendLookup(account.id.toString(), account.id)
+            appendLookup(account.name, account.id)
+        }
+    }.mapValues { (_, ids) -> ids.toSet() }
+
+    private fun buildInstrumentLookup(instruments: List<Instrument>): Map<String, Set<UUID>> = buildMap<String, MutableSet<UUID>> {
+        instruments.forEach { instrument ->
+            appendLookup(instrument.id.toString(), instrument.id)
+            appendLookup(instrument.name, instrument.id)
+            instrument.symbol?.let { symbol -> appendLookup(symbol, instrument.id) }
+        }
+    }.mapValues { (_, ids) -> ids.toSet() }
+
+    private fun MutableMap<String, MutableSet<UUID>>.appendLookup(rawKey: String, id: UUID) {
+        val normalizedKey = normalizeLookupKey(rawKey)
+        if (normalizedKey.isEmpty()) {
+            return
+        }
+        getOrPut(normalizedKey) { linkedSetOf() }.add(id)
+    }
+
+    private fun resolveLookup(
+        rawValue: String,
+        rowNumber: Int,
+        entityName: String,
+        lookup: Map<String, Set<UUID>>
+    ): UUID {
+        val matches = lookup[normalizeLookupKey(rawValue)]
+            ?: throw IllegalArgumentException("Row $rowNumber: unknown $entityName '$rawValue'.")
+
+        return when (matches.size) {
+            1 -> matches.first()
+            else -> throw IllegalArgumentException(
+                "Row $rowNumber: $entityName '$rawValue' is ambiguous. Use a UUID or make the value unique."
+            )
         }
     }
 
-    private fun buildInstrumentLookup(instruments: List<Instrument>): Map<String, UUID> = buildMap {
-        instruments.forEach { instrument ->
-            put(instrument.id.toString().lowercase(), instrument.id)
-            put(instrument.name.trim().lowercase(), instrument.id)
-            instrument.symbol?.trim()?.lowercase()?.let { put(it, instrument.id) }
-        }
-    }
+    private fun normalizeLookupKey(value: String): String = value.trim().lowercase()
 
     private fun parseDate(
         value: String,

@@ -24,6 +24,12 @@ export function tFor(key: MessageKey, language: UiLanguage): string {
   return resolveMessage(messages[key], language)
 }
 
+export function formatMessage(template: string, values: Record<string, string | number | null | undefined>): string {
+  return Object.entries(values).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, value == null ? '' : String(value))
+  }, template)
+}
+
 function resolveMessage(entry: MessageEntry, language: UiLanguage): string {
   return language === 'pl' ? entry.pl : entry.en
 }

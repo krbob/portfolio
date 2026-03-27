@@ -76,6 +76,12 @@ export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean
       const mode = event.metadata.mode
       return mode ? `Zaimportowano stan portfela w trybie ${mode}.` : 'Zaimportowano stan portfela.'
     }
+    case 'PORTFOLIO_TARGETS_REPLACED': {
+      const newMix = event.metadata.newMix
+      return newMix
+        ? `Zapisano nową alokację docelową: ${summarizeMix(newMix, true)}.`
+        : 'Zapisano nową alokację docelową.'
+    }
     case 'READ_MODEL_CACHE_INVALIDATED':
       return 'Wyczyszczono pamięć modeli odczytowych.'
     case 'READ_MODEL_REFRESH_COMPLETED':
@@ -194,6 +200,10 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, isPo
     appPreferenceCount: tFor('auditCopy.metaAppPreferenceCount', lang),
     instrumentCount: tFor('auditCopy.metaInstrumentCount', lang),
     targetCount: tFor('auditCopy.metaTargetCount', lang),
+    previousMix: tFor('auditCopy.metaPreviousMix', lang),
+    newMix: tFor('auditCopy.metaNewMix', lang),
+    targetSum: tFor('auditCopy.metaTargetSum', lang),
+    assetClasses: tFor('auditCopy.metaAssetClasses', lang),
     importProfileCount: tFor('auditCopy.metaImportProfileCount', lang),
     retentionCount: tFor('auditCopy.metaRetentionCount', lang),
     safetyBackupFileName: tFor('auditCopy.metaSafetyBackupFileName', lang),
@@ -303,6 +313,16 @@ function translateMetadataValue(key: string, value: string, isPolish: boolean) {
       return labelAssetClass(value)
     case 'valuationSource':
       return labelValuationSource(value)
+    case 'previousMix':
+    case 'newMix':
+      return summarizeMix(value, true)
+    case 'assetClasses':
+      return value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map(labelAssetClass)
+        .join(', ')
     case 'delimiter':
       return value === 'COMMA' ? 'Przecinek' : value === 'SEMICOLON' ? 'Średnik' : value === 'TAB' ? 'Tabulator' : value
     case 'decimalSeparator':
@@ -322,6 +342,20 @@ function translateMetadataValue(key: string, value: string, isPolish: boolean) {
   }
 }
 
+function summarizeMix(rawMix: string, isPolish: boolean) {
+  return rawMix
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [assetClass, weight] = entry.split('=')
+      const label = isPolish ? labelAssetClass(assetClass) : assetClass
+      const pct = Number(weight) * 100
+      return Number.isFinite(pct) ? `${label} ${pct.toFixed(2)}%` : label
+    })
+    .join(' · ')
+}
+
 function metadataSortOrder(key: string) {
   const priority = [
     'upstream',
@@ -338,6 +372,10 @@ function metadataSortOrder(key: string) {
     'sourceLabel',
     'sourceFileName',
     'profileName',
+    'previousMix',
+    'newMix',
+    'targetSum',
+    'assetClasses',
     'reason',
     'failureMessage',
   ]

@@ -62,209 +62,12 @@ class PortfolioTransferService(
         )
     }
 
-    suspend fun previewImport(request: PortfolioImportRequest): PortfolioImportPreview {
-        val existingAccounts = accountRepository.list()
-        val existingAppPreferences = appPreferenceRepository.list()
-        val existingInstruments = instrumentRepository.list()
-        val existingTargets = portfolioTargetRepository.list()
-        val existingTransactions = transactionRepository.list()
-        val existingImportProfiles = transactionImportProfileRepository.list()
-        val issues = mutableListOf<PortfolioImportIssue>()
-
-        if (request.snapshot.schemaVersion !in SUPPORTED_SCHEMA_VERSIONS) {
-            issues += PortfolioImportIssue(
-                severity = ImportIssueSeverity.ERROR,
-                code = "UNSUPPORTED_SCHEMA_VERSION",
-                message = "Unsupported snapshot schema version ${request.snapshot.schemaVersion}. Expected one of ${SUPPORTED_SCHEMA_VERSIONS.sorted().joinToString()}."
-            )
-        }
-
-        issues += duplicateIdIssues(
-            entityName = "account",
-            ids = request.snapshot.accounts.map(AccountSnapshot::id)
-        )
-        issues += duplicateIdIssues(
-            entityName = "instrument",
-            ids = request.snapshot.instruments.map(InstrumentSnapshot::id)
-        )
-        issues += duplicateIdIssues(
-            entityName = "target",
-            ids = request.snapshot.targets.map(PortfolioTargetSnapshot::id)
-        )
-        issues += duplicateStringIssues(
-            entityName = "app preference",
-            values = request.snapshot.appPreferences.map(AppPreferenceSnapshot::key)
-        )
-        issues += duplicateIdIssues(
-            entityName = "transaction",
-            ids = request.snapshot.transactions.map(TransactionSnapshot::id)
-        )
-        issues += duplicateIdIssues(
-            entityName = "import profile",
-            ids = request.snapshot.importProfiles.map(TransactionImportProfileSnapshot::id)
-        )
-
-        val snapshotAccountIds = mutableSetOf<UUID>()
-        request.snapshot.accounts.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onSuccess { account ->
-                    snapshotAccountIds += account.id
-                }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "account",
-                        entityId = snapshot.id,
-                        message = exception.message ?: "Invalid account snapshot."
-                    )
-                }
-        }
-
-        val snapshotInstrumentIds = mutableSetOf<UUID>()
-        request.snapshot.instruments.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onSuccess { instrument ->
-                    snapshotInstrumentIds += instrument.id
-                }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "instrument",
-                        entityId = snapshot.id,
-                        message = exception.message ?: "Invalid instrument snapshot."
-                    )
-                }
-        }
-
-        request.snapshot.targets.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "target",
-                        entityId = snapshot.id,
-                        message = exception.message ?: "Invalid target snapshot."
-                    )
-                }
-        }
-
-        val snapshotPreferenceKeys = mutableSetOf<String>()
-        request.snapshot.appPreferences.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onSuccess { preference ->
-                    snapshotPreferenceKeys += preference.key
-                }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "app preference",
-                        entityId = snapshot.key,
-                        message = exception.message ?: "Invalid app preference snapshot."
-                    )
-                }
-        }
-
-        val accountIdsAvailable = when (request.mode) {
-            ImportMode.MERGE -> existingAccounts.mapTo(mutableSetOf(), Account::id)
-            ImportMode.REPLACE -> mutableSetOf()
-        }.apply {
-            addAll(snapshotAccountIds)
-        }
-
-        val instrumentIdsAvailable = when (request.mode) {
-            ImportMode.MERGE -> existingInstruments.mapTo(mutableSetOf(), Instrument::id)
-            ImportMode.REPLACE -> mutableSetOf()
-        }.apply {
-            addAll(snapshotInstrumentIds)
-        }
-
-        request.snapshot.transactions.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onSuccess { transaction ->
-                    if (transaction.accountId !in accountIdsAvailable) {
-                        issues += missingReferenceIssue(
-                            transactionId = snapshot.id,
-                            referenceName = "account",
-                            referenceId = snapshot.accountId
-                        )
-                    }
-                    if (transaction.instrumentId != null && transaction.instrumentId !in instrumentIdsAvailable) {
-                        issues += missingReferenceIssue(
-                            transactionId = snapshot.id,
-                            referenceName = "instrument",
-                            referenceId = snapshot.instrumentId ?: "null"
-                        )
-                    }
-                }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "transaction",
-                        entityId = snapshot.id,
-                        message = exception.message ?: "Invalid transaction snapshot."
-                    )
-                }
-        }
-
-        request.snapshot.importProfiles.forEach { snapshot ->
-            runCatching { snapshot.toDomain() }
-                .onSuccess { profile ->
-                    val defaultAccountId = profile.defaults.accountId?.let(String::toUuidOrNull)
-                    if (profile.defaults.accountId != null && defaultAccountId == null) {
-                        issues += invalidSnapshotIssue(
-                            entityName = "import profile",
-                            entityId = snapshot.id,
-                            message = "Import profile default account id must be a valid UUID."
-                        )
-                    } else if (defaultAccountId != null && defaultAccountId !in accountIdsAvailable) {
-                        issues += PortfolioImportIssue(
-                            severity = ImportIssueSeverity.ERROR,
-                            code = "IMPORT_PROFILE_ACCOUNT_MISSING",
-                            message = "Import profile ${snapshot.id} references missing account ${profile.defaults.accountId}."
-                        )
-                    }
-                }
-                .onFailure { exception ->
-                    issues += invalidSnapshotIssue(
-                        entityName = "import profile",
-                        entityId = snapshot.id,
-                        message = exception.message ?: "Invalid import profile snapshot."
-                    )
-                }
-        }
-
-        val snapshotAccountIdsRaw = request.snapshot.accounts.map(AccountSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
-        val snapshotPreferenceKeysRaw = request.snapshot.appPreferences.map(AppPreferenceSnapshot::key).toSet()
-        val snapshotInstrumentIdsRaw = request.snapshot.instruments.map(InstrumentSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
-        val snapshotTargetIdsRaw = request.snapshot.targets.map(PortfolioTargetSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
-        val snapshotTransactionIdsRaw = request.snapshot.transactions.map(TransactionSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
-        val snapshotImportProfileIdsRaw = request.snapshot.importProfiles.map(TransactionImportProfileSnapshot::id).mapNotNull(String::toUuidOrNull).toSet()
-
-        return PortfolioImportPreview(
-            mode = request.mode,
-            schemaVersion = request.snapshot.schemaVersion,
-            isValid = issues.none { issue -> issue.severity == ImportIssueSeverity.ERROR },
-            snapshotAccountCount = request.snapshot.accounts.size,
-            snapshotAppPreferenceCount = request.snapshot.appPreferences.size,
-            snapshotInstrumentCount = request.snapshot.instruments.size,
-            snapshotTargetCount = request.snapshot.targets.size,
-            snapshotTransactionCount = request.snapshot.transactions.size,
-            snapshotImportProfileCount = request.snapshot.importProfiles.size,
-            existingAccountCount = existingAccounts.size,
-            existingAppPreferenceCount = existingAppPreferences.size,
-            existingInstrumentCount = existingInstruments.size,
-            existingTargetCount = existingTargets.size,
-            existingTransactionCount = existingTransactions.size,
-            existingImportProfileCount = existingImportProfiles.size,
-            matchingAccountCount = existingAccounts.count { account -> account.id in snapshotAccountIdsRaw },
-            matchingAppPreferenceCount = existingAppPreferences.count { preference -> preference.key in snapshotPreferenceKeysRaw },
-            matchingInstrumentCount = existingInstruments.count { instrument -> instrument.id in snapshotInstrumentIdsRaw },
-            matchingTargetCount = existingTargets.count { target -> target.id in snapshotTargetIdsRaw },
-            matchingTransactionCount = existingTransactions.count { transaction -> transaction.id in snapshotTransactionIdsRaw },
-            matchingImportProfileCount = existingImportProfiles.count { profile -> profile.id in snapshotImportProfileIdsRaw },
-            blockingIssueCount = issues.count { issue -> issue.severity == ImportIssueSeverity.ERROR },
-            warningCount = issues.count { issue -> issue.severity == ImportIssueSeverity.WARNING },
-            issues = issues.sortedByDescending { issue -> issue.severity == ImportIssueSeverity.ERROR }
-        )
-    }
+    suspend fun previewImport(request: PortfolioImportRequest): PortfolioImportPreview =
+        prepareImport(request).preview
 
     suspend fun importState(request: PortfolioImportRequest): PortfolioImportResult {
-        val preview = previewImport(request)
+        val prepared = prepareImport(request)
+        val preview = prepared.preview
         require(preview.isValid) {
             buildString {
                 append("Snapshot import validation failed.")
@@ -288,45 +91,49 @@ class PortfolioTransferService(
                 accountRepository.deleteAll()
             }
 
-            val accounts = request.snapshot.accounts
-                .sortedWith(compareBy<AccountSnapshot>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
-                .map { snapshot ->
-                    accountRepository.save(snapshot.toDomain())
+            val accounts = prepared.accounts
+                .sortedWith(compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
+                .map { account -> accountRepository.save(account) }
+            val appPreferences = prepared.appPreferences
+                .sortedWith(compareBy<AppPreference>({ it.key }, { it.updatedAt }))
+                .map { preference -> appPreferenceRepository.save(preference) }
+            val instruments = prepared.instruments
+                .sortedBy(Instrument::createdAt)
+                .map { instrument -> instrumentRepository.save(instrument) }
+
+            when (val targetPlan = prepared.targetPlan) {
+                PreparedTargetImportPlan.Preserve -> Unit
+                is PreparedTargetImportPlan.Replace -> {
+                    portfolioTargetRepository.replaceAll(
+                        targetPlan.targets.sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
+                    )
                 }
-            val appPreferences = request.snapshot.appPreferences
-                .sortedWith(compareBy<AppPreferenceSnapshot>({ it.key }, { it.updatedAt }))
-                .map { snapshot ->
-                    appPreferenceRepository.save(snapshot.toDomain())
+            }
+
+            val transactions = prepared.transactions
+                .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+                .map { transaction -> transactionRepository.save(transaction) }
+
+            when (val importProfilesPlan = prepared.importProfilesPlan) {
+                PreparedImportProfilesPlan.Preserve -> Unit
+                is PreparedImportProfilesPlan.ReplaceAll -> {
+                    if (request.mode == ImportMode.MERGE) {
+                        transactionImportProfileRepository.deleteAll()
+                    }
+                    importProfilesPlan.profiles
+                        .sortedWith(compareBy<TransactionImportProfile>({ it.name.lowercase() }, { it.createdAt }))
+                        .forEach { profile -> transactionImportProfileRepository.save(profile) }
                 }
-            val instruments = request.snapshot.instruments
-                .sortedBy(InstrumentSnapshot::createdAt)
-                .map { snapshot ->
-                    instrumentRepository.save(snapshot.toDomain())
-                }
-            request.snapshot.targets
-                .sortedWith(compareBy<PortfolioTargetSnapshot>({ it.createdAt }, { it.assetClass }))
-                .also { snapshots ->
-                    portfolioTargetRepository.replaceAll(snapshots.map { it.toDomain() })
-                }
-            val transactions = request.snapshot.transactions
-                .sortedWith(compareBy<TransactionSnapshot>({ it.tradeDate }, { it.createdAt }))
-                .map { snapshot ->
-                    transactionRepository.save(snapshot.toDomain())
-                }
-            val importProfiles = request.snapshot.importProfiles
-                .sortedWith(compareBy<TransactionImportProfileSnapshot>({ it.name.lowercase() }, { it.createdAt }))
-                .map { snapshot ->
-                    transactionImportProfileRepository.save(snapshot.toDomain())
-                }
+            }
 
             PortfolioImportResult(
                 mode = request.mode,
-                accountCount = accounts.size,
-                appPreferenceCount = appPreferences.size,
-                instrumentCount = instruments.size,
-                targetCount = request.snapshot.targets.size,
-                transactionCount = transactions.size,
-                importProfileCount = importProfiles.size
+                accountCount = prepared.accounts.size,
+                appPreferenceCount = prepared.appPreferences.size,
+                instrumentCount = prepared.instruments.size,
+                targetCount = prepared.targetPlan.appliedCount,
+                transactionCount = prepared.transactions.size,
+                importProfileCount = prepared.importProfilesPlan.appliedCount
             )
         }
         auditLogService.record(
@@ -335,7 +142,7 @@ class PortfolioTransferService(
             entityType = "PORTFOLIO_SNAPSHOT",
             message = "Imported portfolio snapshot in ${request.mode.name} mode.",
             metadata = mapOf(
-                "mode" to request.mode.name,
+                "mode" to result.mode.name,
                 "accountCount" to result.accountCount.toString(),
                 "appPreferenceCount" to result.appPreferenceCount.toString(),
                 "instrumentCount" to result.instrumentCount.toString(),
@@ -345,6 +152,420 @@ class PortfolioTransferService(
             )
         )
         return result
+    }
+
+    private suspend fun prepareImport(request: PortfolioImportRequest): PreparedPortfolioImport {
+        val existingAccounts = accountRepository.list()
+        val existingAppPreferences = appPreferenceRepository.list()
+        val existingInstruments = instrumentRepository.list()
+        val existingTargets = portfolioTargetRepository.list()
+        val existingTransactions = transactionRepository.list()
+        val existingImportProfiles = transactionImportProfileRepository.list()
+        val issues = mutableListOf<PortfolioImportIssue>()
+
+        if (request.snapshot.schemaVersion !in SUPPORTED_SCHEMA_VERSIONS) {
+            issues += PortfolioImportIssue(
+                severity = ImportIssueSeverity.ERROR,
+                code = "UNSUPPORTED_SCHEMA_VERSION",
+                message = "Unsupported snapshot schema version ${request.snapshot.schemaVersion}. Expected one of ${SUPPORTED_SCHEMA_VERSIONS.sorted().joinToString()}."
+            )
+        }
+
+        issues += duplicateIdIssues("account", request.snapshot.accounts.map(AccountSnapshot::id))
+        issues += duplicateIdIssues("instrument", request.snapshot.instruments.map(InstrumentSnapshot::id))
+        issues += duplicateIdIssues("target", request.snapshot.targets.map(PortfolioTargetSnapshot::id))
+        issues += duplicateStringIssues("app preference", request.snapshot.appPreferences.map(AppPreferenceSnapshot::key))
+        issues += duplicateIdIssues("transaction", request.snapshot.transactions.map(TransactionSnapshot::id))
+        issues += duplicateIdIssues("import profile", request.snapshot.importProfiles.map(TransactionImportProfileSnapshot::id))
+
+        val snapshotAccounts = parseSnapshots(
+            snapshots = request.snapshot.accounts,
+            entityName = "account",
+            entityId = AccountSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+        val snapshotAppPreferences = parseSnapshots(
+            snapshots = request.snapshot.appPreferences,
+            entityName = "app preference",
+            entityId = AppPreferenceSnapshot::key,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+        val snapshotInstruments = parseSnapshots(
+            snapshots = request.snapshot.instruments,
+            entityName = "instrument",
+            entityId = InstrumentSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+        val snapshotTargets = parseSnapshots(
+            snapshots = request.snapshot.targets,
+            entityName = "target",
+            entityId = PortfolioTargetSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+        val snapshotTransactions = parseSnapshots(
+            snapshots = request.snapshot.transactions,
+            entityName = "transaction",
+            entityId = TransactionSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+        val snapshotImportProfiles = parseSnapshots(
+            snapshots = request.snapshot.importProfiles,
+            entityName = "import profile",
+            entityId = TransactionImportProfileSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
+
+        if (snapshotTargets.isNotEmpty()) {
+            runCatching { PortfolioTargetService.validateTargets(snapshotTargets) }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "target",
+                        entityId = "targets",
+                        message = exception.message ?: "Invalid target snapshot set."
+                    )
+                }
+        }
+
+        val accountIdsAvailable = when (request.mode) {
+            ImportMode.MERGE -> existingAccounts.mapTo(mutableSetOf(), Account::id)
+            ImportMode.REPLACE -> mutableSetOf()
+        }.apply {
+            addAll(snapshotAccounts.map(Account::id))
+        }
+        val instrumentIdsAvailable = when (request.mode) {
+            ImportMode.MERGE -> existingInstruments.mapTo(mutableSetOf(), Instrument::id)
+            ImportMode.REPLACE -> mutableSetOf()
+        }.apply {
+            addAll(snapshotInstruments.map(Instrument::id))
+        }
+
+        snapshotTransactions.forEach { transaction ->
+            if (transaction.accountId !in accountIdsAvailable) {
+                issues += missingReferenceIssue(
+                    transactionId = transaction.id.toString(),
+                    referenceName = "account",
+                    referenceId = transaction.accountId.toString()
+                )
+            }
+            if (transaction.instrumentId != null && transaction.instrumentId !in instrumentIdsAvailable) {
+                issues += missingReferenceIssue(
+                    transactionId = transaction.id.toString(),
+                    referenceName = "instrument",
+                    referenceId = transaction.instrumentId.toString()
+                )
+            }
+        }
+
+        snapshotImportProfiles.forEach { profile ->
+            val defaultAccountId = profile.defaults.accountId?.let(String::toUuidOrNull)
+            if (profile.defaults.accountId != null && defaultAccountId == null) {
+                issues += invalidSnapshotIssue(
+                    entityName = "import profile",
+                    entityId = profile.id.toString(),
+                    message = "Import profile default account id must be a valid UUID."
+                )
+            } else if (defaultAccountId != null && defaultAccountId !in accountIdsAvailable) {
+                issues += PortfolioImportIssue(
+                    severity = ImportIssueSeverity.ERROR,
+                    code = "IMPORT_PROFILE_ACCOUNT_MISSING",
+                    message = "Import profile ${profile.id} references missing account ${profile.defaults.accountId}."
+                )
+            }
+        }
+
+        val targetPlan = prepareTargetPlan(
+            mode = request.mode,
+            existingTargets = existingTargets,
+            snapshotTargets = snapshotTargets,
+            issues = issues
+        )
+        val importProfilesPlan = prepareImportProfilesPlan(
+            mode = request.mode,
+            existingProfiles = existingImportProfiles,
+            snapshotProfiles = snapshotImportProfiles,
+            issues = issues
+        )
+
+        val diff = PortfolioImportDiff(
+            accounts = buildEntityDiff(
+                mode = request.mode,
+                existing = existingAccounts,
+                incoming = snapshotAccounts,
+                keySelector = Account::id,
+                signatureSelector = { account -> account.toSnapshot() }
+            ),
+            appPreferences = buildEntityDiff(
+                mode = request.mode,
+                existing = existingAppPreferences,
+                incoming = snapshotAppPreferences,
+                keySelector = AppPreference::key,
+                signatureSelector = { preference -> preference.toSnapshot() }
+            ),
+            instruments = buildEntityDiff(
+                mode = request.mode,
+                existing = existingInstruments,
+                incoming = snapshotInstruments,
+                keySelector = Instrument::id,
+                signatureSelector = { instrument -> instrument.toSnapshot() }
+            ),
+            targets = when (targetPlan) {
+                PreparedTargetImportPlan.Preserve -> PortfolioImportEntityDiff(
+                    createdCount = 0,
+                    updatedCount = 0,
+                    unchangedCount = 0,
+                    preservedCount = existingTargets.size,
+                    deletedCount = 0,
+                    sectionSkipped = true
+                )
+                is PreparedTargetImportPlan.Replace -> buildEntityDiff(
+                    mode = request.mode,
+                    existing = existingTargets,
+                    incoming = targetPlan.targets,
+                    keySelector = PortfolioTarget::assetClass,
+                    signatureSelector = { target -> target.toSnapshot() },
+                    allowDeletionInMerge = request.mode == ImportMode.MERGE
+                )
+            },
+            transactions = buildEntityDiff(
+                mode = request.mode,
+                existing = existingTransactions,
+                incoming = snapshotTransactions,
+                keySelector = Transaction::id,
+                signatureSelector = { transaction -> transaction.toSnapshot() }
+            ),
+            importProfiles = when (importProfilesPlan) {
+                PreparedImportProfilesPlan.Preserve -> PortfolioImportEntityDiff(
+                    createdCount = 0,
+                    updatedCount = 0,
+                    unchangedCount = 0,
+                    preservedCount = existingImportProfiles.size,
+                    deletedCount = 0,
+                    sectionSkipped = true
+                )
+                is PreparedImportProfilesPlan.ReplaceAll -> buildEntityDiff(
+                    mode = request.mode,
+                    existing = existingImportProfiles,
+                    incoming = snapshotImportProfiles,
+                    keySelector = TransactionImportProfile::id,
+                    signatureSelector = { profile -> profile.toSnapshot() }
+                )
+            }
+        )
+
+        val sortedIssues = issues.sortedWith(
+            compareBy<PortfolioImportIssue>(
+                { it.severity != ImportIssueSeverity.ERROR },
+                { it.code },
+                { it.message }
+            )
+        )
+
+        return PreparedPortfolioImport(
+            accounts = snapshotAccounts,
+            appPreferences = snapshotAppPreferences,
+            instruments = snapshotInstruments,
+            targetPlan = targetPlan,
+            transactions = snapshotTransactions,
+            importProfilesPlan = importProfilesPlan,
+            preview = PortfolioImportPreview(
+                mode = request.mode,
+                schemaVersion = request.snapshot.schemaVersion,
+                isValid = sortedIssues.none { issue -> issue.severity == ImportIssueSeverity.ERROR },
+                snapshotAccountCount = request.snapshot.accounts.size,
+                snapshotAppPreferenceCount = request.snapshot.appPreferences.size,
+                snapshotInstrumentCount = request.snapshot.instruments.size,
+                snapshotTargetCount = request.snapshot.targets.size,
+                snapshotTransactionCount = request.snapshot.transactions.size,
+                snapshotImportProfileCount = request.snapshot.importProfiles.size,
+                existingAccountCount = existingAccounts.size,
+                existingAppPreferenceCount = existingAppPreferences.size,
+                existingInstrumentCount = existingInstruments.size,
+                existingTargetCount = existingTargets.size,
+                existingTransactionCount = existingTransactions.size,
+                existingImportProfileCount = existingImportProfiles.size,
+                matchingAccountCount = diff.accounts.matchingCount,
+                matchingAppPreferenceCount = diff.appPreferences.matchingCount,
+                matchingInstrumentCount = diff.instruments.matchingCount,
+                matchingTargetCount = diff.targets.matchingCount,
+                matchingTransactionCount = diff.transactions.matchingCount,
+                matchingImportProfileCount = diff.importProfiles.matchingCount,
+                blockingIssueCount = sortedIssues.count { issue -> issue.severity == ImportIssueSeverity.ERROR },
+                warningCount = sortedIssues.count { issue -> issue.severity == ImportIssueSeverity.WARNING },
+                diff = diff,
+                issues = sortedIssues
+            )
+        )
+    }
+
+    private inline fun <S, T> parseSnapshots(
+        snapshots: List<S>,
+        entityName: String,
+        entityId: (S) -> String,
+        issues: MutableList<PortfolioImportIssue>,
+        convert: (S) -> T
+    ): List<T> = buildList {
+        snapshots.forEach { snapshot ->
+            runCatching { convert(snapshot) }
+                .onSuccess(::add)
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = entityName,
+                        entityId = entityId(snapshot),
+                        message = exception.message ?: "Invalid $entityName snapshot."
+                    )
+                }
+        }
+    }
+
+    private fun prepareTargetPlan(
+        mode: ImportMode,
+        existingTargets: List<PortfolioTarget>,
+        snapshotTargets: List<PortfolioTarget>,
+        issues: MutableList<PortfolioImportIssue>
+    ): PreparedTargetImportPlan {
+        if (mode == ImportMode.MERGE && snapshotTargets.isEmpty()) {
+            if (existingTargets.isNotEmpty()) {
+                issues += PortfolioImportIssue(
+                    severity = ImportIssueSeverity.WARNING,
+                    code = "TARGETS_SECTION_SKIPPED",
+                    message = "Snapshot does not contain targets. MERGE will preserve the current target allocation."
+                )
+            }
+            return PreparedTargetImportPlan.Preserve
+        }
+
+        if (mode == ImportMode.MERGE && snapshotTargets.isNotEmpty() && existingTargets.isNotEmpty()) {
+            issues += PortfolioImportIssue(
+                severity = ImportIssueSeverity.WARNING,
+                code = "TARGETS_SECTION_REPLACED",
+                message = "MERGE will replace the current target allocation with the snapshot target set."
+            )
+        }
+
+        return PreparedTargetImportPlan.Replace(snapshotTargets)
+    }
+
+    private fun prepareImportProfilesPlan(
+        mode: ImportMode,
+        existingProfiles: List<TransactionImportProfile>,
+        snapshotProfiles: List<TransactionImportProfile>,
+        issues: MutableList<PortfolioImportIssue>
+    ): PreparedImportProfilesPlan {
+        if (mode == ImportMode.MERGE && snapshotProfiles.isEmpty()) {
+            return PreparedImportProfilesPlan.Preserve
+        }
+
+        val finalProfiles = when (mode) {
+            ImportMode.REPLACE -> snapshotProfiles
+            ImportMode.MERGE -> {
+                val merged = existingProfiles.associateBy(TransactionImportProfile::id).toMutableMap()
+                snapshotProfiles.forEach { profile ->
+                    merged[profile.id] = profile
+                }
+                merged.values.toList()
+            }
+        }
+
+        issues += duplicateImportProfileNameIssues(finalProfiles)
+        return PreparedImportProfilesPlan.ReplaceAll(finalProfiles)
+    }
+
+    private fun duplicateImportProfileNameIssues(
+        profiles: List<TransactionImportProfile>
+    ): List<PortfolioImportIssue> = profiles
+        .groupingBy { it.name.trim() }
+        .eachCount()
+        .filter { (name, count) -> name.isNotBlank() && count > 1 }
+        .keys
+        .sorted()
+        .map { duplicateName ->
+            PortfolioImportIssue(
+                severity = ImportIssueSeverity.ERROR,
+                code = "IMPORT_PROFILE_NAME_DUPLICATE",
+                message = "Import profile name '$duplicateName' would not be unique after import."
+            )
+        }
+
+    private fun <T, K> buildEntityDiff(
+        mode: ImportMode,
+        existing: List<T>,
+        incoming: List<T>,
+        keySelector: (T) -> K,
+        signatureSelector: (T) -> Any,
+        allowDeletionInMerge: Boolean = false
+    ): PortfolioImportEntityDiff {
+        val existingByKey = existing.associateBy(keySelector)
+        val incomingKeys = incoming.map(keySelector).toSet()
+        val createdCount = incoming.count { item -> keySelector(item) !in existingByKey }
+        val updatedCount = incoming.count { item ->
+            val key = keySelector(item)
+            val existingItem = existingByKey[key] ?: return@count false
+            signatureSelector(existingItem) != signatureSelector(item)
+        }
+        val unchangedCount = incoming.count { item ->
+            val key = keySelector(item)
+            val existingItem = existingByKey[key] ?: return@count false
+            signatureSelector(existingItem) == signatureSelector(item)
+        }
+        val preservedCount = when {
+            mode == ImportMode.MERGE && !allowDeletionInMerge ->
+                existing.count { item -> keySelector(item) !in incomingKeys }
+            else -> 0
+        }
+        val deletedCount = when {
+            mode == ImportMode.REPLACE ->
+                existing.count { item -> keySelector(item) !in incomingKeys }
+            mode == ImportMode.MERGE && allowDeletionInMerge ->
+                existing.count { item -> keySelector(item) !in incomingKeys }
+            else -> 0
+        }
+        return PortfolioImportEntityDiff(
+            createdCount = createdCount,
+            updatedCount = updatedCount,
+            unchangedCount = unchangedCount,
+            preservedCount = preservedCount,
+            deletedCount = deletedCount
+        )
+    }
+
+    private data class PreparedPortfolioImport(
+        val accounts: List<Account>,
+        val appPreferences: List<AppPreference>,
+        val instruments: List<Instrument>,
+        val targetPlan: PreparedTargetImportPlan,
+        val transactions: List<Transaction>,
+        val importProfilesPlan: PreparedImportProfilesPlan,
+        val preview: PortfolioImportPreview
+    )
+
+    private sealed interface PreparedTargetImportPlan {
+        val appliedCount: Int
+
+        data object Preserve : PreparedTargetImportPlan {
+            override val appliedCount: Int = 0
+        }
+
+        data class Replace(val targets: List<PortfolioTarget>) : PreparedTargetImportPlan {
+            override val appliedCount: Int = targets.size
+        }
+    }
+
+    private sealed interface PreparedImportProfilesPlan {
+        val appliedCount: Int
+
+        data object Preserve : PreparedImportProfilesPlan {
+            override val appliedCount: Int = 0
+        }
+
+        data class ReplaceAll(val profiles: List<TransactionImportProfile>) : PreparedImportProfilesPlan {
+            override val appliedCount: Int = profiles.size
+        }
     }
 
     private fun duplicateIdIssues(entityName: String, ids: List<String>): List<PortfolioImportIssue> = ids
@@ -542,19 +763,22 @@ class PortfolioTransferService(
         updatedAt = Instant.parse(updatedAt)
     )
 
-    private fun TransactionImportProfileSnapshot.toDomain(): TransactionImportProfile = TransactionImportProfile(
-        id = UUID.fromString(id),
-        name = name,
-        description = description,
-        delimiter = net.bobinski.portfolio.api.domain.model.CsvDelimiter.valueOf(delimiter),
-        dateFormat = net.bobinski.portfolio.api.domain.model.CsvDateFormat.valueOf(dateFormat),
-        decimalSeparator = net.bobinski.portfolio.api.domain.model.CsvDecimalSeparator.valueOf(decimalSeparator),
-        skipDuplicatesByDefault = skipDuplicatesByDefault,
-        headerMappings = headerMappings,
-        defaults = defaults,
-        createdAt = Instant.parse(createdAt),
-        updatedAt = Instant.parse(updatedAt)
-    )
+    private fun TransactionImportProfileSnapshot.toDomain(): TransactionImportProfile {
+        require(name.isNotBlank()) { "Import profile name must not be blank." }
+        return TransactionImportProfile(
+            id = UUID.fromString(id),
+            name = name,
+            description = description,
+            delimiter = net.bobinski.portfolio.api.domain.model.CsvDelimiter.valueOf(delimiter),
+            dateFormat = net.bobinski.portfolio.api.domain.model.CsvDateFormat.valueOf(dateFormat),
+            decimalSeparator = net.bobinski.portfolio.api.domain.model.CsvDecimalSeparator.valueOf(decimalSeparator),
+            skipDuplicatesByDefault = skipDuplicatesByDefault,
+            headerMappings = headerMappings,
+            defaults = defaults,
+            createdAt = Instant.parse(createdAt),
+            updatedAt = Instant.parse(updatedAt)
+        )
+    }
 
     private companion object {
         const val CURRENT_SCHEMA_VERSION = 4
@@ -704,8 +928,30 @@ data class PortfolioImportPreview(
     val matchingImportProfileCount: Int,
     val blockingIssueCount: Int,
     val warningCount: Int,
+    val diff: PortfolioImportDiff,
     val issues: List<PortfolioImportIssue>
 )
+
+data class PortfolioImportDiff(
+    val accounts: PortfolioImportEntityDiff,
+    val appPreferences: PortfolioImportEntityDiff,
+    val instruments: PortfolioImportEntityDiff,
+    val targets: PortfolioImportEntityDiff,
+    val transactions: PortfolioImportEntityDiff,
+    val importProfiles: PortfolioImportEntityDiff
+)
+
+data class PortfolioImportEntityDiff(
+    val createdCount: Int,
+    val updatedCount: Int,
+    val unchangedCount: Int,
+    val preservedCount: Int,
+    val deletedCount: Int,
+    val sectionSkipped: Boolean = false
+) {
+    val matchingCount: Int
+        get() = updatedCount + unchangedCount
+}
 
 data class PortfolioImportIssue(
     val severity: ImportIssueSeverity,

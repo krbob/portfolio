@@ -2,6 +2,8 @@ package net.bobinski.portfolio.api.auth.config
 
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.propertyOrNull
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 
 data class AuthConfig(
     val enabled: Boolean,
@@ -53,7 +55,13 @@ data class AuthConfig(
 fun AuthConfig.modeName(): String = if (enabled) "PASSWORD" else "DISABLED"
 
 fun AuthConfig.passwordFingerprint(): String =
-    java.security.MessageDigest.getInstance("SHA-256")
+    MessageDigest.getInstance("SHA-256")
         .digest(password.toByteArray())
         .joinToString(separator = "") { byte -> "%02x".format(byte) }
         .take(16)
+
+fun AuthConfig.matchesPassword(candidate: String): Boolean =
+    MessageDigest.isEqual(
+        password.toByteArray(StandardCharsets.UTF_8),
+        candidate.toByteArray(StandardCharsets.UTF_8)
+    )
