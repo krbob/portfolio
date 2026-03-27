@@ -2279,7 +2279,7 @@ describe('App', () => {
 
     const instrumentSelect = dialogScope.getByLabelText(/^instrument$/i) as HTMLSelectElement
     expect(Array.from(instrumentSelect.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
-      'Not required',
+      'Select instrument',
       'EDO0336',
     ])
 

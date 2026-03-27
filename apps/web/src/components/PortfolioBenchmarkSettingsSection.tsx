@@ -173,16 +173,17 @@ export function PortfolioBenchmarkSettingsSection() {
                 />
                 {isPolish ? 'Aktywny' : 'Enabled'}
               </label>
-              <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                  checked={pinnedKeys.includes('CUSTOM')}
-                  disabled={!enabledKeys.includes('CUSTOM')}
-                  onChange={() => togglePinned('CUSTOM')}
-                />
-                {isPolish ? 'Przypięty' : 'Pinned'}
-              </label>
+              {enabledKeys.includes('CUSTOM') && (
+                <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
+                    checked={pinnedKeys.includes('CUSTOM')}
+                    onChange={() => togglePinned('CUSTOM')}
+                  />
+                  {isPolish ? 'Przypięty' : 'Pinned'}
+                </label>
+              )}
             </div>
           </div>
 
@@ -260,16 +261,17 @@ function BenchmarkGroup({
                   />
                   {isPolish ? 'Aktywny' : 'Enabled'}
                 </span>
-                <span className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                    checked={pinned}
-                    disabled={!enabled}
-                    onChange={() => onTogglePinned(key)}
-                  />
-                  {isPolish ? 'Przypięty' : 'Pinned'}
-                </span>
+                {enabled && (
+                  <span className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
+                      checked={pinned}
+                      onChange={() => onTogglePinned(key)}
+                    />
+                    {isPolish ? 'Przypięty' : 'Pinned'}
+                  </span>
+                )}
               </div>
             </label>
           )

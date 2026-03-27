@@ -723,41 +723,43 @@ export function TransactionJournal({
                 />
               </label>
 
-              <label>
-                <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
-                <select
-                  className={input}
-                  value={form.instrumentId}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, instrumentId: event.target.value }))
-                  }
-                  disabled={!requiresInstrument}
-                >
-                  <option value="">{isPolish ? 'Nie wymagane' : 'Not required'}</option>
-                  {selectableInstrumentOptions.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>
-                      {instrument.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div>
+              {requiresInstrument && (
                 <label>
-                <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
-                <input
-                  className={input}
-                  inputMode="numeric"
-                  value={form.quantity}
-                  onChange={(event) => handleQuantityChange(event.target.value)}
-                  placeholder="10"
-                  disabled={!requiresInstrument}
-                />
+                  <span className={labelClass}>{isPolish ? 'Instrument' : 'Instrument'}</span>
+                  <select
+                    className={input}
+                    value={form.instrumentId}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, instrumentId: event.target.value }))
+                    }
+                  >
+                    <option value="">{isPolish ? 'Wybierz instrument' : 'Select instrument'}</option>
+                    {selectableInstrumentOptions.map((instrument) => (
+                      <option key={instrument.id} value={instrument.id}>
+                        {instrument.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {isPolish ? 'Ręczny formularz przyjmuje tylko całe sztuki.' : 'The manual form accepts whole units only.'}
-                </p>
-              </div>
+              )}
+
+              {requiresInstrument && (
+                <div>
+                  <label>
+                  <span className={labelClass}>{isPolish ? 'Liczba sztuk' : 'Quantity'}</span>
+                  <input
+                    className={input}
+                    inputMode="numeric"
+                    value={form.quantity}
+                    onChange={(event) => handleQuantityChange(event.target.value)}
+                    placeholder="10"
+                  />
+                  </label>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {isPolish ? 'Ręczny formularz przyjmuje tylko całe sztuki.' : 'The manual form accepts whole units only.'}
+                  </p>
+                </div>
+              )}
 
               {form.type === 'REDEEM' && (
                 <div className="col-span-full rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
@@ -924,17 +926,18 @@ export function TransactionJournal({
                 </div>
               )}
 
-              <label>
-                <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
-                <input
-                  className={input}
-                  inputMode="decimal"
-                  value={form.unitPrice}
-                  onChange={(event) => handleUnitPriceChange(event.target.value)}
-                  placeholder={isPolish ? '123,45' : '123.45'}
-                  disabled={!requiresInstrument}
-                />
-              </label>
+              {requiresInstrument && (
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Cena jednostkowa' : 'Unit price'}</span>
+                  <input
+                    className={input}
+                    inputMode="decimal"
+                    value={form.unitPrice}
+                    onChange={(event) => handleUnitPriceChange(event.target.value)}
+                    placeholder={isPolish ? '123,45' : '123.45'}
+                  />
+                </label>
+              )}
 
               <div>
                 <label className={labelClass} htmlFor="transaction-gross-amount">
