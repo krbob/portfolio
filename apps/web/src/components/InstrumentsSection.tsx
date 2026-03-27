@@ -7,6 +7,14 @@ import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '..
 
 const currentSeriesMonth = new Date().toISOString().slice(0, 7)
 
+function seriesMonthToDate(seriesMonth: string): string {
+  return `${seriesMonth}-01`
+}
+
+function dateToSeriesMonth(date: string): string {
+  return date.slice(0, 7)
+}
+
 function buildEdoSeriesName(seriesMonth: string): string {
   const [yearString, monthString] = seriesMonth.split('-')
   const year = Number(yearString)
@@ -181,15 +189,16 @@ export function InstrumentsSection() {
               <span className={labelClass}>{isPolish ? 'Miesiąc serii' : 'Series month'}</span>
               <input
                 className={input}
-                type="month"
-                value={form.seriesMonth}
-                onChange={(event) =>
+                type="date"
+                value={seriesMonthToDate(form.seriesMonth)}
+                onChange={(event) => {
+                  const month = dateToSeriesMonth(event.target.value)
                   setForm((current) => ({
                     ...current,
-                    seriesMonth: event.target.value,
-                    name: buildEdoSeriesName(event.target.value),
+                    seriesMonth: month,
+                    name: buildEdoSeriesName(month),
                   }))
-                }
+                }}
                 required
               />
             </div>
