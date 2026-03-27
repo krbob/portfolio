@@ -8,11 +8,12 @@ import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import java.util.UUID
 
 class JdbcTransactionRepository(
-    private val dataSource: DataSource
+    private val connectionManager: JdbcConnectionManager
 ) : TransactionRepository {
+    constructor(dataSource: DataSource) : this(JdbcConnectionManager(dataSource))
 
     override suspend fun list(): List<Transaction> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select
@@ -34,7 +35,7 @@ class JdbcTransactionRepository(
         }
 
     override suspend fun get(id: UUID): Transaction? =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select
@@ -53,14 +54,14 @@ class JdbcTransactionRepository(
         }
 
     override suspend fun save(transaction: Transaction): Transaction {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.upsertTransaction(transaction)
         }
         return transaction
     }
 
     override suspend fun delete(id: UUID): Boolean =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 delete from transactions
@@ -73,7 +74,7 @@ class JdbcTransactionRepository(
         }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from transactions").use { statement ->
                 statement.executeUpdate()
             }

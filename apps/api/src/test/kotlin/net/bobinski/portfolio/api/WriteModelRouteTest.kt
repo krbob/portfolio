@@ -354,6 +354,36 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `pln transactions drop fx rate to pln from api payloads`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+
+        val response = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-03-10",
+                  "settlementDate": "2026-03-10",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN",
+                  "fxRateToPln": "4.0321"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertTrue(response.bodyAsText().contains("\"currency\": \"PLN\""))
+        assertTrue(response.bodyAsText().contains("\"fxRateToPln\": null"))
+    }
+
+    @Test
     fun `transactions can be updated and deleted`() = testApplication {
         application {
             module()

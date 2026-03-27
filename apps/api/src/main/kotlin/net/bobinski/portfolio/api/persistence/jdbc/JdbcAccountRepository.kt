@@ -8,11 +8,12 @@ import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import java.util.UUID
 
 class JdbcAccountRepository(
-    private val dataSource: DataSource
+    private val connectionManager: JdbcConnectionManager
 ) : AccountRepository {
+    constructor(dataSource: DataSource) : this(JdbcConnectionManager(dataSource))
 
     override suspend fun list(): List<Account> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select id, name, institution, type, base_currency, display_order, is_active, created_at, updated_at
@@ -31,7 +32,7 @@ class JdbcAccountRepository(
         }
 
     override suspend fun get(id: UUID): Account? =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select id, name, institution, type, base_currency, display_order, is_active, created_at, updated_at
@@ -47,7 +48,7 @@ class JdbcAccountRepository(
         }
 
     override suspend fun save(account: Account): Account {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.upsertAccount(account)
         }
         return account
@@ -58,25 +59,17 @@ class JdbcAccountRepository(
             return
         }
 
-        dataSource.connection.use { connection ->
-            val previousAutoCommit = connection.autoCommit
-            connection.autoCommit = false
-            try {
+        connectionManager.inTransaction {
+            connectionManager.withConnection { connection ->
                 accounts.forEach { account ->
                     connection.upsertAccount(account)
                 }
-                connection.commit()
-            } catch (exception: Exception) {
-                connection.rollback()
-                throw exception
-            } finally {
-                connection.autoCommit = previousAutoCommit
             }
         }
     }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from accounts").use { statement ->
                 statement.executeUpdate()
             }

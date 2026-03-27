@@ -14,12 +14,13 @@ import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepo
 import java.util.UUID
 
 class JdbcTransactionImportProfileRepository(
-    private val dataSource: DataSource,
+    private val connectionManager: JdbcConnectionManager,
     private val json: Json
 ) : TransactionImportProfileRepository {
+    constructor(dataSource: DataSource, json: Json) : this(JdbcConnectionManager(dataSource), json)
 
     override suspend fun list(): List<TransactionImportProfile> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select
@@ -40,7 +41,7 @@ class JdbcTransactionImportProfileRepository(
         }
 
     override suspend fun get(id: UUID): TransactionImportProfile? =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select
@@ -58,14 +59,14 @@ class JdbcTransactionImportProfileRepository(
         }
 
     override suspend fun save(profile: TransactionImportProfile): TransactionImportProfile {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.upsertImportProfile(profile)
         }
         return profile
     }
 
     override suspend fun delete(id: UUID): Boolean =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 delete from transaction_import_profiles
@@ -78,7 +79,7 @@ class JdbcTransactionImportProfileRepository(
         }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from transaction_import_profiles").use { statement ->
                 statement.executeUpdate()
             }

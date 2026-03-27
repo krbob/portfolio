@@ -25,6 +25,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsSer
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
+import net.bobinski.portfolio.api.domain.service.PersistenceTransactionRunner
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
@@ -65,6 +66,7 @@ import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcConnectionManager
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
@@ -145,15 +147,22 @@ fun appModule(
     if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
         single(createdAtStart = true) { PersistenceResources(config) }
         single<DataSource> { get<PersistenceResources>().dataSource }
-        single<AppPreferenceRepository> { JdbcAppPreferenceRepository(dataSource = get()) }
+        single { JdbcConnectionManager(dataSource = get()) }
+        single<PersistenceTransactionRunner> { get<JdbcConnectionManager>() }
+        single<AppPreferenceRepository> { JdbcAppPreferenceRepository(connectionManager = get()) }
         single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
-        single<AccountRepository> { JdbcAccountRepository(dataSource = get()) }
-        single<InstrumentRepository> { JdbcInstrumentRepository(dataSource = get()) }
-        single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(dataSource = get()) }
+        single<AccountRepository> { JdbcAccountRepository(connectionManager = get()) }
+        single<InstrumentRepository> { JdbcInstrumentRepository(connectionManager = get()) }
+        single<PortfolioTargetRepository> { JdbcPortfolioTargetRepository(connectionManager = get()) }
         single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
-        single<TransactionRepository> { JdbcTransactionRepository(dataSource = get()) }
-        single<TransactionImportProfileRepository> { JdbcTransactionImportProfileRepository(dataSource = get(), json = get()) }
+        single<TransactionRepository> { JdbcTransactionRepository(connectionManager = get()) }
+        single<TransactionImportProfileRepository> { JdbcTransactionImportProfileRepository(connectionManager = get(), json = get()) }
     } else {
+        single<PersistenceTransactionRunner> {
+            object : PersistenceTransactionRunner {
+                override suspend fun <T> inTransaction(block: suspend () -> T): T = block()
+            }
+        }
         single<AppPreferenceRepository> { InMemoryAppPreferenceRepository() }
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
@@ -303,6 +312,7 @@ fun appModule(
             portfolioTargetRepository = get(),
             transactionRepository = get(),
             transactionImportProfileRepository = get(),
+            transactionRunner = get(),
             auditLogService = get(),
             clock = get()
         )

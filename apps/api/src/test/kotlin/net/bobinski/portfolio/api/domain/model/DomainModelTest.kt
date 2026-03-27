@@ -134,6 +134,32 @@ class DomainModelTest {
         assertEquals("REDEEM transactions require an instrument.", exception.message)
     }
 
+    @Test
+    fun `pln transaction rejects fx rate to pln`() {
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            Transaction(
+                id = UUID.randomUUID(),
+                accountId = UUID.randomUUID(),
+                instrumentId = null,
+                type = TransactionType.DEPOSIT,
+                tradeDate = LocalDate.parse("2026-01-10"),
+                settlementDate = LocalDate.parse("2026-01-10"),
+                quantity = null,
+                unitPrice = null,
+                grossAmount = BigDecimal("1000.00"),
+                feeAmount = BigDecimal.ZERO,
+                taxAmount = BigDecimal.ZERO,
+                currency = "PLN",
+                fxRateToPln = BigDecimal("4.0123"),
+                notes = "",
+                createdAt = NOW,
+                updatedAt = NOW
+            )
+        }
+
+        assertEquals("PLN transactions must not carry FX rate to PLN.", exception.message)
+    }
+
     private companion object {
         val NOW: Instant = Instant.parse("2026-03-13T12:00:00Z")
     }

@@ -64,7 +64,9 @@ class InstrumentService(
 
         val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
         val symbolChanged = symbol != existing.symbol
-        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null && symbolChanged) {
+        val switchedToStockAnalyst = existing.valuationSource != ValuationSource.STOCK_ANALYST &&
+            command.valuationSource == ValuationSource.STOCK_ANALYST
+        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null && (symbolChanged || switchedToStockAnalyst)) {
             valuationProbeService.verifyStockAnalystSymbol(symbol)
         }
 

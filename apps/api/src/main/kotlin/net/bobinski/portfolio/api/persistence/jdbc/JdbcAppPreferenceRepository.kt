@@ -5,11 +5,12 @@ import net.bobinski.portfolio.api.domain.model.AppPreference
 import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 
 class JdbcAppPreferenceRepository(
-    private val dataSource: DataSource
+    private val connectionManager: JdbcConnectionManager
 ) : AppPreferenceRepository {
+    constructor(dataSource: DataSource) : this(JdbcConnectionManager(dataSource))
 
     override suspend fun get(key: String): AppPreference? =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select preference_key, value_json, updated_at
@@ -29,7 +30,7 @@ class JdbcAppPreferenceRepository(
         }
 
     override suspend fun list(): List<AppPreference> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select preference_key, value_json, updated_at
@@ -48,7 +49,7 @@ class JdbcAppPreferenceRepository(
         }
 
     override suspend fun save(preference: AppPreference): AppPreference {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 insert into app_preferences (
@@ -69,7 +70,7 @@ class JdbcAppPreferenceRepository(
     }
 
     override suspend fun delete(key: String): Boolean =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 delete from app_preferences
@@ -82,7 +83,7 @@ class JdbcAppPreferenceRepository(
         }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from app_preferences").use { statement ->
                 statement.executeUpdate()
             }

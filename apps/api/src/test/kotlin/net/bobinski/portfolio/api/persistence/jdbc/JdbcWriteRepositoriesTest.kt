@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.math.BigDecimal
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -10,6 +11,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -20,10 +22,20 @@ import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
+import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.domain.service.AccountSnapshot
+import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.ImportMode
+import net.bobinski.portfolio.api.domain.service.InstrumentSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
+import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
+import net.bobinski.portfolio.api.domain.service.TransactionSnapshot
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -98,6 +110,147 @@ class JdbcWriteRepositoriesTest {
             transactionRepository.save(redeemTransaction)
 
             assertEquals(redeemTransaction, transactionRepository.get(redeemTransaction.id))
+        }
+    }
+
+    @Test
+    fun `replace import rolls back all sqlite writes when a transaction save fails`() = runBlocking {
+        sqliteDatabase { dataSource ->
+            val connectionManager = JdbcConnectionManager(dataSource)
+            val accountRepository = JdbcAccountRepository(connectionManager)
+            val appPreferenceRepository = JdbcAppPreferenceRepository(connectionManager)
+            val instrumentRepository = JdbcInstrumentRepository(connectionManager)
+            val transactionDelegate = JdbcTransactionRepository(connectionManager)
+            val failingTransactionId = UUID.fromString("40000000-0000-0000-0000-000000000099")
+            val transactionRepository = object : TransactionRepository {
+                override suspend fun list(): List<Transaction> = transactionDelegate.list()
+
+                override suspend fun get(id: UUID): Transaction? = transactionDelegate.get(id)
+
+                override suspend fun save(transaction: Transaction): Transaction {
+                    if (transaction.id == failingTransactionId) {
+                        throw IllegalStateException("Simulated transaction write failure.")
+                    }
+                    return transactionDelegate.save(transaction)
+                }
+
+                override suspend fun delete(id: UUID): Boolean = transactionDelegate.delete(id)
+
+                override suspend fun deleteAll() = transactionDelegate.deleteAll()
+            }
+            val portfolioTargetRepository = JdbcPortfolioTargetRepository(connectionManager)
+            val transactionImportProfileRepository = JdbcTransactionImportProfileRepository(connectionManager, Json.Default)
+            val transferService = PortfolioTransferService(
+                accountRepository = accountRepository,
+                appPreferenceRepository = appPreferenceRepository,
+                instrumentRepository = instrumentRepository,
+                portfolioTargetRepository = portfolioTargetRepository,
+                transactionRepository = transactionRepository,
+                transactionImportProfileRepository = transactionImportProfileRepository,
+                transactionRunner = connectionManager,
+                auditLogService = AuditLogService(InMemoryAuditEventRepository(), Clock.systemUTC()),
+                clock = Clock.systemUTC()
+            )
+
+            val existingAccount = account()
+            val existingInstrument = edoInstrument()
+            val existingTransaction = buyTransaction(existingAccount.id, existingInstrument.id)
+
+            accountRepository.save(existingAccount)
+            instrumentRepository.save(existingInstrument)
+            transactionDelegate.save(existingTransaction)
+
+            val importRequest = PortfolioImportRequest(
+                mode = ImportMode.REPLACE,
+                snapshot = PortfolioSnapshot(
+                    schemaVersion = 4,
+                    exportedAt = Instant.parse("2026-03-20T12:00:00Z"),
+                    accounts = listOf(
+                        AccountSnapshot(
+                            id = "21000000-0000-0000-0000-000000000001",
+                            name = "Imported account",
+                            institution = "Imported broker",
+                            type = "BROKERAGE",
+                            baseCurrency = "PLN",
+                            displayOrder = 0,
+                            isActive = true,
+                            createdAt = "2026-03-20T12:00:00Z",
+                            updatedAt = "2026-03-20T12:00:00Z"
+                        )
+                    ),
+                    appPreferences = emptyList(),
+                    instruments = listOf(
+                        InstrumentSnapshot(
+                            id = "31000000-0000-0000-0000-000000000001",
+                            name = "Imported ETF",
+                            kind = "ETF",
+                            assetClass = "EQUITIES",
+                            symbol = "VWRA.L",
+                            currency = "USD",
+                            valuationSource = "STOCK_ANALYST",
+                            edoTerms = null,
+                            isActive = true,
+                            createdAt = "2026-03-20T12:00:00Z",
+                            updatedAt = "2026-03-20T12:00:00Z"
+                        )
+                    ),
+                    targets = emptyList(),
+                    importProfiles = emptyList(),
+                    transactions = listOf(
+                        TransactionSnapshot(
+                            id = "41000000-0000-0000-0000-000000000001",
+                            accountId = "21000000-0000-0000-0000-000000000001",
+                            instrumentId = null,
+                            type = "DEPOSIT",
+                            tradeDate = "2026-03-20",
+                            settlementDate = "2026-03-20",
+                            quantity = null,
+                            unitPrice = null,
+                            grossAmount = "1000.00",
+                            feeAmount = "0.00",
+                            taxAmount = "0.00",
+                            currency = "PLN",
+                            fxRateToPln = null,
+                            notes = "",
+                            createdAt = "2026-03-20T12:00:00Z",
+                            updatedAt = "2026-03-20T12:00:00Z"
+                        ),
+                        TransactionSnapshot(
+                            id = failingTransactionId.toString(),
+                            accountId = "21000000-0000-0000-0000-000000000001",
+                            instrumentId = "31000000-0000-0000-0000-000000000001",
+                            type = "BUY",
+                            tradeDate = "2026-03-21",
+                            settlementDate = "2026-03-21",
+                            quantity = "2",
+                            unitPrice = "100.00",
+                            grossAmount = "200.00",
+                            feeAmount = "0.00",
+                            taxAmount = "0.00",
+                            currency = "USD",
+                            fxRateToPln = "3.9500",
+                            notes = "",
+                            createdAt = "2026-03-21T12:00:00Z",
+                            updatedAt = "2026-03-21T12:00:00Z"
+                        )
+                    )
+                )
+            )
+
+            var failure: IllegalStateException? = null
+            try {
+                transferService.importState(importRequest)
+            } catch (exception: IllegalStateException) {
+                failure = exception
+            }
+            assertEquals("Simulated transaction write failure.", failure?.message)
+
+            assertEquals(listOf(existingAccount), accountRepository.list())
+            assertEquals(existingInstrument, instrumentRepository.get(existingInstrument.id))
+            assertEquals(existingTransaction, transactionDelegate.get(existingTransaction.id))
+            assertNull(accountRepository.get(UUID.fromString("21000000-0000-0000-0000-000000000001")))
+            assertNull(instrumentRepository.get(UUID.fromString("31000000-0000-0000-0000-000000000001")))
+            assertNull(transactionDelegate.get(failingTransactionId))
         }
     }
 

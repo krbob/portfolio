@@ -7,11 +7,12 @@ import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import java.util.UUID
 
 class JdbcPortfolioTargetRepository(
-    private val dataSource: DataSource
+    private val connectionManager: JdbcConnectionManager
 ) : PortfolioTargetRepository {
+    constructor(dataSource: DataSource) : this(JdbcConnectionManager(dataSource))
 
     override suspend fun list(): List<PortfolioTarget> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 select id, asset_class, target_weight, created_at, updated_at
@@ -38,10 +39,8 @@ class JdbcPortfolioTargetRepository(
         }
 
     override suspend fun replaceAll(targets: List<PortfolioTarget>) {
-        dataSource.connection.use { connection ->
-            val previousAutoCommit = connection.autoCommit
-            connection.autoCommit = false
-            try {
+        connectionManager.inTransaction {
+            connectionManager.withConnection { connection ->
                 connection.prepareStatement("delete from portfolio_targets").use { statement ->
                     statement.executeUpdate()
                 }
@@ -62,18 +61,12 @@ class JdbcPortfolioTargetRepository(
                     }
                     statement.executeBatch()
                 }
-                connection.commit()
-            } catch (error: Exception) {
-                connection.rollback()
-                throw error
-            } finally {
-                connection.autoCommit = previousAutoCommit
             }
         }
     }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from portfolio_targets").use { statement ->
                 statement.executeUpdate()
             }

@@ -89,6 +89,8 @@ class TransactionService(
         val existing = transactionRepository.get(id)
             ?: throw ResourceNotFoundException("Transaction $id was not found.")
         validateReferences(command)
+        val currency = command.currency.uppercase()
+        val fxRateToPln = canonicalFxRateToPln(currency, command.fxRateToPln)
 
         val transaction = transactionRepository.save(
             Transaction(
@@ -103,8 +105,8 @@ class TransactionService(
                 grossAmount = command.grossAmount,
                 feeAmount = command.feeAmount,
                 taxAmount = command.taxAmount,
-                currency = command.currency.uppercase(),
-                fxRateToPln = command.fxRateToPln,
+                currency = currency,
+                fxRateToPln = fxRateToPln,
                 notes = command.notes.trim(),
                 createdAt = existing.createdAt,
                 updatedAt = Instant.now(clock)
@@ -175,7 +177,7 @@ class TransactionService(
                 feeAmount = command.feeAmount,
                 taxAmount = command.taxAmount,
                 currency = command.currency.uppercase(),
-                fxRateToPln = command.fxRateToPln,
+                fxRateToPln = canonicalFxRateToPln(command.currency, command.fxRateToPln),
                 notes = command.notes.trim(),
                 createdAt = timestamp,
                 updatedAt = timestamp
@@ -225,6 +227,7 @@ class TransactionService(
 
     private suspend fun validateImportRow(command: CreateTransactionCommand): String? = try {
         validateReferences(command)
+        val currency = command.currency.uppercase()
         Transaction(
             id = UUID.randomUUID(),
             accountId = command.accountId,
@@ -237,8 +240,8 @@ class TransactionService(
             grossAmount = command.grossAmount,
             feeAmount = command.feeAmount,
             taxAmount = command.taxAmount,
-            currency = command.currency.uppercase(),
-            fxRateToPln = command.fxRateToPln,
+            currency = currency,
+            fxRateToPln = canonicalFxRateToPln(currency, command.fxRateToPln),
             notes = command.notes.trim(),
             createdAt = Instant.EPOCH,
             updatedAt = Instant.EPOCH
@@ -262,7 +265,7 @@ class TransactionService(
         feeAmount = feeAmount.normalized(),
         taxAmount = taxAmount.normalized(),
         currency = currency.uppercase(),
-        fxRateToPln = fxRateToPln?.normalized(),
+        fxRateToPln = canonicalFxRateToPln(currency, fxRateToPln)?.normalized(),
         notes = notes.trim()
     )
 
@@ -278,7 +281,7 @@ class TransactionService(
         feeAmount = feeAmount.normalized(),
         taxAmount = taxAmount.normalized(),
         currency = currency.uppercase(),
-        fxRateToPln = fxRateToPln?.normalized(),
+        fxRateToPln = canonicalFxRateToPln(currency, fxRateToPln)?.normalized(),
         notes = notes.trim()
     )
 
@@ -305,6 +308,13 @@ class TransactionService(
     }
 
     private fun BigDecimal.normalized(): BigDecimal = stripTrailingZeros()
+
+    private fun canonicalFxRateToPln(currency: String, fxRateToPln: BigDecimal?): BigDecimal? =
+        if (currency.uppercase() == "PLN") {
+            null
+        } else {
+            fxRateToPln
+        }
 }
 
 data class CreateTransactionCommand(

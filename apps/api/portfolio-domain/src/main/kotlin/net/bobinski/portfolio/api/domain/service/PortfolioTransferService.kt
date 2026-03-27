@@ -34,6 +34,7 @@ class PortfolioTransferService(
     private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val transactionImportProfileRepository: TransactionImportProfileRepository,
+    private val transactionRunner: PersistenceTransactionRunner,
     private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
@@ -277,55 +278,57 @@ class PortfolioTransferService(
             }
         }
 
-        if (request.mode == ImportMode.REPLACE) {
-            transactionRepository.deleteAll()
-            transactionImportProfileRepository.deleteAll()
-            portfolioTargetRepository.deleteAll()
-            instrumentRepository.deleteAll()
-            appPreferenceRepository.deleteAll()
-            accountRepository.deleteAll()
+        val result = transactionRunner.inTransaction {
+            if (request.mode == ImportMode.REPLACE) {
+                transactionRepository.deleteAll()
+                transactionImportProfileRepository.deleteAll()
+                portfolioTargetRepository.deleteAll()
+                instrumentRepository.deleteAll()
+                appPreferenceRepository.deleteAll()
+                accountRepository.deleteAll()
+            }
+
+            val accounts = request.snapshot.accounts
+                .sortedWith(compareBy<AccountSnapshot>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
+                .map { snapshot ->
+                    accountRepository.save(snapshot.toDomain())
+                }
+            val appPreferences = request.snapshot.appPreferences
+                .sortedWith(compareBy<AppPreferenceSnapshot>({ it.key }, { it.updatedAt }))
+                .map { snapshot ->
+                    appPreferenceRepository.save(snapshot.toDomain())
+                }
+            val instruments = request.snapshot.instruments
+                .sortedBy(InstrumentSnapshot::createdAt)
+                .map { snapshot ->
+                    instrumentRepository.save(snapshot.toDomain())
+                }
+            request.snapshot.targets
+                .sortedWith(compareBy<PortfolioTargetSnapshot>({ it.createdAt }, { it.assetClass }))
+                .also { snapshots ->
+                    portfolioTargetRepository.replaceAll(snapshots.map { it.toDomain() })
+                }
+            val transactions = request.snapshot.transactions
+                .sortedWith(compareBy<TransactionSnapshot>({ it.tradeDate }, { it.createdAt }))
+                .map { snapshot ->
+                    transactionRepository.save(snapshot.toDomain())
+                }
+            val importProfiles = request.snapshot.importProfiles
+                .sortedWith(compareBy<TransactionImportProfileSnapshot>({ it.name.lowercase() }, { it.createdAt }))
+                .map { snapshot ->
+                    transactionImportProfileRepository.save(snapshot.toDomain())
+                }
+
+            PortfolioImportResult(
+                mode = request.mode,
+                accountCount = accounts.size,
+                appPreferenceCount = appPreferences.size,
+                instrumentCount = instruments.size,
+                targetCount = request.snapshot.targets.size,
+                transactionCount = transactions.size,
+                importProfileCount = importProfiles.size
+            )
         }
-
-        val accounts = request.snapshot.accounts
-            .sortedWith(compareBy<AccountSnapshot>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
-            .map { snapshot ->
-                accountRepository.save(snapshot.toDomain())
-            }
-        val appPreferences = request.snapshot.appPreferences
-            .sortedWith(compareBy<AppPreferenceSnapshot>({ it.key }, { it.updatedAt }))
-            .map { snapshot ->
-                appPreferenceRepository.save(snapshot.toDomain())
-            }
-        val instruments = request.snapshot.instruments
-            .sortedBy(InstrumentSnapshot::createdAt)
-            .map { snapshot ->
-                instrumentRepository.save(snapshot.toDomain())
-            }
-        val targets = request.snapshot.targets
-            .sortedWith(compareBy<PortfolioTargetSnapshot>({ it.createdAt }, { it.assetClass }))
-            .also { snapshots ->
-                portfolioTargetRepository.replaceAll(snapshots.map { it.toDomain() })
-            }
-        val transactions = request.snapshot.transactions
-            .sortedWith(compareBy<TransactionSnapshot>({ it.tradeDate }, { it.createdAt }))
-            .map { snapshot ->
-                transactionRepository.save(snapshot.toDomain())
-            }
-        val importProfiles = request.snapshot.importProfiles
-            .sortedWith(compareBy<TransactionImportProfileSnapshot>({ it.name.lowercase() }, { it.createdAt }))
-            .map { snapshot ->
-                transactionImportProfileRepository.save(snapshot.toDomain())
-            }
-
-        val result = PortfolioImportResult(
-            mode = request.mode,
-            accountCount = accounts.size,
-            appPreferenceCount = appPreferences.size,
-            instrumentCount = instruments.size,
-            targetCount = targets.size,
-            transactionCount = transactions.size,
-            importProfileCount = importProfiles.size
-        )
         auditLogService.record(
             category = AuditEventCategory.IMPORTS,
             action = "PORTFOLIO_STATE_IMPORTED",
@@ -532,8 +535,8 @@ class PortfolioTransferService(
         grossAmount = grossAmount.toBigDecimal(),
         feeAmount = feeAmount.toBigDecimal(),
         taxAmount = taxAmount.toBigDecimal(),
-        currency = currency,
-        fxRateToPln = fxRateToPln?.toBigDecimal(),
+        currency = currency.uppercase(),
+        fxRateToPln = fxRateToPln?.toBigDecimal()?.takeUnless { currency.uppercase() == "PLN" },
         notes = notes,
         createdAt = Instant.parse(createdAt),
         updatedAt = Instant.parse(updatedAt)

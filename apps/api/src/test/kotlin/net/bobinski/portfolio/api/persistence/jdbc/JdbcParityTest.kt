@@ -30,6 +30,7 @@ import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepository
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.PersistenceTransactionRunner
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
@@ -80,6 +81,9 @@ class JdbcParityTest {
         transactionImportProfileRepository = InMemoryTransactionImportProfileRepository(),
         portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
         auditEventRepository = InMemoryAuditEventRepository(),
+        transactionRunner = object : PersistenceTransactionRunner {
+            override suspend fun <T> inTransaction(block: suspend () -> T): T = block()
+        },
         closeAction = {}
     )
 
@@ -94,15 +98,17 @@ class JdbcParityTest {
                 busyTimeoutMs = 5_000
             )
         )
+        val connectionManager = JdbcConnectionManager(resources.dataSource)
 
         return Harness(
-            accountRepository = JdbcAccountRepository(resources.dataSource),
-            appPreferenceRepository = JdbcAppPreferenceRepository(resources.dataSource),
-            instrumentRepository = JdbcInstrumentRepository(resources.dataSource),
-            transactionRepository = JdbcTransactionRepository(resources.dataSource),
-            transactionImportProfileRepository = JdbcTransactionImportProfileRepository(resources.dataSource, Json.Default),
-            portfolioTargetRepository = JdbcPortfolioTargetRepository(resources.dataSource),
+            accountRepository = JdbcAccountRepository(connectionManager),
+            appPreferenceRepository = JdbcAppPreferenceRepository(connectionManager),
+            instrumentRepository = JdbcInstrumentRepository(connectionManager),
+            transactionRepository = JdbcTransactionRepository(connectionManager),
+            transactionImportProfileRepository = JdbcTransactionImportProfileRepository(connectionManager, Json.Default),
+            portfolioTargetRepository = JdbcPortfolioTargetRepository(connectionManager),
             auditEventRepository = JdbcAuditEventRepository(resources.dataSource, Json.Default),
+            transactionRunner = connectionManager,
             closeAction = {
                 resources.close()
                 (directory / "portfolio.db").deleteIfExists()
@@ -121,6 +127,7 @@ class JdbcParityTest {
         private val transactionImportProfileRepository: TransactionImportProfileRepository,
         private val portfolioTargetRepository: PortfolioTargetRepository,
         private val auditEventRepository: AuditEventRepository,
+        private val transactionRunner: PersistenceTransactionRunner,
         private val closeAction: () -> Unit
     ) : AutoCloseable {
         private val clock = Clock.fixed(Instant.parse("2026-03-15T12:00:00Z"), ZoneOffset.UTC)
@@ -155,6 +162,7 @@ class JdbcParityTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             transactionImportProfileRepository = transactionImportProfileRepository,
+            transactionRunner = transactionRunner,
             auditLogService = auditLogService,
             clock = clock
         )

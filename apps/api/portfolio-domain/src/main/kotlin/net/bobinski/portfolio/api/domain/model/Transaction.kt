@@ -29,6 +29,7 @@ data class Transaction(
         require(feeAmount >= BigDecimal.ZERO) { "Transaction fee amount must not be negative." }
         require(taxAmount >= BigDecimal.ZERO) { "Transaction tax amount must not be negative." }
         require(fxRateToPln == null || fxRateToPln > BigDecimal.ZERO) { "FX rate to PLN must be positive." }
+        require(currency.uppercase() != "PLN" || fxRateToPln == null) { "PLN transactions must not carry FX rate to PLN." }
         require(updatedAt >= createdAt) { "Updated timestamp must not be before created timestamp." }
         require(settlementDate == null || !settlementDate.isBefore(tradeDate)) {
             "Settlement date must not be before trade date."

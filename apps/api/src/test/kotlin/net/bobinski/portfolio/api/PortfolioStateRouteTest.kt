@@ -238,6 +238,73 @@ class PortfolioStateRouteTest {
     }
 
     @Test
+    fun `portfolio state import normalizes redundant fx rates on pln transactions`() = testApplication {
+        application {
+            module()
+        }
+
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "mode": "REPLACE",
+                  "confirmation": "REPLACE",
+                  "snapshot": {
+                    "schemaVersion": 4,
+                    "exportedAt": "2026-03-13T18:00:00Z",
+                    "accounts": [
+                      {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "name": "Primary",
+                        "institution": "Broker",
+                        "type": "BROKERAGE",
+                        "baseCurrency": "PLN",
+                        "displayOrder": 0,
+                        "isActive": true,
+                        "createdAt": "2026-03-13T18:00:00Z",
+                        "updatedAt": "2026-03-13T18:00:00Z"
+                      }
+                    ],
+                    "appPreferences": [],
+                    "instruments": [],
+                    "targets": [],
+                    "importProfiles": [],
+                    "transactions": [
+                      {
+                        "id": "22222222-2222-2222-2222-222222222222",
+                        "accountId": "11111111-1111-1111-1111-111111111111",
+                        "instrumentId": null,
+                        "type": "DEPOSIT",
+                        "tradeDate": "2026-03-01",
+                        "settlementDate": "2026-03-01",
+                        "quantity": null,
+                        "unitPrice": null,
+                        "grossAmount": "1000.00",
+                        "feeAmount": "0.00",
+                        "taxAmount": "0.00",
+                        "currency": "PLN",
+                        "fxRateToPln": "4.0000",
+                        "notes": "",
+                        "createdAt": "2026-03-13T18:00:00Z",
+                        "updatedAt": "2026-03-13T18:00:00Z"
+                      }
+                    ]
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val transactionsResponse = client.get("/v1/transactions")
+        val exportResponse = client.get("/v1/portfolio/state/export")
+
+        assertEquals(HttpStatusCode.OK, importResponse.status)
+        assertTrue(transactionsResponse.bodyAsText().contains("\"currency\": \"PLN\""))
+        assertTrue(transactionsResponse.bodyAsText().contains("\"fxRateToPln\": null"))
+        assertTrue(exportResponse.bodyAsText().contains("\"fxRateToPln\": null"))
+    }
+
+    @Test
     fun `demo portfolio snapshot imports without losing foreign exchange data`() = testApplication {
         application {
             module()

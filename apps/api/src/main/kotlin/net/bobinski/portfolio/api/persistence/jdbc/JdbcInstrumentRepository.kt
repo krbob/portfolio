@@ -14,11 +14,12 @@ import java.util.UUID
 import java.time.YearMonth
 
 class JdbcInstrumentRepository(
-    private val dataSource: DataSource
+    private val connectionManager: JdbcConnectionManager
 ) : InstrumentRepository {
+    constructor(dataSource: DataSource) : this(JdbcConnectionManager(dataSource))
 
     override suspend fun list(): List<Instrument> =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(BASE_SELECT + " order by i.created_at desc").use { statement ->
                 statement.executeQuery().use { resultSet ->
                     buildList {
@@ -31,7 +32,7 @@ class JdbcInstrumentRepository(
         }
 
     override suspend fun get(id: UUID): Instrument? =
-        dataSource.connection.use { connection ->
+        connectionManager.withConnection { connection ->
             connection.prepareStatement(BASE_SELECT + " where i.id = ?").use { statement ->
                 statement.setUuid(1, id)
                 statement.executeQuery().use { resultSet ->
@@ -41,37 +42,21 @@ class JdbcInstrumentRepository(
         }
 
     override suspend fun save(instrument: Instrument): Instrument {
-        dataSource.connection.use { connection ->
-            val previousAutoCommit = connection.autoCommit
-            connection.autoCommit = false
-            try {
+        connectionManager.inTransaction {
+            connectionManager.withConnection { connection ->
                 connection.upsertInstrument(instrument)
                 connection.deleteEdoTerms(instrument.id)
                 instrument.edoTerms?.let { connection.upsertEdoTerms(instrument.id, it) }
-                connection.commit()
-            } catch (error: Exception) {
-                connection.rollback()
-                throw error
-            } finally {
-                connection.autoCommit = previousAutoCommit
             }
         }
         return instrument
     }
 
     override suspend fun deleteAll() {
-        dataSource.connection.use { connection ->
-            val previousAutoCommit = connection.autoCommit
-            connection.autoCommit = false
-            try {
+        connectionManager.inTransaction {
+            connectionManager.withConnection { connection ->
                 connection.prepareStatement("delete from edo_terms").use { it.executeUpdate() }
                 connection.prepareStatement("delete from instruments").use { it.executeUpdate() }
-                connection.commit()
-            } catch (error: Exception) {
-                connection.rollback()
-                throw error
-            } finally {
-                connection.autoCommit = previousAutoCommit
             }
         }
     }
