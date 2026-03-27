@@ -12,6 +12,7 @@ import {
 } from '../hooks/use-write-model'
 import type { PortfolioStateSnapshot, PreviewPortfolioStateImportResult } from '../api/write-model'
 import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioStateSection() {
@@ -46,7 +47,7 @@ export function PortfolioStateSection() {
           : `Exported ${snapshot.accounts.length} accounts, ${snapshot.appPreferences?.length ?? 0} app settings, ${snapshot.instruments.length} instruments, ${snapshot.targets?.length ?? 0} targets, ${snapshot.transactions.length} transactions and ${snapshot.importProfiles?.length ?? 0} import profiles.`,
       )
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : isPolish ? 'Eksport nie powiódł się.' : 'Export failed.')
+      setImportError(error instanceof Error ? error.message : t('state.exportFailed'))
     }
   }
 
@@ -55,13 +56,13 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError(isPolish ? 'Najpierw wybierz plik zrzutu stanu w formacie JSON.' : 'Choose a JSON snapshot file first.')
+      setImportError(t('state.chooseFileFirst'))
       setPreviewResult(null)
       return
     }
 
     try {
-      const snapshot = parseSelectedSnapshot(selectedFileContent, isPolish)
+      const snapshot = parseSelectedSnapshot(selectedFileContent)
       const result = await previewMutation.mutateAsync({
         mode: importMode,
         snapshot,
@@ -69,16 +70,12 @@ export function PortfolioStateSection() {
       setPreviewResult(result)
       setImportFeedback(
         result.isValid
-          ? isPolish
-            ? 'Podgląd gotowy. Zrzut stanu przeszedł walidację.'
-            : 'Preview ready. The snapshot passed validation.'
-          : isPolish
-            ? 'Podgląd gotowy. Rozwiąż blokujące problemy przed importem.'
-            : 'Preview ready. Resolve blocking issues before importing.',
+          ? t('state.previewValidOk')
+          : t('state.previewValidBlocked'),
       )
     } catch (error) {
       setPreviewResult(null)
-      setImportError(error instanceof Error ? error.message : isPolish ? 'Nie udało się przygotować podglądu.' : 'Preview failed.')
+      setImportError(error instanceof Error ? error.message : t('state.previewFailed'))
     }
   }
 
@@ -104,26 +101,22 @@ export function PortfolioStateSection() {
     setImportError(null)
 
     if (selectedFileContent.trim() === '') {
-      setImportError(isPolish ? 'Najpierw wybierz plik zrzutu stanu w formacie JSON.' : 'Choose a JSON snapshot file first.')
+      setImportError(t('state.chooseFileFirst'))
       return
     }
 
     if (previewResult == null) {
-      setImportError(isPolish ? 'Najpierw uruchom podgląd wybranego zrzutu stanu.' : 'Preview the selected snapshot before importing.')
+      setImportError(t('state.previewFirst'))
       return
     }
 
     if (!previewResult.isValid) {
-      setImportError(
-        isPolish
-          ? 'Wybrany zrzut stanu ma blokujące problemy. Napraw je przed importem.'
-          : 'The selected snapshot has blocking issues. Fix them before importing.',
-      )
+      setImportError(t('state.hasBlockingIssues'))
       return
     }
 
     try {
-      const snapshot = parseSelectedSnapshot(selectedFileContent, isPolish)
+      const snapshot = parseSelectedSnapshot(selectedFileContent)
       const result = await importMutation.mutateAsync({
         mode: importMode,
         confirmation: importMode === 'REPLACE' ? replaceConfirmation : undefined,
@@ -137,41 +130,37 @@ export function PortfolioStateSection() {
       )
       setReplaceConfirmation('')
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : isPolish ? 'Import nie powiódł się.' : 'Import failed.')
+      setImportError(error instanceof Error ? error.message : t('state.importFailed'))
     }
   }
 
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Import / eksport' : 'Transfer'}
-        title={isPolish ? 'Eksport i przywracanie stanu' : 'Backup and restore'}
-        description={
-          isPolish
-            ? 'Wyeksportuj kompletny stan aplikacji do pliku JSON albo przywróć wcześniej zapisany zrzut w trybie MERGE lub REPLACE.'
-            : 'Export the canonical write model as a JSON snapshot or import a previously exported snapshot in merge or replace mode.'
-        }
+        eyebrow={t('state.eyebrow')}
+        title={t('state.title')}
+        description={t('state.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</span>
+          <span className="text-xs text-zinc-500">{t('state.accounts')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Instrumenty' : 'Instruments'}</span>
+          <span className="text-xs text-zinc-500">{t('state.instruments')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Cele' : 'Targets'}</span>
+          <span className="text-xs text-zinc-500">{t('state.targets')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{targetsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</span>
+          <span className="text-xs text-zinc-500">{t('state.transactions')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{transactionsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</span>
+          <span className="text-xs text-zinc-500">{t('state.importProfiles')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{importProfilesQuery.data?.length ?? '...'}</strong>
         </article>
       </div>
@@ -179,47 +168,37 @@ export function PortfolioStateSection() {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-zinc-800/50 p-4">
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Eksport' : 'Export'}</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Pobierz zrzut stanu' : 'Download snapshot'}</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('state.exportLabel')}</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{t('state.exportTitle')}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? 'Generuje kompletny plik JSON z kontami, instrumentami, transakcjami, ustawieniami aplikacji i profilami importu wraz z oryginalnymi identyfikatorami oraz znacznikami czasu.'
-                : 'Generates a canonical JSON snapshot that includes the ledger, app settings and import profiles with original ids and timestamps.'}
+              {t('state.exportDescription')}
             </p>
           </div>
 
           <div className="flex items-center gap-3 mt-2">
             <button className={btnPrimary} type="button" onClick={handleExportClick} disabled={exportMutation.isPending}>
               {exportMutation.isPending
-                ? isPolish
-                  ? 'Eksportowanie...'
-                  : 'Exporting...'
-                : isPolish
-                  ? 'Eksportuj JSON'
-                  : 'Export JSON'}
+                ? t('state.exporting')
+                : t('state.exportJson')}
             </button>
           </div>
         </div>
 
         <form className="rounded-lg border border-zinc-800/50 p-4" onSubmit={handleImportSubmit}>
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Import' : 'Import'}</p>
-            <h4 className="mt-1 text-base font-semibold text-zinc-100">{isPolish ? 'Przywróć zrzut stanu' : 'Restore snapshot'}</h4>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('state.importLabel')}</p>
+            <h4 className="mt-1 text-base font-semibold text-zinc-100">{t('state.importTitle')}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? '`MERGE` aktualizuje istniejące rekordy po identyfikatorach i kluczach. `REPLACE` czyści bieżący stan, ustawienia aplikacji i profile importu przed wczytaniem pliku.'
-                : '`MERGE` upserts by id/key. `REPLACE` clears the current write model, app settings and import profiles before loading the snapshot.'}
+              {t('state.importDescriptionMerge')}
             </p>
             <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy kopię bezpieczeństwa.'
-                : '`REPLACE` import requires typing `REPLACE` and creates a safety backup automatically.'}
+              {t('state.importDescriptionReplace')}
             </p>
           </div>
 
           <div className="space-y-3">
             <div>
-              <span className={labelClass}>{isPolish ? 'Tryb importu' : 'Import mode'}</span>
+              <span className={labelClass}>{t('state.importMode')}</span>
               <select
                 className={input}
                 value={importMode}
@@ -238,7 +217,7 @@ export function PortfolioStateSection() {
 
             {importMode === 'REPLACE' && (
               <div>
-                <span className={labelClass}>{isPolish ? 'Wpisz REPLACE' : 'Type REPLACE'}</span>
+                <span className={labelClass}>{t('state.typeReplace')}</span>
                 <input
                   className={input}
                   type="text"
@@ -250,7 +229,7 @@ export function PortfolioStateSection() {
             )}
 
             <div>
-              <span className={labelClass}>{isPolish ? 'Plik zrzutu stanu' : 'Snapshot file'}</span>
+              <span className={labelClass}>{t('state.snapshotFile')}</span>
               <input
                 type="file"
                 accept="application/json,.json"
@@ -265,59 +244,53 @@ export function PortfolioStateSection() {
               ? isPolish
                 ? `Wybrany plik: ${selectedFileName}`
                 : `Selected file: ${selectedFileName}`
-              : isPolish
-                ? 'Nie wybrano jeszcze pliku zrzutu stanu.'
-                : 'No snapshot file selected yet.'}
+              : t('state.noFileSelected')}
           </p>
 
           {previewResult && (
             <div className="mt-4 rounded-lg border border-zinc-800/50 p-4">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-semibold text-zinc-100">{isPolish ? 'Podsumowanie podglądu importu' : 'Preview summary'}</h5>
+                <h5 className="text-sm font-semibold text-zinc-100">{t('state.previewSummary')}</h5>
                 <span className={`${badge} ${previewResult.isValid ? badgeVariants.success : badgeVariants.error}`}>
                   {previewResult.isValid
-                    ? isPolish
-                      ? 'POPRAWNY'
-                      : 'VALID'
-                    : isPolish
-                      ? 'ZABLOKOWANY'
-                      : 'BLOCKED'}
+                    ? t('state.valid')
+                    : t('state.blocked')}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 <PreviewMetricCard
-                  label={isPolish ? 'Konta' : 'Accounts'}
+                  label={t('state.accounts')}
                   snapshotCount={previewResult.snapshotAccountCount}
                   existingCount={previewResult.existingAccountCount}
                   matchingCount={previewResult.matchingAccountCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Ustawienia' : 'App settings'}
+                  label={t('state.appSettings')}
                   snapshotCount={previewResult.snapshotAppPreferenceCount}
                   existingCount={previewResult.existingAppPreferenceCount}
                   matchingCount={previewResult.matchingAppPreferenceCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Instrumenty' : 'Instruments'}
+                  label={t('state.instruments')}
                   snapshotCount={previewResult.snapshotInstrumentCount}
                   existingCount={previewResult.existingInstrumentCount}
                   matchingCount={previewResult.matchingInstrumentCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Cele' : 'Targets'}
+                  label={t('state.targets')}
                   snapshotCount={previewResult.snapshotTargetCount}
                   existingCount={previewResult.existingTargetCount}
                   matchingCount={previewResult.matchingTargetCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Transakcje' : 'Transactions'}
+                  label={t('state.transactions')}
                   snapshotCount={previewResult.snapshotTransactionCount}
                   existingCount={previewResult.existingTransactionCount}
                   matchingCount={previewResult.matchingTransactionCount}
                 />
                 <PreviewMetricCard
-                  label={isPolish ? 'Profile importu' : 'Import profiles'}
+                  label={t('state.importProfiles')}
                   snapshotCount={previewResult.snapshotImportProfileCount}
                   existingCount={previewResult.existingImportProfileCount}
                   matchingCount={previewResult.matchingImportProfileCount}
@@ -353,12 +326,8 @@ export function PortfolioStateSection() {
           <div className="flex items-center gap-3 mt-3">
             <button className={btnSecondary} type="button" onClick={handlePreviewClick} disabled={previewMutation.isPending || selectedFileContent.trim() === ''}>
               {previewMutation.isPending
-                ? isPolish
-                  ? 'Przygotowywanie podglądu...'
-                  : 'Previewing...'
-                : isPolish
-                  ? 'Podgląd importu'
-                  : 'Preview snapshot'}
+                ? t('state.previewing')
+                : t('state.previewSnapshot')}
             </button>
             <button
               className={btnPrimary}
@@ -373,12 +342,8 @@ export function PortfolioStateSection() {
               }
             >
               {importMutation.isPending
-                ? isPolish
-                  ? 'Importowanie...'
-                  : 'Importing...'
-                : isPolish
-                  ? 'Importuj JSON'
-                  : 'Import JSON'}
+                ? t('state.importing')
+                : t('state.importJson')}
             </button>
           </div>
         </form>
@@ -409,21 +374,20 @@ function PreviewMetricCard({
   existingCount: number
   matchingCount: number
 }) {
-  const { isPolish } = useI18n()
   return (
     <article className="rounded-lg border border-zinc-800/50 p-3">
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       <dl className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{isPolish ? 'Zrzut stanu' : 'Snapshot'}</dt>
+          <dt className="text-zinc-500">{t('state.snapshot')}</dt>
           <dd className="text-zinc-100 tabular-nums">{snapshotCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{isPolish ? 'Bieżący stan' : 'Current'}</dt>
+          <dt className="text-zinc-500">{t('state.current')}</dt>
           <dd className="text-zinc-100 tabular-nums">{existingCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{isPolish ? 'Pasujące id' : 'Matching ids'}</dt>
+          <dt className="text-zinc-500">{t('state.matchingIds')}</dt>
           <dd className="text-zinc-100 tabular-nums">{matchingCount}</dd>
         </div>
       </dl>
@@ -444,10 +408,10 @@ function downloadSnapshot(snapshot: PortfolioStateSnapshot) {
   window.URL.revokeObjectURL(objectUrl)
 }
 
-function parseSelectedSnapshot(rawSnapshot: string, isPolish: boolean): PortfolioStateSnapshot {
+function parseSelectedSnapshot(rawSnapshot: string): PortfolioStateSnapshot {
   try {
     return JSON.parse(rawSnapshot) as PortfolioStateSnapshot
   } catch {
-    throw new Error(isPolish ? 'Plik zrzutu stanu musi zawierać poprawny JSON.' : 'Snapshot file must contain valid JSON.')
+    throw new Error(t('state.invalidJson'))
   }
 }

@@ -9,6 +9,7 @@ import {
   useTransactions,
 } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { badge, badgeVariants } from '../lib/styles'
 import { Card, SectionHeader } from './ui'
 
@@ -41,92 +42,82 @@ export function PortfolioSetupGuideSection() {
   const items: GuideItem[] = [
     buildSetupItem({
       key: 'accounts',
-      title: isPolish ? 'Konta' : 'Accounts',
+      title: t('setup.accounts'),
       count: accountsQuery.data?.length ?? 0,
       loading: accountsQuery.isLoading,
-      loadingDescription: isPolish ? 'Sprawdzanie konfiguracji kont...' : 'Checking account setup...',
+      loadingDescription: t('setup.checkingAccounts'),
       successDescription: (count) =>
         isPolish
           ? `${count} ${count === 1 ? 'konto jest gotowe do księgowania' : 'konta są gotowe do księgowania'}.`
           : `${count} ${count === 1 ? 'account is' : 'accounts are'} ready for posting.`,
-      emptyDescription: isPolish
-        ? 'Dodaj pierwszy rachunek, zanim zaczniesz księgować transakcje.'
-        : 'Add the first account before you start recording transactions.',
+      emptyDescription: t('setup.accountsEmpty'),
       action: {
         kind: 'route',
         to: '/accounts',
-        label: isPolish ? 'Otwórz konta' : 'Open accounts',
+        label: t('setup.openAccounts'),
       },
     }),
     buildSetupItem({
       key: 'instruments',
-      title: isPolish ? 'Instrumenty' : 'Instruments',
+      title: t('setup.instruments'),
       count: instrumentsQuery.data?.length ?? 0,
       loading: instrumentsQuery.isLoading,
-      loadingDescription: isPolish ? 'Sprawdzanie katalogu instrumentów...' : 'Checking instrument catalog...',
+      loadingDescription: t('setup.checkingInstruments'),
       successDescription: (count) =>
         isPolish
           ? `${count} ${count === 1 ? 'instrument jest dostępny w katalogu' : 'instrumentów jest dostępnych w katalogu'}.`
           : `${count} ${count === 1 ? 'instrument is' : 'instruments are'} available in the catalog.`,
-      emptyDescription: isPolish
-        ? 'Dodaj instrumenty, aby transakcje i wyceny miały do czego się odwołać.'
-        : 'Add instruments so transactions and valuations have a catalog to reference.',
+      emptyDescription: t('setup.instrumentsEmpty'),
       action: {
         kind: 'route',
         to: '/instruments',
-        label: isPolish ? 'Otwórz instrumenty' : 'Open instruments',
+        label: t('setup.openInstruments'),
       },
     }),
     buildSetupItem({
       key: 'transactions',
-      title: isPolish ? 'Transakcje' : 'Transactions',
+      title: t('setup.transactions'),
       count: transactionsQuery.data?.length ?? 0,
       loading: transactionsQuery.isLoading,
-      loadingDescription: isPolish ? 'Sprawdzanie dziennika transakcji...' : 'Checking transaction journal...',
+      loadingDescription: t('setup.checkingTransactions'),
       successDescription: (count) =>
         isPolish
           ? `${count} ${count === 1 ? 'transakcja zasila modele odczytowe' : 'transakcji zasila modele odczytowe'}.`
           : `${count} ${count === 1 ? 'transaction feeds' : 'transactions feed'} the read models.`,
-      emptyDescription: isPolish
-        ? 'Zapisz pierwszą transakcję, aby portfolio zaczęło budować pozycje i historię.'
-        : 'Record the first transaction to start building holdings and history.',
+      emptyDescription: t('setup.transactionsEmpty'),
       action: {
         kind: 'route',
         to: '/transactions',
-        label: isPolish ? 'Otwórz transakcje' : 'Open transactions',
+        label: t('setup.openTransactions'),
       },
     }),
     buildSetupItem({
       key: 'targets',
-      title: isPolish ? 'Alokacja docelowa' : 'Target allocation',
+      title: t('setup.targetAllocation'),
       count: targetsQuery.data?.length ?? 0,
       loading: targetsQuery.isLoading,
-      loadingDescription: isPolish ? 'Sprawdzanie konfiguracji celów...' : 'Checking target setup...',
+      loadingDescription: t('setup.checkingTargets'),
       successDescription: (count) =>
         isPolish
           ? `${count} ${count === 1 ? 'cel wspiera sygnały odchylenia' : 'cele wspierają sygnały odchylenia'}.`
           : `${count} ${count === 1 ? 'target supports' : 'targets support'} drift diagnostics.`,
-      emptyDescription: isPolish
-        ? 'Skonfiguruj cele, aby odblokować drift i sugestie rebalansowania.'
-        : 'Configure targets to unlock drift and rebalance suggestions.',
+      emptyDescription: t('setup.targetsEmpty'),
       action: {
         kind: 'hash',
         to: '#targets',
-        label: isPolish ? 'Otwórz cele' : 'Open targets',
+        label: t('setup.openTargets'),
       },
     }),
     {
       key: 'benchmarks',
-      title: isPolish ? 'Benchmarki' : 'Benchmarks',
+      title: t('setup.benchmarks'),
       description: benchmarkSettingsQuery.isLoading
-        ? (isPolish ? 'Sprawdzanie aktywnych benchmarków...' : 'Checking active benchmarks...')
+        ? t('setup.checkingBenchmarks')
         : (benchmarkSettingsQuery.data?.enabledKeys.length ?? 0) > 0
           ? isPolish
             ? `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarków jest aktywnych w zakładce Wyniki.`
             : `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarks are active in Performance.`
-          : isPolish
-            ? 'Włącz benchmarki, aby porównywać portfel z rynkiem, inflacją i benchmarkiem alokacji docelowej.'
-            : 'Enable benchmarks to compare the portfolio against markets, inflation and target mix.',
+          : t('setup.benchmarksEmpty'),
       status: benchmarkSettingsQuery.isLoading
         ? 'info'
         : (benchmarkSettingsQuery.data?.enabledKeys.length ?? 0) > 0
@@ -135,10 +126,10 @@ export function PortfolioSetupGuideSection() {
       action: {
         kind: 'hash',
         to: '#benchmarks',
-        label: isPolish ? 'Otwórz benchmarki' : 'Open benchmarks',
+        label: t('setup.openBenchmarks'),
       },
     },
-    buildReadinessItem(readinessQuery.data?.status, readinessQuery.isLoading, readinessQuery.isError, isPolish),
+    buildReadinessItem(readinessQuery.data?.status, readinessQuery.isLoading, readinessQuery.isError),
     buildDataQualityItem(dataQuality.summary?.warningCount, dataQuality.isLoading, Boolean(dataQuality.error), isPolish),
   ]
 
@@ -148,19 +139,17 @@ export function PortfolioSetupGuideSection() {
   return (
     <Card as="section">
       <SectionHeader
-        eyebrow={isPolish ? 'Start i diagnostyka' : 'Setup and diagnostics'}
-        title={isPolish ? 'Następne kroki' : 'Next steps'}
-        description={isPolish
-          ? 'Krótka checklista konfiguracji i zaufania do danych. Każdy punkt prowadzi do miejsca, w którym można go domknąć.'
-          : 'A short checklist for setup and data trust. Each item links to the place where you can resolve it.'}
+        eyebrow={t('setup.eyebrow')}
+        title={t('setup.title')}
+        description={t('setup.description')}
       />
 
       <div className="mb-5 flex flex-wrap gap-3">
         <span className={`${badge} ${badgeVariants.success}`}>
-          {isPolish ? 'Gotowe' : 'Done'} {doneCount}
+          {t('setup.done')} {doneCount}
         </span>
         <span className={`${badge} ${attentionCount > 0 ? badgeVariants.warning : badgeVariants.default}`}>
-          {isPolish ? 'Do uwagi' : 'Needs attention'} {attentionCount}
+          {t('setup.needsAttention')} {attentionCount}
         </span>
       </div>
 
@@ -173,7 +162,7 @@ export function PortfolioSetupGuideSection() {
                 <p className="mt-1 text-sm text-zinc-500">{item.description}</p>
               </div>
               <span className={`${badge} ${guideBadgeVariant(item.status)}`}>
-                {guideStatusLabel(item.status, isPolish)}
+                {guideStatusLabel(item.status)}
               </span>
             </div>
 
@@ -227,17 +216,17 @@ function buildSetupItem({
   }
 }
 
-function buildReadinessItem(status: string | undefined, isLoading: boolean, isError: boolean, isPolish: boolean): GuideItem {
+function buildReadinessItem(status: string | undefined, isLoading: boolean, isError: boolean): GuideItem {
   if (isLoading) {
     return {
       key: 'readiness',
-      title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
-      description: isPolish ? 'Sprawdzanie usług i zależności...' : 'Checking runtime dependencies...',
+      title: t('setup.readiness'),
+      description: t('setup.checkingReadiness'),
       status: 'info',
       action: {
         kind: 'hash',
         to: '#health',
-        label: isPolish ? 'Otwórz stan systemu' : 'Open health',
+        label: t('setup.openHealth'),
       },
     }
   }
@@ -245,28 +234,26 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
   if (isError || !status || status !== 'READY') {
     return {
       key: 'readiness',
-      title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
-      description: isPolish
-        ? 'Najpierw usuń blokery lub ostrzeżenia systemowe, inaczej kolejne sygnały mogą być mylące.'
-        : 'Resolve runtime blockers or warnings first, otherwise the downstream signals may be misleading.',
+      title: t('setup.readiness'),
+      description: t('setup.readinessWarning'),
       status: 'warning',
       action: {
         kind: 'hash',
         to: '#health',
-        label: isPolish ? 'Otwórz stan systemu' : 'Open health',
+        label: t('setup.openHealth'),
       },
     }
   }
 
   return {
     key: 'readiness',
-    title: isPolish ? 'Gotowość środowiska' : 'Runtime readiness',
-    description: isPolish ? 'System jest gotowy do pracy z wycenami i modelami odczytowymi.' : 'Runtime is ready for valuation and read-model workflows.',
+    title: t('setup.readiness'),
+    description: t('setup.readinessOk'),
     status: 'done',
     action: {
       kind: 'hash',
       to: '#health',
-      label: isPolish ? 'Otwórz stan systemu' : 'Open health',
+      label: t('setup.openHealth'),
     },
   }
 }
@@ -275,13 +262,13 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
   if (isLoading) {
     return {
       key: 'data-quality',
-      title: isPolish ? 'Jakość danych' : 'Data quality',
-      description: isPolish ? 'Składanie sygnałów jakości danych...' : 'Assembling data-quality signals...',
+      title: t('setup.dataQuality'),
+      description: t('setup.checkingDataQuality'),
       status: 'info',
       action: {
         kind: 'hash',
         to: '#data-quality',
-        label: isPolish ? 'Otwórz jakość danych' : 'Open data quality',
+        label: t('setup.openDataQuality'),
       },
     }
   }
@@ -289,7 +276,7 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
   if (hasError || (warningCount ?? 0) > 0) {
     return {
       key: 'data-quality',
-      title: isPolish ? 'Jakość danych' : 'Data quality',
+      title: t('setup.dataQuality'),
       description: isPolish
         ? `Są sygnały wymagające uwagi${warningCount ? ` (${warningCount})` : ''}. Przejrzyj pokrycie wycen, benchmarków i odświeżeń.`
         : `There are data signals that need attention${warningCount ? ` (${warningCount})` : ''}. Review valuations, benchmarks and refresh coverage.`,
@@ -297,20 +284,20 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
       action: {
         kind: 'hash',
         to: '#data-quality',
-        label: isPolish ? 'Otwórz jakość danych' : 'Open data quality',
+        label: t('setup.openDataQuality'),
       },
     }
   }
 
   return {
     key: 'data-quality',
-    title: isPolish ? 'Jakość danych' : 'Data quality',
-    description: isPolish ? 'Pokrycie danych wygląda spójnie dla bieżącego widoku.' : 'Data coverage looks consistent for the current view.',
+    title: t('setup.dataQuality'),
+    description: t('setup.dataQualityOk'),
     status: 'done',
     action: {
       kind: 'hash',
       to: '#data-quality',
-      label: isPolish ? 'Otwórz jakość danych' : 'Open data quality',
+      label: t('setup.openDataQuality'),
     },
   }
 }
@@ -346,15 +333,15 @@ function guideBadgeVariant(status: GuideStatus) {
   }
 }
 
-function guideStatusLabel(status: GuideStatus, isPolish: boolean) {
+function guideStatusLabel(status: GuideStatus) {
   switch (status) {
     case 'done':
-      return isPolish ? 'Gotowe' : 'Done'
+      return t('setup.statusDone')
     case 'action':
-      return isPolish ? 'Do zrobienia' : 'To do'
+      return t('setup.statusTodo')
     case 'warning':
-      return isPolish ? 'Uwagi' : 'Attention'
+      return t('setup.statusAttention')
     case 'info':
-      return isPolish ? 'Sprawdzanie' : 'Checking'
+      return t('setup.statusChecking')
   }
 }

@@ -11,69 +11,24 @@ import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { Card, SectionHeader } from '../components/ui'
-import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 
 const SETTINGS_SECTIONS = [
-  { id: 'health', label: { en: 'Health', pl: 'Stan systemu' } },
-  { id: 'data-quality', label: { en: 'Data quality', pl: 'Jakość danych' } },
-  { id: 'targets', label: { en: 'Targets', pl: 'Cele' } },
-  { id: 'benchmarks', label: { en: 'Benchmarks', pl: 'Benchmarki' } },
-  { id: 'transfer', label: { en: 'Transfer', pl: 'Import / eksport' } },
-  { id: 'backups', label: { en: 'Backups', pl: 'Kopie zapasowe' } },
-  { id: 'cache', label: { en: 'Cache', pl: 'Pamięć podręczna' } },
-  { id: 'audit', label: { en: 'Audit', pl: 'Audyt' } },
-  { id: 'mobile-app', label: { en: 'Mobile app', pl: 'Aplikacja mobilna' } },
-] as const
-
-const SETTINGS_GROUPS = [
-  {
-    id: 'portfolio',
-    eyebrow: { en: 'Portfolio', pl: 'Portfolio' },
-    title: { en: 'Portfolio policy', pl: 'Cele portfela i benchmarki' },
-    description: {
-      en: 'Target allocation and benchmark policy after account and instrument setup moves into dedicated screens.',
-      pl: 'Ustaw cele portfela i benchmarki. Konta oraz instrumenty mają już osobne widoki.',
-    },
-    sectionIds: ['targets', 'benchmarks'] as const,
-  },
-  {
-    id: 'operations',
-    eyebrow: { en: 'Operations', pl: 'Operacje' },
-    title: { en: 'Transfer and server workflows', pl: 'Import, eksport i procesy serwerowe' },
-    description: {
-      en: 'State transfer, backups and cached read models.',
-      pl: 'Import i eksport stanu, kopie zapasowe oraz pamięć podręczna modeli odczytowych.',
-    },
-    sectionIds: ['transfer', 'backups', 'cache'] as const,
-  },
-  {
-    id: 'diagnostics',
-    eyebrow: { en: 'Diagnostics', pl: 'Diagnostyka' },
-    title: { en: 'System health and data trust', pl: 'Stan systemu i wiarygodność danych' },
-    description: {
-      en: 'Runtime readiness, data quality and operational audit.',
-      pl: 'Gotowość środowiska, jakość danych i dziennik operacyjny.',
-    },
-    sectionIds: ['health', 'data-quality', 'audit'] as const,
-  },
-  {
-    id: 'companion',
-    eyebrow: { en: 'Companion', pl: 'Aplikacja' },
-    title: { en: 'Install and access', pl: 'Instalacja i dostęp' },
-    description: {
-      en: 'Mobile install guidance and access ergonomics.',
-      pl: 'Wskazówki dotyczące instalacji mobilnej i wygodnego dostępu.',
-    },
-    sectionIds: ['mobile-app'] as const,
-  },
+  { id: 'health', labelKey: 'settings.navHealth' },
+  { id: 'data-quality', labelKey: 'settings.navDataQuality' },
+  { id: 'targets', labelKey: 'settings.navTargets' },
+  { id: 'benchmarks', labelKey: 'settings.navBenchmarks' },
+  { id: 'transfer', labelKey: 'settings.navTransfer' },
+  { id: 'backups', labelKey: 'settings.navBackups' },
+  { id: 'cache', labelKey: 'settings.navCache' },
+  { id: 'audit', labelKey: 'settings.navAudit' },
+  { id: 'mobile-app', labelKey: 'settings.navMobileApp' },
 ] as const
 
 export function SettingsScreen() {
-  const { isPolish } = useI18n()
-
   return (
     <>
-      <PageHeader title={isPolish ? 'Ustawienia' : 'Settings'} />
+      <PageHeader title={t('settings.title')} />
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">
         {SETTINGS_SECTIONS.map((section) => (
@@ -82,7 +37,7 @@ export function SettingsScreen() {
             href={`#${section.id}`}
             className="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
           >
-            {isPolish ? section.label.pl : section.label.en}
+            {t(section.labelKey)}
           </a>
         ))}
       </div>
@@ -90,31 +45,76 @@ export function SettingsScreen() {
       <div className="grid gap-8 xl:grid-cols-[16rem,minmax(0,1fr)]">
         <aside className="hidden xl:block">
           <Card className="sticky top-6">
-            <nav className="space-y-6" aria-label={isPolish ? 'Nawigacja ustawień' : 'Settings navigation'}>
-              {SETTINGS_GROUPS.map((group) => (
-                <div key={group.id}>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-                    {isPolish ? group.eyebrow.pl : group.eyebrow.en}
-                  </p>
-                  <div className="mt-3 space-y-1.5">
-                    {group.sectionIds.map((sectionId) => {
-                      const section = SETTINGS_SECTIONS.find((candidate) => candidate.id === sectionId)
-                      if (!section) {
-                        return null
-                      }
-                      return (
-                        <a
-                          key={section.id}
-                          href={`#${section.id}`}
-                          className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
-                        >
-                          {isPolish ? section.label.pl : section.label.en}
-                        </a>
-                      )
-                    })}
-                  </div>
+            <nav className="space-y-6" aria-label={t('settings.navLabel')}>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                  {t('settings.portfolioEyebrow')}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {(['settings.navTargets', 'settings.navBenchmarks'] as const).map((key) => (
+                    <a
+                      key={key}
+                      href={`#${key === 'settings.navTargets' ? 'targets' : 'benchmarks'}`}
+                      className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
+                    >
+                      {t(key)}
+                    </a>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                  {t('settings.operationsEyebrow')}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {([
+                    { key: 'settings.navTransfer', id: 'transfer' },
+                    { key: 'settings.navBackups', id: 'backups' },
+                    { key: 'settings.navCache', id: 'cache' },
+                  ] as const).map((item) => (
+                    <a
+                      key={item.key}
+                      href={`#${item.id}`}
+                      className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
+                    >
+                      {t(item.key)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                  {t('settings.diagnosticsEyebrow')}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {([
+                    { key: 'settings.navHealth', id: 'health' },
+                    { key: 'settings.navDataQuality', id: 'data-quality' },
+                    { key: 'settings.navAudit', id: 'audit' },
+                  ] as const).map((item) => (
+                    <a
+                      key={item.key}
+                      href={`#${item.id}`}
+                      className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
+                    >
+                      {t(item.key)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                  {t('settings.companionEyebrow')}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  <a
+                    href="#mobile-app"
+                    className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
+                  >
+                    {t('settings.navMobileApp')}
+                  </a>
+                </div>
+              </div>
             </nav>
           </Card>
         </aside>
@@ -125,9 +125,9 @@ export function SettingsScreen() {
           </section>
 
           <SettingsGroup
-            eyebrow={isPolish ? SETTINGS_GROUPS[0].eyebrow.pl : SETTINGS_GROUPS[0].eyebrow.en}
-            title={isPolish ? SETTINGS_GROUPS[0].title.pl : SETTINGS_GROUPS[0].title.en}
-            description={isPolish ? SETTINGS_GROUPS[0].description.pl : SETTINGS_GROUPS[0].description.en}
+            eyebrow={t('settings.portfolioEyebrow')}
+            title={t('settings.portfolioTitle')}
+            description={t('settings.portfolioDescription')}
           >
             <section id="targets" className="scroll-mt-24">
               <PortfolioTargetsSection />
@@ -139,9 +139,9 @@ export function SettingsScreen() {
           </SettingsGroup>
 
           <SettingsGroup
-            eyebrow={isPolish ? SETTINGS_GROUPS[1].eyebrow.pl : SETTINGS_GROUPS[1].eyebrow.en}
-            title={isPolish ? SETTINGS_GROUPS[1].title.pl : SETTINGS_GROUPS[1].title.en}
-            description={isPolish ? SETTINGS_GROUPS[1].description.pl : SETTINGS_GROUPS[1].description.en}
+            eyebrow={t('settings.operationsEyebrow')}
+            title={t('settings.operationsTitle')}
+            description={t('settings.operationsDescription')}
           >
             <section id="transfer" className="scroll-mt-24">
               <PortfolioStateSection />
@@ -157,9 +157,9 @@ export function SettingsScreen() {
           </SettingsGroup>
 
           <SettingsGroup
-            eyebrow={isPolish ? SETTINGS_GROUPS[2].eyebrow.pl : SETTINGS_GROUPS[2].eyebrow.en}
-            title={isPolish ? SETTINGS_GROUPS[2].title.pl : SETTINGS_GROUPS[2].title.en}
-            description={isPolish ? SETTINGS_GROUPS[2].description.pl : SETTINGS_GROUPS[2].description.en}
+            eyebrow={t('settings.diagnosticsEyebrow')}
+            title={t('settings.diagnosticsTitle')}
+            description={t('settings.diagnosticsDescription')}
           >
             <section id="health" className="scroll-mt-24">
               <SystemReadinessSection />
@@ -171,22 +171,18 @@ export function SettingsScreen() {
 
             <Card as="section" id="audit" className="scroll-mt-24">
               <SectionHeader
-                eyebrow={isPolish ? 'Audyt' : 'Audit'}
-                title={isPolish ? 'Dziennik operacyjny' : 'Operational activity'}
-                description={
-                  isPolish
-                    ? 'Sprawdź ostatnie kopie zapasowe, odtworzenia, importy i inne operacje zmieniające stan poza dziennikiem transakcji.'
-                    : 'Inspect recent backups, restores, imports and other state-changing actions outside the transaction workspace.'
-                }
+                eyebrow={t('settings.auditEyebrow')}
+                title={t('settings.auditTitle')}
+                description={t('settings.auditDescription')}
               />
               <OperationalAuditPanel />
             </Card>
           </SettingsGroup>
 
           <SettingsGroup
-            eyebrow={isPolish ? SETTINGS_GROUPS[3].eyebrow.pl : SETTINGS_GROUPS[3].eyebrow.en}
-            title={isPolish ? SETTINGS_GROUPS[3].title.pl : SETTINGS_GROUPS[3].title.en}
-            description={isPolish ? SETTINGS_GROUPS[3].description.pl : SETTINGS_GROUPS[3].description.en}
+            eyebrow={t('settings.companionEyebrow')}
+            title={t('settings.companionTitle')}
+            description={t('settings.companionDescription')}
           >
             <section id="mobile-app" className="scroll-mt-24">
               <MobileAppSection />

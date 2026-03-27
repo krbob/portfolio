@@ -5,6 +5,7 @@ import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { buildAuditMetadataSummary, formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAuditOutcome } from '../lib/labels'
+import { t } from '../lib/messages'
 import { badge, badgeVariants, filterInput, label } from '../lib/styles'
 
 interface ImportAuditPanelProps {
@@ -31,18 +32,18 @@ export function ImportAuditPanel({
 
   return (
     <>
-      <SectionHeader eyebrow={isPolish ? 'Audyt' : 'Audit'} title={title} description={description} />
+      <SectionHeader eyebrow={t('importAudit.eyebrow')} title={title} description={description} />
 
       {latestEvent && (
         <p className="text-sm text-zinc-500">
-          {isPolish ? 'Ostatnie zdarzenie:' : 'Latest event:'} {formatAuditEventMessage(latestEvent, isPolish)} ·{' '}
+          {t('importAudit.latestEvent')} {formatAuditEventMessage(latestEvent, isPolish)} ·{' '}
           {formatDateTime(latestEvent.occurredAt)}
         </p>
       )}
 
       <div className="flex items-center gap-3 my-3">
         <label>
-          <span className={label}>{isPolish ? 'Wynik' : 'Outcome'}</span>
+          <span className={label}>{t('importAudit.outcome')}</span>
           <select
             className={filterInput}
             value={outcomeFilter}
@@ -59,15 +60,13 @@ export function ImportAuditPanel({
 
       {eventsQuery.isLoading && (
         <p className="text-sm text-zinc-500">
-          {isPolish ? 'Ładowanie aktywności importu...' : 'Loading import activity...'}
+          {t('importAudit.loadingActivity')}
         </p>
       )}
       {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
         <p className="text-sm text-zinc-500">
-          {isPolish
-            ? 'Brak jeszcze zdarzeń audytu związanych z importem.'
-            : 'No import-related audit events yet.'}
+          {t('importAudit.noEvents')}
         </p>
       )}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (

@@ -12,6 +12,7 @@ import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAuditOutcome } from '../lib/labels'
+import { t } from '../lib/messages'
 import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
 export function PortfolioBackupsSection() {
@@ -40,7 +41,7 @@ export function PortfolioBackupsSection() {
           : `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.`,
       )
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Nie udało się utworzyć kopii zapasowej.' : 'Backup run failed.')
+      setActionError(error instanceof Error ? error.message : t('backups.backupFailed'))
     }
   }
 
@@ -61,7 +62,7 @@ export function PortfolioBackupsSection() {
       )
       setRestoreConfirmation('')
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Odtwarzanie nie powiodło się.' : 'Restore failed.')
+      setActionError(error instanceof Error ? error.message : t('backups.restoreFailed'))
     }
   }
 
@@ -73,7 +74,7 @@ export function PortfolioBackupsSection() {
       const downloadedFileName = await downloadBackupMutation.mutateAsync(fileName)
       setFeedback(isPolish ? `Pobrano ${downloadedFileName}.` : `Downloaded ${downloadedFileName}.`)
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Pobieranie nie powiodło się.' : 'Download failed.')
+      setActionError(error instanceof Error ? error.message : t('backups.downloadFailed'))
     }
   }
 
@@ -85,37 +86,33 @@ export function PortfolioBackupsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Kopie zapasowe' : 'Backups'}
-        title={isPolish ? 'Kopie zapasowe serwera' : 'Server snapshots'}
-        description={
-          isPolish
-            ? 'Przechowuj na serwerze pełne kopie zapasowe w JSON-ie z celami, ustawieniami aplikacji i profilami importu, uruchamiaj je na żądanie i przywracaj sprawdzony stan bez pobierania plików.'
-            : 'Keep canonical JSON backups on the server, including targets, app settings and import profiles, trigger them on demand, and restore a known-good state without downloading files first.'
-        }
+        eyebrow={t('backups.eyebrow')}
+        title={t('backups.title')}
+        description={t('backups.description')}
       />
 
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Harmonogram' : 'Scheduler'}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data?.schedulerEnabled ? (isPolish ? 'Włączony' : 'Enabled') : isPolish ? 'Tylko ręcznie' : 'Manual only'}</strong>
+          <span className="text-xs text-zinc-500">{t('backups.scheduler')}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data?.schedulerEnabled ? t('backups.schedulerEnabled') : t('backups.schedulerManual')}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Interwał' : 'Interval'}</span>
+          <span className="text-xs text-zinc-500">{t('backups.interval')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.intervalMinutes} min` : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Retencja' : 'Retention'}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} ${isPolish ? 'plików' : 'files'}` : '...'}</strong>
+          <span className="text-xs text-zinc-500">{t('backups.retention')}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} ${t('backups.files')}` : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Zapisane kopie' : 'Stored backups'}</span>
+          <span className="text-xs text-zinc-500">{t('backups.storedBackups')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? backups.length : '...'}</strong>
         </article>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
-          <span className={labelClass}>{isPolish ? 'Tryb odtwarzania' : 'Restore mode'}</span>
+          <span className={labelClass}>{t('backups.restoreMode')}</span>
           <select
             className={filterInput}
             value={restoreMode}
@@ -131,7 +128,7 @@ export function PortfolioBackupsSection() {
 
         {restoreMode === 'REPLACE' && (
           <div>
-            <span className={labelClass}>{isPolish ? 'Wpisz REPLACE' : 'Type REPLACE'}</span>
+            <span className={labelClass}>{t('backups.typeReplace')}</span>
             <input
               className={filterInput}
               type="text"
@@ -143,40 +140,36 @@ export function PortfolioBackupsSection() {
         )}
 
         <button className={btnPrimary} type="button" onClick={handleRunBackupClick} disabled={runBackupMutation.isPending || backupsQuery.isLoading}>
-          {runBackupMutation.isPending ? (isPolish ? 'Uruchamianie...' : 'Running...') : isPolish ? 'Utwórz kopię teraz' : 'Run backup now'}
+          {runBackupMutation.isPending ? t('backups.running') : t('backups.runNow')}
         </button>
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="text-sm text-zinc-500">{isPolish ? 'Katalog' : 'Directory'}: {backupsQuery.data?.directory ?? (isPolish ? 'Ładowanie...' : 'Loading...')}</p>
+        <p className="text-sm text-zinc-500">{t('backups.directory')}: {backupsQuery.data?.directory ?? (isPolish ? 'Ładowanie...' : 'Loading...')}</p>
         <p className="text-sm text-zinc-500">
-          {isPolish
-            ? '`REPLACE` wymaga wpisania `REPLACE` i automatycznie tworzy kopię bezpieczeństwa.'
-            : '`REPLACE` restore requires typing `REPLACE` and creates a safety backup automatically.'}
+          {t('backups.replaceNotice')}
         </p>
         <p className="text-sm text-zinc-500">
-          {isPolish ? 'Ostatni sukces' : 'Last success'}:{' '}
+          {t('backups.lastSuccess')}:{' '}
           {backupsQuery.data?.lastSuccessAt
             ? formatDateTime(backupsQuery.data.lastSuccessAt)
-            : isPolish
-              ? 'Brak udanej kopii zapasowej.'
-              : 'No successful backup yet.'}
+            : t('backups.noSuccessYet')}
         </p>
         {backupsQuery.data?.lastFailureMessage && (
           <p className="text-sm text-red-400">
-            {isPolish ? 'Ostatni błąd' : 'Last failure'}:{' '}
+            {t('backups.lastFailure')}:{' '}
             {backupsQuery.data.lastFailureAt ? `${formatDateTime(backupsQuery.data.lastFailureAt)}: ` : ''}
             {backupsQuery.data.lastFailureMessage}
           </p>
         )}
       </div>
 
-      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie kopii zapasowych serwera...' : 'Loading server backups...'}</p>}
+      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">{t('backups.loadingBackups')}</p>}
       {backupsQuery.isError && <p className="text-sm text-red-400">{backupsQuery.error.message}</p>}
 
       {!backupsQuery.isLoading && !backupsQuery.isError && (
         <div className="space-y-3 mb-4">
-          {backups.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Nie utworzono jeszcze żadnej kopii zapasowej na serwerze.' : 'No server backups have been created yet.'}</p>}
+          {backups.length === 0 && <p className="text-sm text-zinc-500">{t('backups.noBackupsYet')}</p>}
 
           {backups.map((backup) => (
             <article key={backup.fileName} className="rounded-lg border border-zinc-800/50 p-4">
@@ -184,46 +177,46 @@ export function PortfolioBackupsSection() {
                 <div>
                   <h4 className="text-sm font-semibold text-zinc-100">{backup.fileName}</h4>
                   <p className="text-sm text-zinc-500">
-                    {isPolish ? 'Wyeksportowano' : 'Exported'} {backup.exportedAt ? formatDateTime(backup.exportedAt) : isPolish ? 'nieznane' : 'unknown'} · {formatBytes(backup.sizeBytes)}
+                    {t('backups.exported')} {backup.exportedAt ? formatDateTime(backup.exportedAt) : t('backups.unknown')} · {formatBytes(backup.sizeBytes)}
                   </p>
                 </div>
 
                 <span className={`${badge} ${backup.isReadable ? badgeVariants.success : badgeVariants.error}`}>
-                  {backup.isReadable ? (isPolish ? 'GOTOWY' : 'READY') : isPolish ? 'USZKODZONY' : 'BROKEN'}
+                  {backup.isReadable ? t('backups.ready') : t('backups.broken')}
                 </span>
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Konta' : 'Accounts'}</dt>
+                  <dt className="text-zinc-500">{t('backups.accounts')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Ustawienia' : 'App settings'}</dt>
+                  <dt className="text-zinc-500">{t('backups.appSettings')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Instrumenty' : 'Instruments'}</dt>
+                  <dt className="text-zinc-500">{t('backups.instruments')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Cele' : 'Targets'}</dt>
+                  <dt className="text-zinc-500">{t('backups.targets')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</dt>
+                  <dt className="text-zinc-500">{t('backups.transactions')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</dt>
+                  <dt className="text-zinc-500">{t('backups.importProfilesLabel')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Schemat' : 'Schema'}</dt>
+                  <dt className="text-zinc-500">{t('backups.schema')}</dt>
                   <dd className="text-zinc-100">{backup.schemaVersion ?? missingDataLabel(isPolish)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{isPolish ? 'Utworzono' : 'Created'}</dt>
+                  <dt className="text-zinc-500">{t('backups.created')}</dt>
                   <dd className="text-zinc-100">{formatDateTime(backup.createdAt)}</dd>
                 </div>
               </dl>
@@ -238,12 +231,8 @@ export function PortfolioBackupsSection() {
                   disabled={downloadBackupMutation.isPending}
                 >
                   {downloadBackupMutation.isPending
-                    ? isPolish
-                      ? 'Pobieranie...'
-                      : 'Downloading...'
-                    : isPolish
-                      ? 'Pobierz JSON'
-                      : 'Download JSON'}
+                    ? t('backups.downloading')
+                    : t('backups.downloadJson')}
                 </button>
                 <button
                   type="button"
@@ -256,12 +245,8 @@ export function PortfolioBackupsSection() {
                   }
                 >
                   {restoreBackupMutation.isPending
-                    ? isPolish
-                      ? 'Odtwarzanie...'
-                      : 'Restoring...'
-                    : isPolish
-                      ? 'Przywróć kopię'
-                      : 'Restore backup'}
+                    ? t('backups.restoring')
+                    : t('backups.restoreBackup')}
                 </button>
               </div>
             </article>
@@ -270,19 +255,15 @@ export function PortfolioBackupsSection() {
       )}
 
       <SectionHeader
-        eyebrow={isPolish ? 'Audyt' : 'Audit'}
-        title={isPolish ? 'Aktywność kopii zapasowych' : 'Backup activity'}
-        description={
-          isPolish
-            ? 'Ostatnie uruchomienia kopii zapasowych, odtworzenia i zdarzenia retencji z niezmienialnego dziennika audytu.'
-            : 'Recent backup runs, restores and retention pruning events from the append-only audit log.'
-        }
+        eyebrow={t('backups.auditEyebrow')}
+        title={t('backups.auditTitle')}
+        description={t('backups.auditDescription')}
         className="mb-4 mt-8"
       />
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
-          <span className={labelClass}>{isPolish ? 'Wynik' : 'Outcome'}</span>
+          <span className={labelClass}>{t('backups.outcome')}</span>
           <select className={filterInput} value={backupOutcomeFilter} onChange={(event) => setBackupOutcomeFilter(event.target.value as 'ALL' | 'SUCCESS' | 'FAILURE')}>
             <option value="ALL">{labelAuditOutcome('ALL')}</option>
             <option value="SUCCESS">{labelAuditOutcome('SUCCESS')}</option>
@@ -291,10 +272,10 @@ export function PortfolioBackupsSection() {
         </div>
       </div>
 
-      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie aktywności kopii zapasowych...' : 'Loading backup activity...'}</p>}
+      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">{t('backups.loadingActivity')}</p>}
       {backupEventsQuery.isError && <p className="text-sm text-red-400">{backupEventsQuery.error.message}</p>}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">{isPolish ? 'Brak jeszcze zdarzeń audytu związanych z kopiami zapasowymi.' : 'No backup-related audit events yet.'}</p>
+        <p className="text-sm text-zinc-500">{t('backups.noAuditEvents')}</p>
       )}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length > 0 && (
         <div className="space-y-3">

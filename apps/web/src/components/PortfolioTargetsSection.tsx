@@ -9,6 +9,7 @@ import {
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass } from '../lib/labels'
+import { t } from '../lib/messages'
 import {
   badge,
   badgeVariants,
@@ -93,7 +94,7 @@ export function PortfolioTargetsSection() {
   const savedMixLabel = targetsQuery.data == null
     ? null
     : targetsQuery.data.length === 0
-      ? (isPolish ? 'brak konfiguracji' : 'not configured')
+      ? t('targets.notConfigured')
       : TARGET_FIELDS
         .map((field) => {
           const savedTarget = targetsQuery.data.find((target) => target.assetClass === field.assetClass)
@@ -108,7 +109,7 @@ export function PortfolioTargetsSection() {
     setActionError(null)
 
     if (!totalIsValid) {
-      setActionError(isPolish ? 'Wagi docelowe muszą sumować się dokładnie do 100%.' : 'Target weights must add up to exactly 100%.')
+      setActionError(t('targets.mustSum100'))
       return
     }
 
@@ -131,7 +132,7 @@ export function PortfolioTargetsSection() {
           : `Saved target mix: ${result.map((item) => `${item.assetClass} ${formatPercent(item.targetWeight, { scale: 100, maximumFractionDigits: 2 })}`).join(' · ')}.`,
       )
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : isPolish ? 'Nie udało się zapisać celów.' : 'Saving targets failed.')
+      setActionError(error instanceof Error ? error.message : t('targets.saveFailed'))
     }
   }
 
@@ -160,9 +161,7 @@ export function PortfolioTargetsSection() {
       setSettingsActionError(
         error instanceof Error
           ? error.message
-          : isPolish
-            ? 'Nie udało się zapisać ustawień rebalansowania.'
-            : 'Saving rebalancing settings failed.',
+          : t('targets.savingRebalancingFailed'),
       )
     }
   }
@@ -171,22 +170,20 @@ export function PortfolioTargetsSection() {
   const strategyModeOptions: Array<{ value: RebalancingMode; label: string }> = [
     {
       value: 'CONTRIBUTIONS_ONLY',
-      label: isPolish ? 'Tylko nowymi wpłatami' : 'Contributions only',
+      label: t('targets.contributionsOnly'),
     },
     {
       value: 'ALLOW_TRIMS',
-      label: isPolish ? 'Dopuszczaj przycięcia' : 'Allow trims',
+      label: t('targets.allowTrims'),
     },
   ]
 
   return (
     <Card as="section" id="targets">
       <SectionHeader
-        eyebrow={isPolish ? 'Strategia' : 'Strategy'}
-        title={isPolish ? 'Alokacja docelowa' : 'Target allocation'}
-        description={isPolish
-          ? 'Skonfiguruj docelowy podział portfela używany do diagnozy odchyleń, sugestii rebalansowania wpłatami i benchmarku alokacji docelowej w zakładce Wyniki.'
-          : 'Configure the target mix used for allocation drift, contribution-first rebalance suggestions and the synthetic target-mix benchmark in Performance.'}
+        eyebrow={t('targets.eyebrow')}
+        title={t('targets.title')}
+        description={t('targets.description')}
         actions={(
           <>
             <button
@@ -194,7 +191,7 @@ export function PortfolioTargetsSection() {
               className={btnSecondary}
               onClick={() => applyPreset(PRESET_80_20_INPUTS)}
             >
-              {isPolish ? 'Ustaw 80/20' : 'Preset 80/20'}
+              {t('targets.preset8020')}
             </button>
             <button
               type="submit"
@@ -202,7 +199,7 @@ export function PortfolioTargetsSection() {
               className={btnPrimary}
               disabled={replaceTargetsMutation.isPending || !totalIsValid}
             >
-              {replaceTargetsMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Zapisz cele' : 'Save targets')}
+              {replaceTargetsMutation.isPending ? t('common.saving') : t('targets.saveTargets')}
             </button>
           </>
         )}
@@ -232,19 +229,17 @@ export function PortfolioTargetsSection() {
 
         <div className="flex flex-wrap items-center gap-3">
           <span className={`${badge} ${totalIsValid ? badgeVariants.success : badgeVariants.warning}`}>
-            {isPolish ? 'Suma' : 'Sum'} {formatPercent(totalPct, { maximumFractionDigits: 2 })}
+            {t('targets.sum')} {formatPercent(totalPct, { maximumFractionDigits: 2 })}
           </span>
-          <span className="text-sm text-zinc-500">{isPolish ? 'Edytowany podział' : 'Edited mix'}: {editedMixLabel}</span>
+          <span className="text-sm text-zinc-500">{t('targets.editedMix')}: {editedMixLabel}</span>
           {savedMixLabel ? (
-            <span className="text-sm text-zinc-500">{isPolish ? 'Zapisany podział' : 'Saved mix'}: {savedMixLabel}</span>
+            <span className="text-sm text-zinc-500">{t('targets.savedMix')}: {savedMixLabel}</span>
           ) : null}
         </div>
 
         {targetsQuery.data?.length === 0 ? (
           <p className="text-sm text-amber-400">
-            {isPolish
-              ? 'Brak zapisanej alokacji docelowej. Uzupełnij pola albo użyj gotowego układu, a potem kliknij Zapisz cele.'
-              : 'No targets are saved yet. Fill in the weights or use the preset, then click Save targets.'}
+            {t('targets.noTargetsSaved')}
           </p>
         ) : null}
 
@@ -255,11 +250,9 @@ export function PortfolioTargetsSection() {
       <form className="mt-5 rounded-lg border border-zinc-800/50 p-4 space-y-4" onSubmit={handleRebalancingSettingsSubmit}>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h4 className="text-sm font-semibold text-zinc-100">{isPolish ? 'Polityka rebalansowania' : 'Rebalancing policy'}</h4>
+            <h4 className="text-sm font-semibold text-zinc-100">{t('targets.rebalancingPolicy')}</h4>
             <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? 'Ustal pasmo tolerancji i to, czy aplikacja ma sugerować wyłącznie nowe wpłaty, czy również pełne przycięcia i przesunięcia między koszykami.'
-                : 'Choose the tolerance band and whether the app should suggest only new contributions or a full trim-and-redeploy rebalance.'}
+              {t('targets.rebalancingPolicyDescription')}
             </p>
           </div>
 
@@ -269,14 +262,14 @@ export function PortfolioTargetsSection() {
             disabled={saveRebalancingSettingsMutation.isPending}
           >
             {saveRebalancingSettingsMutation.isPending
-              ? (isPolish ? 'Zapisywanie...' : 'Saving...')
-              : (isPolish ? 'Zapisz politykę' : 'Save policy')}
+              ? t('common.saving')
+              : t('targets.savePolicy')}
           </button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
           <label>
-            <span className={labelClass}>{isPolish ? 'Pasmo tolerancji' : 'Tolerance band'}</span>
+            <span className={labelClass}>{t('targets.toleranceBand')}</span>
             <div className="relative">
               <input
                 className={`${input} pr-14`}
@@ -291,19 +284,19 @@ export function PortfolioTargetsSection() {
           </label>
 
           <div>
-            <span className={labelClass}>{isPolish ? 'Tryb rebalansowania' : 'Rebalancing mode'}</span>
+            <span className={labelClass}>{t('targets.rebalancingMode')}</span>
             <SegmentedControl
               value={rebalancingMode}
               onChange={setRebalancingMode}
               options={strategyModeOptions}
-              ariaLabel={isPolish ? 'Tryb rebalansowania' : 'Rebalancing mode'}
+              ariaLabel={t('targets.rebalancingMode')}
             />
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant="info">
-            {isPolish ? 'Pasmo' : 'Band'} ±{formatPercent(toleranceBandInput || '0', { maximumFractionDigits: 2, suffix: ' pp' })}
+            {t('targets.band')} ±{formatPercent(toleranceBandInput || '0', { maximumFractionDigits: 2, suffix: ' pp' })}
           </Badge>
           <Badge variant="default">{labelRebalancingMode(rebalancingMode, isPolish)}</Badge>
         </div>
@@ -314,7 +307,7 @@ export function PortfolioTargetsSection() {
       </form>
 
       {targetsQuery.isLoading || allocationQuery.isLoading || rebalancingSettingsQuery.isLoading ? (
-        <p className="mt-5 text-sm text-zinc-500">{isPolish ? 'Ładowanie alokacji docelowej i podsumowania odchyleń...' : 'Loading target allocation and drift summary...'}</p>
+        <p className="mt-5 text-sm text-zinc-500">{t('targets.loading')}</p>
       ) : null}
       {targetsQuery.isError ? <p className="mt-5 text-sm text-red-400">{targetsQuery.error.message}</p> : null}
       {allocationQuery.isError ? <p className="mt-5 text-sm text-red-400">{allocationQuery.error.message}</p> : null}
@@ -323,87 +316,73 @@ export function PortfolioTargetsSection() {
         <>
           {!allocation.configured ? (
             <StatePanel
-              eyebrow={isPolish ? 'Cele' : 'Targets'}
-              title={isPolish ? 'Brak skonfigurowanej alokacji docelowej' : 'No target allocation configured yet'}
-              description={isPolish
-                ? 'Zapisz powyżej wagi docelowe, aby odblokować diagnostykę odchyleń i benchmark alokacji docelowej.'
-                : 'Save target weights above to unlock drift diagnostics and the target-mix benchmark.'}
+              eyebrow={t('targets.noConfigEyebrow')}
+              title={t('targets.noConfigTitle')}
+              description={t('targets.noConfigDescription')}
               className="mt-5"
             />
           ) : (
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Suma wag docelowych' : 'Target sum'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.targetSum')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {formatPercent(allocation.targetWeightSumPct, { maximumFractionDigits: 2 })}
                   </strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Pasmo tolerancji' : 'Tolerance band'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.toleranceBand')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })}
                   </strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Akcja strategiczna' : 'Strategy action'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.strategyAction')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">{labelAllocationAction(allocation.recommendedAction, isPolish)}</strong>
                   <p className="mt-1 text-xs text-zinc-500">
                     {labelRebalancingMode(allocation.rebalancingMode, isPolish)}
                   </p>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Poza pasmem' : 'Outside band'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.outsideBand')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {allocation.breachedBucketCount}
                   </strong>
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocation.largestBandBreachPctPoints
-                      ? `${isPolish ? 'Największe przekroczenie' : 'Largest breach'} ${formatPercent(allocation.largestBandBreachPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })}`
-                      : isPolish
-                        ? 'Wszystkie koszyki mieszczą się w paśmie.'
-                        : 'All buckets are within the configured band.'}
+                      ? `${t('targets.largestBreach')} ${formatPercent(allocation.largestBandBreachPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })}`
+                      : t('targets.allWithinBand')}
                   </p>
                 </article>
               </div>
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Dostępna gotówka' : 'Available cash'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.availableCash')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">{formatCurrencyPln(allocation.availableCashPln)}</strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Kolejna wpłata / deploy' : 'Next contribution / deploy'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.nextContribution')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {allocation.recommendedAssetClass
                       ? `${formatCurrencyPln(allocation.recommendedContributionPln)} -> ${labelAssetClass(allocation.recommendedAssetClass)}`
-                      : isPolish
-                        ? 'Brak priorytetu'
-                        : 'No active priority'}
+                      : t('targets.noPriority')}
                   </strong>
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocation.remainingContributionGapPln !== '0.00'
-                      ? isPolish
-                        ? `Pozostała luka po deployu gotówki: ${formatCurrencyPln(allocation.remainingContributionGapPln)}`
-                        : `Remaining funding gap after deploying cash: ${formatCurrencyPln(allocation.remainingContributionGapPln)}`
-                      : isPolish
-                        ? 'Dostępna gotówka pokrywa bieżący niedobór.'
-                        : 'Available cash can cover the current underweight gap.'}
+                      ? `${t('targets.remainingGap')}: ${formatCurrencyPln(allocation.remainingContributionGapPln)}`
+                      : t('targets.cashCoversGap')}
                   </p>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{isPolish ? 'Pełny rebalance' : 'Full rebalance'}</span>
+                  <span className="text-xs text-zinc-500">{t('targets.fullRebalance')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {formatCurrencyPln(allocation.fullRebalanceBuyAmountPln)} / {formatCurrencyPln(allocation.fullRebalanceSellAmountPln)}
                   </strong>
                   <p className="mt-1 text-xs text-zinc-500">
                     {allocation.requiresSelling
-                      ? isPolish
-                        ? 'Powrót do celu wymaga także sprzedaży lub przycięć.'
-                        : 'Restoring the target mix requires trims or sells in addition to cash deployment.'
-                      : isPolish
-                        ? 'Do celu można wrócić samą gotówką lub nową wpłatą.'
-                        : 'The target mix can be restored without selling.'}
+                      ? t('targets.requiresSelling')
+                      : t('targets.noBuysNeeded')}
                   </p>
                 </article>
               </div>
@@ -415,45 +394,45 @@ export function PortfolioTargetsSection() {
                     <div>
                         <h4 className="text-sm font-semibold text-zinc-100">{labelAssetClass(bucket.assetClass)}</h4>
                         <p className="mt-1 text-sm text-zinc-500">
-                          {isPolish ? 'Obecnie' : 'Current'} {formatPercent(bucket.currentWeightPct, { maximumFractionDigits: 2 })} · {isPolish ? 'cel' : 'target'} {formatPercent(bucket.targetWeightPct, { maximumFractionDigits: 2 })}
+                          {t('targets.current')} {formatPercent(bucket.currentWeightPct, { maximumFractionDigits: 2 })} · {t('targets.target')} {formatPercent(bucket.targetWeightPct, { maximumFractionDigits: 2 })}
                         </p>
                         {bucket.targetWeightPct && (
                           <p className="mt-1 text-xs text-zinc-500">
-                            {isPolish ? 'Pasmo' : 'Band'} {formatPercent(bucket.toleranceLowerPct, { maximumFractionDigits: 2 })} - {formatPercent(bucket.toleranceUpperPct, { maximumFractionDigits: 2 })}
+                            {t('targets.band')} {formatPercent(bucket.toleranceLowerPct, { maximumFractionDigits: 2 })} - {formatPercent(bucket.toleranceUpperPct, { maximumFractionDigits: 2 })}
                           </p>
                         )}
                       </div>
-                      <span className={`${badge} ${statusVariant(bucket.status)}`}>{labelTargetStatus(bucket.status, isPolish)}</span>
+                      <span className={`${badge} ${statusVariant(bucket.status)}`}>{labelTargetStatus(bucket.status)}</span>
                     </div>
 
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Bieżąca wartość' : 'Current value'}</dt>
+                        <dt className="text-zinc-500">{t('targets.currentValue')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.currentValuePln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Wartość docelowa' : 'Target value'}</dt>
+                        <dt className="text-zinc-500">{t('targets.targetValue')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.targetValuePln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Odchylenie' : 'Drift'}</dt>
+                        <dt className="text-zinc-500">{t('targets.drift')}</dt>
                         <dd className={driftColor(bucket.driftPctPoints)}>
                           {formatPercent(bucket.driftPctPoints, { signed: true, maximumFractionDigits: 2, suffix: ' pp' })}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Luka do celu' : 'Gap to target'}</dt>
+                        <dt className="text-zinc-500">{t('targets.gapToTarget')}</dt>
                         <dd className={gapColor(bucket.gapValuePln)}>
                           {formatSignedCurrencyPln(bucket.gapValuePln)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Sugerowana wpłata' : 'Suggest contribution'}</dt>
+                        <dt className="text-zinc-500">{t('targets.suggestContribution')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.suggestedContributionPln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{isPolish ? 'Akcja' : 'Action'}</dt>
-                        <dd className="text-zinc-100">{labelBucketAction(bucket.rebalanceAction, isPolish)}</dd>
+                        <dt className="text-zinc-500">{t('targets.action')}</dt>
+                        <dd className="text-zinc-100">{labelBucketAction(bucket.rebalanceAction)}</dd>
                       </div>
                     </dl>
                   </article>
@@ -525,26 +504,22 @@ function statusVariant(status: string) {
   }
 }
 
-function labelTargetStatus(status: string, isPolish: boolean) {
-  if (isPolish) {
-    switch (status) {
-      case 'UNDERWEIGHT':
-        return 'Niedoważone'
-      case 'OVERWEIGHT':
-        return 'Przeważone'
-      case 'ON_TARGET':
-        return 'W normie'
-      default:
-        return status
-    }
+function labelTargetStatus(status: string) {
+  switch (status) {
+    case 'UNDERWEIGHT':
+      return t('targets.statusUnderweight')
+    case 'OVERWEIGHT':
+      return t('targets.statusOverweight')
+    case 'ON_TARGET':
+      return t('targets.statusOnTarget')
+    default:
+      return status
   }
-
-  return status
 }
 
 function labelRebalancingMode(mode: string, isPolish: boolean) {
   if (isPolish) {
-    return mode === 'ALLOW_TRIMS' ? 'Dopuszczaj przycięcia' : 'Tylko nowymi wpłatami'
+    return mode === 'ALLOW_TRIMS' ? t('targets.modeAllowTrims') : t('targets.modeContributions')
   }
   return mode === 'ALLOW_TRIMS' ? 'Allow trims and redeploy' : 'New contributions only'
 }
@@ -553,15 +528,15 @@ function labelAllocationAction(action: string, isPolish: boolean) {
   if (isPolish) {
     switch (action) {
       case 'WITHIN_TOLERANCE':
-        return 'W paśmie'
+        return t('targets.actionWithinTolerance')
       case 'DEPLOY_EXISTING_CASH':
-        return 'Przekieruj gotówkę'
+        return t('targets.actionDeployCash')
       case 'WAIT_FOR_NEXT_CONTRIBUTION':
-        return 'Poczekaj na kolejną wpłatę'
+        return t('targets.actionWait')
       case 'FULL_REBALANCE':
-        return 'Pełny rebalance'
+        return t('targets.actionFullRebalance')
       default:
-        return 'Brak konfiguracji'
+        return t('targets.actionNotConfigured')
     }
   }
 
@@ -579,28 +554,15 @@ function labelAllocationAction(action: string, isPolish: boolean) {
   }
 }
 
-function labelBucketAction(action: string, isPolish: boolean) {
-  if (isPolish) {
-    switch (action) {
-      case 'BUY':
-        return 'Dokup'
-      case 'SELL':
-        return 'Przytnij'
-      case 'HOLD':
-        return 'Trzymaj'
-      default:
-        return 'Brak'
-    }
-  }
-
+function labelBucketAction(action: string) {
   switch (action) {
     case 'BUY':
-      return 'Buy'
+      return t('targets.bucketBuy')
     case 'SELL':
-      return 'Trim / sell'
+      return t('targets.bucketSell')
     case 'HOLD':
-      return 'Hold'
+      return t('targets.bucketHold')
     default:
-      return 'N/A'
+      return t('targets.bucketNa')
   }
 }
