@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:MarketDataFailureAuditService.kt$MarketDataFailureAuditService$suspend fun recordFailure( upstream: String, operation: String, reason: String, symbol: String? = null, instrumentId: String? = null, instrumentName: String? = null, valuationSource: String? = null, purchaseDate: LocalDate? = null, from: LocalDate? = null, to: LocalDate? = null, exception: Throwable? = null )</ID>
+    <ID>EmptyFunctionBlock:AppModule.kt$&lt;no name provided>${}</ID>
+    <ID>FunctionOnlyReturningConstant:SystemRoute.kt$private fun Application.databaseSummary(): String</ID>
+    <ID>FunctionOnlyReturningConstant:SystemRoute.kt$private fun Application.persistenceMode(): String</ID>
+    <ID>LongMethod:AppModule.kt$fun appModule( config: PersistenceConfig, marketDataConfig: MarketDataConfig, backupConfig: BackupConfig, readModelRefreshConfig: ReadModelRefreshConfig, authConfig: AuthConfig, repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME )</ID>
+    <ID>LongMethod:PortfolioOperationsModels.kt$internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest</ID>
+    <ID>LongMethod:PortfolioOperationsModels.kt$internal fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse</ID>
+    <ID>LongParameterList:JdbcParityTest.kt$JdbcParityTest$( id: UUID, accountId: UUID, instrumentId: UUID?, type: TransactionType, tradeDate: LocalDate, quantity: BigDecimal?, unitPrice: BigDecimal?, grossAmount: BigDecimal, currency: String, feeAmount: BigDecimal = BigDecimal.ZERO, taxAmount: BigDecimal = BigDecimal.ZERO )</ID>
+    <ID>LongParameterList:JdbcParityTest.kt$JdbcParityTest.Harness$( private val accountRepository: AccountRepository, private val appPreferenceRepository: AppPreferenceRepository, private val instrumentRepository: InstrumentRepository, private val transactionRepository: TransactionRepository, private val transactionImportProfileRepository: TransactionImportProfileRepository, private val portfolioTargetRepository: PortfolioTargetRepository, private val auditEventRepository: AuditEventRepository, private val transactionRunner: PersistenceTransactionRunner, private val closeAction: () -> Unit )</ID>
+    <ID>LongParameterList:PortfolioAllocationServiceTest.kt$PortfolioAllocationServiceTest$( id: UUID, accountId: UUID, instrumentId: UUID?, type: TransactionType, tradeDate: LocalDate, quantity: BigDecimal?, unitPrice: BigDecimal?, grossAmount: BigDecimal, settlementDate: LocalDate = tradeDate )</ID>
+    <ID>NestedBlockDepth:DataSourceFactoryTest.kt$DataSourceFactoryTest$@Test fun `sqlite datasource applies expected pragmas`()</ID>
+    <ID>NestedBlockDepth:JdbcReadModelCacheRepository.kt$JdbcReadModelCacheRepository$override suspend fun get(cacheKey: String): ReadModelCacheSnapshot?</ID>
+    <ID>SwallowedException:RemoteValuationProbeService.kt$RemoteValuationProbeService$e: Exception</ID>
+    <ID>SwallowedException:RemoteValuationProbeService.kt$RemoteValuationProbeService$e: MarketDataClientException</ID>
+    <ID>SwallowedException:RemoteValuationProbeService.kt$RemoteValuationProbeService$e: TimeoutCancellationException</ID>
+    <ID>TooGenericExceptionCaught:JdbcConnectionManager.kt$JdbcConnectionManager$error: Throwable</ID>
+    <ID>TooGenericExceptionCaught:PortfolioBackupService.kt$PortfolioBackupService$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:ReadModelRefreshService.kt$ReadModelRefreshService$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteCurrentInstrumentValuationProvider.kt$RemoteCurrentInstrumentValuationProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteEdoLotValuationProvider.kt$RemoteEdoLotValuationProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteFxRateHistoryProvider.kt$RemoteFxRateHistoryProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteHistoricalInstrumentValuationProvider.kt$RemoteHistoricalInstrumentValuationProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteInflationAdjustmentProvider.kt$RemoteInflationAdjustmentProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteReferenceSeriesProvider.kt$RemoteReferenceSeriesProvider$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:RemoteValuationProbeService.kt$RemoteValuationProbeService$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:ReadModelRefreshServiceTest.kt$ReadModelRefreshServiceTest.NoopEdoLotValuationProvider$throw RuntimeException("EDO lot provider boom")</ID>
+    <ID>TooGenericExceptionThrown:ReadModelRefreshServiceTest.kt$ReadModelRefreshServiceTest.ThrowingHistoricalProvider$throw RuntimeException("History provider boom")</ID>
+    <ID>UseCheckOrError:JdbcWriteRepositoriesTest.kt$JdbcWriteRepositoriesTest.&lt;no name provided>$throw IllegalStateException("Simulated transaction write failure.")</ID>
+    <ID>UseRequire:PortfolioBackupService.kt$PortfolioBackupService$throw IllegalArgumentException("Backup file name is not valid.")</ID>
+  </CurrentIssues>
+</SmellBaseline>

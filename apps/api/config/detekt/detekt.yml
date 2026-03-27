@@ -1,0 +1,31 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+
+complexity:
+  LargeClass:
+    active: false
+  LongMethod:
+    threshold: 80
+    excludes:
+      - "**/test/**"
+      - "**/*Test.kt"
+      - "**/*IT.kt"
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    active: false
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    active: false
+  WildcardImport:
+    active: false

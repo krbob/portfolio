@@ -215,6 +215,24 @@ docker compose up -d
 - `PORTFOLIO_AUTH_SECURE_COOKIE`
 - `PORTFOLIO_AUTH_SESSION_MAX_AGE_DAYS`
 
+## Local verification
+
+API:
+
+```bash
+cd apps/api
+./gradlew test detekt
+```
+
+Web:
+
+```bash
+cd apps/web
+npm run lint
+npm test
+npm run build
+```
+
 ## Docs
 
 - [docs/architecture.md](./docs/architecture.md): system shape, runtime boundaries, verification model

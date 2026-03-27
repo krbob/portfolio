@@ -1,7 +1,11 @@
+import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.detekt)
 }
 
 group = "net.bobinski.portfolio"
@@ -37,6 +41,24 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+configure<DetektExtension> {
+    buildUponDefaultConfig = true
+    parallel = true
+    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    baseline = project.file("config/detekt/baseline.xml")
+    basePath = rootDir.absolutePath
+}
+
+tasks.withType<Detekt>().configureEach {
+    jvmTarget = "21"
+    reports {
+        html.required.set(true)
+        sarif.required.set(true)
+        txt.required.set(false)
+        md.required.set(false)
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
@@ -64,4 +86,26 @@ ktor {
 
 kotlin {
     jvmToolchain(21)
+}
+
+subprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<DetektExtension> {
+        buildUponDefaultConfig = true
+        parallel = true
+        config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+        baseline = project.file("config/detekt/baseline.xml")
+        basePath = rootDir.absolutePath
+    }
+
+    tasks.withType<Detekt>().configureEach {
+        jvmTarget = "21"
+        reports {
+            html.required.set(true)
+            sarif.required.set(true)
+            txt.required.set(false)
+            md.required.set(false)
+        }
+    }
 }

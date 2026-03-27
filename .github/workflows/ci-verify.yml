@@ -26,10 +26,18 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          build-scan-publish: true
+          build-scan-terms-of-use-url: 'https://gradle.com/help/legal-terms-of-use'
+          build-scan-terms-of-use-agree: 'yes'
 
       - name: Run API tests
         working-directory: apps/api
         run: ./gradlew test
+
+      - name: Run API static analysis
+        working-directory: apps/api
+        run: ./gradlew detekt
 
   web:
     name: Web tests
@@ -72,6 +80,10 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          build-scan-publish: true
+          build-scan-terms-of-use-url: 'https://gradle.com/help/legal-terms-of-use'
+          build-scan-terms-of-use-agree: 'yes'
 
       - name: Regenerate API client
         working-directory: apps/web

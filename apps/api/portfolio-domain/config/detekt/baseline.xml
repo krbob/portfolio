@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:InstrumentService.kt$InstrumentService$command.valuationSource == ValuationSource.STOCK_ANALYST &amp;&amp; symbol != null &amp;&amp; (symbolChanged || switchedToStockAnalyst)</ID>
+    <ID>CyclomaticComplexMethod:PortfolioAllocationService.kt$PortfolioAllocationService$suspend fun summary(): PortfolioAllocationSummary</ID>
+    <ID>CyclomaticComplexMethod:PortfolioHistoryService.kt$PortfolioHistoryService$private suspend fun loadBenchmarkSeries( from: LocalDate, until: LocalDate ): BenchmarkLoads</ID>
+    <ID>CyclomaticComplexMethod:PortfolioHistoryService.kt$PortfolioHistoryService$private suspend fun loadInstrumentHistories( instruments: List&lt;Instrument>, transactions: List&lt;Transaction>, from: LocalDate, until: LocalDate ): HistoricalLoads</ID>
+    <ID>CyclomaticComplexMethod:PortfolioHistoryService.kt$PortfolioHistoryService$suspend fun dailyHistory(): PortfolioDailyHistory</ID>
+    <ID>CyclomaticComplexMethod:PortfolioReadModelService.kt$PortfolioReadModelService$private suspend fun buildLedgerSnapshot(): PortfolioLedgerSnapshot</ID>
+    <ID>CyclomaticComplexMethod:PortfolioReturnsService.kt$PortfolioReturnsService$private fun calculateBreakdown( start: LocalDate, end: LocalDate, values: List&lt;ValuationPoint>, transactions: List&lt;Transaction>, fxLookups: TransactionFxLookups ): ReturnBreakdown?</ID>
+    <ID>CyclomaticComplexMethod:PortfolioReturnsService.kt$PortfolioReturnsService$private fun calculateTimeWeightedMetric( start: LocalDate, end: LocalDate, values: List&lt;ValuationPoint>, cashFlows: List&lt;MoneyWeightedCashFlow> ): TimeWeightedMetric?</ID>
+    <ID>CyclomaticComplexMethod:PortfolioReturnsService.kt$PortfolioReturnsService$private fun calculateXirr(cashFlows: List&lt;MoneyWeightedCashFlow>): Double?</ID>
+    <ID>CyclomaticComplexMethod:PortfolioTransferService.kt$PortfolioTransferService$private suspend fun prepareImport(request: PortfolioImportRequest): PreparedPortfolioImport</ID>
+    <ID>CyclomaticComplexMethod:TransactionCsvImportService.kt$TransactionCsvImportService$private fun parseCommand( row: List&lt;String>, rowNumber: Int, headerLookup: Map&lt;String, Int>, profile: TransactionImportProfile, accountLookup: Map&lt;String, Set&lt;UUID>>, instrumentLookup: Map&lt;String, Set&lt;UUID>> ): CreateTransactionCommand</ID>
+    <ID>CyclomaticComplexMethod:TransactionCsvImportService.kt$TransactionCsvImportService$private fun parseCsv(text: String, delimiter: Char): List&lt;List&lt;String>></ID>
+    <ID>LongMethod:PortfolioAllocationService.kt$PortfolioAllocationService$suspend fun summary(): PortfolioAllocationSummary</ID>
+    <ID>LongMethod:PortfolioHistoryService.kt$PortfolioHistoryService$private suspend fun loadInstrumentHistories( instruments: List&lt;Instrument>, transactions: List&lt;Transaction>, from: LocalDate, until: LocalDate ): HistoricalLoads</ID>
+    <ID>LongMethod:PortfolioHistoryService.kt$PortfolioHistoryService$suspend fun dailyHistory(): PortfolioDailyHistory</ID>
+    <ID>LongMethod:PortfolioReadModelService.kt$PortfolioReadModelService$private suspend fun buildLedgerSnapshot(): PortfolioLedgerSnapshot</ID>
+    <ID>LongMethod:PortfolioReadModelService.kt$PortfolioReadModelService$private suspend fun valueEdoHolding(holding: MutableHolding): ValuedHolding</ID>
+    <ID>LongMethod:PortfolioReturnsService.kt$PortfolioReturnsService$private suspend fun buildPeriod( definition: ReturnPeriodDefinition, requestedFrom: LocalDate, effectiveFrom: LocalDate, history: PortfolioDailyHistory, transactions: List&lt;Transaction>, fxLookups: TransactionFxLookups, externalCashFlows: List&lt;ExternalCashFlow>, referenceBenchmarks: List&lt;ReferenceBenchmarkSeries>, benchmarkSettings: PortfolioBenchmarkSettings ): PortfolioReturnPeriod</ID>
+    <ID>LongMethod:PortfolioTransferService.kt$PortfolioTransferService$private suspend fun prepareImport(request: PortfolioImportRequest): PreparedPortfolioImport</ID>
+    <ID>LongMethod:PortfolioTransferService.kt$PortfolioTransferService$suspend fun importState(request: PortfolioImportRequest): PortfolioImportResult</ID>
+    <ID>LongMethod:TransactionCsvImportService.kt$TransactionCsvImportService$private suspend fun parse( profileId: UUID, csv: String, skipDuplicatesOverride: Boolean?, sourceFileName: String?, sourceLabel: String? ): ParsedCsvImport</ID>
+    <ID>LongParameterList:PortfolioHistoryService.kt$PortfolioHistoryService$( private val accountRepository: AccountRepository, private val instrumentRepository: InstrumentRepository, private val portfolioTargetRepository: PortfolioTargetRepository, private val transactionRepository: TransactionRepository, private val historicalInstrumentValuationProvider: HistoricalInstrumentValuationProvider, private val edoLotValuationProvider: EdoLotValuationProvider, private val referenceSeriesProvider: ReferenceSeriesProvider, private val inflationAdjustmentProvider: InflationAdjustmentProvider, private val transactionFxConversionService: TransactionFxConversionService, private val benchmarkSettingsService: PortfolioBenchmarkSettingsService, private val clock: Clock, private val marketDataStaleAfterDays: Long = 3 )</ID>
+    <ID>LongParameterList:PortfolioReturnsService.kt$PortfolioReturnsService$( definition: ReturnPeriodDefinition, requestedFrom: LocalDate, effectiveFrom: LocalDate, history: PortfolioDailyHistory, transactions: List&lt;Transaction>, fxLookups: TransactionFxLookups, externalCashFlows: List&lt;ExternalCashFlow>, referenceBenchmarks: List&lt;ReferenceBenchmarkSeries>, benchmarkSettings: PortfolioBenchmarkSettings )</ID>
+    <ID>LongParameterList:PortfolioTransferService.kt$PortfolioTransferService$( private val accountRepository: AccountRepository, private val appPreferenceRepository: AppPreferenceRepository, private val instrumentRepository: InstrumentRepository, private val portfolioTargetRepository: PortfolioTargetRepository, private val transactionRepository: TransactionRepository, private val transactionImportProfileRepository: TransactionImportProfileRepository, private val transactionRunner: PersistenceTransactionRunner, private val auditLogService: AuditLogService, private val clock: Clock )</ID>
+    <ID>MatchingDeclarationName:DomainExceptions.kt$ResourceNotFoundException : RuntimeException</ID>
+    <ID>NestedBlockDepth:PortfolioHistoryService.kt$PortfolioHistoryService$private fun buildPortfolioPerformanceIndex( points: List&lt;PortfolioDailyHistoryPoint> ): TreeMap&lt;LocalDate, BigDecimal></ID>
+    <ID>NestedBlockDepth:PortfolioHistoryService.kt$PortfolioHistoryService$suspend fun dailyHistory(): PortfolioDailyHistory</ID>
+    <ID>NestedBlockDepth:PortfolioReadModelService.kt$PortfolioReadModelService$private suspend fun buildLedgerSnapshot(): PortfolioLedgerSnapshot</ID>
+    <ID>ThrowsCount:TransactionCsvImportService.kt$TransactionCsvImportService$private fun parseCommand( row: List&lt;String>, rowNumber: Int, headerLookup: Map&lt;String, Int>, profile: TransactionImportProfile, accountLookup: Map&lt;String, Set&lt;UUID>>, instrumentLookup: Map&lt;String, Set&lt;UUID>> ): CreateTransactionCommand</ID>
+    <ID>ThrowsCount:TransactionService.kt$TransactionService$private suspend fun validateReferences(command: CreateTransactionCommand)</ID>
+    <ID>UseRequire:TransactionService.kt$TransactionService$throw IllegalArgumentException("Transactions cannot target inactive accounts.")</ID>
+  </CurrentIssues>
+</SmellBaseline>
