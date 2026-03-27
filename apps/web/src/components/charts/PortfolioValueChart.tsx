@@ -3,6 +3,7 @@ import { AreaSeries, LineSeries, type IChartApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface PortfolioValueChartProps {
@@ -57,12 +58,12 @@ export function PortfolioValueChart({
   return (
     <ChartContainer
       height={height}
-      title={isPolish && title === 'Portfolio Value' ? 'Wartość portfela' : title}
+      title={isPolish && title === 'Portfolio Value' ? t('portfolioValue.title') : title}
       subtitle={isPolish ? `Wartość vs wpłaty w ${unit}` : `Value vs contributions in ${unit}`}
       legend={
         <>
           <ChartLegendItem color={chartPalette.portfolio} label={isPolish ? `Wartość (${unit})` : `Value (${unit})`} />
-          <ChartLegendItem color={chartPalette.contributions} label={isPolish ? 'Wpłaty' : 'Contributions'} dashed />
+          <ChartLegendItem color={chartPalette.contributions} label={t('portfolioValue.contributions')} dashed />
         </>
       }
       onChart={onChart}

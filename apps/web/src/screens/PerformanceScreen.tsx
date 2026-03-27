@@ -5,6 +5,7 @@ import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read
 import { missingDataLabel } from '../lib/availability'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { isMarketValuationState } from '../lib/valuation'
 import {
   ChartsTab,
@@ -49,12 +50,10 @@ export function PerformanceScreen() {
   if ((historyQuery.isLoading || returnsQuery.isLoading) && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
+        <PageHeader title={t('performance.title')} />
         <LoadingState
-          title={isPolish ? 'Ładowanie wyników' : 'Loading performance'}
-          description={isPolish
-            ? 'Przygotowywanie historii, zwrotów i porównań z benchmarkami dla portfela.'
-            : 'Preparing history, returns and benchmark comparisons for the portfolio.'}
+          title={t('performance.loadingTitle')}
+          description={t('performance.loadingDescription')}
           blocks={4}
         />
       </>
@@ -64,12 +63,10 @@ export function PerformanceScreen() {
   if (historyQuery.isError && returnsQuery.isError && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
+        <PageHeader title={t('performance.title')} />
         <ErrorState
-          title={isPolish ? 'Wyniki niedostępne' : 'Performance unavailable'}
-          description={isPolish
-            ? 'Nie udało się wczytać historii i zwrotów. Spróbuj ponownie albo sprawdź bazę danych oraz gotowość źródeł rynkowych.'
-            : 'History and return read models could not load. Retry now or inspect storage and market-data readiness.'}
+          title={t('performance.errorTitle')}
+          description={t('performance.errorDescription')}
           onRetry={handleRetry}
         />
       </>
@@ -79,13 +76,11 @@ export function PerformanceScreen() {
   if (!historyQuery.isLoading && !returnsQuery.isLoading && !hasHistory && !hasReturns) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
+        <PageHeader title={t('performance.title')} />
         <EmptyState
-          title={isPolish ? 'Brak danych o wynikach' : 'No performance data yet'}
-          description={isPolish
-            ? 'Najpierw zapisz transakcje, aby Portfolio mogło odtworzyć historię dzienną, zwroty i benchmarki.'
-            : 'Record transactions first so Portfolio can reconstruct daily history, returns and benchmarks.'}
-          action={{ label: isPolish ? 'Otwórz transakcje' : 'Open Transactions', to: '/transactions' }}
+          title={t('performance.emptyTitle')}
+          description={t('performance.emptyDescription')}
+          action={{ label: t('performance.emptyAction'), to: '/transactions' }}
         />
       </>
     )
@@ -93,12 +88,12 @@ export function PerformanceScreen() {
 
   return (
     <>
-      <PageHeader title={isPolish ? 'Wyniki' : 'Performance'} />
+      <PageHeader title={t('performance.title')} />
 
       {/* Top stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label={isPolish ? 'Ostatnia wartość' : 'Latest Value'}
+          label={t('performance.latestValue')}
           value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
         />
         <StatCard
@@ -112,7 +107,7 @@ export function PerformanceScreen() {
           change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
         />
         <StatCard
-          label={isPolish ? 'MWRR od początku' : 'Inception MWRR'}
+          label={t('performance.inceptionMwrr')}
           value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
           change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
         />
@@ -124,13 +119,13 @@ export function PerformanceScreen() {
           ...tabItem,
           label: isPolish
             ? tabItem.value === 'charts'
-              ? 'Wykresy'
-              : 'Zwroty'
+              ? t('performance.tabCharts')
+              : t('performance.tabReturns')
             : tabItem.label,
         }))}
         value={tab}
         onChange={setTab}
-        ariaLabel={isPolish ? 'Przestrzeń wyników' : 'Performance workspace'}
+        ariaLabel={t('performance.workspaceLabel')}
         idBase="performance-workspace"
       />
 

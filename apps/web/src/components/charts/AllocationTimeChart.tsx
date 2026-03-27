@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { AreaSeries, type IChartApi, type MouseEventParams, type Time } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
-import { useI18n } from '../../lib/i18n'
 import { formatDate, formatPercent } from '../../lib/format'
+import { t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface AllocationTimeChartProps {
@@ -12,7 +12,6 @@ interface AllocationTimeChartProps {
 }
 
 export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChartProps) {
-  const { isPolish } = useI18n()
   const [hoveredPoint, setHoveredPoint] = useState<PortfolioDailyHistoryPoint | null>(null)
   const latestPoint = points.at(-1) ?? null
   const activePoint = hoveredPoint ?? latestPoint
@@ -65,12 +64,10 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
       <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-zinc-200">
-            {isPolish ? 'Historia alokacji' : 'Allocation History'}
+            {t('allocation.title')}
           </h3>
           <p className="mt-0.5 text-xs text-zinc-500">
-            {isPolish
-              ? 'Akcje, obligacje i gotówka jako procent portfela'
-              : 'Equities, bonds and cash as percentage of portfolio'}
+            {t('allocation.subtitle')}
           </p>
         </div>
 
@@ -78,27 +75,27 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-                {hoveredPoint ? (isPolish ? 'Wybrany dzień' : 'Selected date') : (isPolish ? 'Ostatni dzień' : 'Latest date')}
+                {hoveredPoint ? t('allocation.selectedDate') : t('allocation.latestDate')}
               </p>
               <p className="mt-1 text-sm font-semibold text-zinc-100">
-                {activePoint ? formatDate(activePoint.date) : isPolish ? 'Brak danych' : 'No data'}
+                {activePoint ? formatDate(activePoint.date) : t('common.noData')}
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-4 text-right">
               <AllocationMetric
                 color={chartPalette.equities}
-                label={isPolish ? 'Akcje' : 'Equities'}
+                label={t('allocation.equities')}
                 value={activePoint?.equityAllocationPct ?? null}
               />
               <AllocationMetric
                 color={chartPalette.bonds}
-                label={isPolish ? 'Obligacje' : 'Bonds'}
+                label={t('allocation.bonds')}
                 value={activePoint?.bondAllocationPct ?? null}
               />
               <AllocationMetric
                 color={chartPalette.cash}
-                label={isPolish ? 'Gotówka' : 'Cash'}
+                label={t('allocation.cash')}
                 value={activePoint?.cashAllocationPct ?? null}
               />
             </div>
@@ -110,9 +107,9 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
         height={height}
         legend={
           <>
-            <ChartLegendItem color={chartPalette.equities} label={isPolish ? 'Akcje' : 'Equities'} />
-            <ChartLegendItem color={chartPalette.bonds} label={isPolish ? 'Obligacje' : 'Bonds'} />
-            <ChartLegendItem color={chartPalette.cash} label={isPolish ? 'Gotówka' : 'Cash'} />
+            <ChartLegendItem color={chartPalette.equities} label={t('allocation.equities')} />
+            <ChartLegendItem color={chartPalette.bonds} label={t('allocation.bonds')} />
+            <ChartLegendItem color={chartPalette.cash} label={t('allocation.cash')} />
           </>
         }
         onChart={onChart}

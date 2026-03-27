@@ -1,5 +1,5 @@
-import { getActiveUiLanguage } from '../lib/i18n'
 import { btnDanger, btnSecondary } from '../lib/styles'
+import { t } from '../lib/messages'
 
 interface DangerConfirmInlineProps {
   title: string
@@ -16,12 +16,15 @@ export function DangerConfirmInline({
   title,
   description,
   confirmLabel,
-  cancelLabel = getActiveUiLanguage() === 'pl' ? 'Anuluj' : 'Cancel',
-  confirmPendingLabel = getActiveUiLanguage() === 'pl' ? 'Przetwarzanie...' : 'Working...',
+  cancelLabel,
+  confirmPendingLabel,
   isPending = false,
   onCancel,
   onConfirm,
 }: DangerConfirmInlineProps) {
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel')
+  const resolvedPendingLabel = confirmPendingLabel ?? t('common.processing')
+
   return (
     <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-start justify-between gap-4">
       <div>
@@ -31,10 +34,10 @@ export function DangerConfirmInline({
 
       <div className="flex items-center gap-2 shrink-0">
         <button type="button" className={btnSecondary} onClick={onCancel} disabled={isPending}>
-          {cancelLabel}
+          {resolvedCancelLabel}
         </button>
         <button type="button" className={btnDanger} onClick={onConfirm} disabled={isPending}>
-          {isPending ? confirmPendingLabel : confirmLabel}
+          {isPending ? resolvedPendingLabel : confirmLabel}
         </button>
       </div>
     </div>

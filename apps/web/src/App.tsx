@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { AuthGate } from './components/AuthGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/layout'
-import { useI18n } from './lib/i18n'
+import { t } from './lib/messages'
 
 const DashboardScreen = lazy(async () => {
   const module = await import('./screens/DashboardScreen')
@@ -41,7 +41,6 @@ const SettingsScreen = lazy(async () => {
 })
 
 export function App() {
-  const { isPolish } = useI18n()
   const navigate = useNavigate()
   const handleErrorReset = useCallback(() => { navigate('/') }, [navigate])
 
@@ -49,7 +48,7 @@ export function App() {
     <AuthGate>
       <Layout>
         <ErrorBoundary onReset={handleErrorReset}>
-          <Suspense fallback={<RouteLoadingState isPolish={isPolish} />}>
+          <Suspense fallback={<RouteLoadingState />}>
             <Routes>
               <Route path="/" element={<DashboardScreen />} />
               <Route path="/holdings" element={<HoldingsScreen />} />
@@ -71,17 +70,17 @@ export function App() {
   )
 }
 
-function RouteLoadingState({ isPolish }: { isPolish: boolean }) {
+function RouteLoadingState() {
   return (
     <div className="space-y-3 py-16 text-center">
       <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-        {isPolish ? 'Ładowanie' : 'Loading'}
+        {t('common.loading')}
       </p>
       <h2 className="text-lg font-semibold text-zinc-300">
-        {isPolish ? 'Przygotowujemy ekran' : 'Preparing workspace'}
+        {t('app.loadingTitle')}
       </h2>
       <p className="text-sm text-zinc-500">
-        {isPolish ? 'Wczytujemy widok i związane z nim dane portfela.' : 'Attaching the next screen and its portfolio data.'}
+        {t('app.loadingDescription')}
       </p>
     </div>
   )

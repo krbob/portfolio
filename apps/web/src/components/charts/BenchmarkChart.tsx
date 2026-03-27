@@ -4,6 +4,7 @@ import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
 import { filterInput } from '../../lib/styles'
+import { t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 const BENCHMARK_COLORS: Record<string, string> = {
@@ -92,18 +93,18 @@ export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
   return (
     <ChartContainer
       height={height}
-      title={isPolish ? 'Porównanie z benchmarkiem' : 'Benchmark Comparison'}
-      subtitle={isPolish ? 'Indeksowane do 100 na początku wybranego okresu' : 'Indexed to 100 at the start of the selected period'}
+      title={t('benchmark.title')}
+      subtitle={t('benchmark.subtitle')}
       legend={
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <ChartLegendItem color={chartPalette.portfolio} label={isPolish ? 'Portfel' : 'Portfolio'} />
+          <ChartLegendItem color={chartPalette.portfolio} label={t('benchmark.portfolio')} />
           <ChartLegendItem color={color} label={displayLabel} dashed />
           {availableKeys.length > 1 && (
             <select
               className={`${filterInput} ml-auto`}
               value={activeKey}
               onChange={(e) => setSelected(e.target.value)}
-              aria-label={isPolish ? 'Wybierz benchmark' : 'Select benchmark'}
+              aria-label={t('benchmark.selectLabel')}
             >
               {availableKeys.map((key) => {
                 const l = BENCHMARK_LABELS[key]

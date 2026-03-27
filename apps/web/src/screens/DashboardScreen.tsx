@@ -6,6 +6,7 @@ import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { formatCurrencyBreakdown, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
 import {
@@ -116,12 +117,10 @@ export function DashboardScreen() {
   if (overviewQuery.isLoading) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'} />
+        <PageHeader title={t('dashboard.title')} />
         <LoadingState
-          title={isPolish ? 'Ładowanie pulpitu' : 'Loading dashboard'}
-          description={isPolish
-            ? 'Przygotowywanie bieżącej wartości portfela, alokacji i najnowszej historii rynkowej.'
-            : 'Preparing the current portfolio value, allocation and latest market-backed history.'}
+          title={t('dashboard.loadingTitle')}
+          description={t('dashboard.loadingDescription')}
           blocks={4}
         />
       </>
@@ -131,12 +130,10 @@ export function DashboardScreen() {
   if (overviewQuery.isError) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'} />
+        <PageHeader title={t('dashboard.title')} />
         <ErrorState
-          title={isPolish ? 'Pulpit niedostępny' : 'Dashboard unavailable'}
-          description={isPolish
-            ? 'Nie udało się wczytać podsumowania portfela. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.'
-            : 'Portfolio overview could not load. Retry now or inspect system health in Settings.'}
+          title={t('dashboard.errorTitle')}
+          description={t('dashboard.errorDescription')}
           onRetry={handleRetry}
         />
       </>
@@ -146,13 +143,11 @@ export function DashboardScreen() {
   if (!overview) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'} />
+        <PageHeader title={t('dashboard.title')} />
         <EmptyState
-          title={isPolish ? 'Witaj w Portfolio' : 'Welcome to Portfolio'}
-          description={isPolish
-            ? 'Dodaj konto na ekranie Konta, instrument na ekranie Instrumenty i zapisz pierwszą transakcję, aby rozpocząć śledzenie portfela.'
-            : 'Add an account on the Accounts screen, add an instrument on the Instruments screen, and record your first transaction to start tracking the portfolio.'}
-          action={{ label: isPolish ? 'Przejdź do Kont' : 'Go to Accounts', to: '/accounts' }}
+          title={t('dashboard.welcomeTitle')}
+          description={t('dashboard.welcomeDescription')}
+          action={{ label: t('dashboard.welcomeAction'), to: '/accounts' }}
         />
       </>
     )
@@ -160,10 +155,10 @@ export function DashboardScreen() {
 
   return (
     <>
-      <PageHeader title={isPolish ? 'Pulpit' : 'Dashboard'}>
+      <PageHeader title={t('dashboard.title')}>
         {latestPoint && (
           <span className="text-xs text-zinc-500">
-            {isPolish ? 'Stan na' : 'As of'} {latestPoint.date} · {labelPortfolioValuationBasis(valuationState, isPolish)}
+            {t('dashboard.asOf')} {latestPoint.date} · {labelPortfolioValuationBasis(valuationState, isPolish)}
           </span>
         )}
       </PageHeader>

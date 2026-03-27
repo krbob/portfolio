@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { getActiveUiLanguage } from '../lib/i18n'
 import { btnPrimary, btnSecondary } from '../lib/styles'
+import { t } from '../lib/messages'
 
 interface Props {
   children: ReactNode
@@ -39,8 +39,6 @@ export class ErrorBoundary extends Component<Props, State> {
       return this.props.children
     }
 
-    const isPolish = getActiveUiLanguage() === 'pl'
-
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="mx-auto max-w-lg rounded-xl border border-red-500/25 bg-red-500/5 px-8 py-12 text-center">
@@ -54,22 +52,20 @@ export class ErrorBoundary extends Component<Props, State> {
             </svg>
           </div>
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-red-300/80">
-            {isPolish ? 'Nieoczekiwany błąd' : 'Unexpected error'}
+            {t('error.eyebrow')}
           </p>
           <h3 className="mt-2 text-lg font-semibold text-zinc-100">
-            {isPolish ? 'Widok uległ awarii' : 'This view has crashed'}
+            {t('error.title')}
           </h3>
           <p className="mt-2 max-w-md text-sm text-red-200/70">
-            {isPolish
-              ? 'Wystąpił nieoczekiwany błąd w interfejsie. Możesz odświeżyć stronę lub wrócić do ekranu głównego.'
-              : 'An unexpected error occurred in the interface. You can reload the page or return to the dashboard.'}
+            {t('error.description')}
           </p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <button type="button" className={btnSecondary} onClick={this.handleReset}>
-              {isPolish ? 'Wróć' : 'Go back'}
+              {t('common.goBack')}
             </button>
             <button type="button" className={btnPrimary} onClick={this.handleReload}>
-              {isPolish ? 'Odśwież stronę' : 'Reload page'}
+              {t('error.reload')}
             </button>
           </div>
         </div>
