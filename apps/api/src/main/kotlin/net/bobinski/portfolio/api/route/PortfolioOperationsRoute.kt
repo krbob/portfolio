@@ -28,6 +28,8 @@ import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheSnapshot
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotSummary
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshRunResult
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshStatus
@@ -39,6 +41,7 @@ fun Route.portfolioOperationsRoute() {
     val portfolioTransferService: PortfolioTransferService by inject()
     val portfolioBackupService: PortfolioBackupService by inject()
     val readModelRefreshService: ReadModelRefreshService by inject()
+    val marketDataSnapshotCacheService: MarketDataSnapshotCacheService by inject()
     val auditLogService: AuditLogService by inject()
 
     route("/v1/portfolio") {
@@ -48,6 +51,15 @@ fun Route.portfolioOperationsRoute() {
             operationId = "listReadModelCacheSnapshots",
             summary = "List read-model cache snapshots",
             description = "Returns cached read-model snapshots and their invalidation metadata.",
+            tag = "Portfolio"
+        )
+
+        get("/market-data-snapshots") {
+            call.respond(marketDataSnapshotCacheService.listSnapshots().map(MarketDataSnapshotSummary::toResponse))
+        }.documented(
+            operationId = "listMarketDataSnapshots",
+            summary = "List market-data snapshots",
+            description = "Returns cached last-known-good market-data snapshots used for stale fallback diagnostics.",
             tag = "Portfolio"
         )
 
@@ -404,6 +416,17 @@ data class ReadModelCacheInvalidationResponse(
 )
 
 @Serializable
+data class MarketDataSnapshotResponse(
+    val snapshotType: String,
+    val identity: String,
+    val cachedAt: String,
+    val sourceFrom: String? = null,
+    val sourceTo: String? = null,
+    val sourceAsOf: String? = null,
+    val pointCount: Int? = null
+)
+
+@Serializable
 data class ReadModelRefreshStatusResponse(
     val schedulerEnabled: Boolean,
     val intervalMinutes: Long,
@@ -486,6 +509,16 @@ private fun ReadModelCacheSnapshot.toResponse(): ReadModelCacheSnapshotResponse 
     generatedAt = generatedAt.toString(),
     invalidationReason = invalidationReason.name,
     payloadSizeBytes = payloadSizeBytes
+)
+
+private fun MarketDataSnapshotSummary.toResponse(): MarketDataSnapshotResponse = MarketDataSnapshotResponse(
+    snapshotType = snapshotType,
+    identity = identity,
+    cachedAt = cachedAt.toString(),
+    sourceFrom = sourceFrom,
+    sourceTo = sourceTo,
+    sourceAsOf = sourceAsOf,
+    pointCount = pointCount
 )
 
 private fun ReadModelRefreshStatus.toResponse(): ReadModelRefreshStatusResponse = ReadModelRefreshStatusResponse(

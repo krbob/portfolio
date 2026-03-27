@@ -193,6 +193,36 @@ export function labelReadinessStatus(value: string) {
   }
 }
 
+export function labelMarketDataSnapshotType(value: string) {
+  if (getActiveUiLanguage() === 'pl') {
+    switch (value) {
+      case 'QUOTE':
+        return 'Kwotowanie'
+      case 'PRICE_SERIES':
+        return 'Seria cen'
+      case 'INFLATION_MONTHLY':
+        return 'Inflacja miesięczna'
+      case 'INFLATION_WINDOW':
+        return 'Okno inflacji'
+      default:
+        return value
+    }
+  }
+
+  switch (value) {
+    case 'QUOTE':
+      return 'Quote'
+    case 'PRICE_SERIES':
+      return 'Price series'
+    case 'INFLATION_MONTHLY':
+      return 'Monthly inflation'
+    case 'INFLATION_WINDOW':
+      return 'Inflation window'
+    default:
+      return value
+  }
+}
+
 export function labelTransactionType(value: string) {
   if (getActiveUiLanguage() === 'pl') {
     switch (value) {

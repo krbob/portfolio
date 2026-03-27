@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
   fetchPortfolioAllocation,
   fetchPortfolioAuditEvents,
@@ -63,5 +64,12 @@ export function useReadModelCacheSnapshots() {
   return useQuery({
     queryKey: ['portfolio-read-model-cache'],
     queryFn: fetchReadModelCacheSnapshots,
+  })
+}
+
+export function useMarketDataSnapshots() {
+  return useQuery({
+    queryKey: ['portfolio-market-data-snapshots'],
+    queryFn: fetchMarketDataSnapshots,
   })
 }

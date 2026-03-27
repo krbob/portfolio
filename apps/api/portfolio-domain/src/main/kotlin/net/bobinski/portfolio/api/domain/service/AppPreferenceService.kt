@@ -50,5 +50,8 @@ class AppPreferenceService(
         return value
     }
 
+    suspend fun listByPrefix(prefix: String): List<AppPreference> =
+        repository.list().filter { preference -> preference.key.startsWith(prefix) }
+
     suspend fun delete(key: String): Boolean = repository.delete(key)
 }

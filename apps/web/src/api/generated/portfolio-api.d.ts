@@ -452,6 +452,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/market-data-snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List market-data snapshots
+         * @description Returns cached last-known-good market-data snapshots used for stale fallback diagnostics.
+         */
+        get: operations["listMarketDataSnapshots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/read-model-refresh": {
         parameters: {
             query?: never;
@@ -1244,6 +1264,16 @@ export interface components {
         /** net.bobinski.portfolio.api.route.ReadModelCacheInvalidationResponse */
         ReadModelCacheInvalidationResponse: {
             clearedSnapshotCount: number;
+        };
+        /** net.bobinski.portfolio.api.route.MarketDataSnapshotResponse */
+        MarketDataSnapshotResponse: {
+            snapshotType: string;
+            identity: string;
+            cachedAt: string;
+            sourceFrom?: string | null;
+            sourceTo?: string | null;
+            sourceAsOf?: string | null;
+            pointCount?: number | null;
         };
         /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
         ReadModelRefreshStatusResponse: {
@@ -2184,6 +2214,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadModelCacheInvalidationResponse"];
+                };
+            };
+        };
+    };
+    listMarketDataSnapshots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketDataSnapshotResponse"][];
                 };
             };
         };

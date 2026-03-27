@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { MobileAppSection } from '../components/MobileAppSection'
+import { MarketDataSnapshotsSection } from '../components/MarketDataSnapshotsSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
@@ -20,6 +21,7 @@ const SETTINGS_SECTIONS = [
   { id: 'benchmarks', labelKey: 'settings.navBenchmarks' },
   { id: 'transfer', labelKey: 'settings.navTransfer' },
   { id: 'backups', labelKey: 'settings.navBackups' },
+  { id: 'market-data', labelKey: 'settings.navMarketData' },
   { id: 'cache', labelKey: 'settings.navCache' },
   { id: 'audit', labelKey: 'settings.navAudit' },
   { id: 'mobile-app', labelKey: 'settings.navMobileApp' },
@@ -67,11 +69,12 @@ export function SettingsScreen() {
                   {t('settings.operationsEyebrow')}
                 </p>
                 <div className="mt-3 space-y-1.5">
-                  {([
-                    { key: 'settings.navTransfer', id: 'transfer' },
-                    { key: 'settings.navBackups', id: 'backups' },
-                    { key: 'settings.navCache', id: 'cache' },
-                  ] as const).map((item) => (
+                    {([
+                      { key: 'settings.navTransfer', id: 'transfer' },
+                      { key: 'settings.navBackups', id: 'backups' },
+                      { key: 'settings.navMarketData', id: 'market-data' },
+                      { key: 'settings.navCache', id: 'cache' },
+                    ] as const).map((item) => (
                     <a
                       key={item.key}
                       href={`#${item.id}`}
@@ -149,6 +152,10 @@ export function SettingsScreen() {
 
             <section id="backups" className="scroll-mt-24">
               <PortfolioBackupsSection />
+            </section>
+
+            <section id="market-data" className="scroll-mt-24">
+              <MarketDataSnapshotsSection />
             </section>
 
             <section id="cache" className="scroll-mt-24">

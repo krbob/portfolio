@@ -28,6 +28,9 @@ export type PortfolioAuditEvent =
 export type ReadModelCacheSnapshot =
   paths['/v1/portfolio/read-model-cache']['get']['responses'][200]['content']['application/json'][number]
 
+export type MarketDataSnapshot =
+  paths['/v1/portfolio/market-data-snapshots']['get']['responses'][200]['content']['application/json'][number]
+
 export type PortfolioAllocationBucket =
   components['schemas']['PortfolioAllocationBucketResponse']
 
@@ -82,4 +85,8 @@ export function fetchPortfolioAuditEvents({
 
 export function fetchReadModelCacheSnapshots() {
   return requestJson<ReadModelCacheSnapshot[]>('/api/v1/portfolio/read-model-cache')
+}
+
+export function fetchMarketDataSnapshots() {
+  return requestJson<MarketDataSnapshot[]>('/api/v1/portfolio/market-data-snapshots')
 }
