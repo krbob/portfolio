@@ -23,10 +23,12 @@ const MONTHS = [
   { value: '12', pl: 'Grudzień', en: 'December' },
 ] as const
 
-function edoYearOptions(): string[] {
+function edoYearOptions(existingYear?: number): string[] {
   const currentYear = new Date().getFullYear()
+  const minYear = Math.min(currentYear - 5, existingYear ?? currentYear)
+  const maxYear = currentYear + 1
   const years: string[] = []
-  for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+  for (let y = minYear; y <= maxYear; y++) {
     years.push(String(y))
   }
   return years
@@ -277,7 +279,7 @@ export function InstrumentsSection() {
                     setForm((current) => ({ ...current, seriesMonth: next, name: buildEdoSeriesName(next) }))
                   }}
                 >
-                  {edoYearOptions().map((y) => (
+                  {edoYearOptions(Number(form.seriesMonth.split('-')[0])).map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
                 </select>

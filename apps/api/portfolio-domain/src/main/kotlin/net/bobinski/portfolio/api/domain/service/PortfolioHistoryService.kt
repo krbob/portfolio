@@ -457,9 +457,15 @@ class PortfolioHistoryService(
         )
 
         val indices = mutableMapOf<String, TreeMap<LocalDate, BigDecimal>>()
-        indices[BenchmarkKey.VWRA.name] = equityLookup
-        indices[BenchmarkKey.INFLATION.name] = inflation.lookup
-        indices[BenchmarkKey.TARGET_MIX.name] = targetMixLookup.lookup
+        if (settings.isEnabled(BenchmarkKey.VWRA)) {
+            indices[BenchmarkKey.VWRA.name] = equityLookup
+        }
+        if (settings.isEnabled(BenchmarkKey.INFLATION)) {
+            indices[BenchmarkKey.INFLATION.name] = inflation.lookup
+        }
+        if (settings.isEnabled(BenchmarkKey.TARGET_MIX)) {
+            indices[BenchmarkKey.TARGET_MIX.name] = targetMixLookup.lookup
+        }
 
         val additionalBenchmarks = settings.activeReferenceBenchmarks()
         val additionalResults = additionalBenchmarks.map { ref ->

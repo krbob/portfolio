@@ -1,4 +1,5 @@
 import { getActiveUiLanguage } from './i18n'
+import { t } from './messages'
 
 export function labelAssetClass(value: string) {
   if (getActiveUiLanguage() === 'pl') {
@@ -432,5 +433,20 @@ export function labelImportRowStatus(value: string) {
       return 'Invalid'
     default:
       return value
+  }
+}
+
+export function translateBenchmarkLabel(label: string): string {
+  switch (label) {
+    case 'VWRA benchmark':
+      return t('benchmarks.translateVwra')
+    case 'Inflation benchmark':
+      return t('benchmarks.translateInflation')
+    case 'Configured target mix':
+      return t('benchmarks.translateTargetMix')
+    case 'Custom benchmark':
+      return t('benchmarks.translateCustom')
+    default:
+      return label
   }
 }

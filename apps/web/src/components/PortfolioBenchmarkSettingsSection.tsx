@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { usePortfolioBenchmarkSettings, useSavePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
+import { translateBenchmarkLabel } from '../lib/labels'
 import { t } from '../lib/messages'
 import { badge, badgeVariants, btnPrimary, input, label as labelClass } from '../lib/styles'
 import { Card, SectionHeader } from './ui'
@@ -274,17 +275,3 @@ function BenchmarkGroup({
   )
 }
 
-function translateBenchmarkLabel(label: string) {
-  switch (label) {
-    case 'VWRA benchmark':
-      return t('benchmarks.translateVwra')
-    case 'Inflation benchmark':
-      return t('benchmarks.translateInflation')
-    case 'Configured target mix':
-      return t('benchmarks.translateTargetMix')
-    case 'Custom benchmark':
-      return t('benchmarks.translateCustom')
-    default:
-      return label
-  }
-}

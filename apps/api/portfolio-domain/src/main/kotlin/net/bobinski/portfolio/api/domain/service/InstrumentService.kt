@@ -63,7 +63,8 @@ class InstrumentService(
             ?: throw ResourceNotFoundException("Instrument not found: ${command.id}")
 
         val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
-        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null) {
+        val symbolChanged = symbol != existing.symbol
+        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null && symbolChanged) {
             valuationProbeService.verifyStockAnalystSymbol(symbol)
         }
 

@@ -5,6 +5,7 @@ import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-r
 import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
 import { useI18n } from '../../lib/i18n'
+import { translateBenchmarkLabel } from '../../lib/labels'
 import { t } from '../../lib/messages'
 import { card, td, tdRight, th, thRight, tr } from '../../lib/styles'
 
@@ -351,7 +352,7 @@ function BenchmarkCard({
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium text-zinc-500">{benchmark.label}</p>
+        <p className="text-xs font-medium text-zinc-500">{translateBenchmarkLabel(benchmark.label)}</p>
         {benchmark.pinned ? (
           <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-300">
             {t('performanceSections.pinned')}

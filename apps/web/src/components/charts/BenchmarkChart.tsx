@@ -34,11 +34,12 @@ const DEFAULT_BENCHMARK_COLOR = '#a1a1aa'
 interface BenchmarkChartProps {
   points: PortfolioDailyHistoryPoint[]
   height?: number
+  customBenchmarkLabel?: string
 }
 
 const benchmarkPriceFormat = { type: 'price' as const, minMove: 0.01, precision: 2 }
 
-export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
+export function BenchmarkChart({ points, height = 300, customBenchmarkLabel }: BenchmarkChartProps) {
   const { isPolish } = useI18n()
 
   const availableKeys = useMemo(() => {
@@ -55,12 +56,14 @@ export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
     return preferred.filter((k) => keysWithData.has(k))
   }, [points])
 
-  const [selected, setSelected] = useState<string>('VWRA')
-  const activeKey = availableKeys.includes(selected) ? selected : availableKeys[0] ?? 'VWRA'
+  const [selected, setSelected] = useState<string | null>(null)
+  const activeKey = selected != null && availableKeys.includes(selected) ? selected : availableKeys[0] ?? 'VWRA'
 
   const color = BENCHMARK_COLORS[activeKey] ?? DEFAULT_BENCHMARK_COLOR
   const label = BENCHMARK_LABELS[activeKey]
-  const displayLabel = label ? (isPolish ? label.pl : label.en) : activeKey
+  const displayLabel = activeKey === 'CUSTOM' && customBenchmarkLabel
+    ? customBenchmarkLabel
+    : label ? (isPolish ? label.pl : label.en) : activeKey
 
   const onChart = useCallback(
     (chart: IChartApi) => {
@@ -108,8 +111,11 @@ export function BenchmarkChart({ points, height = 300 }: BenchmarkChartProps) {
             >
               {availableKeys.map((key) => {
                 const l = BENCHMARK_LABELS[key]
+                const optionLabel = key === 'CUSTOM' && customBenchmarkLabel
+                  ? customBenchmarkLabel
+                  : l ? (isPolish ? l.pl : l.en) : key
                 return (
-                  <option key={key} value={key}>{l ? (isPolish ? l.pl : l.en) : key}</option>
+                  <option key={key} value={key}>{optionLabel}</option>
                 )
               })}
             </select>

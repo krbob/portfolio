@@ -403,7 +403,7 @@ export function TransactionJournal({
       feeAmount: normalizeDecimalForPayload(form.feeAmount),
       taxAmount: normalizeDecimalForPayload(form.taxAmount),
       currency: form.currency,
-      fxRateToPln: normalizeOptionalDecimalForPayload(form.fxRateToPln),
+      fxRateToPln: form.currency === 'PLN' ? null : normalizeOptionalDecimalForPayload(form.fxRateToPln),
       notes: form.notes,
     }
 
@@ -975,9 +975,14 @@ export function TransactionJournal({
                 <input
                   className={input}
                   value={form.currency}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-                  }
+                  onChange={(event) => {
+                    const nextCurrency = event.target.value.toUpperCase()
+                    setForm((current) => ({
+                      ...current,
+                      currency: nextCurrency,
+                      fxRateToPln: nextCurrency === 'PLN' ? '' : current.fxRateToPln,
+                    }))
+                  }}
                   maxLength={3}
                   required
                 />
