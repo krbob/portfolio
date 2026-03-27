@@ -13,3 +13,17 @@ jobs:
   verify:
     name: Verify
     uses: ./.github/workflows/ci-verify.yml
+
+  smoke-self-hosted-market-data-docker:
+    name: Self-hosted market-data smoke
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run self-hosted market-data smoke test
+        run: sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
