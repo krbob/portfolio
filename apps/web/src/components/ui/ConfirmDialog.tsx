@@ -1,4 +1,5 @@
 import { Modal } from './Modal'
+import { t } from '../../lib/messages'
 import { btnDanger, btnSecondary } from '../../lib/styles'
 
 interface ConfirmDialogProps {
@@ -17,7 +18,7 @@ export function ConfirmDialog({
   onCancel,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel = t('common.confirm'),
   variant = 'default',
 }: ConfirmDialogProps) {
   return (
@@ -29,7 +30,7 @@ export function ConfirmDialog({
       footer={
         <>
           <button type="button" className={btnSecondary} onClick={onCancel}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"

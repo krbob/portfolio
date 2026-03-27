@@ -73,7 +73,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   })
 
   return (
-    <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`} aria-label="Primary navigation">
+    <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`} aria-label={t('layout.navigation')}>
       <div className="px-5 py-6">
         <h1 className="text-xl font-bold tracking-tight text-zinc-100">Portfolio</h1>
         <p className="mt-1 text-xs text-zinc-600">

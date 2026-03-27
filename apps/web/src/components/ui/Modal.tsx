@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
+import { t } from '../../lib/messages'
 
 interface ModalProps {
   open: boolean
@@ -55,7 +56,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

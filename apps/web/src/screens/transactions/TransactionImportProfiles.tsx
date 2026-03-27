@@ -340,7 +340,7 @@ export function TransactionImportProfiles({
           >
             <option value="COMMA">{t('importProfiles.comma')}</option>
             <option value="SEMICOLON">{t('importProfiles.semicolon')}</option>
-            <option value="TAB">Tab</option>
+            <option value="TAB">{t('importProfiles.tab')}</option>
           </select>
         </label>
 
