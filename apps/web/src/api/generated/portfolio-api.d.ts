@@ -1004,6 +1004,7 @@ export interface components {
             valuedAt?: string | null;
             valuationStatus: string;
             valuationIssue?: string | null;
+            currentRatePercent?: string | null;
         };
         /** net.bobinski.portfolio.api.route.HoldingResponse */
         HoldingResponse: {

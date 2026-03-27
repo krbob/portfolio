@@ -169,7 +169,8 @@ data class HoldingEdoLotResponse(
     val unrealizedGainPln: String?,
     val valuedAt: String?,
     val valuationStatus: String,
-    val valuationIssue: String?
+    val valuationIssue: String?,
+    val currentRatePercent: String? = null
 )
 
 @Serializable
@@ -395,7 +396,8 @@ private fun HoldingSnapshot.toResponse(): HoldingResponse = HoldingResponse(
             unrealizedGainPln = lot.unrealizedGainPln?.toPlainString(),
             valuedAt = lot.valuedAt?.toString(),
             valuationStatus = lot.valuationStatus.name,
-            valuationIssue = lot.valuationIssue
+            valuationIssue = lot.valuationIssue,
+            currentRatePercent = lot.currentRatePercent?.toPlainString()
         )
     }
 )

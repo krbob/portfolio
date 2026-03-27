@@ -40,9 +40,11 @@ class EdoCalculatorClient(
         }
 
         val payload = json.decodeFromString<EdoCalculatorResponse>(response.body())
+        val activePeriod = payload.edoValue.periods.firstOrNull { it.daysElapsed < it.daysInPeriod }
         EdoUnitValue(
             asOf = LocalDate.parse(payload.asOf),
-            totalValue = payload.edoValue.totalValue.toBigDecimal()
+            totalValue = payload.edoValue.totalValue.toBigDecimal(),
+            currentRatePercent = activePeriod?.ratePercent?.toBigDecimal()
         )
     }
 
@@ -195,7 +197,8 @@ class EdoCalculatorClient(
 
 data class EdoUnitValue(
     val asOf: LocalDate,
-    val totalValue: BigDecimal
+    val totalValue: BigDecimal,
+    val currentRatePercent: BigDecimal? = null
 )
 
 data class InflationWindow(
@@ -223,7 +226,15 @@ private data class EdoCalculatorResponse(
 
 @Serializable
 private data class EdoValueResponse(
-    val totalValue: String
+    val totalValue: String,
+    val periods: List<EdoPeriodResponse> = emptyList()
+)
+
+@Serializable
+private data class EdoPeriodResponse(
+    val daysInPeriod: Int,
+    val daysElapsed: Int,
+    val ratePercent: String
 )
 
 @Serializable

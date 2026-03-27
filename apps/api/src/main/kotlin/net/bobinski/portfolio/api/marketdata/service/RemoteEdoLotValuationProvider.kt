@@ -24,7 +24,8 @@ class RemoteEdoLotValuationProvider(
             InstrumentValuationResult.Success(
                 InstrumentValuation(
                     pricePerUnitPln = value.totalValue,
-                    valuedAt = value.asOf
+                    valuedAt = value.asOf,
+                    currentRatePercent = value.currentRatePercent
                 )
             )
         } catch (exception: MarketDataClientException) {

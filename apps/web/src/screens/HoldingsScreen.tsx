@@ -425,18 +425,39 @@ export function HoldingsScreen() {
             <p className={`mt-2 text-sm ${issueToneClass(normalizedValuationStatus(selectedHolding.valuationStatus))}`}>{selectedHolding.valuationIssue}</p>
           )}
           {selectedHolding.kind === 'BOND_EDO' && (selectedHolding.edoLots?.length ?? 0) > 0 ? (
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-zinc-200">
-                    {isPolish ? 'Wykup EDO' : 'Redeem EDO'}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {isPolish
-                      ? `${selectedHolding.edoLots?.length ?? 0} aktywne partie${selectedHolding.edoLots?.[0]?.purchaseDate ? ` od ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Otwórz wykup z już wybraną serią i kontem.`
-                      : `${selectedHolding.edoLots?.length ?? 0} active lots${selectedHolding.edoLots?.[0]?.purchaseDate ? ` starting from ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Open redemption with this series and account preselected.`}
-                  </p>
+            <div className="mt-4 space-y-3">
+              {selectedHolding.edoLots?.map((lot) => (
+                <div
+                  key={`${lot.purchaseDate}-${lot.quantity}`}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {formatDate(lot.purchaseDate)} · {formatNumber(lot.quantity, { maximumFractionDigits: 0 })} {isPolish ? 'szt.' : 'units'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
+                    {lot.currentRatePercent && (
+                      <p className="text-xs text-zinc-400">
+                        {isPolish ? 'Oprocentowanie' : 'Rate'}: {lot.currentRatePercent}%
+                      </p>
+                    )}
+                  </div>
                 </div>
+              ))}
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {isPolish ? 'Wykup EDO' : 'Redeem EDO'}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {isPolish
+                        ? `${selectedHolding.edoLots?.length ?? 0} aktywne partie${selectedHolding.edoLots?.[0]?.purchaseDate ? ` od ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Otwórz wykup z już wybraną serią i kontem.`
+                        : `${selectedHolding.edoLots?.length ?? 0} active lots${selectedHolding.edoLots?.[0]?.purchaseDate ? ` starting from ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Open redemption with this series and account preselected.`}
+                    </p>
+                  </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -455,6 +476,7 @@ export function HoldingsScreen() {
                       : `Redeem all (${formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} units)`}
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           ) : null}

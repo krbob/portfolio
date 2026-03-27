@@ -550,7 +550,8 @@ class PortfolioReadModelService(
                     unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
                     valuedAt = valuation.valuedAt,
                     valuationStatus = lotStatus,
-                    valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue)
+                    valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue),
+                    currentRatePercent = valuation.currentRatePercent
                 )
             }
         )
@@ -882,7 +883,8 @@ data class EdoLotSnapshot(
     val unrealizedGainPln: BigDecimal?,
     val valuedAt: LocalDate?,
     val valuationStatus: HoldingValuationStatus,
-    val valuationIssue: String?
+    val valuationIssue: String?,
+    val currentRatePercent: BigDecimal? = null
 )
 
 data class PortfolioAccountSummary(

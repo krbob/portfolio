@@ -89,6 +89,27 @@ export function InstrumentDetailsCard({
         />
       </div>
 
+      {row.instrument.edoTerms && (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              {isPolish ? 'Oprocentowanie I okresu' : 'First period rate'}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-zinc-50">
+              {(row.instrument.edoTerms.firstPeriodRateBps / 100).toFixed(2)}%
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              {isPolish ? 'Marża' : 'Margin'}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-zinc-50">
+              {(row.instrument.edoTerms.marginBps / 100).toFixed(2)}%
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
           <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Podział na rachunki' : 'Account split'}</h4>
@@ -154,6 +175,11 @@ export function InstrumentDetailsCard({
                         ? 'Wycena księgowa'
                         : 'Book basis'}
                   </p>
+                  {lot.currentRatePercent && (
+                    <p className="text-xs text-zinc-400">
+                      {isPolish ? 'Oprocentowanie' : 'Rate'}: {lot.currentRatePercent}%
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
