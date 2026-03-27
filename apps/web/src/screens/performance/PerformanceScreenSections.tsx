@@ -5,6 +5,7 @@ import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-r
 import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
 import { useI18n } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 import { card, td, tdRight, th, thRight, tr } from '../../lib/styles'
 
 export type Period = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
@@ -39,10 +40,8 @@ export function ChartsTab({
   if (historyQuery.isLoading && points.length === 0) {
     return (
       <LoadingState
-        title={isPolish ? 'Ładowanie historii portfela' : 'Loading portfolio history'}
-        description={isPolish
-          ? 'Przygotowywanie historii wartości, wpłat i alokacji dla wybranego okresu.'
-          : 'Preparing value, contributions and allocation history for the selected period.'}
+        title={t('performanceSections.loadingCharts')}
+        description={t('performanceSections.loadingChartsDescription')}
       />
     )
   }
@@ -50,10 +49,8 @@ export function ChartsTab({
   if (historyQuery.isError && points.length === 0) {
     return (
       <ErrorState
-        title={isPolish ? 'Historia niedostępna' : 'History unavailable'}
-        description={isPolish
-          ? 'Nie udało się wczytać historii dziennej dla przestrzeni wyników.'
-          : 'Daily history could not load for the performance workspace.'}
+        title={t('performanceSections.chartsErrorTitle')}
+        description={t('performanceSections.chartsErrorDescription')}
         onRetry={() => void historyQuery.refetch()}
       />
     )
@@ -62,11 +59,9 @@ export function ChartsTab({
   if (points.length === 0) {
     return (
       <StatePanel
-        eyebrow={isPolish ? 'Historia' : 'History'}
-        title={isPolish ? 'Brak danych historycznych' : 'No history data available'}
-        description={isPolish
-          ? 'Portfel nie zgromadził jeszcze wystarczającej liczby transakcji, aby narysować wykresy historyczne.'
-          : 'Portfolio has not accumulated enough transactions to render the historical charts yet.'}
+        eyebrow={t('performanceSections.chartsEmptyEyebrow')}
+        title={t('performanceSections.chartsEmptyTitle')}
+        description={t('performanceSections.chartsEmptyDescription')}
       />
     )
   }
@@ -76,25 +71,25 @@ export function ChartsTab({
       <div className={card}>
         <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Zakres' : 'Range'}</span>
+            <span className="text-sm font-medium text-zinc-400">{t('performanceSections.range')}</span>
             <SegmentedControl
               options={PERIODS.map((value) => ({ value, label: value }))}
               value={period}
               onChange={(value) => onPeriodChange(value as Period)}
-              ariaLabel={isPolish ? 'Zakres wykresu wyników' : 'Performance chart period'}
+              ariaLabel={t('performanceSections.chartPeriodLabel')}
             />
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Jednostka' : 'Unit'}</span>
+            <span className="text-sm font-medium text-zinc-400">{t('performanceSections.unit')}</span>
             <SegmentedControl
               options={[
                 { value: 'PLN', label: 'PLN' },
                 { value: 'USD', label: 'USD' },
-                { value: 'AU', label: isPolish ? 'Złoto' : 'Gold' },
+                { value: 'AU', label: t('performanceSections.gold') },
               ]}
               value={unit}
               onChange={(value) => onUnitChange(value as Unit)}
-              ariaLabel={isPolish ? 'Jednostka wykresu wyników' : 'Performance chart unit'}
+              ariaLabel={t('performanceSections.chartUnitLabel')}
             />
           </div>
         </div>
@@ -136,10 +131,8 @@ export function ReturnsTab({
   if (returnsQuery.isLoading) {
     return (
       <LoadingState
-        title={isPolish ? 'Ładowanie zwrotów' : 'Loading returns'}
-        description={isPolish
-          ? 'Wyliczanie MWRR, TWR i nadwyżki względem benchmarków.'
-          : 'Calculating money-weighted, time-weighted and benchmark-relative returns.'}
+        title={t('performanceSections.loadingReturns')}
+        description={t('performanceSections.loadingReturnsDescription')}
       />
     )
   }
@@ -147,10 +140,8 @@ export function ReturnsTab({
   if (returnsQuery.isError) {
     return (
       <ErrorState
-        title={isPolish ? 'Zwroty niedostępne' : 'Returns unavailable'}
-        description={isPolish
-          ? 'Nie udało się wczytać wyliczeń zwrotów dla tego widoku.'
-          : 'Return calculations could not be loaded for this workspace.'}
+        title={t('performanceSections.returnsErrorTitle')}
+        description={t('performanceSections.returnsErrorDescription')}
         onRetry={() => void returnsQuery.refetch()}
       />
     )
@@ -159,11 +150,9 @@ export function ReturnsTab({
   if (!data || data.periods.length === 0) {
     return (
       <StatePanel
-        eyebrow={isPolish ? 'Zwroty' : 'Returns'}
-        title={isPolish ? 'Brak wyliczonych okresów zwrotu' : 'No return periods calculated yet'}
-        description={isPolish
-          ? 'Okresy zwrotu pojawią się, gdy Portfolio będzie miało wystarczającą historię i przepływy zewnętrzne.'
-          : 'Return periods appear after Portfolio has enough history and external cash-flow data to evaluate.'}
+        eyebrow={t('performanceSections.returnsEmptyEyebrow')}
+        title={t('performanceSections.returnsEmptyTitle')}
+        description={t('performanceSections.returnsEmptyDescription')}
       />
     )
   }
@@ -176,11 +165,9 @@ export function ReturnsTab({
     <div className="space-y-4">
       {!returnsDisplayAvailable ? (
         <StatePanel
-          eyebrow={isPolish ? 'Zwroty' : 'Returns'}
-          title={isPolish ? 'Zwroty są chwilowo niewiarygodne' : 'Returns are temporarily unavailable'}
-          description={isPolish
-            ? 'Historia portfela nie ma obecnie wystarczającego pokrycia wyceną rynkową, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.'
-            : 'Portfolio history currently lacks enough market valuation coverage, so return metrics are shown as N/A instead of pretending they are 0.00%.'}
+          eyebrow={t('performanceSections.returnsEmptyEyebrow')}
+          title={t('performanceSections.returnsUnavailableTitle')}
+          description={t('performanceSections.returnsUnavailableDescription')}
         />
       ) : null}
 
@@ -197,13 +184,13 @@ export function ReturnsTab({
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-800">
-              <th className={th}>{isPolish ? 'Okres' : 'Period'}</th>
+              <th className={th}>{t('performanceSections.period')}</th>
               <th className={thRight}>PLN MWRR</th>
               <th className={thRight}>PLN TWR</th>
-              <th className={thRight}>{isPolish ? 'PLN po inflacji' : 'Real PLN'}</th>
+              <th className={thRight}>{t('performanceSections.realPln')}</th>
               <th className={thRight}>USD MWRR</th>
-              <th className={thRight}>{isPolish ? 'Rocznie' : 'Annualized'}</th>
-              <th className={thRight}>{isPolish ? 'Dni' : 'Days'}</th>
+              <th className={thRight}>{t('performanceSections.annualized')}</th>
+              <th className={thRight}>{t('performanceSections.days')}</th>
             </tr>
           </thead>
           <tbody>
@@ -216,7 +203,7 @@ export function ReturnsTab({
                   {p.label}
                   {p.clippedToInception && (
                     <span className="ml-1.5 text-xs text-zinc-600">
-                      {isPolish ? '(ucięte do początku portfela)' : '(clipped)'}
+                      {t('performanceSections.clipped')}
                     </span>
                   )}
                 </td>
@@ -254,7 +241,7 @@ export function ReturnsTab({
           <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-zinc-200">
-                {isPolish ? 'Benchmarki' : 'Benchmarks'}
+                {t('performanceSections.benchmarks')}
               </h3>
               <p className="mt-1 text-sm text-zinc-500">
                 {isPolish
@@ -367,7 +354,7 @@ function BenchmarkCard({
         <p className="text-xs font-medium text-zinc-500">{benchmark.label}</p>
         {benchmark.pinned ? (
           <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-300">
-            {isPolish ? 'Przypięty' : 'Pinned'}
+            {t('performanceSections.pinned')}
           </span>
         ) : null}
       </div>
@@ -375,7 +362,7 @@ function BenchmarkCard({
         {formatReturn(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
       <p className="mt-0.5 text-xs text-zinc-600">
-        {isPolish ? 'TWR benchmarku' : 'Bench TWR'} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
+        {t('performanceSections.benchTwr')} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
     </div>
   )
@@ -399,7 +386,7 @@ function ReturnsBreakdownCard({
     <div className={card}>
       <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-200">{isPolish ? 'Rozbicie zmiany wartości' : 'Value-change bridge'}</h3>
+          <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.valueBridge')}</h3>
           <p className="mt-1 text-sm text-zinc-500">
             {returnsDisplayAvailable
               ? (isPolish
@@ -411,12 +398,12 @@ function ReturnsBreakdownCard({
           </p>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-medium text-zinc-400">{isPolish ? 'Okres' : 'Period'}</span>
+          <span className="text-sm font-medium text-zinc-400">{t('performanceSections.period')}</span>
           <SegmentedControl
             options={PERIODS.map((value) => ({ value, label: value }))}
             value={selectedPeriod}
             onChange={(value) => onPeriodChange(value as Period)}
-            ariaLabel={isPolish ? 'Okres mostu wyniku' : 'Value bridge period'}
+            ariaLabel={t('performanceSections.valueBridgePeriod')}
           />
         </div>
       </div>
@@ -424,52 +411,52 @@ function ReturnsBreakdownCard({
       {breakdown ? (
         <>
           <div className="mb-4 flex flex-wrap gap-3 text-xs text-zinc-500 sm:text-sm">
-            <span>{isPolish ? 'Od' : 'From'} {period.from}</span>
-            <span>{isPolish ? 'Do' : 'Until'} {period.until}</span>
-            <span>{isPolish ? 'Zmiana netto' : 'Net change'} {formatSignedCurrencyPln(breakdown.netChangePln)}</span>
+            <span>{t('performanceSections.from')} {period.from}</span>
+            <span>{t('performanceSections.until')} {period.until}</span>
+            <span>{t('performanceSections.netChange')} {formatSignedCurrencyPln(breakdown.netChangePln)}</span>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <BreakdownMetric
-              label={isPolish ? 'Otwarcie' : 'Opening value'}
+              label={t('performanceSections.opening')}
               value={formatCurrencyPln(breakdown.openingValuePln)}
               tone="neutral"
             />
             <BreakdownMetric
-              label={isPolish ? 'Wpłaty / wypłaty' : 'Deposits / withdrawals'}
+              label={t('performanceSections.depositsWithdrawals')}
               value={formatSignedCurrencyPln(breakdown.netExternalFlowsPln)}
               tone={numericTone(breakdown.netExternalFlowsPln)}
-              subtitle={isPolish ? 'Przepływy zewnętrzne' : 'External cash flows'}
+              subtitle={t('performanceSections.externalFlows')}
             />
             <BreakdownMetric
-              label={isPolish ? 'Odsetki / kupony' : 'Interest / coupons'}
+              label={t('performanceSections.interestCoupons')}
               value={formatSignedCurrencyPln(breakdown.interestAndCouponsPln)}
               tone={numericTone(breakdown.interestAndCouponsPln)}
             />
             <BreakdownMetric
-              label={isPolish ? 'Opłaty' : 'Fees'}
+              label={t('performanceSections.fees')}
               value={formatSignedCurrencyPln(breakdown.feesPln)}
               tone={numericTone(breakdown.feesPln)}
             />
             <BreakdownMetric
-              label={isPolish ? 'Podatki' : 'Taxes'}
+              label={t('performanceSections.taxes')}
               value={formatSignedCurrencyPln(breakdown.taxesPln)}
               tone={numericTone(breakdown.taxesPln)}
             />
             <BreakdownMetric
-              label={isPolish ? 'Rynek i waluty' : 'Market + FX'}
+              label={t('performanceSections.marketFx')}
               value={formatSignedCurrencyPln(breakdown.marketAndFxPln)}
               tone={numericTone(breakdown.marketAndFxPln)}
-              subtitle={isPolish ? 'Reszta po przepływach i kosztach' : 'Residual after flows and costs'}
+              subtitle={t('performanceSections.marketFxSubtitle')}
             />
             <BreakdownMetric
-              label={isPolish ? 'Wynik netto' : 'Net investment result'}
+              label={t('performanceSections.netInvestmentResult')}
               value={formatSignedCurrencyPln(breakdown.netInvestmentResultPln)}
               tone={numericTone(breakdown.netInvestmentResultPln)}
-              subtitle={isPolish ? 'Bez wpłat i wypłat' : 'Excluding deposits and withdrawals'}
+              subtitle={t('performanceSections.netInvestmentSubtitle')}
             />
             <BreakdownMetric
-              label={isPolish ? 'Zamknięcie' : 'Closing value'}
+              label={t('performanceSections.closing')}
               value={formatCurrencyPln(breakdown.closingValuePln)}
               tone="neutral"
             />
@@ -477,11 +464,9 @@ function ReturnsBreakdownCard({
         </>
       ) : (
         <StatePanel
-          eyebrow={isPolish ? 'Rozbicie wyniku' : 'Value bridge'}
-          title={isPolish ? 'Brak rozbicia dla tego okresu' : 'No bridge available for this period'}
-          description={isPolish
-            ? 'Nie udało się złożyć rozbicia przepływów i kosztów dla wybranego okresu.'
-            : 'The app could not assemble a flow-and-cost bridge for the selected period.'}
+          eyebrow={t('performanceSections.bridgeEyebrow')}
+          title={t('performanceSections.noBridgeTitle')}
+          description={t('performanceSections.noBridgeDescription')}
         />
       )}
     </div>

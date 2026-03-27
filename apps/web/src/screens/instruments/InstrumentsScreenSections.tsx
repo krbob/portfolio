@@ -2,6 +2,7 @@ import type { PortfolioHolding } from '../../api/read-model'
 import { Card } from '../../components/ui'
 import { formatCurrencyPln, formatDate } from '../../lib/format'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
+import { t } from '../../lib/messages'
 import {
   describeHoldingGainRate,
   formatHoldingGainPreview,
@@ -56,7 +57,7 @@ export function InstrumentDetailsCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-            {isPolish ? 'Wybrany instrument' : 'Selected instrument'}
+            {t('instrumentDetails.selectedInstrument')}
           </p>
           <h3 className="mt-2 text-xl font-semibold text-zinc-50">{row.instrument.name}</h3>
           <p className="mt-1 text-sm text-zinc-500">
@@ -70,19 +71,19 @@ export function InstrumentDetailsCard({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <InstrumentDetailMetric
-          label={isPolish ? 'Konta aktywne' : 'Active accounts'}
+          label={t('instrumentDetails.activeAccounts')}
           value={String(row.accountCount)}
           detail={row.accountCount === 0
-            ? (isPolish ? 'Instrument tylko w katalogu' : 'Catalog only')
-            : `${row.transactionCount} ${isPolish ? 'transakcji' : 'transactions'}`}
+            ? t('instrumentDetails.catalogOnly')
+            : `${row.transactionCount} ${t('instrumentDetails.transactions')}`}
         />
         <InstrumentDetailMetric
-          label={isPolish ? 'Łączna ilość' : 'Total quantity'}
+          label={t('instrumentDetails.totalQuantity')}
           value={row.accountCount === 0 ? '0' : formatHoldingQuantity(row.quantity)}
-          detail={isPolish ? `Koszt ${formatCurrencyPln(row.totalBookValuePln)}` : `Cost ${formatCurrencyPln(row.totalBookValuePln)}`}
+          detail={`${t('instrumentDetails.cost')} ${formatCurrencyPln(row.totalBookValuePln)}`}
         />
         <InstrumentDetailMetric
-          label={isPolish ? 'Bieżąca wartość' : 'Current value'}
+          label={t('instrumentDetails.currentValue')}
           value={formatCurrencyPln(row.totalCurrentValuePln)}
           detail={describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
           tone={row.valuedHoldingCount === 0 ? 'default' : row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
@@ -93,7 +94,7 @@ export function InstrumentDetailsCard({
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              {isPolish ? 'Oprocentowanie I okresu' : 'First period rate'}
+              {t('instrumentDetails.firstPeriodRate')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
               {(row.instrument.edoTerms.firstPeriodRateBps / 100).toFixed(2)}%
@@ -101,7 +102,7 @@ export function InstrumentDetailsCard({
           </div>
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              {isPolish ? 'Marża' : 'Margin'}
+              {t('instrumentDetails.margin')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
               {(row.instrument.edoTerms.marginBps / 100).toFixed(2)}%
@@ -112,15 +113,13 @@ export function InstrumentDetailsCard({
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Podział na rachunki' : 'Account split'}</h4>
+          <h4 className="text-sm font-medium text-zinc-100">{t('instrumentDetails.accountSplit')}</h4>
           <p className="text-xs text-zinc-500">{labelValuationSource(row.instrument.valuationSource)}</p>
         </div>
 
         {holdings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">
-            {isPolish
-              ? 'Instrument jest w katalogu, ale nie ma jeszcze aktywnych pozycji.'
-              : 'The instrument is in the catalog but does not have active holdings yet.'}
+            {t('instrumentDetails.noCatalogHoldings')}
           </p>
         ) : (
           <div className="mt-3 space-y-2">
@@ -132,7 +131,7 @@ export function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{holding.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatHoldingQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'} · {holding.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                    {formatHoldingQuantity(holding.quantity)} {t('instrumentDetails.units')} · {holding.transactionCount} {t('instrumentDetails.transactions')}
                   </p>
                 </div>
                 <div className="text-right">
@@ -140,9 +139,7 @@ export function InstrumentDetailsCard({
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(holding.valuationStatus)
                       ? formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)
-                      : isPolish
-                        ? 'Wycena księgowa'
-                        : 'Book basis'}
+                      : t('instrumentDetails.bookBasis')}
                   </p>
                 </div>
               </div>
@@ -153,7 +150,7 @@ export function InstrumentDetailsCard({
 
       {edoLots.length > 0 && (
         <div className="mt-6">
-          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Loty EDO' : 'EDO lots'}</h4>
+          <h4 className="text-sm font-medium text-zinc-100">{t('instrumentDetails.edoLots')}</h4>
           <div className="mt-3 space-y-2">
             {edoLots.map((lot) => (
               <div
@@ -163,7 +160,7 @@ export function InstrumentDetailsCard({
                 <div>
                   <p className="font-medium text-zinc-100">{lot.accountName}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatDate(lot.purchaseDate)} · {formatHoldingQuantity(lot.quantity)} {isPolish ? 'szt.' : 'units'}
+                    {formatDate(lot.purchaseDate)} · {formatHoldingQuantity(lot.quantity)} {t('instrumentDetails.units')}
                   </p>
                 </div>
                 <div className="text-right">
@@ -171,13 +168,11 @@ export function InstrumentDetailsCard({
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(lot.valuationStatus)
                       ? formatHoldingGainPreview(lot.unrealizedGainPln, isPolish)
-                      : isPolish
-                        ? 'Wycena księgowa'
-                        : 'Book basis'}
+                      : t('instrumentDetails.bookBasis')}
                   </p>
                   {lot.currentRatePercent && (
                     <p className="text-xs text-zinc-400">
-                      {isPolish ? 'Oprocentowanie' : 'Rate'}: {lot.currentRatePercent}%
+                      {t('instrumentDetails.rate')}: {lot.currentRatePercent}%
                     </p>
                   )}
                 </div>

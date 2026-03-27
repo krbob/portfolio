@@ -178,7 +178,6 @@ export function DashboardScreen() {
       />
 
       <DashboardAllocationBar
-        isPolish={isPolish}
         equityPct={equityPct}
         bondPct={bondPct}
         cashPct={cashPct}
@@ -209,7 +208,6 @@ export function DashboardScreen() {
           />
 
           <DashboardDataQualityCard
-            isPolish={isPolish}
             summary={dataQuality.summary}
           />
         </div>

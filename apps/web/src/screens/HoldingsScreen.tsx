@@ -6,8 +6,9 @@ import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } fr
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { missingDataLabel } from '../lib/availability'
 import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
-import { getActiveUiLanguage, useI18n } from '../lib/i18n'
+import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
+import { t } from '../lib/messages'
 import { usePersistentState } from '../lib/persistence'
 import type { TransactionRouteState } from '../lib/transaction-composer'
 import { isMarketValuedStatus } from '../lib/valuation'
@@ -140,12 +141,10 @@ export function HoldingsScreen() {
   if (holdingsQuery.isLoading) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pozycje' : 'Holdings'} />
+        <PageHeader title={t('holdings.title')} />
         <LoadingState
-          title={isPolish ? 'Ładowanie pozycji' : 'Loading holdings'}
-          description={isPolish
-            ? 'Wyliczanie bieżących pozycji, statusu wyceny i ekspozycji kont.'
-            : 'Resolving the current positions, valuation status and account exposure.'}
+          title={t('holdings.loadingTitle')}
+          description={t('holdings.loadingDescription')}
           blocks={4}
         />
       </>
@@ -155,12 +154,10 @@ export function HoldingsScreen() {
   if (holdingsQuery.isError) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pozycje' : 'Holdings'} />
+        <PageHeader title={t('holdings.title')} />
         <ErrorState
-          title={isPolish ? 'Pozycje niedostępne' : 'Holdings unavailable'}
-          description={isPolish
-            ? 'Nie udało się wczytać bieżących pozycji. Spróbuj ponownie albo sprawdź gotowość środowiska w Ustawieniach.'
-            : 'Current positions could not load. Retry now or verify runtime readiness in Settings.'}
+          title={t('holdings.errorTitle')}
+          description={t('holdings.errorDescription')}
           onRetry={() => void holdingsQuery.refetch()}
         />
       </>
@@ -170,13 +167,11 @@ export function HoldingsScreen() {
   if (holdings.length === 0) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Pozycje' : 'Holdings'} />
+        <PageHeader title={t('holdings.title')} />
         <EmptyState
-          title={isPolish ? 'Brak pozycji' : 'No holdings yet'}
-          description={isPolish
-            ? 'Portfel nie ma teraz aktywnych pozycji. Ten widok zapełni się po zapisaniu transakcji, które zostawiają otwartą pozycję; jeśli masz tylko gotówkę albo wszystko zostało już zamknięte, pozostanie pusty.'
-            : 'The portfolio has no active holdings right now. This view fills after recording transactions that leave an open position; if you only hold cash or have already closed everything, it will stay empty.'}
-          action={{ label: isPolish ? 'Przejdź do Transakcji' : 'Go to Transactions', to: '/transactions' }}
+          title={t('holdings.emptyTitle')}
+          description={t('holdings.emptyDescription')}
+          action={{ label: t('holdings.emptyAction'), to: '/transactions' }}
         />
       </>
     )
@@ -184,43 +179,39 @@ export function HoldingsScreen() {
 
   return (
     <>
-      <PageHeader title={isPolish ? 'Pozycje' : 'Holdings'}>
+      <PageHeader title={t('holdings.title')}>
         <Badge variant="default">
           {activeFilterCount > 0
             ? isPolish
               ? `${filteredHoldings.length} z ${holdings.length} pozycji`
               : `${filteredHoldings.length} of ${holdings.length} positions`
-            : `${holdings.length} ${isPolish ? 'pozycji' : 'positions'}`}
+            : `${holdings.length} ${t('holdings.positions')}`}
         </Badge>
         <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValue)}</span>
       </PageHeader>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <HoldingSummaryTile
-          label={isPolish ? 'Widoczne pozycje' : 'Visible holdings'}
+          label={t('holdings.visibleHoldings')}
           value={String(filteredHoldings.length)}
           detail={formatCurrencyPln(totalValue)}
         />
         <HoldingSummaryTile
-          label={isPolish ? 'Rynkowo wycenione' : 'Market valued'}
+          label={t('holdings.marketValued')}
           value={String(valuedCount)}
-          detail={filteredHoldings.length > 0 ? `${formatPercentOf(valuedCount, filteredHoldings.length)} ${isPolish ? 'widoku' : 'of view'}` : undefined}
+          detail={filteredHoldings.length > 0 ? `${formatPercentOf(valuedCount, filteredHoldings.length)} ${t('holdings.ofView')}` : undefined}
           tone={valuedCount === filteredHoldings.length ? 'success' : 'default'}
         />
         <HoldingSummaryTile
-          label={isPolish ? 'Księgowe / częściowe' : 'Book basis / partial'}
+          label={t('holdings.bookBasisPartial')}
           value={String(degradedCount)}
           detail={degradedCount > 0
-            ? isPolish
-              ? 'Brak pełnej wyceny rynkowej'
-              : 'Full market valuation unavailable'
-            : isPolish
-              ? 'Pełna wycena rynkowa'
-              : 'Full market valuation'}
+            ? t('holdings.fullMarketUnavailable')
+            : t('holdings.fullMarketValuation')}
           tone={degradedCount > 0 ? 'warning' : 'default'}
         />
         <HoldingSummaryTile
-          label={isPolish ? 'Problemy danych' : 'Data issues'}
+          label={t('holdings.dataIssues')}
           value={String(marketIssueCount + fxIssueCount + staleCount)}
           detail={isPolish
             ? `${marketIssueCount} cen · ${fxIssueCount} FX · ${staleCount} opóźnionych`
@@ -241,34 +232,34 @@ export function HoldingsScreen() {
             : undefined}
         >
           <FilterSelect
-            label={isPolish ? 'Konto' : 'Account'}
+            label={t('holdings.filterAccount')}
             value={accountFilter}
             options={filterOptions.accounts}
-            allLabel={isPolish ? 'Wszystkie konta' : 'All accounts'}
+            allLabel={t('holdings.filterAllAccounts')}
             onChange={setAccountFilter}
           />
           <FilterSelect
-            label={isPolish ? 'Klasa' : 'Class'}
+            label={t('holdings.filterClass')}
             value={assetClassFilter}
             options={filterOptions.assetClasses.map((c) => ({ value: c, label: labelAssetClass(c) }))}
-            allLabel={isPolish ? 'Wszystkie klasy' : 'All classes'}
+            allLabel={t('holdings.filterAllClasses')}
             onChange={setAssetClassFilter}
           />
           <FilterSelect
-            label={isPolish ? 'Status' : 'Status'}
+            label={t('holdings.filterStatus')}
             value={statusFilter}
-            options={filterOptions.statuses.map((status) => ({ value: status, label: valuationStatusFilterLabel(status, isPolish) }))}
-            allLabel={isPolish ? 'Wszystkie statusy' : 'All statuses'}
+            options={filterOptions.statuses.map((status) => ({ value: status, label: valuationStatusFilterLabel(status) }))}
+            allLabel={t('holdings.filterAllStatuses')}
             onChange={setStatusFilter}
           />
           <div>
-            <span className={labelClass}>{isPolish ? 'Szukaj' : 'Search'}</span>
+            <span className={labelClass}>{t('holdings.filterSearch')}</span>
             <input
               type="search"
               className={filterInput}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isPolish ? 'Nazwa, konto, waluta...' : 'Name, account, currency...'}
+              placeholder={t('holdings.filterSearchPlaceholder')}
             />
           </div>
         </FilterBar>
@@ -288,12 +279,10 @@ export function HoldingsScreen() {
       {/* Table */}
       {filteredHoldings.length === 0 ? (
         <StatePanel
-          eyebrow={isPolish ? 'Przefiltrowane' : 'Filtered out'}
-          title={isPolish ? 'Brak pozycji pasujących do filtrów' : 'No holdings match the current filters'}
-          description={isPolish
-            ? 'Wyczyść jeden lub kilka filtrów, aby przywrócić pozycje na widok.'
-            : 'Clear one or more filters to bring positions back into view.'}
-          action={{ label: isPolish ? 'Wyczyść filtry' : 'Clear filters', onClick: clearFilters }}
+          eyebrow={t('holdings.filteredEyebrow')}
+          title={t('holdings.filteredTitle')}
+          description={t('holdings.filteredDescription')}
+          action={{ label: t('holdings.clearFilters'), onClick: clearFilters }}
           className="py-10"
         />
       ) : (
@@ -302,13 +291,13 @@ export function HoldingsScreen() {
             <table className="w-full">
               <thead className="sticky top-0 bg-zinc-900">
                 <tr className="border-b border-zinc-800">
-                  <SortableHeader sort={sortState} field="instrumentName" label={isPolish ? 'Instrument' : 'Instrument'} onToggle={setSortState} />
-                  <SortableHeader sort={sortState} field="accountName" label={isPolish ? 'Konto' : 'Account'} onToggle={setSortState} />
-                  <SortableHeader sort={sortState} field="assetClass" label={isPolish ? 'Klasa' : 'Class'} onToggle={setSortState} />
-                  <SortableHeader sort={sortState} field="quantity" label={isPolish ? 'Ilość' : 'Qty'} onToggle={setSortState} align="right" />
-                  <SortableHeader sort={sortState} field="currentValuePln" label={isPolish ? 'Wartość' : 'Value'} onToggle={setSortState} align="right" />
+                  <SortableHeader sort={sortState} field="instrumentName" label={t('holdings.instrument')} onToggle={setSortState} />
+                  <SortableHeader sort={sortState} field="accountName" label={t('holdings.account')} onToggle={setSortState} />
+                  <SortableHeader sort={sortState} field="assetClass" label={t('holdings.class')} onToggle={setSortState} />
+                  <SortableHeader sort={sortState} field="quantity" label={t('holdings.qty')} onToggle={setSortState} align="right" />
+                  <SortableHeader sort={sortState} field="currentValuePln" label={t('holdings.value')} onToggle={setSortState} align="right" />
                   <SortableHeader sort={sortState} field="unrealizedGainPln" label="P/L" onToggle={setSortState} align="right" />
-                  <SortableHeader sort={sortState} field="valuationStatus" label={isPolish ? 'Status' : 'Status'} onToggle={setSortState} />
+                  <SortableHeader sort={sortState} field="valuationStatus" label={t('holdings.status')} onToggle={setSortState} />
                 </tr>
               </thead>
               <tbody>
@@ -370,7 +359,7 @@ export function HoldingsScreen() {
               <tfoot>
                 <tr className="border-t-2 border-zinc-700 bg-zinc-900">
                   <td className={`${td} font-medium text-zinc-300`} colSpan={4}>
-                    {isPolish ? 'Suma' : 'Total'} ({filteredHoldings.length})
+                    {t('holdings.total')} ({filteredHoldings.length})
                   </td>
                   <td className={`${tdRight} font-bold text-zinc-100`}>{formatCurrencyPln(totalValue)}</td>
                   <td className={tdRight} />
@@ -397,13 +386,13 @@ export function HoldingsScreen() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <DetailStat label={isPolish ? 'Ilość' : 'Quantity'} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} />
-            <DetailStat label={isPolish ? 'Śr. koszt' : 'Avg Cost'} value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)} />
-            <DetailStat label={isPolish ? 'Bieżąca cena' : 'Current Price'} value={formatCurrencyPln(selectedHolding.currentPricePln)} />
-            <DetailStat label={isPolish ? 'Bieżąca wartość' : 'Current Value'} value={formatCurrencyPln(selectedHolding.currentValuePln ?? selectedHolding.bookValuePln)} />
-            <DetailStat label={isPolish ? 'Wartość księgowa' : 'Book Value'} value={formatCurrencyPln(selectedHolding.bookValuePln)} />
+            <DetailStat label={t('holdings.quantity')} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} />
+            <DetailStat label={t('holdings.avgCost')} value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)} />
+            <DetailStat label={t('holdings.currentPrice')} value={formatCurrencyPln(selectedHolding.currentPricePln)} />
+            <DetailStat label={t('holdings.currentValue')} value={formatCurrencyPln(selectedHolding.currentValuePln ?? selectedHolding.bookValuePln)} />
+            <DetailStat label={t('holdings.bookValue')} value={formatCurrencyPln(selectedHolding.bookValuePln)} />
             <DetailStat
-              label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
+              label={t('holdings.unrealizedPL')}
               value={selectedHolding.unrealizedGainPln == null
                 ? missingDataLabel(isPolish)
                 : formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
@@ -433,14 +422,14 @@ export function HoldingsScreen() {
                 >
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
-                      {formatDate(lot.purchaseDate)} · {formatNumber(lot.quantity, { maximumFractionDigits: 0 })} {isPolish ? 'szt.' : 'units'}
+                      {formatDate(lot.purchaseDate)} · {formatNumber(lot.quantity, { maximumFractionDigits: 0 })} {t('holdings.units')}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                     {lot.currentRatePercent && (
                       <p className="text-xs text-zinc-400">
-                        {isPolish ? 'Oprocentowanie' : 'Rate'}: {lot.currentRatePercent}%
+                        {t('holdings.rate')}: {lot.currentRatePercent}%
                       </p>
                     )}
                   </div>
@@ -450,7 +439,7 @@ export function HoldingsScreen() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
-                      {isPolish ? 'Wykup EDO' : 'Redeem EDO'}
+                      {t('holdings.redeemEdo')}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500">
                       {isPolish
@@ -464,7 +453,7 @@ export function HoldingsScreen() {
                     className={btnGhost}
                     onClick={() => openRedeemFlow(selectedHolding)}
                   >
-                    {isPolish ? 'Otwórz wykup' : 'Start redeem'}
+                    {t('holdings.startRedeem')}
                   </button>
                   <button
                     type="button"
@@ -570,20 +559,18 @@ function HoldingsValuationBanner({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-amber-300/80">
-            {isPolish ? 'Tryb wyceny' : 'Valuation mode'}
+            {t('holdings.valuationMode')}
           </p>
           <h2 className="mt-1 text-sm font-semibold text-zinc-100">
             {fullyBookBased
-              ? (isPolish ? 'Widok opiera się obecnie na wartości księgowej.' : 'This view currently relies on book basis.')
+              ? t('holdings.bookBasisView')
               : staleCount > 0 && marketIssueCount + fxIssueCount === 0
-                ? (isPolish ? 'Widok korzysta z ostatnich dostępnych cen rynkowych.' : 'This view uses the latest available market prices.')
-              : (isPolish ? 'Widok miesza wyceny rynkowe z wartością księgową.' : 'This view mixes market prices with book basis.')}
+                ? t('holdings.staleView')
+              : t('holdings.mixedView')}
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
             {fullyBookBased
-              ? (isPolish
-                  ? 'Bieżący P/L wróci po odzyskaniu cen rynkowych i przeliczeń FX.'
-                  : 'Live P/L returns once market quotes and FX coverage are back.')
+              ? t('holdings.bookBasisReturnHint')
               : staleCount > 0 && marketIssueCount + fxIssueCount === 0
                 ? (isPolish
                     ? `${valuedCount} z ${totalCount} pozycji ma wycenę rynkową, w tym ${staleCount} opóźnionych.`
@@ -715,7 +702,7 @@ function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortSta
     case 'instrumentName': return f * a.instrumentName.localeCompare(b.instrumentName)
     case 'accountName': return f * a.accountName.localeCompare(b.accountName)
     case 'assetClass': return f * labelAssetClass(a.assetClass).localeCompare(labelAssetClass(b.assetClass))
-    case 'valuationStatus': return f * valuationStatusFilterLabel(a.valuationStatus, getActiveUiLanguage() === 'pl').localeCompare(valuationStatusFilterLabel(b.valuationStatus, getActiveUiLanguage() === 'pl'))
+    case 'valuationStatus': return f * valuationStatusFilterLabel(a.valuationStatus).localeCompare(valuationStatusFilterLabel(b.valuationStatus))
     case 'quantity': return f * (asNumber(a.quantity) - asNumber(b.quantity))
     case 'unrealizedGainPln': return f * (asNumber(a.unrealizedGainPln) - asNumber(b.unrealizedGainPln))
     case 'currentValuePln': return f * (asNumber(a.currentValuePln ?? a.bookValuePln) - asNumber(b.currentValuePln ?? b.bookValuePln))
@@ -787,45 +774,45 @@ function normalizedValuationStatus(value: string | null | undefined) {
   return value ?? 'UNAVAILABLE'
 }
 
-function valuationStatusFilterLabel(value: string | null | undefined, isPolish: boolean) {
+function valuationStatusFilterLabel(value: string | null | undefined) {
   switch (normalizedValuationStatus(value)) {
     case 'VALUED':
-      return isPolish ? 'Rynkowa' : 'Market valued'
+      return t('holdings.filterValued')
     case 'STALE':
-      return isPolish ? 'Opóźniona' : 'Stale'
+      return t('holdings.filterStale')
     case 'BOOK_ONLY':
-      return isPolish ? 'Księgowa' : 'Book basis'
+      return t('holdings.filterBookOnly')
     case 'MISSING_MARKET_DATA':
-      return isPolish ? 'Brak ceny' : 'Missing quote'
+      return t('holdings.filterMissingMarket')
     case 'MISSING_FX':
-      return isPolish ? 'Brak FX' : 'Missing FX'
+      return t('holdings.filterMissingFx')
     case 'UNSUPPORTED_CORRECTIONS':
-      return isPolish ? 'Korekty' : 'Corrections'
+      return t('holdings.filterCorrections')
     case 'UNAVAILABLE':
-      return isPolish ? 'Brak wyceny' : 'No valuation'
+      return t('holdings.filterUnavailable')
     default:
-      return value ?? (isPolish ? 'Brak wyceny' : 'No valuation')
+      return value ?? t('holdings.filterUnavailable')
   }
 }
 
-function holdingStatusPresentation(value: string | null | undefined, isPolish: boolean) {
+function holdingStatusPresentation(value: string | null | undefined, _isPolish?: boolean) {
   switch (normalizedValuationStatus(value)) {
     case 'VALUED':
-      return { label: isPolish ? 'Rynkowa' : 'Market', className: badgeVariants.success }
+      return { label: t('holdings.statusValued'), className: badgeVariants.success }
     case 'STALE':
-      return { label: isPolish ? 'Opóźniona' : 'Stale', className: badgeVariants.info }
+      return { label: t('holdings.statusStale'), className: badgeVariants.info }
     case 'BOOK_ONLY':
-      return { label: isPolish ? 'Księgowa' : 'Book basis', className: badgeVariants.warning }
+      return { label: t('holdings.statusBookOnly'), className: badgeVariants.warning }
     case 'MISSING_MARKET_DATA':
-      return { label: isPolish ? 'Brak ceny' : 'No quote', className: badgeVariants.default }
+      return { label: t('holdings.statusMissingMarket'), className: badgeVariants.default }
     case 'MISSING_FX':
-      return { label: isPolish ? 'Brak FX' : 'Missing FX', className: badgeVariants.warning }
+      return { label: t('holdings.statusMissingFx'), className: badgeVariants.warning }
     case 'UNSUPPORTED_CORRECTIONS':
-      return { label: isPolish ? 'Korekty' : 'Corrections', className: badgeVariants.error }
+      return { label: t('holdings.statusCorrections'), className: badgeVariants.error }
     case 'UNAVAILABLE':
-      return { label: isPolish ? 'Brak wyceny' : 'No valuation', className: badgeVariants.default }
+      return { label: t('holdings.statusUnavailable'), className: badgeVariants.default }
     default:
-      return { label: valuationStatusFilterLabel(value, isPolish), className: badgeVariants.default }
+      return { label: valuationStatusFilterLabel(value), className: badgeVariants.default }
   }
 }
 

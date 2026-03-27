@@ -7,6 +7,7 @@ import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
+import { t } from '../lib/messages'
 import { usePersistentState } from '../lib/persistence'
 import {
   describeHoldingGainRate,
@@ -65,12 +66,10 @@ export function InstrumentsScreen() {
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Instrumenty' : 'Instruments'} />
+        <PageHeader title={t('instrumentsScreen.title')} />
         <LoadingState
-          title={isPolish ? 'Ładowanie instrumentów' : 'Loading instruments'}
-          description={isPolish
-            ? 'Budowanie widoku instrumentów i ekspozycji na rachunkach.'
-            : 'Combining the instrument catalog with exposure across accounts.'}
+          title={t('instrumentsScreen.loadingTitle')}
+          description={t('instrumentsScreen.loadingDescription')}
           blocks={4}
         />
       </>
@@ -80,12 +79,10 @@ export function InstrumentsScreen() {
   if (instrumentsQuery.isError || holdingsQuery.isError) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Instrumenty' : 'Instruments'} />
+        <PageHeader title={t('instrumentsScreen.title')} />
         <ErrorState
-          title={isPolish ? 'Instrumenty niedostępne' : 'Instruments unavailable'}
-          description={isPolish
-            ? 'Nie udało się zbudować widoku instrumentów. Spróbuj ponownie albo sprawdź stan systemu.'
-            : 'The instrument view could not be assembled. Retry now or inspect system health.'}
+          title={t('instrumentsScreen.errorTitle')}
+          description={t('instrumentsScreen.errorDescription')}
           onRetry={() => {
             void Promise.all([instrumentsQuery.refetch(), holdingsQuery.refetch()])
           }}
@@ -96,7 +93,7 @@ export function InstrumentsScreen() {
 
   return (
     <>
-      <PageHeader title={isPolish ? 'Instrumenty' : 'Instruments'}>
+      <PageHeader title={t('instrumentsScreen.title')}>
         <Badge variant="default">
           {rows.length} {isPolish ? (rows.length === 1 ? 'instrument' : 'instrumentów') : 'instruments'}
         </Badge>
@@ -108,27 +105,27 @@ export function InstrumentsScreen() {
       {rows.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <InstrumentSummaryTile
-            label={isPolish ? 'Katalog instrumentów' : 'Instrument catalog'}
+            label={t('instrumentsScreen.catalog')}
             value={String(rows.length)}
             detail={isPolish ? `${activeRows.length} aktywnych w portfelu` : `${activeRows.length} active in portfolio`}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Łączna wartość' : 'Total value'}
+            label={t('instrumentsScreen.totalValue')}
             value={formatCurrencyPln(totalValuePln)}
             detail={isPolish ? `${activeRows.length} pozycji po zsumowaniu wszystkich rachunków` : `${activeRows.length} aggregates across accounts`}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
+            label={t('instrumentsScreen.unrealizedPL')}
             value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
             detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, isPolish)}
             tone={totalValuedHoldingCount === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <InstrumentSummaryTile
-            label={isPolish ? 'Instrumenty bez pełnej wyceny' : 'Degraded instruments'}
+            label={t('instrumentsScreen.degradedInstruments')}
             value={String(degradedCount)}
             detail={degradedCount === 0
               ? staleCount === 0
-                ? (isPolish ? 'Każdy aktywny instrument ma świeżą wycenę rynkową' : 'Every active instrument has fresh market valuation')
+                ? t('instrumentsScreen.freshValuation')
                 : (isPolish ? `${staleCount} ma wycenę rynkową z opóźnieniem` : `${staleCount} have stale market valuation`)
               : (isPolish
                   ? `Część instrumentów korzysta z niepełnej lub księgowej wyceny${staleCount > 0 ? ` · ${staleCount} z opóźnieniem` : ''}`
@@ -143,21 +140,17 @@ export function InstrumentsScreen() {
           <Card flush>
             <div className="border-b border-zinc-800 px-5 py-4">
               <SectionHeader
-                eyebrow={isPolish ? 'Model odczytowy' : 'Read model'}
-                title={isPolish ? 'Przegląd instrumentów' : 'Instrument overview'}
-                description={isPolish
-                  ? 'Pozycje zebrane ponad wszystkimi rachunkami, z zachowaniem pełnego katalogu instrumentów także bez aktywnych transakcji.'
-                  : 'Positions aggregated across accounts while still exposing the canonical instrument catalog.'}
+                eyebrow={t('instrumentsScreen.readModel')}
+                title={t('instrumentsScreen.instrumentOverview')}
+                description={t('instrumentsScreen.overviewDescription')}
               />
             </div>
 
             {rows.length === 0 ? (
               <div className="p-5">
                 <EmptyState
-                  title={isPolish ? 'Brak instrumentów' : 'No instruments yet'}
-                  description={isPolish
-                    ? 'Dodaj pierwszy instrument po prawej stronie, aby zbudować katalog portfela.'
-                    : 'Add the first instrument on the right to build the portfolio catalog.'}
+                  title={t('instrumentsScreen.noInstrumentsTitle')}
+                  description={t('instrumentsScreen.noInstrumentsDescription')}
                 />
               </div>
             ) : (
@@ -165,13 +158,13 @@ export function InstrumentsScreen() {
                 <table className="min-w-full">
                   <thead className="bg-zinc-950/30">
                     <tr>
-                      <SortableHeader sort={sortState} field="instrumentName" label={isPolish ? 'Instrument' : 'Instrument'} onToggle={setSortState} />
-                      <SortableHeader sort={sortState} field="catalog" label={isPolish ? 'Katalog' : 'Catalog'} onToggle={setSortState} />
-                      <SortableHeader sort={sortState} field="accountCount" label={isPolish ? 'Konta' : 'Accounts'} onToggle={setSortState} align="right" />
-                      <SortableHeader sort={sortState} field="quantity" label={isPolish ? 'Ilość' : 'Quantity'} onToggle={setSortState} align="right" />
-                      <SortableHeader sort={sortState} field="totalCurrentValuePln" label={isPolish ? 'Wartość' : 'Value'} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="instrumentName" label={t('instrumentsScreen.instrumentColumn')} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="catalog" label={t('instrumentsScreen.catalogColumn')} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="accountCount" label={t('instrumentsScreen.accountsColumn')} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="quantity" label={t('instrumentsScreen.quantityColumn')} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="totalCurrentValuePln" label={t('instrumentsScreen.valueColumn')} onToggle={setSortState} align="right" />
                       <SortableHeader sort={sortState} field="totalUnrealizedGainPln" label="P/L" onToggle={setSortState} align="right" />
-                      <SortableHeader sort={sortState} field="status" label={isPolish ? 'Status' : 'Status'} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="status" label={t('instrumentsScreen.statusColumn')} onToggle={setSortState} align="right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -208,8 +201,8 @@ export function InstrumentsScreen() {
                               <p className="tabular-nums text-zinc-100">{row.accountCount}</p>
                               <p className="text-xs text-zinc-500">
                                 {row.accountCount === 0
-                                  ? (isPolish ? 'tylko katalog' : 'catalog only')
-                                  : (isPolish ? 'rachunków z pozycją' : 'active accounts')}
+                                  ? t('instrumentsScreen.catalogOnly')
+                                  : t('instrumentsScreen.activeAccounts')}
                               </p>
                             </div>
                           </td>
@@ -217,7 +210,7 @@ export function InstrumentsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatHoldingQuantity(row.quantity)}</p>
                               <p className="text-xs text-zinc-500">
-                                {row.transactionCount} {isPolish ? 'transakcji' : 'transactions'}
+                                {row.transactionCount} {t('instrumentsScreen.transactions')}
                               </p>
                             </div>
                           </td>
@@ -225,7 +218,7 @@ export function InstrumentsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(row.totalCurrentValuePln)}</p>
                               <p className="text-xs text-zinc-500">
-                                {isPolish ? 'Koszt nabycia' : 'Cost basis'} {formatCurrencyPln(row.totalBookValuePln)}
+                                {t('instrumentsScreen.costBasis')} {formatCurrencyPln(row.totalBookValuePln)}
                               </p>
                             </div>
                           </td>

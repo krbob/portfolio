@@ -8,6 +8,7 @@ import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType } from '../lib/labels'
+import { t } from '../lib/messages'
 import {
   calculateGainPct,
   describeHoldingGainRate,
@@ -63,12 +64,10 @@ export function AccountsScreen() {
   if (accountsQuery.isLoading || holdingsQuery.isLoading) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Konta' : 'Accounts'} />
+        <PageHeader title={t('accountsScreen.title')} />
         <LoadingState
-          title={isPolish ? 'Ładowanie kont' : 'Loading accounts'}
-          description={isPolish
-            ? 'Budowanie widoku rachunków, sald gotówkowych i bieżącej wartości.'
-            : 'Building the account view, cash balances and current value.'}
+          title={t('accountsScreen.loadingTitle')}
+          description={t('accountsScreen.loadingDescription')}
           blocks={4}
         />
       </>
@@ -78,12 +77,10 @@ export function AccountsScreen() {
   if (accountsQuery.isError || holdingsQuery.isError) {
     return (
       <>
-        <PageHeader title={isPolish ? 'Konta' : 'Accounts'} />
+        <PageHeader title={t('accountsScreen.title')} />
         <ErrorState
-          title={isPolish ? 'Konta niedostępne' : 'Accounts unavailable'}
-          description={isPolish
-            ? 'Nie udało się wczytać podsumowania rachunków. Spróbuj ponownie albo sprawdź stan systemu.'
-            : 'Per-account aggregates could not load. Retry now or inspect system health.'}
+          title={t('accountsScreen.errorTitle')}
+          description={t('accountsScreen.errorDescription')}
           onRetry={() => void Promise.all([accountsQuery.refetch(), holdingsQuery.refetch()])}
         />
       </>
@@ -92,7 +89,7 @@ export function AccountsScreen() {
 
   return (
     <>
-      <PageHeader title={isPolish ? 'Konta' : 'Accounts'}>
+      <PageHeader title={t('accountsScreen.title')}>
         <Badge variant="default">
           {accounts.length} {isPolish ? (accounts.length === 1 ? 'konto' : (accounts.length % 10 >= 2 && accounts.length % 10 <= 4 && (accounts.length % 100 < 12 || accounts.length % 100 > 14)) ? 'konta' : 'kont') : 'accounts'}
         </Badge>
@@ -104,27 +101,27 @@ export function AccountsScreen() {
       {accounts.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <AccountSummaryTile
-            label={isPolish ? 'Wartość rachunków' : 'Account value'}
+            label={t('accountsScreen.accountValue')}
             value={formatCurrencyPln(totalValuePln)}
             detail={isPolish ? `${totalHoldings} pozycji aktywnych` : `${totalHoldings} active holdings`}
           />
           <AccountSummaryTile
-            label={isPolish ? 'Gotówka na rachunkach' : 'Cash on accounts'}
+            label={t('accountsScreen.cashOnAccounts')}
             value={formatCurrencyPln(totalCashPln)}
-            detail={totalValuePln > 0 ? `${formatPercent((totalCashPln / totalValuePln) * 100)} ${isPolish ? 'portfela' : 'of portfolio'}` : undefined}
+            detail={totalValuePln > 0 ? `${formatPercent((totalCashPln / totalValuePln) * 100)} ${t('accountsScreen.ofPortfolio')}` : undefined}
           />
           <AccountSummaryTile
-            label={isPolish ? 'Niezrealizowany wynik pozycji' : 'Unrealized holdings P/L'}
+            label={t('accountsScreen.unrealizedPL')}
             value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldings, isPolish)}
             detail={describePortfolioGain(totalHoldings, totalValuedHoldings, isPolish, { cashExcluded: true })}
             tone={totalValuedHoldings === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <AccountSummaryTile
-            label={isPolish ? 'Konta bez pełnej wyceny' : 'Degraded accounts'}
+            label={t('accountsScreen.degradedAccounts')}
             value={String(degradedCount)}
             detail={degradedCount === 0
-              ? (isPolish ? 'Pełna wycena na wszystkich rachunkach' : 'Full valuation on every account')
-              : (isPolish ? 'Część rachunków korzysta z wyceny opóźnionej lub księgowej' : 'Some accounts use stale or book valuation')}
+              ? t('accountsScreen.fullValuation')
+              : t('accountsScreen.staleFallback')}
             tone={degradedCount === 0 ? 'success' : 'warning'}
           />
         </div>
@@ -135,21 +132,17 @@ export function AccountsScreen() {
           <Card flush>
             <div className="border-b border-zinc-800 px-5 py-4">
               <SectionHeader
-                eyebrow={isPolish ? 'Model odczytowy' : 'Read model'}
-                title={isPolish ? 'Przegląd rachunków' : 'Account overview'}
-                description={isPolish
-                  ? 'Wartość, gotówka i status wyceny w podziale na rachunki. Kolejność możesz ustawić ręcznie.'
-                  : 'Value, cash and valuation status split by account, with manual ordering controlled from this view.'}
+                eyebrow={t('accountsScreen.readModel')}
+                title={t('accountsScreen.accountOverview')}
+                description={t('accountsScreen.overviewDescription')}
               />
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                 <span>
-                  {isPolish
-                    ? 'Przeciągnij uchwyt po lewej, aby ustawić kolejność kont.'
-                    : 'Drag the handle on the left to set the account order.'}
+                  {t('accountsScreen.dragHint')}
                 </span>
                 {reorderAccountsMutation.isPending && (
                   <span className="text-blue-400">
-                    {isPolish ? 'Zapisywanie kolejności...' : 'Saving order...'}
+                    {t('accountsScreen.savingOrder')}
                   </span>
                 )}
                 {reorderAccountsMutation.error && (
@@ -161,10 +154,8 @@ export function AccountsScreen() {
             {accounts.length === 0 ? (
               <div className="p-5">
                 <EmptyState
-                  title={isPolish ? 'Brak kont' : 'No accounts yet'}
-                  description={isPolish
-                    ? 'Dodaj pierwszy rachunek po prawej stronie, aby zacząć przypisywać do niego transakcje.'
-                    : 'Add the first account on the right to start assigning transactions to it.'}
+                  title={t('accountsScreen.noAccountsTitle')}
+                  description={t('accountsScreen.noAccountsDescription')}
                 />
               </div>
             ) : (
@@ -173,15 +164,15 @@ export function AccountsScreen() {
                   <thead className="bg-zinc-950/30">
                     <tr>
                       <th className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        <span className="sr-only">{isPolish ? 'Kolejność' : 'Order'}</span>
+                        <span className="sr-only">{t('accountsScreen.order')}</span>
                       </th>
-                      <th className={th}>{isPolish ? 'Konto' : 'Account'}</th>
-                      <th className={th}>{isPolish ? 'Typ' : 'Type'}</th>
-                      <th className={thRight}>{isPolish ? 'Pozycje' : 'Holdings'}</th>
-                      <th className={thRight}>{isPolish ? 'Gotówka' : 'Cash'}</th>
-                      <th className={thRight}>{isPolish ? 'Wartość' : 'Value'}</th>
-                      <th className={thRight}>{isPolish ? 'P/L' : 'P/L'}</th>
-                      <th className={thRight}>{isPolish ? 'Status' : 'Status'}</th>
+                      <th className={th}>{t('accountsScreen.accountColumn')}</th>
+                      <th className={th}>{t('accountsScreen.type')}</th>
+                      <th className={thRight}>{t('accountsScreen.holdingsColumn')}</th>
+                      <th className={thRight}>{t('accountsScreen.cash')}</th>
+                      <th className={thRight}>{t('accountsScreen.value')}</th>
+                      <th className={thRight}>{t('accountsScreen.pl')}</th>
+                      <th className={thRight}>{t('accountsScreen.statusColumn')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -246,7 +237,7 @@ export function AccountsScreen() {
                             <div>
                               <p className="text-zinc-200">{labelAccountType(account.type)}</p>
                               <p className="text-xs text-zinc-500">
-                                {formatPercent(account.portfolioWeightPct)} {isPolish ? 'portfela' : 'of portfolio'}
+                                {formatPercent(account.portfolioWeightPct)} {t('accountsScreen.ofPortfolio')}
                               </p>
                             </div>
                           </td>
@@ -254,7 +245,7 @@ export function AccountsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{account.activeHoldingCount}</p>
                               <p className="text-xs text-zinc-500">
-                                {account.valuedHoldingCount}/{account.activeHoldingCount} {isPolish ? 'z wyceną rynkową' : 'market-backed'}
+                                {account.valuedHoldingCount}/{account.activeHoldingCount} {t('accountsScreen.marketBacked')}
                               </p>
                             </div>
                           </td>
@@ -264,7 +255,7 @@ export function AccountsScreen() {
                               <p className="text-xs text-zinc-500">
                                 {hasMeaningfulCurrencyBreakdown(account.cashBalances)
                                   ? cashBreakdown
-                                  : `${isPolish ? 'Wpłaty netto' : 'Net contributions'} ${formatCurrencyPln(account.netContributionsPln)}`}
+                                  : `${t('accountsScreen.netContributions')} ${formatCurrencyPln(account.netContributionsPln)}`}
                               </p>
                             </div>
                           </td>
@@ -272,7 +263,7 @@ export function AccountsScreen() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.totalCurrentValuePln)}</p>
                               <p className="text-xs text-zinc-500">
-                                {isPolish ? 'Zainwestowane' : 'Invested'} {formatCurrencyPln(account.investedCurrentValuePln)}
+                                {t('accountsScreen.invested')} {formatCurrencyPln(account.investedCurrentValuePln)}
                               </p>
                             </div>
                           </td>

@@ -10,6 +10,7 @@ import {
   parsePortfolioNumber,
   portfolioValuationStateVariant,
 } from '../../lib/portfolio-presentation'
+import { t } from '../../lib/messages'
 import { badge } from '../../lib/styles'
 import { isMarketValuedStatus } from '../../lib/valuation'
 
@@ -61,7 +62,7 @@ export function AccountDetailsCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-            {isPolish ? 'Wybrane konto' : 'Selected account'}
+            {t('accountDetails.selectedAccount')}
           </p>
           <h3 className="mt-2 text-xl font-semibold text-zinc-50">{account.accountName}</h3>
           <p className="mt-1 text-sm text-zinc-500">
@@ -75,17 +76,17 @@ export function AccountDetailsCard({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <AccountDetailMetric
-          label={isPolish ? 'Gotówka' : 'Cash'}
+          label={t('accountDetails.cash')}
           value={formatCurrencyPln(account.cashBalancePln)}
           detail={cashBreakdown ?? formatPercent(cashSharePct)}
         />
         <AccountDetailMetric
-          label={isPolish ? 'Zainwestowane' : 'Invested'}
+          label={t('accountDetails.invested')}
           value={formatCurrencyPln(account.investedCurrentValuePln)}
           detail={isPolish ? `${account.activeHoldingCount} pozycji` : `${account.activeHoldingCount} holdings`}
         />
         <AccountDetailMetric
-          label={isPolish ? 'Wpłaty netto' : 'Net contributions'}
+          label={t('accountDetails.netContributions')}
           value={formatCurrencyPln(account.netContributionsPln)}
           detail={contributionBreakdown ?? describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, isPolish)}
           tone={account.valuedHoldingCount === 0 ? 'default' : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
@@ -95,33 +96,29 @@ export function AccountDetailsCard({
       {showBreakdownPanels && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <CurrencyBreakdownCard
-            title={isPolish ? 'Salda według walut' : 'Native cash balances'}
+            title={t('accountDetails.nativeCashBalances')}
             items={account.cashBalances}
-            isPolish={isPolish}
           />
           <CurrencyBreakdownCard
-            title={isPolish ? 'Wpłaty netto wg waluty' : 'Net contributions by currency'}
+            title={t('accountDetails.netContributionsByCurrency')}
             items={account.netContributionBalances}
-            isPolish={isPolish}
           />
         </div>
       )}
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-zinc-100">{isPolish ? 'Największe pozycje' : 'Top positions'}</h4>
+          <h4 className="text-sm font-medium text-zinc-100">{t('accountDetails.topPositions')}</h4>
           {largestHolding && (
             <p className="text-xs text-zinc-500">
-              {isPolish ? 'Największa pozycja' : 'Largest line'}: {largestHolding.instrumentName}
+              {t('accountDetails.largestLine')}: {largestHolding.instrumentName}
             </p>
           )}
         </div>
 
         {holdings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">
-            {isPolish
-              ? 'Na tym rachunku nie ma jeszcze aktywnych pozycji. Jego wartość pochodzi na razie wyłącznie z gotówki.'
-              : 'This account has no active positions yet. Its value currently comes from cash only.'}
+            {t('accountDetails.noPositions')}
           </p>
         ) : (
           <div className="mt-3 space-y-2">
@@ -137,7 +134,7 @@ export function AccountDetailsCard({
                   <div>
                     <p className="font-medium text-zinc-100">{holding.instrumentName}</p>
                     <p className="text-xs text-zinc-500">
-                      {labelAssetClass(holding.assetClass)} · {formatHoldingQuantity(holding.quantity)} {isPolish ? 'szt.' : 'units'}
+                      {labelAssetClass(holding.assetClass)} · {formatHoldingQuantity(holding.quantity)} {t('accountDetails.units')}
                     </p>
                   </div>
                   <div className="text-right">
@@ -145,7 +142,7 @@ export function AccountDetailsCard({
                     <p className="text-xs text-zinc-500">
                       {isMarketValuedStatus(holding.valuationStatus)
                         ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)}`
-                        : `${formatPercent(weightPct)} · ${isPolish ? 'wycena księgowa' : 'book basis'}`}
+                        : `${formatPercent(weightPct)} · ${t('accountDetails.bookBasis')}`}
                     </p>
                   </div>
                 </div>
@@ -185,11 +182,9 @@ function AccountDetailMetric({
 function CurrencyBreakdownCard({
   title,
   items,
-  isPolish,
 }: {
   title: string
   items: PortfolioAccountSummary['cashBalances'] | PortfolioAccountSummary['netContributionBalances'] | undefined
-  isPolish: boolean
 }) {
   const rows = items ?? []
 
@@ -198,7 +193,7 @@ function CurrencyBreakdownCard({
       <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</p>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-zinc-500">
-          {isPolish ? 'Brak rozbicia walutowego.' : 'No currency data yet.'}
+          {t('accountDetails.noCurrencyData')}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
@@ -210,7 +205,7 @@ function CurrencyBreakdownCard({
                   {formatCurrency(row.amount, row.currency)}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  {isPolish ? 'wartość księgowa' : 'book'} {formatCurrencyPln(row.bookValuePln)}
+                  {t('accountDetails.bookLabel')} {formatCurrencyPln(row.bookValuePln)}
                 </p>
               </div>
             </div>

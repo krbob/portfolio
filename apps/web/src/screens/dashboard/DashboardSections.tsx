@@ -6,6 +6,7 @@ import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
 import { labelAssetClass } from '../../lib/labels'
+import { t } from '../../lib/messages'
 import {
   describeAssetSliceValuation,
   describePortfolioValuationBasis,
@@ -49,27 +50,23 @@ export function DashboardHeroStats({
         hero
       />
       <StatCard
-        label={isPolish ? 'Zmiana dzienna' : 'Daily Change'}
+        label={t('dashboardSections.dailyChange')}
         value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
         subtitle={dailyChangePct != null
           ? formatPercent(dailyChangePct, { signed: true })
           : hasMarketBackedCurrentValuation
-            ? isPolish
-              ? 'Czekamy na komplet danych'
-              : 'Waiting for data'
-            : isPolish
-              ? 'Wymaga pełnej wyceny rynkowej'
-              : 'Requires full market valuation'}
+            ? t('dashboardSections.waitingForData')
+            : t('dashboardSections.requiresMarketValuation')}
         change={dailyChange != null ? (dailyChange > 0 ? 'positive' : dailyChange < 0 ? 'negative' : 'neutral') : undefined}
       />
       <StatCard
-        label={isPolish ? 'Akcje' : 'Equities'}
+        label={t('dashboardSections.equities')}
         value={formatCurrencyPln(displayedEquityValuePln)}
         subtitle={describeAssetSliceValuation(equityPct, valuationState, isPolish)}
         dot="equity"
       />
       <StatCard
-        label={isPolish ? 'Obligacje' : 'Bonds'}
+        label={t('dashboardSections.bonds')}
         value={formatCurrencyPln(displayedBondValuePln)}
         subtitle={describeAssetSliceValuation(bondPct, valuationState, isPolish)}
         dot="bond"
@@ -79,12 +76,10 @@ export function DashboardHeroStats({
 }
 
 export function DashboardAllocationBar({
-  isPolish,
   equityPct,
   bondPct,
   cashPct,
 }: {
-  isPolish: boolean
   equityPct: number
   bondPct: number
   cashPct: number
@@ -92,11 +87,11 @@ export function DashboardAllocationBar({
   return (
     <div className={`${card} mt-4`}>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Alokacja' : 'Allocation'}</h3>
+        <h3 className="text-sm font-medium text-zinc-400">{t('dashboardSections.allocation')}</h3>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <AllocationLegend label={isPolish ? 'Akcje' : 'Equities'} color="bg-blue-500" pct={equityPct} />
-          <AllocationLegend label={isPolish ? 'Obligacje' : 'Bonds'} color="bg-amber-500" pct={bondPct} />
-          <AllocationLegend label={isPolish ? 'Gotówka' : 'Cash'} color="bg-zinc-500" pct={cashPct} />
+          <AllocationLegend label={t('dashboardSections.equities')} color="bg-blue-500" pct={equityPct} />
+          <AllocationLegend label={t('dashboardSections.bonds')} color="bg-amber-500" pct={bondPct} />
+          <AllocationLegend label={t('dashboardSections.cash')} color="bg-zinc-500" pct={cashPct} />
         </div>
       </div>
       <div className="flex h-3 overflow-hidden rounded-full bg-zinc-800">
@@ -135,16 +130,10 @@ export function DashboardHistoryCard({
           {historyValuationState !== 'MARK_TO_MARKET' ? (
             <p className="mt-1 text-xs text-zinc-500">
               {historyValuationState === 'BOOK_ONLY'
-                ? isPolish
-                  ? 'Wykres opiera się na wycenie księgowej.'
-                  : 'This chart is based on book basis.'
+                ? t('dashboardSections.chartBookBasis')
                 : historyValuationState === 'STALE'
-                  ? isPolish
-                    ? 'Wykres korzysta z ostatnich dostępnych cen rynkowych.'
-                    : 'This chart uses the latest available market prices.'
-                  : isPolish
-                    ? 'Wykres łączy wyceny rynkowe z wyceną księgową.'
-                    : 'This chart mixes market prices with book basis.'}
+                  ? t('dashboardSections.chartStale')
+                  : t('dashboardSections.chartMixed')}
             </p>
           ) : null}
         </div>
@@ -167,29 +156,23 @@ export function DashboardHistoryCard({
       </div>
       {isLoading && chartPoints.length === 0 ? (
         <LoadingState
-          title={isPolish ? 'Ładowanie historii' : 'Loading history'}
-          description={isPolish
-            ? 'Pobieranie dziennej historii portfela dla wybranego zakresu.'
-            : 'Fetching the daily portfolio curve for this dashboard range.'}
+          title={t('dashboardSections.loadingHistory')}
+          description={t('dashboardSections.loadingHistoryDescription')}
           variant="inline"
           blocks={2}
         />
       ) : isError && chartPoints.length === 0 ? (
         <ErrorState
-          title={isPolish ? 'Historia niedostępna' : 'History unavailable'}
-          description={isPolish
-            ? 'Pulpit może pokazać bieżącą wartość, ale nie udało się wczytać wykresu historycznego.'
-            : 'The dashboard can still show current value, but the historical chart did not load.'}
+          title={t('dashboardSections.historyUnavailable')}
+          description={t('dashboardSections.historyErrorDescription')}
           onRetry={onRetry}
           className="border-0 bg-transparent px-0 py-8"
         />
       ) : chartPoints.length === 0 ? (
         <StatePanel
-          title={isPolish ? 'Brak historii portfela' : 'No history data yet'}
-          description={isPolish
-            ? 'Zapisz więcej transakcji albo wróć później do Wyników, aby zbudować krzywą portfela.'
-            : 'Record more transactions or open Performance later to build out the portfolio curve.'}
-          eyebrow={isPolish ? 'Historia' : 'History'}
+          title={t('dashboardSections.noHistoryTitle')}
+          description={t('dashboardSections.noHistoryDescription')}
+          eyebrow={t('dashboardSections.historyEyebrow')}
           className="border-0 bg-transparent px-0 py-8"
         />
       ) : (
@@ -222,20 +205,14 @@ export function DashboardTargetDriftCard({
     <div className={card}>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-zinc-400">{isPolish ? 'Odchylenie od celu' : 'Target drift'}</h3>
+          <h3 className="text-sm font-medium text-zinc-400">{t('dashboardSections.targetDrift')}</h3>
           {allocation?.valuationState !== 'MARK_TO_MARKET' ? (
             <p className="mt-1 text-xs text-zinc-500">
               {allocation?.valuationState === 'BOOK_ONLY'
-                ? isPolish
-                  ? 'Sygnał alokacji opiera się na wycenie księgowej.'
-                  : 'Allocation signal is based on book basis.'
+                ? t('dashboardSections.allocationBookBasis')
                 : allocation?.valuationState === 'STALE'
-                  ? isPolish
-                    ? 'Sygnał alokacji korzysta z ostatnich dostępnych cen rynkowych.'
-                    : 'Allocation signal uses the latest available market prices.'
-                  : isPolish
-                    ? 'Sygnał alokacji łączy wyceny rynkowe z księgową.'
-                    : 'Allocation signal mixes market prices with book basis.'}
+                  ? t('dashboardSections.allocationStale')
+                  : t('dashboardSections.allocationMixed')}
             </p>
           ) : null}
         </div>
@@ -244,37 +221,31 @@ export function DashboardTargetDriftCard({
             {labelAllocationAction(allocation.recommendedAction, isPolish)}
           </Badge>
         ) : (
-          <Badge variant="default">{isPolish ? 'Brak konfiguracji' : 'Not configured'}</Badge>
+          <Badge variant="default">{t('dashboardSections.notConfigured')}</Badge>
         )}
       </div>
 
       {isLoading ? (
         <div className="py-8">
           <LoadingState
-            title={isPolish ? 'Ładowanie alokacji docelowej' : 'Loading target allocation'}
-            description={isPolish
-              ? 'Wyliczanie wag docelowych, bieżącego odchylenia i sugestii rebalansowania przez kolejne wpłaty.'
-              : 'Resolving configured weights, current drift and contribution-first rebalance suggestions.'}
+            title={t('dashboardSections.loadingTargetAllocation')}
+            description={t('dashboardSections.loadingTargetDescription')}
             variant="inline"
             blocks={2}
           />
         </div>
       ) : isError ? (
         <ErrorState
-          title={isPolish ? 'Odchylenie od celu niedostępne' : 'Target drift unavailable'}
-          description={isPolish
-            ? 'Pulpit nie mógł wczytać odchylenia alokacji. Spróbuj ponownie albo sprawdź alokację w Ustawieniach.'
-            : 'The dashboard could not load allocation drift. Retry now or review allocation health in Settings.'}
+          title={t('dashboardSections.targetDriftUnavailable')}
+          description={t('dashboardSections.targetDriftErrorDescription')}
           onRetry={onRetry}
           className="border-0 bg-transparent px-0 py-8"
         />
       ) : !allocation?.configured ? (
         <StatePanel
-          eyebrow={isPolish ? 'Strategia' : 'Strategy'}
-          title={isPolish ? 'Brak skonfigurowanej alokacji docelowej' : 'No target allocation configured'}
-          description={isPolish
-            ? 'Ustaw wagi docelowe, aby odblokować diagnostykę odchyleń, sugestie rebalansowania i benchmark alokacji docelowej.'
-            : 'Set target weights to unlock drift diagnostics, rebalance suggestions and the target-mix benchmark.'}
+          eyebrow={t('dashboardSections.strategyEyebrow')}
+          title={t('dashboardSections.noTargetTitle')}
+          description={t('dashboardSections.noTargetDescription')}
           className="border-0 bg-transparent px-0 py-8"
         />
       ) : (
@@ -298,21 +269,19 @@ export function DashboardTargetDriftCard({
                   : isPolish
                     ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu.`
                     : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target.`
-                : isPolish
-                  ? 'Koszyki są zgodne ze skonfigurowaną alokacją.'
-                  : 'Target buckets are aligned with the configured mix.'}
+                : t('dashboardSections.bucketsAligned')}
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              {isPolish ? 'Pasmo tolerancji' : 'Tolerance band'} ±{formatPercent(allocation.toleranceBandPctPoints, {
+              {t('dashboardSections.toleranceBand')} ±{formatPercent(allocation.toleranceBandPctPoints, {
                 maximumFractionDigits: 2,
                 suffix: ' pp',
-              })} · {allocation.breachedBucketCount} {isPolish ? 'poza zakresem' : 'outside band'}
+              })} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
             </p>
           </div>
 
           <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-zinc-500">{isPolish ? 'Największa luka' : 'Largest gap'}</dt>
+              <dt className="text-zinc-500">{t('dashboardSections.largestGap')}</dt>
               <dd className={`mt-1 font-medium ${gapTone(rebalanceBucket?.gapValuePln)}`}>
                 {rebalanceBucket ? formatSignedCurrencyPln(rebalanceBucket.gapValuePln) : formatSignedCurrencyPln(0)}
               </dd>
@@ -320,8 +289,8 @@ export function DashboardTargetDriftCard({
             <div>
               <dt className="text-zinc-500">
                 {allocation.recommendedAction === 'DEPLOY_EXISTING_CASH'
-                  ? (isPolish ? 'Dostępna gotówka' : 'Available cash')
-                  : (isPolish ? 'Kolejna wpłata' : 'Next contribution')}
+                  ? t('dashboardSections.availableCash')
+                  : t('dashboardSections.nextContribution')}
               </dt>
               <dd className="mt-1 font-medium text-zinc-100">
                 {allocation.recommendedAssetClass && Number(allocation.recommendedContributionPln) > 0
@@ -330,13 +299,11 @@ export function DashboardTargetDriftCard({
                       ? `${formatCurrencyPln(allocation.recommendedContributionPln)} gotówki -> ${labelAssetClass(allocation.recommendedAssetClass)}`
                       : `${formatCurrencyPln(allocation.recommendedContributionPln)} cash -> ${labelAssetClass(allocation.recommendedAssetClass)}`
                     : `${formatCurrencyPln(allocation.recommendedContributionPln)} -> ${labelAssetClass(allocation.recommendedAssetClass)}`
-                  : isPolish
-                    ? 'Brak potrzeby rebalansowania przez wpłatę'
-                    : 'No rebalance contribution needed'}
+                  : t('dashboardSections.noRebalanceNeeded')}
               </dd>
             </div>
             <div>
-              <dt className="text-zinc-500">{isPolish ? 'Pełny rebalance' : 'Full rebalance'}</dt>
+              <dt className="text-zinc-500">{t('dashboardSections.fullRebalance')}</dt>
               <dd className="mt-1 font-medium text-zinc-100">
                 {formatCurrencyPln(allocation.fullRebalanceBuyAmountPln)} / {formatCurrencyPln(allocation.fullRebalanceSellAmountPln)}
               </dd>
@@ -344,7 +311,7 @@ export function DashboardTargetDriftCard({
           </dl>
 
           <Link to="/settings#targets" className="inline-flex text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-100">
-            {isPolish ? 'Otwórz alokację docelową' : 'Open target allocation'}
+            {t('dashboardSections.openTargetAllocation')}
           </Link>
         </div>
       )}
@@ -353,10 +320,8 @@ export function DashboardTargetDriftCard({
 }
 
 export function DashboardDataQualityCard({
-  isPolish,
   summary,
 }: {
-  isPolish: boolean
   summary: PortfolioDataQualitySummary | null | undefined
 }) {
   if (!summary?.warningCount) {
@@ -366,7 +331,7 @@ export function DashboardDataQualityCard({
   return (
     <div className="rounded-xl border border-amber-500/20 bg-zinc-900 p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-amber-400">{isPolish ? 'Jakość danych' : 'Data quality'}</h3>
+        <h3 className="text-sm font-medium text-amber-400">{t('dashboardSections.dataQuality')}</h3>
         <Badge variant="warning">{summary.warningCount}</Badge>
       </div>
       <div className="space-y-3">
@@ -377,7 +342,7 @@ export function DashboardDataQualityCard({
         ))}
       </div>
       <Link to="/settings#data-quality" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
-        {isPolish ? 'Otwórz szczegóły jakości danych' : 'Open data quality details'}
+        {t('dashboardSections.openDataQuality')}
       </Link>
     </div>
   )
@@ -401,13 +366,11 @@ export function DashboardQuickStats({
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        label={isPolish ? 'Niezrealizowany zysk/strata' : 'Unrealized P/L'}
+        label={t('dashboardSections.unrealizedPL')}
         value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
         subtitle={hasMarketBackedCurrentValuation
           ? undefined
-          : isPolish
-            ? 'Wymaga pełnej wyceny rynkowej'
-            : 'Requires full market valuation'}
+          : t('dashboardSections.requiresMarketValuation')}
         change={hasMarketBackedCurrentValuation
           ? Number(overview.totalUnrealizedGainPln) > 0
             ? 'positive'
@@ -417,17 +380,17 @@ export function DashboardQuickStats({
           : undefined}
       />
       <StatCard
-        label={isPolish ? 'Wpłaty netto' : 'Net Contributions'}
+        label={t('dashboardSections.netContributions')}
         value={formatCurrencyPln(overview.netContributionsPln)}
         subtitle={contributionBreakdownSubtitle}
       />
       <StatCard
-        label={isPolish ? 'Saldo gotówki' : 'Cash Balance'}
+        label={t('dashboardSections.cashBalance')}
         value={formatCurrencyPln(overview.cashBalancePln)}
         subtitle={cashBreakdownSubtitle}
       />
       <StatCard
-        label={isPolish ? 'Podstawa wyceny' : 'Valuation basis'}
+        label={t('dashboardSections.valuationBasis')}
         value={labelPortfolioValuationBasis(valuationState, isPolish)}
         subtitle={describePortfolioValuationBasis(overview, isPolish)}
       />
@@ -489,32 +452,17 @@ function allocationActionVariant(action: string) {
   }
 }
 
-function labelAllocationAction(action: string, isPolish: boolean) {
-  if (isPolish) {
-    switch (action) {
-      case 'WITHIN_TOLERANCE':
-        return 'W tolerancji'
-      case 'DEPLOY_EXISTING_CASH':
-        return 'Wykorzystaj gotówkę'
-      case 'WAIT_FOR_NEXT_CONTRIBUTION':
-        return 'Poczekaj na kolejną wpłatę'
-      case 'FULL_REBALANCE':
-        return 'Pełny rebalancing'
-      default:
-        return 'Brak konfiguracji'
-    }
-  }
-
+function labelAllocationAction(action: string, _isPolish: boolean) {
   switch (action) {
     case 'WITHIN_TOLERANCE':
-      return 'Within tolerance'
+      return t('dashboardSections.withinTolerance')
     case 'DEPLOY_EXISTING_CASH':
-      return 'Deploy cash'
+      return t('dashboardSections.deployCash')
     case 'WAIT_FOR_NEXT_CONTRIBUTION':
-      return 'Wait for contribution'
+      return t('dashboardSections.waitForContribution')
     case 'FULL_REBALANCE':
-      return 'Full rebalance'
+      return t('dashboardSections.fullRebalanceAction')
     default:
-      return 'Not configured'
+      return t('dashboardSections.notConfiguredAction')
   }
 }

@@ -2,6 +2,7 @@ import type { PortfolioHolding } from '../../api/read-model'
 import type { Instrument } from '../../api/write-model'
 import { getActiveUiLanguage } from '../../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
+import { t } from '../../lib/messages'
 import { parsePortfolioNumber } from '../../lib/portfolio-presentation'
 import { badgeVariants } from '../../lib/styles'
 import { isMarketValuedStatus } from '../../lib/valuation'
@@ -150,16 +151,16 @@ export function statusVariant(status: InstrumentRow['status']) {
   }
 }
 
-export function labelInstrumentStatus(status: InstrumentRow['status'], isPolish: boolean) {
+export function labelInstrumentStatus(status: InstrumentRow['status'], _isPolish?: boolean) {
   switch (status) {
     case 'VALUED':
-      return isPolish ? 'Pełna wycena' : 'Active'
+      return t('instrumentModel.valued')
     case 'STALE':
-      return isPolish ? 'Wycena z opóźnieniem' : 'Stale'
+      return t('instrumentModel.stale')
     case 'DEGRADED':
-      return isPolish ? 'Wycena niepełna' : 'Degraded'
+      return t('instrumentModel.degraded')
     case 'CATALOG_ONLY':
-      return isPolish ? 'Tylko w katalogu' : 'Catalog'
+      return t('instrumentModel.catalogOnly')
   }
 }
 
