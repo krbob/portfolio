@@ -133,7 +133,7 @@ class PortfolioTransferService(
                 instrumentCount = prepared.instruments.size,
                 targetCount = prepared.targetPlan.appliedCount,
                 transactionCount = prepared.transactions.size,
-                importProfileCount = prepared.importProfilesPlan.appliedCount
+                importProfileCount = prepared.importProfilesPlan.importedCount
             )
         }
         auditLogService.record(
@@ -473,7 +473,10 @@ class PortfolioTransferService(
         }
 
         issues += duplicateImportProfileNameIssues(finalProfiles)
-        return PreparedImportProfilesPlan.ReplaceAll(finalProfiles)
+        return PreparedImportProfilesPlan.ReplaceAll(
+            profiles = finalProfiles,
+            importedCount = snapshotProfiles.size
+        )
     }
 
     private fun duplicateImportProfileNameIssues(
@@ -557,15 +560,16 @@ class PortfolioTransferService(
     }
 
     private sealed interface PreparedImportProfilesPlan {
-        val appliedCount: Int
+        val importedCount: Int
 
         data object Preserve : PreparedImportProfilesPlan {
-            override val appliedCount: Int = 0
+            override val importedCount: Int = 0
         }
 
-        data class ReplaceAll(val profiles: List<TransactionImportProfile>) : PreparedImportProfilesPlan {
-            override val appliedCount: Int = profiles.size
-        }
+        data class ReplaceAll(
+            val profiles: List<TransactionImportProfile>,
+            override val importedCount: Int
+        ) : PreparedImportProfilesPlan
     }
 
     private fun duplicateIdIssues(entityName: String, ids: List<String>): List<PortfolioImportIssue> = ids

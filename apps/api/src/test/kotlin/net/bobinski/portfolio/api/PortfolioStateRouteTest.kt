@@ -11,6 +11,7 @@ import io.ktor.server.testing.testApplication
 import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -240,6 +241,87 @@ class PortfolioStateRouteTest {
     }
 
     @Test
+    fun `merge import replaces targets when snapshot includes the targets section`() = testApplication {
+        application {
+            module()
+        }
+
+        createTargets(
+            """
+            {
+              "items": [
+                { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                { "assetClass": "BONDS", "targetWeight": "0.20" }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        val requestBody =
+            """
+            {
+              "mode": "MERGE",
+              "snapshot": {
+                "schemaVersion": 4,
+                "exportedAt": "2026-03-20T12:00:00Z",
+                "accounts": [],
+                "appPreferences": [],
+                "instruments": [],
+                "targets": [
+                  {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "assetClass": "EQUITIES",
+                    "targetWeight": "0.60",
+                    "createdAt": "2026-03-20T12:00:00Z",
+                    "updatedAt": "2026-03-20T12:00:00Z"
+                  },
+                  {
+                    "id": "22222222-2222-2222-2222-222222222222",
+                    "assetClass": "CASH",
+                    "targetWeight": "0.40",
+                    "createdAt": "2026-03-20T12:00:00Z",
+                    "updatedAt": "2026-03-20T12:00:00Z"
+                  }
+                ],
+                "importProfiles": [],
+                "transactions": []
+              }
+            }
+            """.trimIndent()
+        val previewResponse = client.post("/v1/portfolio/state/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val targetsResponse = client.get("/v1/portfolio/targets")
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+        val targetsBody = targetsResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status, previewBody)
+        assertTrue(previewBody.contains("\"isValid\": true"), previewBody)
+        assertTrue(previewBody.contains("\"code\": \"TARGETS_SECTION_REPLACED\""), previewBody)
+        assertTrue(previewBody.contains("\"createdCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"updatedCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"deletedCount\": 1"), previewBody)
+        assertTrue(previewBody.contains("\"sectionSkipped\": false"), previewBody)
+        assertEquals(HttpStatusCode.OK, importResponse.status, importBody)
+        assertTrue(importBody.contains("\"targetCount\": 2"), importBody)
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"EQUITIES\"[\\s\\S]*?\"targetWeight\":\\s*\"0\\.6(?:0+)?\"").containsMatchIn(targetsBody),
+            targetsBody
+        )
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"CASH\"[\\s\\S]*?\"targetWeight\":\\s*\"0\\.4(?:0+)?\"").containsMatchIn(targetsBody),
+            targetsBody
+        )
+        assertFalse(targetsBody.contains("\"assetClass\": \"BONDS\""), targetsBody)
+    }
+
+    @Test
     fun `portfolio state preview rejects duplicate target asset classes`() = testApplication {
         application {
             module()
@@ -353,6 +435,38 @@ class PortfolioStateRouteTest {
         assertTrue(previewBody.contains("Interactive Brokers CSV"), previewBody)
         assertEquals(HttpStatusCode.BadRequest, importResponse.status)
         assertTrue(importBody.contains("Interactive Brokers CSV"), importBody)
+    }
+
+    @Test
+    fun `merge import reports only incoming import profiles in the result count`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount(name = "Primary")
+        createImportProfile(accountId, name = "Primary CSV")
+        val exportedSnapshot = client.get("/v1/portfolio/state/export").bodyAsText()
+        createImportProfile(accountId, name = "Secondary CSV")
+
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "mode": "MERGE",
+                  "snapshot": $exportedSnapshot
+                }
+                """.trimIndent()
+            )
+        }
+        val importProfilesResponse = client.get("/v1/transactions/import/profiles")
+        val importBody = importResponse.bodyAsText()
+        val importProfilesBody = importProfilesResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, importResponse.status, importBody)
+        assertTrue(importBody.contains("\"importProfileCount\": 1"), importBody)
+        assertTrue(importProfilesBody.contains("\"name\": \"Primary CSV\""), importProfilesBody)
+        assertTrue(importProfilesBody.contains("\"name\": \"Secondary CSV\""), importProfilesBody)
     }
 
     @Test
@@ -671,13 +785,16 @@ class PortfolioStateRouteTest {
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
-    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createImportProfile(accountId: String) {
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createImportProfile(
+        accountId: String,
+        name: String = "Interactive Brokers CSV"
+    ) {
         val response = client.post("/v1/transactions/import/profiles") {
             contentType(ContentType.Application.Json)
             setBody(
                 """
                 {
-                  "name": "Interactive Brokers CSV",
+                  "name": "$name",
                   "description": "Primary import profile",
                   "delimiter": "COMMA",
                   "dateFormat": "ISO_LOCAL_DATE",
