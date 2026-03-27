@@ -1381,7 +1381,7 @@ export function TransactionJournal({
                 ) : null}
                 {transaction.fxRateToPln ? (
                   <span className={`${badge} bg-zinc-800 text-zinc-400`}>
-                    fx {formatNumber(transaction.fxRateToPln, { maximumFractionDigits: 6 })}
+                    fx {formatNumber(transaction.fxRateToPln, { maximumFractionDigits: 6, minimumFractionDigits: 0 })}
                   </span>
                 ) : null}
               </div>

@@ -7,6 +7,7 @@ import { getActiveLocaleTag } from './i18n'
 const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
 const numberFormatterCache = new Map<string, Intl.NumberFormat>()
 const fixedNumberFormatterCache = new Map<string, Intl.NumberFormat>()
+const rangeNumberFormatterCache = new Map<string, Intl.NumberFormat>()
 const dateFormatterCache = new Map<string, Intl.DateTimeFormat>()
 const dateTimeFormatterCache = new Map<string, Intl.DateTimeFormat>()
 const monthFormatterCache = new Map<string, Intl.DateTimeFormat>()
@@ -88,11 +89,15 @@ export function formatSignedCurrencyPln(value: string | number | null | undefine
 
 export function formatNumber(
   value: string | number | null | undefined,
-  options: { maximumFractionDigits?: number } = {},
+  options: { maximumFractionDigits?: number; minimumFractionDigits?: number } = {},
 ) {
   const amount = toNumber(value)
   if (amount == null || Number.isNaN(amount)) {
     return activeUnavailableLabel()
+  }
+
+  if (options.minimumFractionDigits != null && options.maximumFractionDigits != null) {
+    return rangeNumberFormatter(options.minimumFractionDigits, options.maximumFractionDigits).format(amount)
   }
 
   if (options.maximumFractionDigits != null) {
@@ -229,6 +234,20 @@ function fixedNumberFormatter(maximumFractionDigits: number) {
     )
   }
   return fixedNumberFormatterCache.get(cacheKey)!
+}
+
+function rangeNumberFormatter(minimumFractionDigits: number, maximumFractionDigits: number) {
+  const cacheKey = `${getActiveLocaleTag()}::${minimumFractionDigits}:${maximumFractionDigits}`
+  if (!rangeNumberFormatterCache.has(cacheKey)) {
+    rangeNumberFormatterCache.set(
+      cacheKey,
+      new Intl.NumberFormat(getActiveLocaleTag(), {
+        minimumFractionDigits,
+        maximumFractionDigits,
+      }),
+    )
+  }
+  return rangeNumberFormatterCache.get(cacheKey)!
 }
 
 function dateFormatter() {
