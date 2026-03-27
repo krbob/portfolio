@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LineSeries, type IChartApi, type ISeriesApi, type SeriesType } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
+import { orderAvailableBenchmarkKeys } from '../../lib/benchmarks'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
 import { filterInput } from '../../lib/styles'
@@ -49,16 +50,7 @@ export function BenchmarkChart({
         }
       }
     }
-    const defaultOrder = ['VWRA', 'V80A', 'V60A', 'V40A', 'V20A', 'CUSTOM', 'INFLATION', 'TARGET_MIX']
-    const preferred = benchmarkOrder?.length ? benchmarkOrder : defaultOrder
-    const ordered = preferred.filter((key) => keysWithData.has(key))
-    if (benchmarkOrder?.length) {
-      return ordered
-    }
-    const remaining = [...keysWithData]
-      .filter((key) => !preferred.includes(key))
-      .sort()
-    return [...ordered, ...remaining]
+    return orderAvailableBenchmarkKeys(keysWithData, benchmarkOrder)
   }, [benchmarkOrder, points])
 
   const [selected, setSelected] = useState<string | null>(null)

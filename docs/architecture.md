@@ -21,6 +21,8 @@ Transactions are canonical. Daily snapshots are cacheable read models that can b
 - historical FX rates
 - historical EDO valuations
 
+Separately from read-model snapshots, the runtime also persists last-known-good market-data snapshots for quotes, benchmark/reference series, and inflation. Those snapshots are not a source of truth; they are a resilience layer that lets the product surface `STALE` or degraded values when upstreams fail temporarily.
+
 ## Runtime modes
 
 The product ships with a small set of explicit compose modes instead of ad-hoc shell overrides:
@@ -79,6 +81,7 @@ The verification strategy is split across unit, UI, and runtime levels:
 
 - backend tests cover domain and API behavior through Gradle
 - web tests cover screen-level flows, shared presentation helpers, formatting, and label mappings through Vitest
+- web tests also include route-level smoke coverage for the main user flow (`Dashboard -> Accounts -> Instruments -> Transactions -> Holdings -> Performance`)
 - PR CI runs the fast, deterministic path: API tests, ESLint, web tests/build, generated API-client sync, and SQLite Docker smoke
 - `main` CI additionally runs the self-hosted market-data smoke test before publishing images
 - the remote market-data smoke test stays manual because it requires deployment-specific upstreams
@@ -87,7 +90,8 @@ The verification strategy is split across unit, UI, and runtime levels:
 
 - keep transactions as the canonical source of truth
 - persist rebuildable read-model cache snapshots for heavy analytical endpoints
+- persist last-known-good market-data snapshots separately from read-model cache entries
 - isolate pure portfolio calculations from HTTP/persistence concerns in `portfolio-domain`
 - keep `health`, `meta`, and auth session bootstrap routes public while protecting the rest of the API surface when auth is enabled
 - keep the SQLite deployment path simple: one app stack, one DB volume, one backup volume
-- keep background refresh and data-quality diagnostics explicit rather than hiding stale/degraded data behind silently cached reads
+- keep background refresh and data-quality diagnostics explicit; cached market-data fallback must surface as `STALE` or degraded coverage rather than pretending live freshness

@@ -20,6 +20,7 @@ It is designed around a simple product stance:
 - EDO valuation and inflation via `edo-calculator`
 - ETF, FX, and benchmark history via `stock-analyst`
 - optional spot gold history via `gold-api`, with `GC=F` fallback when no gold API key is configured or spot history is temporarily unavailable
+- last-known-good market-data snapshots for quotes, history, benchmarks, and inflation, surfaced as `STALE` or degraded coverage when live upstreams fail
 - server backups, restore, canonical export/import, audit trail, and read-model cache diagnostics
 - optional single-user password auth
 - background refresh for heavy read models
@@ -116,6 +117,8 @@ Depending on ticker, FX, and CPI coverage exposed by the published upstream imag
 
 That is expected for this mode. The self-hosted smoke test verifies both the fully valued path and the partial-coverage fallback.
 
+On ARM hosts, the upstream market-data images currently default to `linux/amd64` in [docker-compose.market-data.self-hosted.yml](./docker-compose.market-data.self-hosted.yml). That keeps behavior explicit instead of relying on Docker warnings. If those upstreams publish multi-arch images later, override or remove `PORTFOLIO_MARKET_DATA_PLATFORM`.
+
 ### 4. Run the full self-hosted stack from published images
 
 If you want `portfolio` together with its market-data dependencies, use the example stack:
@@ -189,6 +192,8 @@ docker compose up -d
 ```
 
 That removes the named Docker volumes used by the app stack.
+
+For routine operations, smoke checks, backup/restore steps, and auth guardrails, see [docs/runbook.md](./docs/runbook.md).
 
 ## Runtime model
 
@@ -288,6 +293,7 @@ The API can pre-warm heavy read models such as:
 This keeps first-open latency lower on self-hosted installs.
 
 The scheduler is opt-in and does not turn the cache into a second source of truth.
+When live market-data upstreams fail, the app can fall back to persisted last-known-good snapshots, but those values remain visible to the user as `STALE` or degraded coverage.
 
 ## API contracts
 
@@ -342,7 +348,7 @@ sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
 
 CI coverage is intentionally split by cost and determinism:
 
-- pull requests run API tests, web tests, web build, OpenAPI client sync verification, and the SQLite Docker smoke test
+- pull requests run API tests, web tests, route-level UI smoke, web build, OpenAPI client sync verification, and the SQLite Docker smoke test
 - pushes to `main` additionally run the self-hosted market-data smoke test before publishing container images
 - the remote market-data smoke test remains manual because it depends on environment-specific upstream URLs and optional external API credentials
 
@@ -350,6 +356,7 @@ CI coverage is intentionally split by cost and determinism:
 
 - [docs/architecture.md](./docs/architecture.md)
 - [docs/domain-model.md](./docs/domain-model.md)
+- [docs/runbook.md](./docs/runbook.md)
 - [docs/roadmap.md](./docs/roadmap.md)
 - [stock-analyst](https://github.com/krbob/stock-analyst)
 - [edo-calculator](https://github.com/krbob/edo-calculator)

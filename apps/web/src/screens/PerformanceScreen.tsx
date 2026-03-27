@@ -4,6 +4,7 @@ import { EmptyState, ErrorState, LoadingState, StatCard, TabBar } from '../compo
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { usePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
+import { resolveBenchmarkOrder } from '../lib/benchmarks'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
@@ -35,25 +36,7 @@ export function PerformanceScreen() {
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
   const returnsDisplayAvailable = isMarketValuationState(historyQuery.data?.valuationState)
-  const benchmarkOrder = useMemo(() => {
-    const settings = benchmarkSettingsQuery.data
-    const defaultOrder = ['VWRA', 'V80A', 'V60A', 'V40A', 'V20A', 'CUSTOM', 'INFLATION', 'TARGET_MIX']
-
-    if (!settings) {
-      return defaultOrder
-    }
-
-    const optionOrder = settings.options.map((option) => option.key)
-    const enabledKeys = settings.enabledKeys.length > 0 ? settings.enabledKeys : optionOrder
-    const enabledSet = new Set(enabledKeys)
-    const orderedPinned = settings.pinnedKeys.filter((key) => enabledSet.has(key))
-    const remainingOptionKeys = optionOrder.filter((key) => enabledSet.has(key) && !orderedPinned.includes(key))
-    const remainingKnownDefaults = defaultOrder.filter(
-      (key) => enabledSet.has(key) && !orderedPinned.includes(key) && !remainingOptionKeys.includes(key),
-    )
-
-    return [...orderedPinned, ...remainingOptionKeys, ...remainingKnownDefaults]
-  }, [benchmarkSettingsQuery.data])
+  const benchmarkOrder = useMemo(() => resolveBenchmarkOrder(benchmarkSettingsQuery.data), [benchmarkSettingsQuery.data])
   const customBenchmarkLabel = benchmarkSettingsQuery.data?.customLabel ?? undefined
 
   const series = seriesForUnit(unit)
