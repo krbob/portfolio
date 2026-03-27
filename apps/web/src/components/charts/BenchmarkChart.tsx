@@ -1,22 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
-import { LineSeries, type IChartApi } from 'lightweight-charts'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { LineSeries, type IChartApi, type ISeriesApi, type SeriesType } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
 import { filterInput } from '../../lib/styles'
 import { t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
-
-const BENCHMARK_COLORS: Record<string, string> = {
-  VWRA: chartPalette.vwra,
-  INFLATION: chartPalette.inflation,
-  TARGET_MIX: chartPalette.targetMix,
-  V80A: '#8b5cf6',
-  V60A: '#a78bfa',
-  V40A: '#c4b5fd',
-  V20A: '#ddd6fe',
-  CUSTOM: '#f472b6',
-}
 
 const BENCHMARK_LABELS: Record<string, { pl: string; en: string }> = {
   VWRA: { pl: 'VWRA (akcje globalne)', en: 'VWRA (global equity)' },
@@ -29,7 +18,7 @@ const BENCHMARK_LABELS: Record<string, { pl: string; en: string }> = {
   CUSTOM: { pl: 'Własny benchmark', en: 'Custom benchmark' },
 }
 
-const DEFAULT_BENCHMARK_COLOR = '#a1a1aa'
+const BENCHMARK_LINE_COLOR = '#a1a1aa' // zinc-400 — stable color for all benchmarks
 
 interface BenchmarkChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -47,6 +36,8 @@ export function BenchmarkChart({
   benchmarkOrder,
 }: BenchmarkChartProps) {
   const { isPolish } = useI18n()
+  const benchmarkSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
+  const chartRef = useRef<IChartApi | null>(null)
 
   const availableKeys = useMemo(() => {
     if (points.length === 0) return []
@@ -73,14 +64,16 @@ export function BenchmarkChart({
   const [selected, setSelected] = useState<string | null>(null)
   const activeKey = selected != null && availableKeys.includes(selected) ? selected : availableKeys[0] ?? 'VWRA'
 
-  const color = BENCHMARK_COLORS[activeKey] ?? DEFAULT_BENCHMARK_COLOR
   const label = BENCHMARK_LABELS[activeKey]
   const displayLabel = activeKey === 'CUSTOM' && customBenchmarkLabel
     ? customBenchmarkLabel
     : label ? (isPolish ? label.pl : label.en) : activeKey
 
+  // Initial chart setup — only depends on points (not activeKey)
   const onChart = useCallback(
     (chart: IChartApi) => {
+      chartRef.current = chart
+
       chart.addSeries(LineSeries, {
         color: chartPalette.portfolio,
         lineWidth: 3,
@@ -91,21 +84,36 @@ export function BenchmarkChart({
           .map((p) => ({ time: p.date, value: Number(p.portfolioPerformanceIndex) })),
       )
 
-      chart.addSeries(LineSeries, {
-        color,
+      const benchmarkSeries = chart.addSeries(LineSeries, {
+        color: BENCHMARK_LINE_COLOR,
         lineWidth: 2,
         lineStyle: 2,
         priceFormat: benchmarkPriceFormat,
-      }).setData(
-        points
-          .filter((p) => p.benchmarkIndices?.[activeKey] != null)
-          .map((p) => ({ time: p.date, value: Number(p.benchmarkIndices![activeKey]) })),
-      )
+      })
+      benchmarkSeriesRef.current = benchmarkSeries
 
       chart.timeScale().fitContent()
+
+      return () => {
+        chartRef.current = null
+        benchmarkSeriesRef.current = null
+      }
     },
-    [points, activeKey, color],
+    [points],
   )
+
+  // Update benchmark series data when activeKey changes — no chart remount
+  useEffect(() => {
+    const series = benchmarkSeriesRef.current
+    if (!series) return
+
+    series.setData(
+      points
+        .filter((p) => p.benchmarkIndices?.[activeKey] != null)
+        .map((p) => ({ time: p.date, value: Number(p.benchmarkIndices![activeKey]) })),
+    )
+    chartRef.current?.timeScale().fitContent()
+  }, [activeKey, points])
 
   return (
     <ChartContainer
@@ -115,7 +123,7 @@ export function BenchmarkChart({
       legend={
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <ChartLegendItem color={chartPalette.portfolio} label={t('benchmark.portfolio')} />
-          <ChartLegendItem color={color} label={displayLabel} dashed />
+          <ChartLegendItem color={BENCHMARK_LINE_COLOR} label={displayLabel} dashed />
           {availableKeys.length > 1 && (
             <select
               className={`${filterInput} ml-auto`}

@@ -270,13 +270,13 @@ export function InstrumentsSection() {
               <span className={labelClass}>{t('instruments.firstPeriodRate')}</span>
               <input
                 className={input}
-                type="number"
-                step={10}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={form.firstPeriodRateBps}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    firstPeriodRateBps: event.target.value,
+                    firstPeriodRateBps: event.target.value.replace(/\D/g, ''),
                   }))
                 }
                 required
@@ -287,11 +287,11 @@ export function InstrumentsSection() {
               <span className={labelClass}>{t('instruments.margin')}</span>
               <input
                 className={input}
-                type="number"
-                step={10}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={form.marginBps}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, marginBps: event.target.value }))
+                  setForm((current) => ({ ...current, marginBps: event.target.value.replace(/\D/g, '') }))
                 }
                 required
               />

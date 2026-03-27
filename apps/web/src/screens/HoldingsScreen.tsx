@@ -429,7 +429,7 @@ export function HoldingsScreen() {
                     <p className="text-sm tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                     {lot.currentRatePercent && (
                       <p className="text-xs text-zinc-400">
-                        {t('holdings.rate')}: {lot.currentRatePercent}%
+                        {t('holdings.rate')}: {formatNumber(lot.currentRatePercent, { maximumFractionDigits: 2 })}%
                       </p>
                     )}
                   </div>

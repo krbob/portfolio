@@ -1,6 +1,6 @@
 import type { PortfolioHolding } from '../../api/read-model'
 import { Card } from '../../components/ui'
-import { formatCurrencyPln, formatDate } from '../../lib/format'
+import { formatCurrencyPln, formatDate, formatNumber } from '../../lib/format'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
 import { t } from '../../lib/messages'
 import {
@@ -97,7 +97,7 @@ export function InstrumentDetailsCard({
               {t('instrumentDetails.firstPeriodRate')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
-              {(row.instrument.edoTerms.firstPeriodRateBps / 100).toFixed(2)}%
+              {formatNumber(row.instrument.edoTerms.firstPeriodRateBps / 100, { maximumFractionDigits: 2 })}%
             </p>
           </div>
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
@@ -105,7 +105,7 @@ export function InstrumentDetailsCard({
               {t('instrumentDetails.margin')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
-              {(row.instrument.edoTerms.marginBps / 100).toFixed(2)}%
+              {formatNumber(row.instrument.edoTerms.marginBps / 100, { maximumFractionDigits: 2 })}%
             </p>
           </div>
         </div>
@@ -172,7 +172,7 @@ export function InstrumentDetailsCard({
                   </p>
                   {lot.currentRatePercent && (
                     <p className="text-xs text-zinc-400">
-                      {t('instrumentDetails.rate')}: {lot.currentRatePercent}%
+                      {t('instrumentDetails.rate')}: {formatNumber(lot.currentRatePercent, { maximumFractionDigits: 2 })}%
                     </p>
                   )}
                 </div>
