@@ -43,6 +43,13 @@ const samplePoints: PortfolioDailyHistoryPoint[] = [
   },
 ]
 
+const orderedPoints: PortfolioDailyHistoryPoint[] = [
+  {
+    ...samplePoints[0],
+    benchmarkIndices: { VWRA: '100.00', CUSTOM: '99.50', TARGET_MIX: '100.20' },
+  },
+]
+
 describe('BenchmarkChart', () => {
   afterEach(() => cleanup())
 
@@ -77,5 +84,24 @@ describe('BenchmarkChart', () => {
     await user.selectOptions(select, 'INFLATION')
 
     expect(select.value).toBe('INFLATION')
+  })
+
+  it('prefers the configured order and custom label when provided', () => {
+    setLanguage('pl')
+
+    render(
+      <I18nProvider>
+        <BenchmarkChart
+          points={orderedPoints}
+          benchmarkOrder={['CUSTOM', 'VWRA']}
+          customBenchmarkLabel="Europa 600"
+        />
+      </I18nProvider>,
+    )
+
+    const select = screen.getByLabelText('Wybierz benchmark') as HTMLSelectElement
+    expect(select.value).toBe('CUSTOM')
+    expect(screen.getByRole('option', { name: 'Europa 600' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /miks docelowy/i })).not.toBeInTheDocument()
   })
 })

@@ -27,6 +27,8 @@ export function ChartsTab({
   unit,
   onUnitChange,
   series,
+  benchmarkOrder,
+  customBenchmarkLabel,
 }: {
   historyQuery: ReturnType<typeof usePortfolioDailyHistory>
   points: PortfolioDailyHistoryPoint[]
@@ -35,6 +37,8 @@ export function ChartsTab({
   unit: Unit
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
+  benchmarkOrder: string[]
+  customBenchmarkLabel?: string
 }) {
   const { isPolish } = useI18n()
 
@@ -109,7 +113,11 @@ export function ChartsTab({
       </div>
 
       <div className={card}>
-        <BenchmarkChart points={points} />
+        <BenchmarkChart
+          points={points}
+          benchmarkOrder={benchmarkOrder}
+          customBenchmarkLabel={customBenchmarkLabel}
+        />
       </div>
     </div>
   )

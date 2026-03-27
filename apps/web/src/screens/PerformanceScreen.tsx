@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, TabBar } from '../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
+import { usePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
@@ -27,12 +28,33 @@ export function PerformanceScreen() {
 
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
+  const benchmarkSettingsQuery = usePortfolioBenchmarkSettings()
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
   const returnsDisplayAvailable = isMarketValuationState(historyQuery.data?.valuationState)
+  const benchmarkOrder = useMemo(() => {
+    const settings = benchmarkSettingsQuery.data
+    const defaultOrder = ['VWRA', 'V80A', 'V60A', 'V40A', 'V20A', 'CUSTOM', 'INFLATION', 'TARGET_MIX']
+
+    if (!settings) {
+      return defaultOrder
+    }
+
+    const optionOrder = settings.options.map((option) => option.key)
+    const enabledKeys = settings.enabledKeys.length > 0 ? settings.enabledKeys : optionOrder
+    const enabledSet = new Set(enabledKeys)
+    const orderedPinned = settings.pinnedKeys.filter((key) => enabledSet.has(key))
+    const remainingOptionKeys = optionOrder.filter((key) => enabledSet.has(key) && !orderedPinned.includes(key))
+    const remainingKnownDefaults = defaultOrder.filter(
+      (key) => enabledSet.has(key) && !orderedPinned.includes(key) && !remainingOptionKeys.includes(key),
+    )
+
+    return [...orderedPinned, ...remainingOptionKeys, ...remainingKnownDefaults]
+  }, [benchmarkSettingsQuery.data])
+  const customBenchmarkLabel = benchmarkSettingsQuery.data?.customLabel ?? undefined
 
   const series = seriesForUnit(unit)
 
@@ -44,7 +66,7 @@ export function PerformanceScreen() {
   const hasReturns = allPeriods.length > 0
 
   function handleRetry() {
-    void Promise.all([historyQuery.refetch(), returnsQuery.refetch()])
+    void Promise.all([historyQuery.refetch(), returnsQuery.refetch(), benchmarkSettingsQuery.refetch()])
   }
 
   if ((historyQuery.isLoading || returnsQuery.isLoading) && !hasHistory && !hasReturns) {
@@ -144,6 +166,8 @@ export function PerformanceScreen() {
               unit={unit}
               onUnitChange={setUnit}
               series={series}
+              benchmarkOrder={benchmarkOrder}
+              customBenchmarkLabel={customBenchmarkLabel}
             />
           </section>
         ) : (

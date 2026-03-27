@@ -35,11 +35,17 @@ interface BenchmarkChartProps {
   points: PortfolioDailyHistoryPoint[]
   height?: number
   customBenchmarkLabel?: string
+  benchmarkOrder?: string[]
 }
 
 const benchmarkPriceFormat = { type: 'price' as const, minMove: 0.01, precision: 2 }
 
-export function BenchmarkChart({ points, height = 300, customBenchmarkLabel }: BenchmarkChartProps) {
+export function BenchmarkChart({
+  points,
+  height = 300,
+  customBenchmarkLabel,
+  benchmarkOrder,
+}: BenchmarkChartProps) {
   const { isPolish } = useI18n()
 
   const availableKeys = useMemo(() => {
@@ -52,9 +58,17 @@ export function BenchmarkChart({ points, height = 300, customBenchmarkLabel }: B
         }
       }
     }
-    const preferred = ['VWRA', 'V80A', 'V60A', 'V40A', 'V20A', 'CUSTOM', 'INFLATION', 'TARGET_MIX']
-    return preferred.filter((k) => keysWithData.has(k))
-  }, [points])
+    const defaultOrder = ['VWRA', 'V80A', 'V60A', 'V40A', 'V20A', 'CUSTOM', 'INFLATION', 'TARGET_MIX']
+    const preferred = benchmarkOrder?.length ? benchmarkOrder : defaultOrder
+    const ordered = preferred.filter((key) => keysWithData.has(key))
+    if (benchmarkOrder?.length) {
+      return ordered
+    }
+    const remaining = [...keysWithData]
+      .filter((key) => !preferred.includes(key))
+      .sort()
+    return [...ordered, ...remaining]
+  }, [benchmarkOrder, points])
 
   const [selected, setSelected] = useState<string | null>(null)
   const activeKey = selected != null && availableKeys.includes(selected) ? selected : availableKeys[0] ?? 'VWRA'

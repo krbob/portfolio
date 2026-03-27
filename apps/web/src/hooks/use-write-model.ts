@@ -289,6 +289,7 @@ export function useSavePortfolioBenchmarkSettings() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['portfolio-benchmark-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),

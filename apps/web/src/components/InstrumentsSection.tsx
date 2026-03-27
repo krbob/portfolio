@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useCreateInstrument, useUpdateInstrument, useInstruments } from '../hooks/use-write-model'
+import { buildEdoSeriesName, edoYearOptions } from '../lib/edo-series'
 import { getActiveUiLanguage } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
@@ -22,27 +23,6 @@ const MONTHS = [
   { value: '11', pl: 'Listopad', en: 'November' },
   { value: '12', pl: 'Grudzień', en: 'December' },
 ] as const
-
-function edoYearOptions(existingYear?: number): string[] {
-  const currentYear = new Date().getFullYear()
-  const minYear = Math.min(currentYear - 5, existingYear ?? currentYear)
-  const maxYear = currentYear + 1
-  const years: string[] = []
-  for (let y = minYear; y <= maxYear; y++) {
-    years.push(String(y))
-  }
-  return years
-}
-
-function buildEdoSeriesName(seriesMonth: string): string {
-  const [yearString, monthString] = seriesMonth.split('-')
-  const year = Number(yearString)
-  const month = Number(monthString)
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    return 'EDO'
-  }
-  return `EDO${String(month).padStart(2, '0')}${String((year + 10) % 100).padStart(2, '0')}`
-}
 
 const initialForm = {
   name: '',
