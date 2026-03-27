@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { ImportAuditPanel } from '../../components/ImportAuditPanel'
 import { useI18n } from '../../lib/i18n'
 import { labelImportRowStatus } from '../../lib/labels'
+import { t } from '../../lib/messages'
 import {
   badge,
   btnPrimary,
@@ -48,23 +49,23 @@ function ImportPreviewPanel({
     <div className="mt-6">
       <div className="grid grid-cols-2 gap-3 mb-3 lg:grid-cols-5">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Wszystkie wiersze' : 'Total rows'}</span>
+          <span className="text-xs text-zinc-500">{t('import.totalRows')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.totalRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Do importu' : 'Importable'}</span>
+          <span className="text-xs text-zinc-500">{t('import.importable')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.importableRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Istniejące duplikaty' : 'Existing duplicates'}</span>
+          <span className="text-xs text-zinc-500">{t('import.existingDuplicates')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateExistingCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Duplikaty w paczce' : 'Batch duplicates'}</span>
+          <span className="text-xs text-zinc-500">{t('import.batchDuplicates')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.duplicateBatchCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Błędne' : 'Invalid'}</span>
+          <span className="text-xs text-zinc-500">{t('import.invalid')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.invalidRowCount}</strong>
         </article>
       </div>
@@ -74,7 +75,7 @@ function ImportPreviewPanel({
       </p>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label={isPolish ? 'Wiersze podglądu importu' : 'Import preview rows'}>
+        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="group" aria-label={t('import.previewRowsLabel')}>
           {(
             [
               ['ALL', isPolish ? `Wszystkie (${preview.totalRowCount})` : `All (${preview.totalRowCount})`],
@@ -101,7 +102,7 @@ function ImportPreviewPanel({
         {rows.map((row) => (
           <article className="flex items-center justify-between rounded-lg border border-zinc-800/50 px-4 py-3" key={`${row.rowNumber}-${row.status}`}>
             <div>
-              <strong className="text-sm font-medium text-zinc-100">{isPolish ? 'Wiersz' : 'Row'} {row.rowNumber}</strong>
+              <strong className="text-sm font-medium text-zinc-100">{t('import.row')} {row.rowNumber}</strong>
               <p className="text-sm text-zinc-500">{row.message}</p>
             </div>
             <span className={`${badge} ${importPreviewBadgeVariant(row.status)}`}>
@@ -111,9 +112,7 @@ function ImportPreviewPanel({
         ))}
         {rows.length === 0 && (
           <p className="text-sm text-zinc-500">
-            {isPolish
-              ? 'Żaden wiersz podglądu nie pasuje do wybranego statusu.'
-              : 'No preview rows match the selected status.'}
+            {t('import.noPreviewRows')}
           </p>
         )}
       </div>
@@ -140,8 +139,6 @@ export function TransactionImport({
   previewTransactionsImportMutation,
   importTransactionsMutation,
 }: TransactionImportProps) {
-  const { isPolish } = useI18n()
-
   const [importBatchMode, setImportBatchMode] = useState<ImportBatchMode>('csv')
   const [importCsv, setImportCsv] = useState('')
   const [importSkipDuplicates, setImportSkipDuplicates] = useState(true)
@@ -217,10 +214,7 @@ export function TransactionImport({
     if (selectedImportProfile == null) {
       setImportPreview(null)
       setImportError(
-        importProfileBlockingReason ??
-          (isPolish
-            ? 'Zapisz profil importu CSV przed uruchomieniem podglądu.'
-            : 'Save a CSV import profile before previewing.'),
+        importProfileBlockingReason ?? t('import.saveProfileBeforePreview'),
       )
       return
     }
@@ -252,10 +246,7 @@ export function TransactionImport({
 
     if (selectedImportProfile == null) {
       setImportError(
-        importProfileBlockingReason ??
-          (isPolish
-            ? 'Zapisz profil importu CSV przed importem.'
-            : 'Save a CSV import profile before importing.'),
+        importProfileBlockingReason ?? t('import.saveProfileBeforeImport'),
       )
       return
     }
@@ -299,7 +290,7 @@ export function TransactionImport({
     } catch (error) {
       setStructuredImportPreview(null)
       setStructuredImportError(
-        error instanceof Error ? error.message : isPolish ? 'Podgląd nie powiódł się.' : 'Preview failed.',
+        error instanceof Error ? error.message : t('import.previewFailed'),
       )
     }
   }
@@ -325,7 +316,7 @@ export function TransactionImport({
       })
     } catch (error) {
       setStructuredImportError(
-        error instanceof Error ? error.message : isPolish ? 'Import nie powiódł się.' : 'Import failed.',
+        error instanceof Error ? error.message : t('import.importFailed'),
       )
     }
   }
@@ -339,19 +330,17 @@ export function TransactionImport({
         aria-labelledby="transactions-workspace-tab-import"
       >
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Import paczki' : 'Batch import'}</p>
-          <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Podgląd i import paczek transakcji' : 'Preview and import transaction batches'}</h4>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('import.batchImportEyebrow')}</p>
+          <h4 className="mt-1 text-lg font-semibold text-zinc-100">{t('import.batchImportTitle')}</h4>
           <p className="mt-1 text-sm text-zinc-500">
-            {isPolish
-              ? 'Użyj zapisanych profili CSV dla eksportów od brokera albo wyślij paczkę JSON bezpośrednio do importu transakcji.'
-              : 'Use saved CSV profiles for broker exports or post canonical JSON batches directly against the transaction import endpoint.'}
+            {t('import.batchImportDescription')}
           </p>
         </div>
 
-        <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={isPolish ? 'Tryb importu paczki' : 'Import batch mode'}>
+        <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={t('import.batchModeLabel')}>
           {([
-            ['csv', isPolish ? 'CSV z profilem' : 'CSV with profile'],
-            ['structured', isPolish ? 'Strukturalny JSON' : 'Structured JSON'],
+            ['csv', t('import.csvWithProfile')],
+            ['structured', t('import.structuredJson')],
           ] as const).map(([mode, modeLabel]) => (
             <button
               key={mode}
@@ -381,16 +370,14 @@ export function TransactionImport({
               <span className={`${badge} bg-zinc-800 text-zinc-400`}>
                 {selectedImportProfile
                   ? selectedImportProfile.name
-                  : isPolish
-                    ? 'Nie wybrano zapisanego profilu'
-                    : 'No saved profile selected'}
+                  : t('import.noProfileSelected')}
               </span>
               {importProfileBlockingReason && <p className="text-sm text-zinc-500 mt-1">{importProfileBlockingReason}</p>}
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex-1 min-w-[200px]">
-                <span className={labelClass}>{isPolish ? 'Plik źródłowy' : 'Source file'}</span>
+                <span className={labelClass}>{t('import.sourceFile')}</span>
                 <input
                   className={filterInput}
                   value={importSourceFileName}
@@ -399,12 +386,12 @@ export function TransactionImport({
                 />
               </label>
               <label className="flex-1 min-w-[200px]">
-                <span className={labelClass}>{isPolish ? 'Etykieta źródła' : 'Source label'}</span>
+                <span className={labelClass}>{t('import.sourceLabel')}</span>
                 <input
                   className={filterInput}
                   value={importSourceLabel}
                   onChange={(event) => setImportSourceLabel(event.target.value)}
-                  placeholder={isPolish ? 'Eksport IBKR marzec 2026' : 'IBKR March 2026 export'}
+                  placeholder={t('import.sourceLabelPlaceholder')}
                 />
               </label>
             </div>
@@ -424,7 +411,7 @@ export function TransactionImport({
                 onChange={(event) => setImportSkipDuplicates(event.target.checked)}
                 disabled={selectedImportProfile == null}
               />
-              <span>{isPolish ? 'Pomijaj duplikaty podczas importu' : 'Skip duplicate rows during import'}</span>
+              <span>{t('import.skipDuplicates')}</span>
             </label>
 
             <div className="flex items-center gap-3">
@@ -439,12 +426,8 @@ export function TransactionImport({
                 }
               >
                 {previewTransactionsCsvImportMutation.isPending
-                  ? isPolish
-                    ? 'Przygotowywanie podglądu...'
-                    : 'Previewing...'
-                  : isPolish
-                    ? 'Podgląd importu'
-                    : 'Preview import'}
+                  ? t('import.previewing')
+                  : t('import.previewImport')}
               </button>
               <button
                 className={btnPrimary}
@@ -458,12 +441,8 @@ export function TransactionImport({
                 }
               >
                 {importTransactionsCsvMutation.isPending
-                  ? isPolish
-                    ? 'Importowanie...'
-                    : 'Importing...'
-                  : isPolish
-                    ? 'Importuj CSV'
-                    : 'Import CSV'}
+                  ? t('import.importing')
+                  : t('import.importCsv')}
               </button>
             </div>
 
@@ -498,14 +477,10 @@ export function TransactionImport({
           >
             <div className="space-y-1">
               <p className="text-sm text-zinc-500">
-                {isPolish
-                  ? 'Wklej tablicę JSON z wierszami transakcji albo pełny obiekt importu z polem `rows`.'
-                  : 'Paste either a canonical JSON array of transaction rows or a full import payload with `rows`.'}
+                {t('import.structuredJsonHint')}
               </p>
               <p className="text-sm text-zinc-500">
-                {isPolish
-                  ? 'Ta ścieżka wywołuje bezpośrednio `/v1/transactions/import` i omija profile parsowania CSV.'
-                  : 'This path calls `/v1/transactions/import` directly and bypasses CSV parsing profiles.'}
+                {t('import.structuredJsonBypass')}
               </p>
             </div>
 
@@ -523,7 +498,7 @@ export function TransactionImport({
                 checked={structuredImportSkipDuplicates}
                 onChange={(event) => setStructuredImportSkipDuplicates(event.target.checked)}
               />
-              <span>{isPolish ? 'Pomijaj duplikaty podczas importu' : 'Skip duplicate rows during import'}</span>
+              <span>{t('import.skipDuplicates')}</span>
             </label>
 
             <div className="flex items-center gap-3">
@@ -534,12 +509,8 @@ export function TransactionImport({
                 disabled={previewTransactionsImportMutation.isPending || structuredImportJson.trim() === ''}
               >
                 {previewTransactionsImportMutation.isPending
-                  ? isPolish
-                    ? 'Przygotowywanie podglądu...'
-                    : 'Previewing...'
-                  : isPolish
-                    ? 'Podgląd importu'
-                    : 'Preview import'}
+                  ? t('import.previewing')
+                  : t('import.previewImport')}
               </button>
               <button
                 className={btnPrimary}
@@ -552,12 +523,8 @@ export function TransactionImport({
                 }
               >
                 {importTransactionsMutation.isPending
-                  ? isPolish
-                    ? 'Importowanie...'
-                    : 'Importing...'
-                  : isPolish
-                    ? 'Importuj paczkę JSON'
-                    : 'Import JSON batch'}
+                  ? t('import.importing')
+                  : t('import.importJsonBatch')}
               </button>
             </div>
 
@@ -587,12 +554,8 @@ export function TransactionImport({
 
       <section className={card}>
         <ImportAuditPanel
-          title={isPolish ? 'Ostatnie importy' : 'Recent imports'}
-          description={
-            isPolish
-              ? 'Używaj tego jako szybkiego śladu audytowego po operacjach batch.'
-              : 'Use this as a quick audit trail after batch operations.'
-          }
+          title={t('import.recentImports')}
+          description={t('import.recentImportsDescription')}
           limit={8}
         />
       </section>

@@ -5,6 +5,7 @@ import type {
   TransactionImportProfile,
 } from '../../api/write-model'
 import { getActiveUiLanguage } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 
 export type { ImportTransactionsPayload, ImportTransactionsPreviewResult, SaveTransactionImportProfilePayload }
 export type { Transaction, TransactionImportProfile } from '../../api/write-model'
@@ -123,12 +124,9 @@ export const importMappingFields: Array<{
 ]
 
 export function createInitialImportProfileForm(): ImportProfileFormState {
-  const isPolish = getActiveUiLanguage() === 'pl'
   return {
-    name: isPolish ? 'Kanoniczny CSV' : 'Canonical CSV',
-    description: isPolish
-      ? 'Domyślny profil dla standardowego formatu CSV transakcji.'
-      : 'Default profile for the canonical transaction CSV format.',
+    name: t('txHelpers.defaultProfileName'),
+    description: t('txHelpers.defaultProfileDescription'),
     delimiter: 'COMMA',
     dateFormat: 'ISO_LOCAL_DATE',
     decimalSeparator: 'DOT',
@@ -216,25 +214,16 @@ export function buildImportProfilePayload(form: ImportProfileFormState): SaveTra
 }
 
 export function parseStructuredImportPayload(raw: string, skipDuplicates: boolean): ImportTransactionsPayload {
-  const isPolish = getActiveUiLanguage() === 'pl'
   const trimmed = raw.trim()
   if (trimmed === '') {
-    throw new Error(
-      isPolish
-        ? 'Najpierw wklej tablicę JSON z wierszami transakcji albo pełny obiekt importu.'
-        : 'Paste a JSON array of transaction rows or a full import payload first.',
-    )
+    throw new Error(t('txHelpers.pasteJsonFirst'))
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(trimmed)
   } catch {
-    throw new Error(
-      isPolish
-        ? 'Strukturalny import musi zawierać poprawny JSON.'
-        : 'Structured import must contain valid JSON.',
-    )
+    throw new Error(t('txHelpers.invalidJson'))
   }
 
   if (Array.isArray(parsed)) {
@@ -247,11 +236,7 @@ export function parseStructuredImportPayload(raw: string, skipDuplicates: boolea
   if (typeof parsed === 'object' && parsed !== null && 'rows' in parsed) {
     const rows = (parsed as { rows?: unknown }).rows
     if (!Array.isArray(rows)) {
-      throw new Error(
-        isPolish
-          ? 'Obiekt importu strukturalnego musi zawierać tablicę "rows".'
-          : 'Structured import payload must expose a "rows" array.',
-      )
+      throw new Error(t('txHelpers.rowsArrayRequired'))
     }
 
     return {
@@ -260,11 +245,7 @@ export function parseStructuredImportPayload(raw: string, skipDuplicates: boolea
     }
   }
 
-  throw new Error(
-    isPolish
-      ? 'Import strukturalny oczekuje tablicy JSON z wierszami albo obiektu z tablicą "rows".'
-      : 'Structured import expects either a JSON array of rows or an object with a "rows" array.',
-  )
+  throw new Error(t('txHelpers.invalidPayloadShape'))
 }
 
 export function normalizeOptionalValue(value: string): string | null {
@@ -281,9 +262,7 @@ export function buildImportProfileTemplate(form: ImportProfileFormState): string
   const delimiter = delimiterCharacter(form.delimiter)
   const mappedFields = getImportMappingFields(isPolish).filter((field) => form.headerMappings[field.key].trim() !== '')
   if (mappedFields.length === 0) {
-    return isPolish
-      ? 'Zmapuj przynajmniej jedną kolumnę CSV, aby wygenerować przykład.'
-      : 'Map at least one CSV column to generate a sample.'
+    return t('txHelpers.mapAtLeastOneColumn')
   }
 
   const headers = mappedFields.map((field) => form.headerMappings[field.key].trim())
@@ -319,7 +298,7 @@ export function exampleValueForField(field: ImportMappingField, form: ImportProf
     case 'fxRateToPln':
       return formatExampleDecimal('4.0123', form.decimalSeparator)
     case 'notes':
-      return getActiveUiLanguage() === 'pl' ? 'Pierwsza partia' : 'Starter lot'
+      return t('txHelpers.exampleNotes')
     default:
       return ''
   }

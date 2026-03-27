@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioAuditEvents, usePortfolioHoldings } from '../hooks/use-read-model'
-import { useI18n } from '../lib/i18n'
 import { labelAuditOutcome } from '../lib/labels'
+import { t } from '../lib/messages'
 import {
   useAccounts,
   useCreateTransaction,
@@ -30,7 +30,6 @@ import { TransactionImportProfiles } from '../screens/transactions/TransactionIm
 import type { TransactionRouteState } from '../lib/transaction-composer'
 
 export function TransactionsSection() {
-  const { isPolish } = useI18n()
   const location = useLocation()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
@@ -86,21 +85,13 @@ export function TransactionsSection() {
 
   const importProfileBlockingReason =
     selectedImportProfileId == null
-      ? isPolish
-        ? 'Ładowanie zapisanych profili importu.'
-        : 'Loading saved import profiles.'
+      ? t('transactionsOrch.loadingProfiles')
       : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
-        ? isPolish
-          ? 'Zapisz profil importu CSV przed podglądem albo importem.'
-          : 'Save a CSV import profile before previewing or importing.'
+        ? t('transactionsOrch.saveProfileBeforeAction')
         : selectedImportProfile == null
-          ? isPolish
-            ? 'Wybrany profil importu CSV nie jest już dostępny.'
-            : 'Selected CSV import profile is no longer available.'
+          ? t('transactionsOrch.profileUnavailable')
           : importProfileDirty
-            ? isPolish
-              ? 'Zapisz zmiany w profilu przed podglądem albo importem.'
-              : 'Save profile changes before previewing or importing.'
+            ? t('transactionsOrch.saveProfileChanges')
             : null
 
   const importEvents = importEventsQuery.data ?? []
@@ -160,12 +151,8 @@ export function TransactionsSection() {
   ) {
     return (
       <LoadingState
-        title={isPolish ? 'Ładowanie obszaru transakcji' : 'Loading transactions workspace'}
-        description={
-          isPolish
-            ? 'Pobieranie kont, instrumentów, wierszy dziennika i zapisanych profili importu.'
-            : 'Fetching accounts, instruments, journal rows and saved import profiles.'
-        }
+        title={t('transactionsOrch.loadingTitle')}
+        description={t('transactionsOrch.loadingDescription')}
         blocks={4}
       />
     )
@@ -174,12 +161,8 @@ export function TransactionsSection() {
   if (!hasWorkspaceData && workspaceError) {
     return (
       <ErrorState
-        title={isPolish ? 'Transakcje niedostępne' : 'Transactions unavailable'}
-        description={
-          isPolish
-            ? 'Nie udało się załadować obszaru transakcji. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.'
-            : 'The canonical transaction workspace could not load. Retry now or verify runtime health in Settings.'
-        }
+        title={t('transactionsOrch.errorTitle')}
+        description={t('transactionsOrch.errorDescription')}
         onRetry={handleRetryWorkspace}
       />
     )
@@ -188,13 +171,9 @@ export function TransactionsSection() {
   if (accountOptions.length === 0) {
     return (
       <EmptyState
-        title={isPolish ? 'Brak jeszcze kont' : 'No accounts available yet'}
-        description={
-          isPolish
-            ? 'Utwórz konto maklerskie albo rejestr obligacji na ekranie Konta, zanim zaczniesz zapisywać transakcje.'
-            : 'Create your brokerage or bond account on the Accounts screen before recording transactions.'
-        }
-        action={{ label: isPolish ? 'Przejdź do Kont' : 'Go to Accounts', to: '/accounts' }}
+        title={t('transactionsOrch.noAccountsTitle')}
+        description={t('transactionsOrch.noAccountsDescription')}
+        action={{ label: t('transactionsOrch.goToAccounts'), to: '/accounts' }}
       />
     )
   }
@@ -202,43 +181,39 @@ export function TransactionsSection() {
   return (
     <section className="space-y-6">
       <SectionHeader
-        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
-        title={isPolish ? 'Transakcje' : 'Transactions'}
-        description={
-          isPolish
-            ? 'Prowadź jeden rejestr transakcji, ale pracuj osobno na dzienniku, imporcie i profilach.'
-            : 'Keep the canonical event stream in one place, but work through journal, import and profile flows separately.'
-        }
+        eyebrow={t('transactionsOrch.eyebrow')}
+        title={t('transactionsOrch.title')}
+        description={t('transactionsOrch.description')}
         className="mb-2"
       />
 
       <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Transakcje' : 'Transactions'}</span>
+          <span className="text-xs text-zinc-500">{t('transactionsOrch.transactions')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{journalRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Wiersze dziennika w widoku' : 'Journal rows in view'}</span>
+          <span className="text-xs text-zinc-500">{t('transactionsOrch.journalRowsInView')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{sortedRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Zapisane profile' : 'Saved profiles'}</span>
+          <span className="text-xs text-zinc-500">{t('transactionsOrch.savedProfiles')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{importProfileCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{isPolish ? 'Ostatnie zdarzenie importu' : 'Latest import event'}</span>
+          <span className="text-xs text-zinc-500">{t('transactionsOrch.latestImportEvent')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
-            {latestImportEvent ? labelAuditOutcome(latestImportEvent.outcome) : isPolish ? 'Brak' : 'None yet'}
+            {latestImportEvent ? labelAuditOutcome(latestImportEvent.outcome) : t('common.none')}
           </strong>
         </article>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={isPolish ? 'Obszar transakcji' : 'Transactions workspace'}>
+        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={t('transactionsOrch.workspaceLabel')}>
           {([
-            ['journal', isPolish ? 'Dziennik' : 'Journal'],
-            ['import', isPolish ? 'Import' : 'Import'],
-            ['profiles', isPolish ? 'Profile' : 'Profiles'],
+            ['journal', t('transactionsOrch.journal')],
+            ['import', t('transactionsOrch.import')],
+            ['profiles', t('transactionsOrch.profiles')],
           ] as const).map(([workspace, wsLabel]) => (
             <button
               key={workspace}

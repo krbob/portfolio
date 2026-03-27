@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DangerConfirmInline } from '../../components/DangerConfirmInline'
 import { useI18n } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 import {
   btnDanger,
   btnPrimary,
@@ -250,18 +251,16 @@ export function TransactionImportProfiles({
       aria-labelledby="transactions-workspace-tab-profiles"
     >
       <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Profile importu' : 'Import profiles'}</p>
-        <h4 className="mt-1 text-lg font-semibold text-zinc-100">{isPolish ? 'Zapisane reguły parsowania CSV' : 'Saved CSV parsing rules'}</h4>
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.eyebrow')}</p>
+        <h4 className="mt-1 text-lg font-semibold text-zinc-100">{t('importProfiles.title')}</h4>
         <p className="mt-1 text-sm text-zinc-500">
-          {isPolish
-            ? 'Utrzymuj jeden profil na brokera albo format eksportu. Podgląd i import zawsze użyją ostatniej zapisanej wersji wybranego profilu.'
-            : 'Keep one profile per broker or export format. Preview and import will always use the last saved version of the selected profile.'}
+          {t('importProfiles.description')}
         </p>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
         <label>
-          <span className={labelClass}>{isPolish ? 'Zapisany profil' : 'Saved profile'}</span>
+          <span className={labelClass}>{t('importProfiles.savedProfile')}</span>
           <select
             className={filterInput}
             value={selectedImportProfileId ?? ''}
@@ -271,19 +270,19 @@ export function TransactionImportProfiles({
               setSelectedImportProfileId(event.target.value)
             }}
           >
-            {selectedImportProfileId === null && <option value="">{isPolish ? 'Ładowanie profili...' : 'Loading profiles...'}</option>}
+            {selectedImportProfileId === null && <option value="">{t('importProfiles.loadingProfiles')}</option>}
             {importProfiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
                 {profile.name}
               </option>
             ))}
-            <option value={NEW_IMPORT_PROFILE_ID}>{isPolish ? 'Nowy profil' : 'New profile'}</option>
+            <option value={NEW_IMPORT_PROFILE_ID}>{t('importProfiles.newProfile')}</option>
           </select>
         </label>
 
         <div className="flex items-center gap-3">
           <button type="button" className={btnSecondary} onClick={handleCreateNewImportProfile}>
-            {isPolish ? 'Nowy profil' : 'New profile'}
+            {t('importProfiles.newProfile')}
           </button>
           <button
             type="button"
@@ -292,12 +291,8 @@ export function TransactionImportProfiles({
             disabled={selectedImportProfile == null || deleteImportProfileMutation.isPending}
           >
             {deleteImportProfileMutation.isPending
-              ? isPolish
-                ? 'Usuwanie...'
-                : 'Deleting...'
-              : isPolish
-                ? 'Usuń profil'
-                : 'Delete profile'}
+              ? t('importProfiles.deleting')
+              : t('importProfiles.deleteProfile')}
           </button>
         </div>
       </div>
@@ -305,13 +300,9 @@ export function TransactionImportProfiles({
       {selectedImportProfile && pendingDeleteImportProfileId === selectedImportProfile.id && (
         <DangerConfirmInline
           title={isPolish ? `Usunąć profil "${selectedImportProfile.name}"?` : `Delete profile "${selectedImportProfile.name}"?`}
-          description={
-            isPolish
-              ? 'To usuwa zapisane reguły parsowania z serwera. Już zaimportowane transakcje pozostają bez zmian.'
-              : 'This removes the saved parsing rules from the server. Existing imported transactions stay untouched.'
-          }
-          confirmLabel={isPolish ? 'Usuń profil' : 'Delete profile'}
-          confirmPendingLabel={isPolish ? 'Usuwanie...' : 'Deleting...'}
+          description={t('importProfiles.deleteConfirmDescription')}
+          confirmLabel={t('importProfiles.deleteProfile')}
+          confirmPendingLabel={t('importProfiles.deleting')}
           isPending={deleteImportProfileMutation.isPending}
           onCancel={() => setPendingDeleteImportProfileId(null)}
           onConfirm={confirmDeleteImportProfile}
@@ -320,41 +311,41 @@ export function TransactionImportProfiles({
 
       <form className="grid grid-cols-2 gap-3 mt-4 lg:grid-cols-4" onSubmit={handleImportProfileSubmit}>
         <label>
-          <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
+          <span className={labelClass}>{t('importProfiles.name')}</span>
           <input
             className={input}
             value={importProfileForm.name}
             onChange={(event) => updateImportProfileField('name', event.target.value)}
-            placeholder={isPolish ? 'Eksport aktywności IBKR' : 'IBKR activity export'}
+            placeholder={t('importProfiles.namePlaceholder')}
             required
           />
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Opis' : 'Description'}</span>
+          <span className={labelClass}>{t('importProfiles.descriptionField')}</span>
           <input
             className={input}
             value={importProfileForm.description}
             onChange={(event) => updateImportProfileField('description', event.target.value)}
-            placeholder={isPolish ? 'Eksport średnikiem z europejskimi separatorami dziesiętnymi' : 'Semicolon export with European decimals'}
+            placeholder={t('importProfiles.descriptionPlaceholder')}
           />
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Separator pól' : 'Delimiter'}</span>
+          <span className={labelClass}>{t('importProfiles.delimiter')}</span>
           <select
             className={input}
             value={importProfileForm.delimiter}
             onChange={(event) => updateImportProfileField('delimiter', event.target.value)}
           >
-            <option value="COMMA">{isPolish ? 'Przecinek' : 'Comma'}</option>
-            <option value="SEMICOLON">{isPolish ? 'Średnik' : 'Semicolon'}</option>
+            <option value="COMMA">{t('importProfiles.comma')}</option>
+            <option value="SEMICOLON">{t('importProfiles.semicolon')}</option>
             <option value="TAB">Tab</option>
           </select>
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Format daty' : 'Date format'}</span>
+          <span className={labelClass}>{t('importProfiles.dateFormat')}</span>
           <select
             className={input}
             value={importProfileForm.dateFormat}
@@ -368,25 +359,25 @@ export function TransactionImportProfiles({
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Separator dziesiętny' : 'Decimal separator'}</span>
+          <span className={labelClass}>{t('importProfiles.decimalSeparator')}</span>
           <select
             className={input}
             value={importProfileForm.decimalSeparator}
             onChange={(event) => updateImportProfileField('decimalSeparator', event.target.value)}
           >
-            <option value="DOT">{isPolish ? 'Kropka' : 'Dot'}</option>
-            <option value="COMMA">{isPolish ? 'Przecinek' : 'Comma'}</option>
+            <option value="DOT">{t('importProfiles.dot')}</option>
+            <option value="COMMA">{t('importProfiles.comma')}</option>
           </select>
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Domyślne konto' : 'Default account'}</span>
+          <span className={labelClass}>{t('importProfiles.defaultAccount')}</span>
           <select
             className={input}
             value={importProfileForm.defaults.accountId}
             onChange={(event) => updateImportProfileDefault('accountId', event.target.value)}
           >
-            <option value="">{isPolish ? 'CSV zawiera kolumnę konta' : 'CSV provides account column'}</option>
+            <option value="">{t('importProfiles.csvProvidesAccount')}</option>
             {sortedAccountOptions.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name}
@@ -396,7 +387,7 @@ export function TransactionImportProfiles({
         </label>
 
         <label>
-          <span className={labelClass}>{isPolish ? 'Domyślna waluta' : 'Default currency'}</span>
+          <span className={labelClass}>{t('importProfiles.defaultCurrency')}</span>
           <input
             className={input}
             value={importProfileForm.defaults.currency}
@@ -414,19 +405,17 @@ export function TransactionImportProfiles({
             onChange={(event) => updateImportProfileField('skipDuplicatesByDefault', event.target.checked)}
           />
           <div>
-            <span className={labelClass}>{isPolish ? 'Domyślnie pomijaj duplikaty' : 'Skip duplicates by default'}</span>
+            <span className={labelClass}>{t('importProfiles.skipDuplicatesByDefault')}</span>
             <p className="text-sm text-zinc-500">
-              {isPolish
-                ? 'Używane do domyślnego ustawienia checkboxa importu dla tego profilu.'
-                : 'Used to prefill the import checkbox for this profile.'}
+              {t('importProfiles.skipDuplicatesHint')}
             </p>
           </div>
         </label>
 
         <div className="col-span-full">
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Mapowanie nagłówków' : 'Header mappings'}</p>
-            <h5 className="mt-1 text-sm font-semibold text-zinc-100">{isPolish ? 'Dopasuj kolumny CSV do pól transakcji' : 'Match CSV columns to canonical transaction fields'}</h5>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.headerMappingsEyebrow')}</p>
+            <h5 className="mt-1 text-sm font-semibold text-zinc-100">{t('importProfiles.headerMappingsTitle')}</h5>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {localizedImportMappingFields.map((field) => (
@@ -440,7 +429,7 @@ export function TransactionImportProfiles({
                 />
                 {field.required && (
                   <small className="text-xs text-zinc-600">
-                    {isPolish ? 'Wymagane przez parser backendu.' : 'Required by the backend parser.'}
+                    {t('importProfiles.requiredByParser')}
                   </small>
                 )}
               </label>
@@ -450,11 +439,9 @@ export function TransactionImportProfiles({
 
         <div className="col-span-full">
           <div className="mb-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{isPolish ? 'Podgląd szablonu' : 'Template preview'}</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.templateEyebrow')}</p>
             <p className="mt-1 text-sm text-zinc-500">
-              {isPolish
-                ? 'Przykładowy nagłówek i jeden wiersz wygenerowany z bieżącego formularza profilu.'
-                : 'Sample header and one example row generated from the current profile form.'}
+              {t('importProfiles.templateDescription')}
             </p>
           </div>
           <pre className="mt-2 rounded-lg bg-zinc-800 p-3 text-xs text-zinc-400 font-mono overflow-x-auto">{importProfileTemplate}</pre>
@@ -471,16 +458,10 @@ export function TransactionImportProfiles({
             }
           >
             {createImportProfileMutation.isPending || updateImportProfileMutation.isPending
-              ? isPolish
-                ? 'Zapisywanie...'
-                : 'Saving...'
+              ? t('importProfiles.saving')
               : selectedImportProfileId === NEW_IMPORT_PROFILE_ID
-                ? isPolish
-                  ? 'Utwórz profil'
-                  : 'Create profile'
-                : isPolish
-                  ? 'Zapisz profil'
-                  : 'Save profile'}
+                ? t('importProfiles.createProfile')
+                : t('importProfiles.saveProfile')}
           </button>
         </div>
 
