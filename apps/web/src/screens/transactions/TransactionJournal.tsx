@@ -467,6 +467,8 @@ export function TransactionJournal({
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
     setGrossAmountMode(draft?.grossAmount ? 'manual' : 'auto')
+    const draftInstrument = draft?.instrumentId ? instrumentOptions.find((i) => i.id === draft.instrumentId) : null
+    const defaultUnitPrice = draft?.unitPrice ?? (draftInstrument?.kind === 'BOND_EDO' ? '100' : initialForm.unitPrice)
     setForm({
       ...initialForm,
       accountId: draft?.accountId ?? initialForm.accountId,
@@ -475,7 +477,7 @@ export function TransactionJournal({
       tradeDate: draft?.tradeDate ?? initialForm.tradeDate,
       settlementDate: draft?.settlementDate ?? draft?.tradeDate ?? initialForm.settlementDate,
       quantity: draft?.quantity ?? initialForm.quantity,
-      unitPrice: draft?.unitPrice ?? initialForm.unitPrice,
+      unitPrice: defaultUnitPrice,
       grossAmount: draft?.grossAmount ?? initialForm.grossAmount,
       feeAmount: draft?.feeAmount ?? initialForm.feeAmount,
       taxAmount: draft?.taxAmount ?? initialForm.taxAmount,
@@ -745,9 +747,17 @@ export function TransactionJournal({
                   <select
                     className={input}
                     value={form.instrumentId}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, instrumentId: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      const nextId = event.target.value
+                      const selected = instrumentOptions.find((i) => i.id === nextId)
+                      setForm((current) => ({
+                        ...current,
+                        instrumentId: nextId,
+                        unitPrice: selected?.kind === 'BOND_EDO' && (current.unitPrice === '' || current.unitPrice === '0')
+                          ? '100'
+                          : current.unitPrice,
+                      }))
+                    }}
                   >
                     <option value="">{isPolish ? 'Wybierz instrument' : 'Select instrument'}</option>
                     {selectableInstrumentOptions.map((instrument) => (
