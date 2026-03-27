@@ -12,6 +12,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       cacheSnapshots: cacheSnapshots(),
       refreshStatus: refreshStatus(),
       isPolish: false,
+      now: new Date('2026-03-20T12:00:00Z'),
     })
 
     expect(summary).not.toBeNull()
@@ -37,6 +38,7 @@ describe('buildPortfolioDataQualitySummary', () => {
         lastFailureMessage: 'benchmark refresh timed out',
       },
       isPolish: false,
+      now: new Date('2026-03-20T13:05:00Z'),
     })
 
     expect(summary).not.toBeNull()
@@ -46,6 +48,44 @@ describe('buildPortfolioDataQualitySummary', () => {
     const refreshCheck = summary?.checks.find((check) => check.key === 'refresh')
     expect(refreshCheck?.status).toBe('WARN')
     expect(refreshCheck?.message).toContain('benchmark refresh timed out')
+  })
+
+  it('does not warn on benchmarks when all configured benchmarks are still available', () => {
+    const summary = buildPortfolioDataQualitySummary({
+      overview: overview(),
+      history: history({ benchmarkSeriesIssueCount: 1 }),
+      returns: returns({
+        benchmarks: [
+          benchmark('VWRA', true),
+          benchmark('CUSTOM', true),
+        ],
+      }),
+      cacheSnapshots: cacheSnapshots(),
+      refreshStatus: refreshStatus(),
+      isPolish: false,
+      now: new Date('2026-03-20T12:00:00Z'),
+    })
+
+    const benchmarkCheck = summary?.checks.find((check) => check.key === 'benchmarks')
+    expect(benchmarkCheck?.status).toBe('PASS')
+    expect(benchmarkCheck?.message).toContain('Available benchmarks: 2 of 2.')
+  })
+
+  it('warns when CPI coverage is stale beyond the tolerated publication lag', () => {
+    const summary = buildPortfolioDataQualitySummary({
+      overview: overview(),
+      history: history(),
+      returns: returns({ inflationUntil: '2026-01' }),
+      cacheSnapshots: cacheSnapshots(),
+      refreshStatus: refreshStatus(),
+      isPolish: false,
+      now: new Date('2026-03-27T12:00:00Z'),
+    })
+
+    const cpiCheck = summary?.checks.find((check) => check.key === 'cpi')
+    expect(cpiCheck?.status).toBe('WARN')
+    expect(cpiCheck?.message).toContain('through December 2025')
+    expect(cpiCheck?.message).toContain('at least January 2026')
   })
 })
 
@@ -77,7 +117,7 @@ function overview(): PortfolioOverview {
   }
 }
 
-function history(): PortfolioDailyHistory {
+function history(overrides: Partial<PortfolioDailyHistory> = {}): PortfolioDailyHistory {
   return {
     from: '2026-01-01',
     until: '2026-03-20',
@@ -112,10 +152,11 @@ function history(): PortfolioDailyHistory {
         valuedHoldingCount: 1,
       },
     ],
+    ...overrides,
   }
 }
 
-function returns(): PortfolioReturns {
+function returns(overrides: { inflationUntil?: string; benchmarks?: PortfolioReturns['periods'][number]['benchmarks'] } = {}): PortfolioReturns {
   return {
     asOf: '2026-03-20',
     periods: [
@@ -141,33 +182,32 @@ function returns(): PortfolioReturns {
           annualizedTimeWeightedReturn: '0.03',
         },
         inflationFrom: '2026-01',
-        inflationUntil: '2026-03',
+        inflationUntil: overrides.inflationUntil ?? '2026-03',
         inflationMultiplier: '1.02',
-        benchmarks: [
-          {
-            key: 'VWRA',
-            label: 'VWRA benchmark',
-            pinned: true,
-            nominalPln: {
-              moneyWeightedReturn: '0.04',
-              annualizedMoneyWeightedReturn: '0.04',
-              timeWeightedReturn: '0.04',
-              annualizedTimeWeightedReturn: '0.04',
-            },
-            excessTimeWeightedReturn: '0.01',
-            excessAnnualizedTimeWeightedReturn: '0.01',
-          },
-          {
-            key: 'CUSTOM',
-            label: 'Custom benchmark',
-            pinned: false,
-            nominalPln: null,
-            excessTimeWeightedReturn: null,
-            excessAnnualizedTimeWeightedReturn: null,
-          },
+        benchmarks: overrides.benchmarks ?? [
+          benchmark('VWRA', true),
+          benchmark('CUSTOM', false),
         ],
       },
     ],
+  }
+}
+
+function benchmark(key: string, available: boolean): PortfolioReturns['periods'][number]['benchmarks'][number] {
+  return {
+    key,
+    label: `${key} benchmark`,
+    pinned: key === 'VWRA',
+    nominalPln: available
+      ? {
+          moneyWeightedReturn: '0.04',
+          annualizedMoneyWeightedReturn: '0.04',
+          timeWeightedReturn: '0.04',
+          annualizedTimeWeightedReturn: '0.04',
+        }
+      : null,
+    excessTimeWeightedReturn: available ? '0.01' : null,
+    excessAnnualizedTimeWeightedReturn: available ? '0.01' : null,
   }
 }
 

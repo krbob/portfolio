@@ -96,18 +96,60 @@ export const supportMessages = {
   'presentation.sliceStalePricing': { pl: 'ceny z opóźnieniem', en: 'stale pricing' },
   'dataQualityLib.valuationCoverage': { pl: 'Pokrycie wyceny', en: 'Valuation coverage' },
   'dataQualityLib.noActiveHoldings': { pl: 'Brak aktywnych pozycji do zweryfikowania.', en: 'No active holdings to validate yet.' },
+  'dataQualityLib.valuationCoveragePass': {
+    pl: 'Wszystkie {count} pozycje mają bieżącą wycenę.',
+    en: 'All {count} holdings have current valuations.',
+  },
+  'dataQualityLib.valuationCoverageWarn': {
+    pl: '{valuedCount} z {activeCount} pozycji jest wycenionych; otwarte luki: {issueCount}.',
+    en: '{valuedCount} of {activeCount} holdings are valued; open valuation gaps: {issueCount}.',
+  },
   'dataQualityLib.instrumentHistory': { pl: 'Historia instrumentów', en: 'Instrument history' },
   'dataQualityLib.instrumentHistoryPass': { pl: 'Historia instrumentów odtwarza się bez luk wyceny.', en: 'Instrument history rebuilds without valuation gaps.' },
+  'dataQualityLib.instrumentHistoryWarn': {
+    pl: 'Problemy z historią wyceny instrumentów: {issueCount}.',
+    en: 'Instrument valuation history issues: {issueCount}.',
+  },
   'dataQualityLib.fxAndUsd': { pl: 'FX i USD', en: 'FX and USD' },
   'dataQualityLib.fxPass': { pl: 'Przeliczenia FX i referencyjny widok USD są dostępne.', en: 'FX conversions and the USD reference view are available.' },
+  'dataQualityLib.fxWarn': {
+    pl: 'Brakujące przeliczenia FX: {missingFxTransactions}. Widok USD {usdViewStatus}.',
+    en: 'Missing FX conversions: {missingFxTransactions}. USD view is {usdViewStatus}.',
+  },
+  'dataQualityLib.fxWarnUsdPartial': { pl: 'działa częściowo', en: 'partially available' },
+  'dataQualityLib.fxWarnUsdUnavailable': { pl: 'jest niedostępny', en: 'unavailable' },
   'dataQualityLib.gold': { pl: 'Złoto', en: 'Gold' },
   'dataQualityLib.goldPass': { pl: 'Referencyjny widok złota jest dostępny dla bieżącego zakresu.', en: 'The gold reference view is available for the current window.' },
   'dataQualityLib.goldWarn': { pl: 'Referencyjny widok złota jest obecnie niedostępny dla bieżącego zakresu.', en: 'The gold reference view is currently unavailable for the active window.' },
   'dataQualityLib.benchmarks': { pl: 'Benchmarki', en: 'Benchmarks' },
   'dataQualityLib.noBenchmarksConfigured': { pl: 'Nie skonfigurowano jeszcze benchmarków.', en: 'No benchmarks are configured yet.' },
+  'dataQualityLib.benchmarksPass': {
+    pl: 'Dostępne benchmarki: {availableCount} z {totalCount}.',
+    en: 'Available benchmarks: {availableCount} of {totalCount}.',
+  },
+  'dataQualityLib.benchmarksWarn': {
+    pl: 'Dostępne benchmarki: {availableCount} z {totalCount}. Co najmniej jeden benchmark jest obecnie niedostępny albo niekompletny.',
+    en: 'Available benchmarks: {availableCount} of {totalCount}. At least one benchmark is currently unavailable or incomplete.',
+  },
   'dataQualityLib.cpi': { pl: 'CPI', en: 'CPI' },
+  'dataQualityLib.cpiPass': {
+    pl: 'Pokrycie CPI do {coverageThrough}.',
+    en: 'CPI coverage through {coverageThrough}.',
+  },
+  'dataQualityLib.cpiWarnStale': {
+    pl: 'Pokrycie CPI jest opóźnione: do {currentCoverageThrough}. Dla bieżącej daty oczekujemy co najmniej {minimumCoverageThrough}.',
+    en: 'CPI coverage is lagging: through {currentCoverageThrough}. For the current date, at least {minimumCoverageThrough} is expected.',
+  },
   'dataQualityLib.noCpiCoverage': { pl: 'Brak dostępnego okna CPI dla realnego PLN.', en: 'No CPI coverage window is currently available for real PLN.' },
   'dataQualityLib.refreshLabel': { pl: 'Odświeżanie modeli odczytowych', en: 'Read-model refresh' },
   'dataQualityLib.refreshFallbackFailure': { pl: 'Ostatnie odświeżenie zakończyło się błędem.', en: 'The latest refresh failed.' },
+  'dataQualityLib.refreshWarn': {
+    pl: 'Ostatnie odświeżenie nie powiodło się {failureAt}: {failureMessage}',
+    en: 'The latest refresh failed at {failureAt}: {failureMessage}',
+  },
+  'dataQualityLib.refreshPass': {
+    pl: 'Ostatnie udane odświeżenie: {refreshedAt}.',
+    en: 'Last successful refresh: {refreshedAt}.',
+  },
   'dataQualityLib.noRefreshYet': { pl: 'Modele odczytowe nie były jeszcze odświeżane w tle.', en: 'Read models have not been refreshed in the background yet.' },
 } satisfies MessageCatalog

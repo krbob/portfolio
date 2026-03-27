@@ -8,7 +8,7 @@ import type {
 import type { ReadModelRefreshStatus } from '../api/write-model'
 import { formatYearMonth } from './format'
 import type { UiLanguage } from './i18n'
-import { tFor } from './messages'
+import { formatMessage, tFor } from './messages'
 
 export type DataQualityStatus = 'PASS' | 'WARN' | 'INFO'
 
@@ -45,6 +45,7 @@ interface BuildPortfolioDataQualitySummaryInput {
   cacheSnapshots?: ReadModelCacheSnapshot[]
   refreshStatus?: ReadModelRefreshStatus
   isPolish: boolean
+  now?: Date
 }
 
 export function buildPortfolioDataQualitySummary({
@@ -54,6 +55,7 @@ export function buildPortfolioDataQualitySummary({
   cacheSnapshots = [],
   refreshStatus,
   isPolish,
+  now = new Date(),
 }: BuildPortfolioDataQualitySummaryInput): PortfolioDataQualitySummary | null {
   if (!overview || !history || !returns || !refreshStatus) {
     return null
@@ -92,12 +94,11 @@ export function buildPortfolioDataQualitySummary({
     buildFxCheck(overview.missingFxTransactions, usdSeriesAvailable, lang),
     buildGoldCheck(goldSeriesAvailable, lang),
     buildBenchmarkCheck({
-      issueCount: history.benchmarkSeriesIssueCount,
       availableBenchmarkCount,
       totalBenchmarkCount,
       lang,
     }),
-    buildCpiCheck(cpiCoverageThroughMonth, lang),
+    buildCpiCheck(cpiCoverageThroughMonth, lang, now),
     buildRefreshCheck({
       historyRefreshAt: historySnapshot?.generatedAt ?? null,
       returnsRefreshAt: returnsSnapshot?.generatedAt ?? null,
@@ -151,9 +152,9 @@ function buildValuationCheck(overview: PortfolioOverview, lang: UiLanguage): Por
       key: 'valuation',
       label,
       status: 'PASS',
-      message: lang === 'pl'
-        ? `Wszystkie ${overview.activeHoldingCount} pozycje mają bieżącą wycenę.`
-        : `All ${overview.activeHoldingCount} holdings have current valuations.`,
+      message: formatMessage(tFor('dataQualityLib.valuationCoveragePass', lang), {
+        count: overview.activeHoldingCount,
+      }),
     }
   }
 
@@ -161,9 +162,11 @@ function buildValuationCheck(overview: PortfolioOverview, lang: UiLanguage): Por
     key: 'valuation',
     label,
     status: 'WARN',
-    message: lang === 'pl'
-      ? `${overview.valuedHoldingCount} z ${overview.activeHoldingCount} pozycji jest wycenionych; otwarte luki: ${overview.valuationIssueCount}.`
-      : `${overview.valuedHoldingCount} of ${overview.activeHoldingCount} holdings are valued; open valuation gaps: ${overview.valuationIssueCount}.`,
+    message: formatMessage(tFor('dataQualityLib.valuationCoverageWarn', lang), {
+      valuedCount: overview.valuedHoldingCount,
+      activeCount: overview.activeHoldingCount,
+      issueCount: overview.valuationIssueCount,
+    }),
   }
 }
 
@@ -181,9 +184,9 @@ function buildInstrumentHistoryCheck(issueCount: number, lang: UiLanguage): Port
         key: 'instrument-history',
         label,
         status: 'WARN',
-        message: lang === 'pl'
-          ? `Problemy z historią wyceny instrumentów: ${issueCount}.`
-          : `Instrument valuation history issues: ${issueCount}.`,
+        message: formatMessage(tFor('dataQualityLib.instrumentHistoryWarn', lang), {
+          issueCount,
+        }),
       }
 }
 
@@ -203,9 +206,13 @@ function buildFxCheck(missingFxTransactions: number, usdSeriesAvailable: boolean
     key: 'fx',
     label,
     status: 'WARN',
-    message: lang === 'pl'
-      ? `Brakujące przeliczenia FX: ${missingFxTransactions}. Widok USD ${usdSeriesAvailable ? 'działa częściowo' : 'jest niedostępny'}.`
-      : `Missing FX conversions: ${missingFxTransactions}. USD view is ${usdSeriesAvailable ? 'partially available' : 'unavailable'}.`,
+    message: formatMessage(tFor('dataQualityLib.fxWarn', lang), {
+      missingFxTransactions,
+      usdViewStatus: tFor(
+        usdSeriesAvailable ? 'dataQualityLib.fxWarnUsdPartial' : 'dataQualityLib.fxWarnUsdUnavailable',
+        lang,
+      ),
+    }),
   }
 }
 
@@ -228,12 +235,10 @@ function buildGoldCheck(goldSeriesAvailable: boolean, lang: UiLanguage): Portfol
 }
 
 function buildBenchmarkCheck({
-  issueCount,
   availableBenchmarkCount,
   totalBenchmarkCount,
   lang,
 }: {
-  issueCount: number
   availableBenchmarkCount: number
   totalBenchmarkCount: number
   lang: UiLanguage
@@ -249,14 +254,15 @@ function buildBenchmarkCheck({
     }
   }
 
-  if (issueCount === 0 && availableBenchmarkCount === totalBenchmarkCount) {
+  if (availableBenchmarkCount === totalBenchmarkCount) {
     return {
       key: 'benchmarks',
       label,
       status: 'PASS',
-      message: lang === 'pl'
-        ? `Dostępne benchmarki: ${availableBenchmarkCount} z ${totalBenchmarkCount}.`
-        : `Available benchmarks: ${availableBenchmarkCount} of ${totalBenchmarkCount}.`,
+      message: formatMessage(tFor('dataQualityLib.benchmarksPass', lang), {
+        availableCount: availableBenchmarkCount,
+        totalCount: totalBenchmarkCount,
+      }),
     }
   }
 
@@ -264,23 +270,37 @@ function buildBenchmarkCheck({
     key: 'benchmarks',
     label,
     status: 'WARN',
-    message: lang === 'pl'
-      ? `Dostępne benchmarki: ${availableBenchmarkCount} z ${totalBenchmarkCount}; problemy serii: ${issueCount}.`
-      : `Available benchmarks: ${availableBenchmarkCount} of ${totalBenchmarkCount}; series issues: ${issueCount}.`,
+    message: formatMessage(tFor('dataQualityLib.benchmarksWarn', lang), {
+      availableCount: availableBenchmarkCount,
+      totalCount: totalBenchmarkCount,
+    }),
   }
 }
 
-function buildCpiCheck(cpiCoverageThroughMonth: string | null, lang: UiLanguage): PortfolioDataQualityCheck {
+function buildCpiCheck(cpiCoverageThroughMonth: string | null, lang: UiLanguage, now: Date): PortfolioDataQualityCheck {
   const label = tFor('dataQualityLib.cpi', lang)
 
   if (cpiCoverageThroughMonth) {
+    const minimumCoverageThroughMonth = minimumFreshCpiCoverageThroughMonth(now)
+    if (compareYearMonth(cpiCoverageThroughMonth, minimumCoverageThroughMonth) < 0) {
+      return {
+        key: 'cpi',
+        label,
+        status: 'WARN',
+        message: formatMessage(tFor('dataQualityLib.cpiWarnStale', lang), {
+          currentCoverageThrough: formatYearMonth(cpiCoverageThroughMonth),
+          minimumCoverageThrough: formatYearMonth(minimumCoverageThroughMonth),
+        }),
+      }
+    }
+
     return {
       key: 'cpi',
       label,
       status: 'PASS',
-      message: lang === 'pl'
-        ? `Pokrycie CPI do ${formatYearMonth(cpiCoverageThroughMonth)}.`
-        : `CPI coverage through ${formatYearMonth(cpiCoverageThroughMonth)}.`,
+      message: formatMessage(tFor('dataQualityLib.cpiPass', lang), {
+        coverageThrough: formatYearMonth(cpiCoverageThroughMonth),
+      }),
     }
   }
 
@@ -319,9 +339,10 @@ function buildRefreshCheck({
       key: 'refresh',
       label,
       status: 'WARN',
-      message: lang === 'pl'
-        ? `Ostatnie odświeżenie nie powiodło się ${refreshStatus.lastFailureAt}: ${failureMessage}`
-        : `The latest refresh failed at ${refreshStatus.lastFailureAt}: ${failureMessage}`,
+      message: formatMessage(tFor('dataQualityLib.refreshWarn', lang), {
+        failureAt: refreshStatus.lastFailureAt,
+        failureMessage,
+      }),
     }
   }
 
@@ -330,9 +351,9 @@ function buildRefreshCheck({
       key: 'refresh',
       label,
       status: 'PASS',
-      message: lang === 'pl'
-        ? `Ostatnie udane odświeżenie: ${lastSuccessfulRefreshAt}.`
-        : `Last successful refresh: ${lastSuccessfulRefreshAt}.`,
+      message: formatMessage(tFor('dataQualityLib.refreshPass', lang), {
+        refreshedAt: lastSuccessfulRefreshAt,
+      }),
     }
   }
 
@@ -366,6 +387,55 @@ function findCpiCoverageThroughMonth(returns: PortfolioReturns): string | null {
 
   const coverageDate = new Date(Date.UTC(year, month - 2, 1))
   return `${coverageDate.getUTCFullYear()}-${String(coverageDate.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+function minimumFreshCpiCoverageThroughMonth(now: Date): string {
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth() + 1
+  const day = now.getUTCDate()
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const latestCompletePortfolioMonthExclusive = shiftYearMonth(
+    `${year}-${String(month).padStart(2, '0')}`,
+    day === daysInMonth ? 1 : 0,
+  )
+  return shiftYearMonth(latestCompletePortfolioMonthExclusive, -2)
+}
+
+function compareYearMonth(left: string, right: string) {
+  const leftParsed = parseYearMonth(left)
+  const rightParsed = parseYearMonth(right)
+  if (!leftParsed || !rightParsed) {
+    return 0
+  }
+
+  return (leftParsed.year - rightParsed.year) * 12 + (leftParsed.month - rightParsed.month)
+}
+
+function shiftYearMonth(value: string, deltaMonths: number): string {
+  const parsed = parseYearMonth(value)
+  if (!parsed) {
+    return value
+  }
+
+  const totalMonths = parsed.year * 12 + (parsed.month - 1) + deltaMonths
+  const year = Math.floor(totalMonths / 12)
+  const month = (totalMonths % 12 + 12) % 12 + 1
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+function parseYearMonth(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value)
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
+    return null
+  }
+
+  return { year, month }
 }
 
 
