@@ -63,11 +63,8 @@ class InstrumentService(
             ?: throw ResourceNotFoundException("Instrument not found: ${command.id}")
 
         val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
-        val symbolChanged = symbol != existing.symbol
-        val switchedToStockAnalyst = existing.valuationSource != ValuationSource.STOCK_ANALYST &&
-            command.valuationSource == ValuationSource.STOCK_ANALYST
-        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null && (symbolChanged || switchedToStockAnalyst)) {
-            valuationProbeService.verifyStockAnalystSymbol(symbol)
+        if (shouldVerifySymbol(command.valuationSource, symbol, existing)) {
+            valuationProbeService.verifyStockAnalystSymbol(symbol!!)
         }
 
         val now = Instant.now(clock)
@@ -93,6 +90,15 @@ class InstrumentService(
             }
         )
         return updated
+    }
+
+    private fun shouldVerifySymbol(
+        valuationSource: ValuationSource,
+        symbol: String?,
+        existing: Instrument
+    ): Boolean {
+        if (valuationSource != ValuationSource.STOCK_ANALYST || symbol == null) return false
+        return symbol != existing.symbol || existing.valuationSource != ValuationSource.STOCK_ANALYST
     }
 }
 

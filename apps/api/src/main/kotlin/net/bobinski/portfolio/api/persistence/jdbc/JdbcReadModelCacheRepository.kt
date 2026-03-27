@@ -9,22 +9,17 @@ class JdbcReadModelCacheRepository(
     private val dataSource: DataSource
 ) : ReadModelCacheRepository {
 
-    override suspend fun get(cacheKey: String): ReadModelCacheSnapshot? =
-        dataSource.connection.use { connection ->
-            connection.prepareStatement(
-                """
-                select cache_key, model_name, model_version, inputs_from, inputs_to, source_updated_at,
-                       generated_at, invalidation_reason, payload_json, payload_size_bytes
-                from read_model_snapshots
-                where cache_key = ?
-                """.trimIndent()
-            ).use { statement ->
-                statement.setString(1, cacheKey)
-                statement.executeQuery().use { resultSet ->
-                    if (resultSet.next()) resultSet.toReadModelCacheSnapshot() else null
-                }
+    override suspend fun get(cacheKey: String): ReadModelCacheSnapshot? {
+        val connection = dataSource.connection
+        return connection.use {
+            val statement = it.prepareStatement(GET_BY_KEY_SQL)
+            statement.use { stmt ->
+                stmt.setString(1, cacheKey)
+                val resultSet = stmt.executeQuery()
+                resultSet.use { rs -> if (rs.next()) rs.toReadModelCacheSnapshot() else null }
             }
         }
+    }
 
     override suspend fun list(): List<ReadModelCacheSnapshot> =
         dataSource.connection.use { connection ->
@@ -91,6 +86,15 @@ class JdbcReadModelCacheRepository(
                 statement.executeUpdate()
             }
         }
+
+    private companion object {
+        private const val GET_BY_KEY_SQL = """
+            select cache_key, model_name, model_version, inputs_from, inputs_to, source_updated_at,
+                   generated_at, invalidation_reason, payload_json, payload_size_bytes
+            from read_model_snapshots
+            where cache_key = ?
+        """
+    }
 
     private fun java.sql.ResultSet.toReadModelCacheSnapshot(): ReadModelCacheSnapshot = ReadModelCacheSnapshot(
         cacheKey = getString("cache_key"),

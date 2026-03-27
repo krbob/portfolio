@@ -20,24 +20,10 @@ class DataSourceFactoryTest {
 
         try {
             dataSource.connection.use { connection ->
-                connection.createStatement().use { statement ->
-                    statement.executeQuery("pragma foreign_keys").use { resultSet ->
-                        resultSet.next()
-                        assertEquals(1, resultSet.getInt(1))
-                    }
-                    statement.executeQuery("pragma journal_mode").use { resultSet ->
-                        resultSet.next()
-                        assertEquals("wal", resultSet.getString(1).lowercase())
-                    }
-                    statement.executeQuery("pragma synchronous").use { resultSet ->
-                        resultSet.next()
-                        assertEquals(2, resultSet.getInt(1))
-                    }
-                    statement.executeQuery("pragma busy_timeout").use { resultSet ->
-                        resultSet.next()
-                        assertEquals(5_000, resultSet.getInt(1))
-                    }
-                }
+                assertPragma(connection, "foreign_keys", 1)
+                assertPragma(connection, "journal_mode", "wal")
+                assertPragma(connection, "synchronous", 2)
+                assertPragma(connection, "busy_timeout", 5_000)
             }
         } finally {
             (dataSource as AutoCloseable).close()
@@ -45,6 +31,24 @@ class DataSourceFactoryTest {
             (directory / "portfolio.db-shm").deleteIfExists()
             (directory / "portfolio.db-wal").deleteIfExists()
             directory.deleteIfExists()
+        }
+    }
+
+    private fun assertPragma(connection: java.sql.Connection, pragma: String, expected: Int) {
+        connection.createStatement().use { statement ->
+            statement.executeQuery("pragma $pragma").use { resultSet ->
+                resultSet.next()
+                assertEquals(expected, resultSet.getInt(1))
+            }
+        }
+    }
+
+    private fun assertPragma(connection: java.sql.Connection, pragma: String, expected: String) {
+        connection.createStatement().use { statement ->
+            statement.executeQuery("pragma $pragma").use { resultSet ->
+                resultSet.next()
+                assertEquals(expected, resultSet.getString(1).lowercase())
+            }
         }
     }
 

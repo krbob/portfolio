@@ -28,45 +28,7 @@ class PortfolioAllocationService(
         }.multiply(HUNDRED).scalePercent()
         val availableCash = overview.cashCurrentValuePln.money()
 
-        val bucketInputs = currentValues.entries.map { (assetClass, currentValue) ->
-            val target = targetsByAssetClass[assetClass]
-            val currentWeightPct = if (totalCurrentValue.signum() == 0) {
-                BigDecimal.ZERO
-            } else {
-                currentValue
-                    .divide(totalCurrentValue, 8, RoundingMode.HALF_UP)
-                    .multiply(HUNDRED)
-            }.scalePercent()
-            val targetWeightPct = target?.targetWeight?.multiply(HUNDRED)?.scalePercent()
-            val targetValue = target?.let { totalCurrentValue.multiply(it.targetWeight).money() }
-            val gapValue = targetValue?.subtract(currentValue)?.money()
-            val driftPctPoints = targetWeightPct?.let { currentWeightPct.subtract(it).scalePercent() }
-            val withinTolerance = driftPctPoints != null && driftPctPoints.abs() <= toleranceBandPctPoints
-            val outsideToleranceGapValue = when {
-                gapValue == null || withinTolerance -> BigDecimal.ZERO
-                else -> gapValue
-            }
-            AllocationBucketInput(
-                assetClass = assetClass,
-                currentValuePln = currentValue.money(),
-                currentWeightPct = currentWeightPct,
-                targetWeightPct = targetWeightPct,
-                targetValuePln = targetValue,
-                driftPctPoints = driftPctPoints,
-                gapValuePln = gapValue,
-                toleranceLowerPct = targetWeightPct?.subtract(toleranceBandPctPoints)?.max(BigDecimal.ZERO)?.scalePercent(),
-                toleranceUpperPct = targetWeightPct?.add(toleranceBandPctPoints)?.min(HUNDRED)?.scalePercent(),
-                withinTolerance = withinTolerance,
-                outsideToleranceGapValuePln = outsideToleranceGapValue,
-                rebalanceAction = when {
-                    target == null || gapValue == null -> AllocationBucketAction.UNCONFIGURED
-                    withinTolerance -> AllocationBucketAction.HOLD
-                    gapValue > BigDecimal("0.01") -> AllocationBucketAction.BUY
-                    gapValue < BigDecimal("-0.01") -> AllocationBucketAction.SELL
-                    else -> AllocationBucketAction.HOLD
-                }
-            )
-        }
+        val bucketInputs = buildBucketInputs(currentValues, targetsByAssetClass, totalCurrentValue, toleranceBandPctPoints)
 
         val positiveGaps = bucketInputs.filter { it.outsideToleranceGapValuePln > BigDecimal.ZERO }
         val negativeGaps = bucketInputs.filter { it.outsideToleranceGapValuePln < BigDecimal.ZERO }
@@ -105,29 +67,12 @@ class PortfolioAllocationService(
             largestBandBreachPctPoints = largestBandBreachPctPoints,
             recommendedAction = recommendedAction,
             recommendedAssetClass = contributionTarget?.assetClass,
-            recommendedContributionPln = when {
-                contributionTarget == null || positiveGapSum.signum() == 0 || availableCash.signum() == 0 -> BigDecimal.ZERO.money()
-                availableCash >= positiveGapSum -> contributionTarget.outsideToleranceGapValuePln.money()
-                else -> availableCash
-                    .multiply(contributionTarget.outsideToleranceGapValuePln)
-                    .divide(positiveGapSum, 8, RoundingMode.HALF_UP)
-                    .money()
-            },
+            recommendedContributionPln = suggestedContribution(contributionTarget?.outsideToleranceGapValuePln, positiveGapSum, availableCash),
             remainingContributionGapPln = positiveGapSum.subtract(availableCash).max(BigDecimal.ZERO).money(),
             fullRebalanceBuyAmountPln = positiveGapSum,
             fullRebalanceSellAmountPln = negativeGapSum,
             requiresSelling = negativeGapSum > BigDecimal.ZERO && positiveGapSum > availableCash,
             buckets = bucketInputs.map { bucket ->
-                val suggestedContribution = when {
-                    bucket.outsideToleranceGapValuePln <= BigDecimal.ZERO -> BigDecimal.ZERO
-                    positiveGapSum.signum() == 0 || availableCash.signum() == 0 -> BigDecimal.ZERO
-                    availableCash >= positiveGapSum -> bucket.outsideToleranceGapValuePln.money()
-                    else -> availableCash
-                        .multiply(bucket.outsideToleranceGapValuePln)
-                        .divide(positiveGapSum, 8, RoundingMode.HALF_UP)
-                        .money()
-                }
-
                 PortfolioAllocationBucket(
                     assetClass = bucket.assetClass,
                     currentValuePln = bucket.currentValuePln,
@@ -139,7 +84,7 @@ class PortfolioAllocationService(
                     toleranceLowerPct = bucket.toleranceLowerPct,
                     toleranceUpperPct = bucket.toleranceUpperPct,
                     withinTolerance = bucket.withinTolerance,
-                    suggestedContributionPln = suggestedContribution,
+                    suggestedContributionPln = suggestedContribution(bucket.outsideToleranceGapValuePln.takeIf { it > BigDecimal.ZERO }, positiveGapSum, availableCash),
                     rebalanceAction = bucket.rebalanceAction,
                     status = when {
                         bucket.targetWeightPct == null -> AllocationBucketStatus.UNCONFIGURED
@@ -151,6 +96,61 @@ class PortfolioAllocationService(
                 )
             }
         )
+    }
+
+    private fun buildBucketInputs(
+        currentValues: Map<AssetClass, BigDecimal>,
+        targetsByAssetClass: Map<AssetClass, PortfolioTarget>,
+        totalCurrentValue: BigDecimal,
+        toleranceBandPctPoints: BigDecimal
+    ): List<AllocationBucketInput> = currentValues.entries.map { (assetClass, currentValue) ->
+        val target = targetsByAssetClass[assetClass]
+        val currentWeightPct = if (totalCurrentValue.signum() == 0) {
+            BigDecimal.ZERO
+        } else {
+            currentValue
+                .divide(totalCurrentValue, 8, RoundingMode.HALF_UP)
+                .multiply(HUNDRED)
+        }.scalePercent()
+        val targetWeightPct = target?.targetWeight?.multiply(HUNDRED)?.scalePercent()
+        val targetValue = target?.let { totalCurrentValue.multiply(it.targetWeight).money() }
+        val gapValue = targetValue?.subtract(currentValue)?.money()
+        val driftPctPoints = targetWeightPct?.let { currentWeightPct.subtract(it).scalePercent() }
+        val withinTolerance = driftPctPoints != null && driftPctPoints.abs() <= toleranceBandPctPoints
+        AllocationBucketInput(
+            assetClass = assetClass,
+            currentValuePln = currentValue.money(),
+            currentWeightPct = currentWeightPct,
+            targetWeightPct = targetWeightPct,
+            targetValuePln = targetValue,
+            driftPctPoints = driftPctPoints,
+            gapValuePln = gapValue,
+            toleranceLowerPct = targetWeightPct?.subtract(toleranceBandPctPoints)?.max(BigDecimal.ZERO)?.scalePercent(),
+            toleranceUpperPct = targetWeightPct?.add(toleranceBandPctPoints)?.min(HUNDRED)?.scalePercent(),
+            withinTolerance = withinTolerance,
+            outsideToleranceGapValuePln = if (gapValue == null || withinTolerance) BigDecimal.ZERO else gapValue,
+            rebalanceAction = when {
+                target == null || gapValue == null -> AllocationBucketAction.UNCONFIGURED
+                withinTolerance -> AllocationBucketAction.HOLD
+                gapValue > BigDecimal("0.01") -> AllocationBucketAction.BUY
+                gapValue < BigDecimal("-0.01") -> AllocationBucketAction.SELL
+                else -> AllocationBucketAction.HOLD
+            }
+        )
+    }
+
+    private fun suggestedContribution(
+        gapValue: BigDecimal?,
+        positiveGapSum: BigDecimal,
+        availableCash: BigDecimal
+    ): BigDecimal = when {
+        gapValue == null || gapValue <= BigDecimal.ZERO -> BigDecimal.ZERO.money()
+        positiveGapSum.signum() == 0 || availableCash.signum() == 0 -> BigDecimal.ZERO.money()
+        availableCash >= positiveGapSum -> gapValue.money()
+        else -> availableCash
+            .multiply(gapValue)
+            .divide(positiveGapSum, 8, RoundingMode.HALF_UP)
+            .money()
     }
 
     private fun BigDecimal.scalePercent(): BigDecimal = setScale(2, RoundingMode.HALF_UP)

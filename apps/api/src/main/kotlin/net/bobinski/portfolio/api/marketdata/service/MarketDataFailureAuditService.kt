@@ -32,6 +32,20 @@ class MarketDataFailureAuditService(
             symbol = resolvedSymbol,
             purchaseDate = purchaseDate
         )
+        val metadata = buildMap {
+            put("upstream", resolvedUpstream)
+            put("operation", resolvedOperation)
+            resolvedSymbol?.let { put("symbol", it) }
+            instrumentName?.let { put("instrumentName", it) }
+            valuationSource?.let { put("valuationSource", it) }
+            purchaseDate?.let { put("purchaseDate", it.toString()) }
+            from?.let { put("from", it.toString()) }
+            to?.let { put("to", it.toString()) }
+            put("reason", reason)
+            clientException?.statusCode?.let { put("statusCode", it.toString()) }
+            clientException?.responseBodyPreview?.let { put("responseBodyPreview", it) }
+            exception?.javaClass?.simpleName?.takeIf { it.isNotBlank() }?.let { put("exceptionType", it) }
+        }
 
         auditLogService.record(
             category = AuditEventCategory.SYSTEM,
@@ -40,20 +54,7 @@ class MarketDataFailureAuditService(
             entityType = "MARKET_DATA",
             entityId = instrumentId ?: resolvedSymbol ?: purchaseDate?.toString(),
             message = message,
-            metadata = buildMap {
-                put("upstream", resolvedUpstream)
-                put("operation", resolvedOperation)
-                resolvedSymbol?.let { put("symbol", it) }
-                instrumentName?.let { put("instrumentName", it) }
-                valuationSource?.let { put("valuationSource", it) }
-                purchaseDate?.let { put("purchaseDate", it.toString()) }
-                from?.let { put("from", it.toString()) }
-                to?.let { put("to", it.toString()) }
-                put("reason", reason)
-                clientException?.statusCode?.let { put("statusCode", it.toString()) }
-                clientException?.responseBodyPreview?.let { put("responseBodyPreview", it) }
-                exception?.javaClass?.simpleName?.takeIf { it.isNotBlank() }?.let { put("exceptionType", it) }
-            }
+            metadata = metadata
         )
     }
 

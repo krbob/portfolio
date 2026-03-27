@@ -395,108 +395,59 @@ internal fun PortfolioBackupRecord.toResponse(): PortfolioBackupRecordResponse =
 internal fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = PortfolioSnapshotResponse(
     schemaVersion = schemaVersion,
     exportedAt = exportedAt.toString(),
-    accounts = accounts.map { snapshot ->
-        AccountSnapshotResponse(
-            id = snapshot.id,
-            name = snapshot.name,
-            institution = snapshot.institution,
-            type = snapshot.type,
-            baseCurrency = snapshot.baseCurrency,
-            displayOrder = snapshot.displayOrder,
-            isActive = snapshot.isActive,
-            createdAt = snapshot.createdAt,
-            updatedAt = snapshot.updatedAt
-        )
-    },
-    appPreferences = appPreferences.map { snapshot ->
-        AppPreferenceSnapshotResponse(
-            key = snapshot.key,
-            valueJson = snapshot.valueJson,
-            updatedAt = snapshot.updatedAt
-        )
-    },
-    instruments = instruments.map { snapshot ->
-        InstrumentSnapshotResponse(
-            id = snapshot.id,
-            name = snapshot.name,
-            kind = snapshot.kind,
-            assetClass = snapshot.assetClass,
-            symbol = snapshot.symbol,
-            currency = snapshot.currency,
-            valuationSource = snapshot.valuationSource,
-            edoTerms = snapshot.edoTerms?.let { terms ->
-                EdoTermsSnapshotResponse(
-                    seriesMonth = terms.seriesMonth,
-                    firstPeriodRateBps = terms.firstPeriodRateBps,
-                    marginBps = terms.marginBps
-                )
-            },
-            isActive = snapshot.isActive,
-            createdAt = snapshot.createdAt,
-            updatedAt = snapshot.updatedAt
-        )
-    },
-    targets = targets.map { snapshot ->
-        PortfolioTargetSnapshotResponse(
-            id = snapshot.id,
-            assetClass = snapshot.assetClass,
-            targetWeight = snapshot.targetWeight,
-            createdAt = snapshot.createdAt,
-            updatedAt = snapshot.updatedAt
-        )
-    },
-    importProfiles = importProfiles.map { snapshot ->
-        TransactionImportProfileSnapshotResponse(
-            id = snapshot.id,
-            name = snapshot.name,
-            description = snapshot.description,
-            delimiter = snapshot.delimiter,
-            dateFormat = snapshot.dateFormat,
-            decimalSeparator = snapshot.decimalSeparator,
-            skipDuplicatesByDefault = snapshot.skipDuplicatesByDefault,
-            headerMappings = TransactionImportHeaderMappingsResponse(
-                account = snapshot.headerMappings.account,
-                type = snapshot.headerMappings.type,
-                tradeDate = snapshot.headerMappings.tradeDate,
-                settlementDate = snapshot.headerMappings.settlementDate,
-                instrument = snapshot.headerMappings.instrument,
-                quantity = snapshot.headerMappings.quantity,
-                unitPrice = snapshot.headerMappings.unitPrice,
-                grossAmount = snapshot.headerMappings.grossAmount,
-                feeAmount = snapshot.headerMappings.feeAmount,
-                taxAmount = snapshot.headerMappings.taxAmount,
-                currency = snapshot.headerMappings.currency,
-                fxRateToPln = snapshot.headerMappings.fxRateToPln,
-                notes = snapshot.headerMappings.notes
-            ),
-            defaults = TransactionImportDefaultsResponse(
-                accountId = snapshot.defaults.accountId,
-                currency = snapshot.defaults.currency
-            ),
-            createdAt = snapshot.createdAt,
-            updatedAt = snapshot.updatedAt
-        )
-    },
-    transactions = transactions.map { snapshot ->
-        TransactionSnapshotResponse(
-            id = snapshot.id,
-            accountId = snapshot.accountId,
-            instrumentId = snapshot.instrumentId,
-            type = snapshot.type,
-            tradeDate = snapshot.tradeDate,
-            settlementDate = snapshot.settlementDate,
-            quantity = snapshot.quantity,
-            unitPrice = snapshot.unitPrice,
-            grossAmount = snapshot.grossAmount,
-            feeAmount = snapshot.feeAmount,
-            taxAmount = snapshot.taxAmount,
-            currency = snapshot.currency,
-            fxRateToPln = snapshot.fxRateToPln,
-            notes = snapshot.notes,
-            createdAt = snapshot.createdAt,
-            updatedAt = snapshot.updatedAt
-        )
-    }
+    accounts = accounts.map(net.bobinski.portfolio.api.domain.service.AccountSnapshot::toResponse),
+    appPreferences = appPreferences.map(net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot::toResponse),
+    instruments = instruments.map(net.bobinski.portfolio.api.domain.service.InstrumentSnapshot::toResponse),
+    targets = targets.map(net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot::toResponse),
+    importProfiles = importProfiles.map(net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot::toResponse),
+    transactions = transactions.map(net.bobinski.portfolio.api.domain.service.TransactionSnapshot::toResponse)
+)
+
+private fun net.bobinski.portfolio.api.domain.service.AccountSnapshot.toResponse() = AccountSnapshotResponse(
+    id = id, name = name, institution = institution, type = type,
+    baseCurrency = baseCurrency, displayOrder = displayOrder, isActive = isActive,
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot.toResponse() = AppPreferenceSnapshotResponse(
+    key = key, valueJson = valueJson, updatedAt = updatedAt
+)
+
+private fun net.bobinski.portfolio.api.domain.service.InstrumentSnapshot.toResponse() = InstrumentSnapshotResponse(
+    id = id, name = name, kind = kind, assetClass = assetClass,
+    symbol = symbol, currency = currency, valuationSource = valuationSource,
+    edoTerms = edoTerms?.let { EdoTermsSnapshotResponse(it.seriesMonth, it.firstPeriodRateBps, it.marginBps) },
+    isActive = isActive, createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot.toResponse() = PortfolioTargetSnapshotResponse(
+    id = id, assetClass = assetClass, targetWeight = targetWeight,
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot.toResponse() = TransactionImportProfileSnapshotResponse(
+    id = id, name = name, description = description,
+    delimiter = delimiter, dateFormat = dateFormat, decimalSeparator = decimalSeparator,
+    skipDuplicatesByDefault = skipDuplicatesByDefault,
+    headerMappings = TransactionImportHeaderMappingsResponse(
+        account = headerMappings.account, type = headerMappings.type,
+        tradeDate = headerMappings.tradeDate, settlementDate = headerMappings.settlementDate,
+        instrument = headerMappings.instrument, quantity = headerMappings.quantity,
+        unitPrice = headerMappings.unitPrice, grossAmount = headerMappings.grossAmount,
+        feeAmount = headerMappings.feeAmount, taxAmount = headerMappings.taxAmount,
+        currency = headerMappings.currency, fxRateToPln = headerMappings.fxRateToPln,
+        notes = headerMappings.notes
+    ),
+    defaults = TransactionImportDefaultsResponse(accountId = defaults.accountId, currency = defaults.currency),
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun net.bobinski.portfolio.api.domain.service.TransactionSnapshot.toResponse() = TransactionSnapshotResponse(
+    id = id, accountId = accountId, instrumentId = instrumentId, type = type,
+    tradeDate = tradeDate, settlementDate = settlementDate,
+    quantity = quantity, unitPrice = unitPrice, grossAmount = grossAmount,
+    feeAmount = feeAmount, taxAmount = taxAmount, currency = currency,
+    fxRateToPln = fxRateToPln, notes = notes, createdAt = createdAt, updatedAt = updatedAt
 )
 
 internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = PortfolioImportRequest(
@@ -508,109 +459,64 @@ internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Po
     snapshot = PortfolioSnapshot(
         schemaVersion = snapshot.schemaVersion,
         exportedAt = snapshot.exportedAt.toInstantOrThrow("snapshot.exportedAt"),
-        accounts = snapshot.accounts.map { account ->
-            net.bobinski.portfolio.api.domain.service.AccountSnapshot(
-                id = account.id,
-                name = account.name,
-                institution = account.institution,
-                type = account.type,
-                baseCurrency = account.baseCurrency,
-                displayOrder = account.displayOrder,
-                isActive = account.isActive,
-                createdAt = account.createdAt,
-                updatedAt = account.updatedAt
-            )
-        },
-        appPreferences = snapshot.appPreferences.map { preference ->
-            net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot(
-                key = preference.key,
-                valueJson = preference.valueJson,
-                updatedAt = preference.updatedAt
-            )
-        },
-        instruments = snapshot.instruments.map { instrument ->
-            net.bobinski.portfolio.api.domain.service.InstrumentSnapshot(
-                id = instrument.id,
-                name = instrument.name,
-                kind = instrument.kind,
-                assetClass = instrument.assetClass,
-                symbol = instrument.symbol,
-                currency = instrument.currency,
-                valuationSource = instrument.valuationSource,
-                edoTerms = instrument.edoTerms?.let { terms ->
-                    net.bobinski.portfolio.api.domain.service.EdoTermsSnapshot(
-                        seriesMonth = terms.seriesMonth,
-                        firstPeriodRateBps = terms.firstPeriodRateBps,
-                        marginBps = terms.marginBps
-                    )
-                },
-                isActive = instrument.isActive,
-                createdAt = instrument.createdAt,
-                updatedAt = instrument.updatedAt
-            )
-        },
-        targets = snapshot.targets.map { target ->
-            net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot(
-                id = target.id,
-                assetClass = target.assetClass,
-                targetWeight = target.targetWeight,
-                createdAt = target.createdAt,
-                updatedAt = target.updatedAt
-            )
-        },
-        importProfiles = snapshot.importProfiles.map { profile ->
-            net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot(
-                id = profile.id,
-                name = profile.name,
-                description = profile.description,
-                delimiter = profile.delimiter,
-                dateFormat = profile.dateFormat,
-                decimalSeparator = profile.decimalSeparator,
-                skipDuplicatesByDefault = profile.skipDuplicatesByDefault,
-                headerMappings = net.bobinski.portfolio.api.domain.model.TransactionImportHeaderMappings(
-                    account = profile.headerMappings.account,
-                    type = profile.headerMappings.type,
-                    tradeDate = profile.headerMappings.tradeDate,
-                    settlementDate = profile.headerMappings.settlementDate,
-                    instrument = profile.headerMappings.instrument,
-                    quantity = profile.headerMappings.quantity,
-                    unitPrice = profile.headerMappings.unitPrice,
-                    grossAmount = profile.headerMappings.grossAmount,
-                    feeAmount = profile.headerMappings.feeAmount,
-                    taxAmount = profile.headerMappings.taxAmount,
-                    currency = profile.headerMappings.currency,
-                    fxRateToPln = profile.headerMappings.fxRateToPln,
-                    notes = profile.headerMappings.notes
-                ),
-                defaults = net.bobinski.portfolio.api.domain.model.TransactionImportDefaults(
-                    accountId = profile.defaults.accountId,
-                    currency = profile.defaults.currency
-                ),
-                createdAt = profile.createdAt,
-                updatedAt = profile.updatedAt
-            )
-        },
-        transactions = snapshot.transactions.map { transaction ->
-            net.bobinski.portfolio.api.domain.service.TransactionSnapshot(
-                id = transaction.id,
-                accountId = transaction.accountId,
-                instrumentId = transaction.instrumentId,
-                type = transaction.type,
-                tradeDate = transaction.tradeDate,
-                settlementDate = transaction.settlementDate,
-                quantity = transaction.quantity,
-                unitPrice = transaction.unitPrice,
-                grossAmount = transaction.grossAmount,
-                feeAmount = transaction.feeAmount,
-                taxAmount = transaction.taxAmount,
-                currency = transaction.currency,
-                fxRateToPln = transaction.fxRateToPln,
-                notes = transaction.notes,
-                createdAt = transaction.createdAt,
-                updatedAt = transaction.updatedAt
-            )
-        }
+        accounts = snapshot.accounts.map(AccountSnapshotResponse::toDomain),
+        appPreferences = snapshot.appPreferences.map(AppPreferenceSnapshotResponse::toDomain),
+        instruments = snapshot.instruments.map(InstrumentSnapshotResponse::toDomain),
+        targets = snapshot.targets.map(PortfolioTargetSnapshotResponse::toDomain),
+        importProfiles = snapshot.importProfiles.map(TransactionImportProfileSnapshotResponse::toDomain),
+        transactions = snapshot.transactions.map(TransactionSnapshotResponse::toDomain)
     )
+)
+
+private fun AccountSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.AccountSnapshot(
+    id = id, name = name, institution = institution, type = type,
+    baseCurrency = baseCurrency, displayOrder = displayOrder, isActive = isActive,
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun AppPreferenceSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot(
+    key = key, valueJson = valueJson, updatedAt = updatedAt
+)
+
+private fun InstrumentSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.InstrumentSnapshot(
+    id = id, name = name, kind = kind, assetClass = assetClass,
+    symbol = symbol, currency = currency, valuationSource = valuationSource,
+    edoTerms = edoTerms?.let {
+        net.bobinski.portfolio.api.domain.service.EdoTermsSnapshot(it.seriesMonth, it.firstPeriodRateBps, it.marginBps)
+    },
+    isActive = isActive, createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun PortfolioTargetSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot(
+    id = id, assetClass = assetClass, targetWeight = targetWeight,
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun TransactionImportProfileSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot(
+    id = id, name = name, description = description,
+    delimiter = delimiter, dateFormat = dateFormat, decimalSeparator = decimalSeparator,
+    skipDuplicatesByDefault = skipDuplicatesByDefault,
+    headerMappings = net.bobinski.portfolio.api.domain.model.TransactionImportHeaderMappings(
+        account = headerMappings.account, type = headerMappings.type,
+        tradeDate = headerMappings.tradeDate, settlementDate = headerMappings.settlementDate,
+        instrument = headerMappings.instrument, quantity = headerMappings.quantity,
+        unitPrice = headerMappings.unitPrice, grossAmount = headerMappings.grossAmount,
+        feeAmount = headerMappings.feeAmount, taxAmount = headerMappings.taxAmount,
+        currency = headerMappings.currency, fxRateToPln = headerMappings.fxRateToPln,
+        notes = headerMappings.notes
+    ),
+    defaults = net.bobinski.portfolio.api.domain.model.TransactionImportDefaults(
+        accountId = defaults.accountId, currency = defaults.currency
+    ),
+    createdAt = createdAt, updatedAt = updatedAt
+)
+
+private fun TransactionSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.TransactionSnapshot(
+    id = id, accountId = accountId, instrumentId = instrumentId, type = type,
+    tradeDate = tradeDate, settlementDate = settlementDate,
+    quantity = quantity, unitPrice = unitPrice, grossAmount = grossAmount,
+    feeAmount = feeAmount, taxAmount = taxAmount, currency = currency,
+    fxRateToPln = fxRateToPln, notes = notes, createdAt = createdAt, updatedAt = updatedAt
 )
 
 internal fun net.bobinski.portfolio.api.domain.service.PortfolioImportResult.toResponse(): PortfolioImportResultResponse =
