@@ -25,6 +25,16 @@ class AppPreferenceService(
         }
     }
 
+    suspend fun <T> getOrNull(
+        key: String,
+        serializer: KSerializer<T>
+    ): T? {
+        val preference = repository.get(key) ?: return null
+        return runCatching {
+            json.decodeFromString(serializer, preference.valueJson)
+        }.getOrNull()
+    }
+
     suspend fun <T> put(
         key: String,
         serializer: KSerializer<T>,

@@ -14,11 +14,13 @@ import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
+import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -32,6 +34,11 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
+            val appPreferenceService = AppPreferenceService(
+                repository = InMemoryAppPreferenceRepository(),
+                json = AppJsonFactory.create(),
+                clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
+            )
             val provider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
@@ -59,7 +66,8 @@ class RemoteReferenceSeriesProviderTest {
                         auditEventRepository = auditEventRepository,
                         clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
                     )
-                )
+                ),
+                snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
             )
 
             val result = provider.goldPln(
@@ -86,6 +94,11 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
+            val appPreferenceService = AppPreferenceService(
+                repository = InMemoryAppPreferenceRepository(),
+                json = AppJsonFactory.create(),
+                clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
+            )
             val provider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
@@ -113,7 +126,8 @@ class RemoteReferenceSeriesProviderTest {
                         auditEventRepository = auditEventRepository,
                         clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
                     )
-                )
+                ),
+                snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
             )
 
             val result = provider.usdPln(
@@ -136,6 +150,112 @@ class RemoteReferenceSeriesProviderTest {
             assertTrue(event.metadata["responseBodyPreview"]!!.contains("Too many requests"))
         } finally {
             server.close()
+        }
+    }
+
+    @Test
+    fun `reference series falls back to cached snapshot when upstream later fails`() = runBlocking {
+        val cacheClock = Clock.fixed(Instant.parse("2026-03-27T13:00:00Z"), ZoneOffset.UTC)
+        val appPreferenceService = AppPreferenceService(
+            repository = InMemoryAppPreferenceRepository(),
+            json = AppJsonFactory.create(),
+            clock = cacheClock
+        )
+        val snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+
+        val successServer = FakeReferenceSeriesServer()
+        successServer.start()
+
+        try {
+            val warmProvider = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystBaseUrl = successServer.baseUrl,
+                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
+                    goldApiBaseUrl = successServer.baseUrl,
+                    goldApiKey = null,
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = successServer.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = successServer.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = InMemoryAuditEventRepository(),
+                        clock = cacheClock
+                    )
+                ),
+                snapshotCacheService = snapshotCacheService
+            )
+
+            val warmResult = warmProvider.usdPln(
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+
+            assertTrue(warmResult is ReferenceSeriesResult.Success)
+        } finally {
+            successServer.close()
+        }
+
+        val failingServer = FakeReferenceSeriesServer(failUsdHistory = true)
+        failingServer.start()
+
+        try {
+            val fallbackProvider = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystBaseUrl = failingServer.baseUrl,
+                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
+                    goldApiBaseUrl = failingServer.baseUrl,
+                    goldApiKey = null,
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = failingServer.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = failingServer.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = InMemoryAuditEventRepository(),
+                        clock = cacheClock
+                    )
+                ),
+                snapshotCacheService = snapshotCacheService
+            )
+
+            val result = fallbackProvider.usdPln(
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+
+            assertTrue(result is ReferenceSeriesResult.Success)
+            result as ReferenceSeriesResult.Success
+            assertTrue(result.fromCache)
+            assertEquals(2, result.prices.size)
+            assertEquals(LocalDate.parse("2026-03-19"), result.prices[0].date)
+            assertEquals(BigDecimal("3.85"), result.prices[0].closePricePln)
+        } finally {
+            failingServer.close()
         }
     }
 }

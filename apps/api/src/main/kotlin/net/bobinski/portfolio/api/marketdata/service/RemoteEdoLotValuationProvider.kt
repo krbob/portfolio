@@ -9,7 +9,8 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 class RemoteEdoLotValuationProvider(
     private val config: MarketDataConfig,
     private val edoCalculatorClient: EdoCalculatorClient,
-    private val marketDataFailureAuditService: MarketDataFailureAuditService
+    private val marketDataFailureAuditService: MarketDataFailureAuditService,
+    private val snapshotCacheService: MarketDataSnapshotCacheService
 ) : EdoLotValuationProvider {
     override suspend fun value(lotTerms: EdoLotTerms): InstrumentValuationResult {
         if (!config.enabled) {
@@ -21,13 +22,13 @@ class RemoteEdoLotValuationProvider(
 
         return try {
             val value = edoCalculatorClient.unitValueInPln(terms = lotTerms)
-            InstrumentValuationResult.Success(
-                InstrumentValuation(
-                    pricePerUnitPln = value.totalValue,
-                    valuedAt = value.asOf,
-                    currentRatePercent = value.currentRatePercent
-                )
+            val valuation = InstrumentValuation(
+                pricePerUnitPln = value.totalValue,
+                valuedAt = value.asOf,
+                currentRatePercent = value.currentRatePercent
             )
+            snapshotCacheService.putQuote(identity = edoQuoteIdentity(lotTerms), valuation = valuation)
+            InstrumentValuationResult.Success(valuation = valuation)
         } catch (exception: MarketDataClientException) {
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
@@ -36,6 +37,7 @@ class RemoteEdoLotValuationProvider(
                 purchaseDate = lotTerms.purchaseDate,
                 exception = exception
             )
+            cachedQuoteResult(lotTerms)?.let { return it }
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
@@ -48,6 +50,7 @@ class RemoteEdoLotValuationProvider(
                 purchaseDate = lotTerms.purchaseDate,
                 exception = exception
             )
+            cachedQuoteResult(lotTerms)?.let { return it }
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
@@ -73,9 +76,9 @@ class RemoteEdoLotValuationProvider(
         }
 
         return try {
-            HistoricalInstrumentValuationResult.Success(
-                prices = edoCalculatorClient.historyInPln(terms = lotTerms, from = start, to = to)
-            )
+            val history = edoCalculatorClient.historyInPln(terms = lotTerms, from = start, to = to)
+            snapshotCacheService.putSeries(identity = edoHistoryIdentity(lotTerms), prices = history)
+            HistoricalInstrumentValuationResult.Success(prices = history)
         } catch (exception: MarketDataClientException) {
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
@@ -86,6 +89,7 @@ class RemoteEdoLotValuationProvider(
                 to = to,
                 exception = exception
             )
+            cachedHistoryResult(lotTerms = lotTerms, from = start, to = to)?.let { return it }
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
@@ -100,10 +104,32 @@ class RemoteEdoLotValuationProvider(
                 to = to,
                 exception = exception
             )
+            cachedHistoryResult(lotTerms = lotTerms, from = start, to = to)?.let { return it }
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
             )
         }
     }
+
+    private suspend fun cachedQuoteResult(lotTerms: EdoLotTerms): InstrumentValuationResult.Success? {
+        val cached = snapshotCacheService.getQuote(identity = edoQuoteIdentity(lotTerms)) ?: return null
+        return InstrumentValuationResult.Success(valuation = cached, fromCache = true)
+    }
+
+    private suspend fun cachedHistoryResult(
+        lotTerms: EdoLotTerms,
+        from: LocalDate,
+        to: LocalDate
+    ): HistoricalInstrumentValuationResult.Success? {
+        val cached = snapshotCacheService.getSeries(identity = edoHistoryIdentity(lotTerms), from = from, to = to)
+            ?: return null
+        return HistoricalInstrumentValuationResult.Success(prices = cached, fromCache = true)
+    }
+
+    private fun edoQuoteIdentity(lotTerms: EdoLotTerms): String =
+        "edo-quote:${lotTerms.purchaseDate}|${lotTerms.firstPeriodRateBps}|${lotTerms.marginBps}"
+
+    private fun edoHistoryIdentity(lotTerms: EdoLotTerms): String =
+        "edo-history:${lotTerms.purchaseDate}|${lotTerms.firstPeriodRateBps}|${lotTerms.marginBps}"
 }

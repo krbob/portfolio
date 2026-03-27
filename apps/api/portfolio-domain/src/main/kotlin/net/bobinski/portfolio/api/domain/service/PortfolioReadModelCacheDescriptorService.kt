@@ -13,6 +13,7 @@ import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotPreferences
 
 class PortfolioReadModelCacheDescriptorService(
     private val accountRepository: AccountRepository,
@@ -30,13 +31,13 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
-        modelVersion = 8
+        modelVersion = 9
     )
 
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.returns",
         modelName = "RETURNS",
-        modelVersion = 5,
+        modelVersion = 6,
         preferenceUpdatedAt = appPreferenceRepository.get(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)?.updatedAt
     )
 
@@ -50,6 +51,11 @@ class PortfolioReadModelCacheDescriptorService(
         val instruments = instrumentRepository.list()
         val targets = portfolioTargetRepository.list()
         val transactions = transactionRepository.list()
+        val marketDataSnapshotUpdatedAt = appPreferenceRepository.list()
+            .asSequence()
+            .filter { preference -> preference.key.startsWith(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX) }
+            .map { preference -> preference.updatedAt }
+            .maxOrNull()
         val today = LocalDate.now(clock)
 
         return ReadModelCacheDescriptor(
@@ -58,7 +64,14 @@ class PortfolioReadModelCacheDescriptorService(
             modelVersion = cacheDescriptorVersion(modelVersion),
             inputsFrom = transactions.minOfOrNull(Transaction::tradeDate) ?: today,
             inputsTo = today,
-            sourceUpdatedAt = maxUpdatedAt(accounts, instruments, targets, transactions, preferenceUpdatedAt)
+            sourceUpdatedAt = maxUpdatedAt(
+                accounts,
+                instruments,
+                targets,
+                transactions,
+                preferenceUpdatedAt,
+                marketDataSnapshotUpdatedAt
+            )
         )
     }
 
@@ -80,12 +93,14 @@ class PortfolioReadModelCacheDescriptorService(
         instruments: List<Instrument>,
         targets: List<PortfolioTarget>,
         transactions: List<Transaction>,
-        preferenceUpdatedAt: Instant? = null
+        preferenceUpdatedAt: Instant? = null,
+        marketDataSnapshotUpdatedAt: Instant? = null
     ): Instant? = listOfNotNull(
         accounts.maxOfOrNull(Account::updatedAt),
         instruments.maxOfOrNull(Instrument::updatedAt),
         targets.maxOfOrNull(PortfolioTarget::updatedAt),
         transactions.maxOfOrNull(Transaction::updatedAt),
-        preferenceUpdatedAt
+        preferenceUpdatedAt,
+        marketDataSnapshotUpdatedAt
     ).maxOrNull()
 }

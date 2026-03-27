@@ -510,17 +510,17 @@ class PortfolioReadModelService(
             )
         }
 
-        val successfulResults = results.map { (lot, result) -> lot to (result as InstrumentValuationResult.Success).valuation }
-        val currentValuePln = successfulResults.fold(BigDecimal.ZERO) { total, (lot, valuation) ->
-            total.add(valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT), MONEY_CONTEXT)
+        val successfulResults = results.map { (lot, result) -> lot to (result as InstrumentValuationResult.Success) }
+        val currentValuePln = successfulResults.fold(BigDecimal.ZERO) { total, (lot, result) ->
+            total.add(result.valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT), MONEY_CONTEXT)
         }.money()
         val currentPricePln = if (holding.quantity.signum() == 0) {
             BigDecimal.ZERO
         } else {
             currentValuePln.divide(holding.quantity, 8, RoundingMode.HALF_UP)
         }.money()
-        val valuedAt = successfulResults.maxOfOrNull { (_, valuation) -> valuation.valuedAt }
-        val valuationStatus = if (successfulResults.any { (_, valuation) -> isStale(valuation.valuedAt) }) {
+        val valuedAt = successfulResults.maxOfOrNull { (_, result) -> result.valuation.valuedAt }
+        val valuationStatus = if (successfulResults.any { (_, result) -> isStale(result) }) {
             HoldingValuationStatus.STALE
         } else {
             HoldingValuationStatus.VALUED
@@ -536,11 +536,15 @@ class PortfolioReadModelService(
             unrealizedGainPln = currentValuePln.subtract(holding.costBasisPln, MONEY_CONTEXT).money(),
             valuedAt = valuedAt,
             valuationStatus = valuationStatus,
-            valuationIssue = valuedAt?.takeIf(::isStale)?.let(::staleValuationIssue),
+            valuationIssue = successfulResults
+                .map { (_, result) -> result }
+                .mapNotNull(::valuationIssueFor)
+                .firstOrNull(),
             transactionCount = holding.transactionCount,
-            edoLots = successfulResults.map { (lot, valuation) ->
+            edoLots = successfulResults.map { (lot, result) ->
+                val valuation = result.valuation
                 val lotCurrentValue = valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT).money()
-                val lotStatus = valuationStatusFor(valuation)
+                val lotStatus = valuationStatusFor(result)
                 EdoLotSnapshot(
                     purchaseDate = lot.purchaseDate,
                     quantity = lot.quantity.quantity(),
@@ -550,7 +554,7 @@ class PortfolioReadModelService(
                     unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
                     valuedAt = valuation.valuedAt,
                     valuationStatus = lotStatus,
-                    valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue),
+                    valuationIssue = valuationIssueFor(result),
                     currentRatePercent = valuation.currentRatePercent
                 )
             }
@@ -558,7 +562,7 @@ class PortfolioReadModelService(
     }
 
     private fun MutableHolding.toValuedHolding(valuation: InstrumentValuationResult?): ValuedHolding = when (valuation) {
-        is InstrumentValuationResult.Success -> toValuedHolding(valuation.valuation)
+        is InstrumentValuationResult.Success -> toValuedHolding(valuation)
         is InstrumentValuationResult.Failure -> ValuedHolding(
             account = account,
             instrument = instrument,
@@ -588,9 +592,10 @@ class PortfolioReadModelService(
         )
     }
 
-    private fun MutableHolding.toValuedHolding(valuation: InstrumentValuation): ValuedHolding {
+    private fun MutableHolding.toValuedHolding(result: InstrumentValuationResult.Success): ValuedHolding {
+        val valuation = result.valuation
         val currentValuePln = valuation.pricePerUnitPln.multiply(quantity, MONEY_CONTEXT).money()
-        val valuationStatus = valuationStatusFor(valuation)
+        val valuationStatus = valuationStatusFor(result)
         return ValuedHolding(
             account = account,
             instrument = instrument,
@@ -601,7 +606,7 @@ class PortfolioReadModelService(
             unrealizedGainPln = currentValuePln.subtract(costBasisPln, MONEY_CONTEXT).money(),
             valuedAt = valuation.valuedAt,
             valuationStatus = valuationStatus,
-            valuationIssue = valuation.valuedAt.takeIf(::isStale)?.let(::staleValuationIssue),
+            valuationIssue = valuationIssueFor(result),
             transactionCount = transactionCount
         )
     }
@@ -718,14 +723,20 @@ class PortfolioReadModelService(
         HoldingValuationStatus.UNSUPPORTED -> false
     }
 
-    private fun valuationStatusFor(valuation: InstrumentValuation): HoldingValuationStatus =
-        if (isStale(valuation.valuedAt)) HoldingValuationStatus.STALE else HoldingValuationStatus.VALUED
+    private fun valuationStatusFor(valuation: InstrumentValuationResult.Success): HoldingValuationStatus =
+        if (isStale(valuation)) HoldingValuationStatus.STALE else HoldingValuationStatus.VALUED
 
     private fun isStale(valuedAt: LocalDate): Boolean =
         valuedAt.isBefore(LocalDate.now(clock).minusDays(marketDataStaleAfterDays))
 
-    private fun staleValuationIssue(valuedAt: LocalDate): String =
-        "Last market valuation is from $valuedAt."
+    private fun isStale(valuation: InstrumentValuationResult.Success): Boolean =
+        valuation.fromCache || isStale(valuation.valuation.valuedAt)
+
+    private fun valuationIssueFor(valuation: InstrumentValuationResult.Success): String? = when {
+        valuation.fromCache -> "Using cached market valuation from ${valuation.valuation.valuedAt}."
+        isStale(valuation.valuation.valuedAt) -> "Last market valuation is from ${valuation.valuation.valuedAt}."
+        else -> null
+    }
 
     private fun InstrumentValuationFailureType.toHoldingValuationStatus(): HoldingValuationStatus = when (this) {
         InstrumentValuationFailureType.UNAVAILABLE -> HoldingValuationStatus.UNAVAILABLE

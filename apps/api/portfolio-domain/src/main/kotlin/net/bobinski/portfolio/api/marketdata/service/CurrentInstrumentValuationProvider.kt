@@ -15,7 +15,10 @@ data class InstrumentValuation(
 )
 
 sealed interface InstrumentValuationResult {
-    data class Success(val valuation: InstrumentValuation) : InstrumentValuationResult
+    data class Success(
+        val valuation: InstrumentValuation,
+        val fromCache: Boolean = false
+    ) : InstrumentValuationResult
     data class Failure(
         val type: InstrumentValuationFailureType,
         val reason: String

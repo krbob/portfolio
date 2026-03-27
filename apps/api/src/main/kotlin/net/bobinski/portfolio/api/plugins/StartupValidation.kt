@@ -88,13 +88,22 @@ internal fun validateStartupConfiguration(
         require(authConfig.sessionCookieName.isNotBlank()) {
             "Password authentication requires a non-blank session cookie name."
         }
+        require(authConfig.sessionCookieName.isValidCookieName()) {
+            "Password authentication requires a valid session cookie name."
+        }
         require(authConfig.sessionMaxAgeDays > 0) {
             "Password authentication requires a positive session max age."
+        }
+        require(authConfig.sessionSecret != authConfig.password) {
+            "Password authentication requires a session secret distinct from the password."
         }
     }
 }
 
 private fun String.isHttpUrl(): Boolean = startsWith("http://") || startsWith("https://")
+
+private fun String.isValidCookieName(): Boolean =
+    matches(Regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"))
 
 private fun validateDatabasePath(rawPath: String): Path {
     val databasePath = Path.of(rawPath).toAbsolutePath().normalize()

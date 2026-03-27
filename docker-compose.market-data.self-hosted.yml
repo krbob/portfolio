@@ -10,6 +10,7 @@ services:
 
   stock-analyst:
     image: ghcr.io/krbob/stock-analyst:main
+    platform: ${PORTFOLIO_MARKET_DATA_PLATFORM:-linux/amd64}
     depends_on:
       - stock-analyst-backend-yfinance
     environment:
@@ -18,9 +19,10 @@ services:
 
   stock-analyst-backend-yfinance:
     image: ghcr.io/krbob/stock-analyst-backend-yfinance:main
+    platform: ${PORTFOLIO_MARKET_DATA_PLATFORM:-linux/amd64}
     restart: unless-stopped
 
   edo-calculator:
     image: ghcr.io/krbob/edo-calculator:latest
+    platform: ${PORTFOLIO_MARKET_DATA_PLATFORM:-linux/amd64}
     restart: unless-stopped
-

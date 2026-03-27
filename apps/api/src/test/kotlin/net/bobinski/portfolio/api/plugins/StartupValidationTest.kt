@@ -166,6 +166,41 @@ class StartupValidationTest {
         }
     }
 
+    @Test
+    fun `startup validation rejects invalid auth cookie names`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig(),
+                backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
+                authConfig = validAuthConfig().copy(
+                    enabled = true,
+                    password = "correct horse battery staple",
+                    sessionSecret = "0123456789abcdef",
+                    sessionCookieName = "portfolio session"
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation rejects session secret equal to password`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig(),
+                backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
+                authConfig = validAuthConfig().copy(
+                    enabled = true,
+                    password = "0123456789abcdef",
+                    sessionSecret = "0123456789abcdef"
+                )
+            )
+        }
+    }
+
     private fun validPersistenceConfig() = defaultPersistenceConfig()
 
     private fun validSqlitePersistenceConfig() = defaultPersistenceConfig()

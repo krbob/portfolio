@@ -10,7 +10,8 @@ import java.math.RoundingMode
 class RemoteCurrentInstrumentValuationProvider(
     private val config: MarketDataConfig,
     private val stockAnalystClient: StockAnalystClient,
-    private val marketDataFailureAuditService: MarketDataFailureAuditService
+    private val marketDataFailureAuditService: MarketDataFailureAuditService,
+    private val snapshotCacheService: MarketDataSnapshotCacheService
 ) : CurrentInstrumentValuationProvider {
     override suspend fun value(instrument: Instrument): InstrumentValuationResult {
         if (!config.enabled) {
@@ -43,6 +44,7 @@ class RemoteCurrentInstrumentValuationProvider(
                 valuationSource = instrument.valuationSource.name,
                 exception = exception
             )
+            cachedQuoteResult(instrument)?.let { return it }
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
@@ -58,6 +60,7 @@ class RemoteCurrentInstrumentValuationProvider(
                 valuationSource = instrument.valuationSource.name,
                 exception = exception
             )
+            cachedQuoteResult(instrument)?.let { return it }
             InstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
@@ -72,12 +75,20 @@ class RemoteCurrentInstrumentValuationProvider(
                 reason = "Instrument does not define a market symbol."
             )
         val quote = stockAnalystClient.quoteInPln(symbol)
-        return InstrumentValuationResult.Success(
-            InstrumentValuation(
-                pricePerUnitPln = quote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
-                valuedAt = quote.date
-            )
+        val valuation = InstrumentValuation(
+            pricePerUnitPln = quote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
+            valuedAt = quote.date
         )
+        snapshotCacheService.putQuote(identity = stockQuoteIdentity(symbol), valuation = valuation)
+        return InstrumentValuationResult.Success(valuation = valuation)
     }
+
+    private suspend fun cachedQuoteResult(instrument: Instrument): InstrumentValuationResult.Success? {
+        val symbol = instrument.symbol ?: return null
+        val cached = snapshotCacheService.getQuote(stockQuoteIdentity(symbol)) ?: return null
+        return InstrumentValuationResult.Success(valuation = cached, fromCache = true)
+    }
+
+    private fun stockQuoteIdentity(symbol: String): String = "stock-quote:$symbol"
 
 }

@@ -12,7 +12,8 @@ import java.time.LocalDate
 class RemoteHistoricalInstrumentValuationProvider(
     private val config: MarketDataConfig,
     private val stockAnalystClient: StockAnalystClient,
-    private val marketDataFailureAuditService: MarketDataFailureAuditService
+    private val marketDataFailureAuditService: MarketDataFailureAuditService,
+    private val snapshotCacheService: MarketDataSnapshotCacheService
 ) : HistoricalInstrumentValuationProvider {
     override suspend fun dailyPriceSeries(
         instrument: Instrument,
@@ -61,6 +62,7 @@ class RemoteHistoricalInstrumentValuationProvider(
                 to = to,
                 exception = exception
             )
+            cachedHistoryResult(instrument = instrument, from = from, to = to)?.let { return it }
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
@@ -88,6 +90,7 @@ class RemoteHistoricalInstrumentValuationProvider(
                 to = to,
                 exception = exception
             )
+            cachedHistoryResult(instrument = instrument, from = from, to = to)?.let { return it }
             HistoricalInstrumentValuationResult.Failure(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Unexpected market data error."
@@ -107,9 +110,23 @@ class RemoteHistoricalInstrumentValuationProvider(
             )
         val history = stockAnalystClient.historyInPln(symbol, from = from, to = to)
             .map { HistoricalPricePoint(date = it.date, closePricePln = it.closePricePln) }
+        snapshotCacheService.putSeries(identity = stockHistoryIdentity(symbol), prices = history)
 
         return HistoricalInstrumentValuationResult.Success(prices = history)
     }
+
+    private suspend fun cachedHistoryResult(
+        instrument: Instrument,
+        from: LocalDate,
+        to: LocalDate
+    ): HistoricalInstrumentValuationResult.Success? {
+        val symbol = instrument.symbol ?: return null
+        val cached = snapshotCacheService.getSeries(identity = stockHistoryIdentity(symbol), from = from, to = to)
+            ?: return null
+        return HistoricalInstrumentValuationResult.Success(prices = cached, fromCache = true)
+    }
+
+    private fun stockHistoryIdentity(symbol: String): String = "stock-history:$symbol"
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RemoteHistoricalInstrumentValuationProvider::class.java)

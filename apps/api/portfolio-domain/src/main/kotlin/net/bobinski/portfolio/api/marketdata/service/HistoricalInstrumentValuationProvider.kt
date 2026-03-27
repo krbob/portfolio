@@ -14,7 +14,8 @@ interface HistoricalInstrumentValuationProvider {
 
 sealed interface HistoricalInstrumentValuationResult {
     data class Success(
-        val prices: List<HistoricalPricePoint>
+        val prices: List<HistoricalPricePoint>,
+        val fromCache: Boolean = false
     ) : HistoricalInstrumentValuationResult
 
     data class Failure(

@@ -13,7 +13,8 @@ interface ReferenceSeriesProvider {
 
 sealed interface ReferenceSeriesResult {
     data class Success(
-        val prices: List<HistoricalPricePoint>
+        val prices: List<HistoricalPricePoint>,
+        val fromCache: Boolean = false
     ) : ReferenceSeriesResult
 
     data class Failure(

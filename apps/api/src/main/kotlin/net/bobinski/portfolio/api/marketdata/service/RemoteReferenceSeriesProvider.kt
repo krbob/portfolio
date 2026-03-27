@@ -14,10 +14,12 @@ class RemoteReferenceSeriesProvider(
     private val config: MarketDataConfig,
     private val stockAnalystClient: StockAnalystClient,
     private val goldApiClient: GoldApiClient,
-    private val marketDataFailureAuditService: MarketDataFailureAuditService
+    private val marketDataFailureAuditService: MarketDataFailureAuditService,
+    private val snapshotCacheService: MarketDataSnapshotCacheService
 ) : ReferenceSeriesProvider {
     override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         loadSeries(
+            identity = "reference:usd-pln",
             symbol = config.usdPlnSymbol,
             currency = null,
             from = from,
@@ -51,6 +53,7 @@ class RemoteReferenceSeriesProvider(
 
     override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         loadSeries(
+            identity = benchmarkIdentity(symbol, "PLN"),
             symbol = symbol,
             currency = "PLN",
             from = from,
@@ -58,14 +61,15 @@ class RemoteReferenceSeriesProvider(
         )
 
     private suspend fun loadSeries(
+        identity: String,
         symbol: String,
         currency: String?,
         from: LocalDate,
         to: LocalDate
     ): ReferenceSeriesResult = try {
-        ReferenceSeriesResult.Success(
-            prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
-        )
+        val prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
+        snapshotCacheService.putSeries(identity = identity, prices = prices)
+        ReferenceSeriesResult.Success(prices = prices)
     } catch (exception: MarketDataClientException) {
         logger.warn(
             "Reference series failed for symbol {} (currency={}) in {}..{}: {}",
@@ -84,6 +88,7 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
+        cachedSeries(identity = identity, from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
     } catch (exception: Exception) {
         logger.warn(
@@ -103,6 +108,7 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
+        cachedSeries(identity = identity, from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected reference market data error.")
     }
 
@@ -138,6 +144,7 @@ class RemoteReferenceSeriesProvider(
             logger.warn("Gold spot series returned no usable PLN points in {}..{}", from, to)
             ReferenceSeriesResult.Failure("gold-api returned no usable gold history in PLN.")
         } else {
+            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = prices)
             ReferenceSeriesResult.Success(prices = prices)
         }
     } catch (exception: MarketDataClientException) {
@@ -151,6 +158,7 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: Exception) {
         logger.warn("Unexpected gold spot series error in {}..{}", from, to, exception)
@@ -163,6 +171,7 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected gold spot history error.")
     }
 
@@ -172,6 +181,7 @@ class RemoteReferenceSeriesProvider(
     ): ReferenceSeriesResult {
         val spotResult = loadGoldSpotSeriesInPln(from = from, to = to)
         if (spotResult is ReferenceSeriesResult.Success) {
+            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = spotResult.prices)
             return spotResult
         }
 
@@ -181,8 +191,11 @@ class RemoteReferenceSeriesProvider(
             to = to
         )
         if (fallbackResult is ReferenceSeriesResult.Success) {
+            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = fallbackResult.prices)
             return fallbackResult
         }
+
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
 
         val spotFailureMessage = (spotResult as? ReferenceSeriesResult.Failure)?.reason
             ?: "Gold spot history unavailable."
@@ -196,4 +209,16 @@ class RemoteReferenceSeriesProvider(
     private companion object {
         private val logger = LoggerFactory.getLogger(RemoteReferenceSeriesProvider::class.java)
     }
+
+    private suspend fun cachedSeries(
+        identity: String,
+        from: LocalDate,
+        to: LocalDate
+    ): ReferenceSeriesResult.Success? {
+        val cached = snapshotCacheService.getSeries(identity = identity, from = from, to = to) ?: return null
+        return ReferenceSeriesResult.Success(prices = cached, fromCache = true)
+    }
+
+    private fun benchmarkIdentity(symbol: String, currency: String?): String =
+        "reference:$symbol:${currency ?: "BASE"}"
 }

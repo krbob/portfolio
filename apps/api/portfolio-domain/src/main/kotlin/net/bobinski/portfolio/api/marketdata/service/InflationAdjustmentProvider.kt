@@ -12,7 +12,8 @@ sealed interface InflationAdjustmentResult {
     data class Success(
         val from: YearMonth,
         val until: YearMonth,
-        val multiplier: BigDecimal
+        val multiplier: BigDecimal,
+        val fromCache: Boolean = false
     ) : InflationAdjustmentResult
 
     data class Failure(
@@ -24,7 +25,8 @@ sealed interface InflationSeriesResult {
     data class Success(
         val from: YearMonth,
         val until: YearMonth,
-        val points: List<MonthlyInflationPoint>
+        val points: List<MonthlyInflationPoint>,
+        val fromCache: Boolean = false
     ) : InflationSeriesResult
 
     data class Failure(

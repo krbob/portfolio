@@ -7,7 +7,8 @@ import java.time.YearMonth
 
 class RemoteInflationAdjustmentProvider(
     private val config: MarketDataConfig,
-    private val edoCalculatorClient: EdoCalculatorClient
+    private val edoCalculatorClient: EdoCalculatorClient,
+    private val snapshotCacheService: MarketDataSnapshotCacheService
 ) : InflationAdjustmentProvider {
     override suspend fun cumulativeSince(from: YearMonth): InflationAdjustmentResult {
         if (!config.enabled) {
@@ -16,14 +17,18 @@ class RemoteInflationAdjustmentProvider(
 
         return try {
             val window = edoCalculatorClient.inflationSince(from)
-            InflationAdjustmentResult.Success(
+            val success = InflationAdjustmentResult.Success(
                 from = window.from,
                 until = window.until,
                 multiplier = window.multiplier
             )
+            snapshotCacheService.putCumulativeInflation(success)
+            success
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.getCumulativeInflation(from)?.let { return it }
             InflationAdjustmentResult.Failure(exception.message ?: "Inflation request failed.")
         } catch (exception: Exception) {
+            snapshotCacheService.getCumulativeInflation(from)?.let { return it }
             InflationAdjustmentResult.Failure(exception.message ?: "Unexpected inflation request error.")
         }
     }
@@ -35,7 +40,7 @@ class RemoteInflationAdjustmentProvider(
 
         return try {
             val series = edoCalculatorClient.monthlyInflation(from = from, untilExclusive = untilExclusive)
-            InflationSeriesResult.Success(
+            val success = InflationSeriesResult.Success(
                 from = series.from,
                 until = series.until,
                 points = series.points.map { point ->
@@ -45,9 +50,13 @@ class RemoteInflationAdjustmentProvider(
                     )
                 }
             )
+            snapshotCacheService.putMonthlyInflation(success.points)
+            success
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }
             InflationSeriesResult.Failure(exception.message ?: "Monthly inflation request failed.")
         } catch (exception: Exception) {
+            snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }
             InflationSeriesResult.Failure(exception.message ?: "Unexpected monthly inflation request error.")
         }
     }

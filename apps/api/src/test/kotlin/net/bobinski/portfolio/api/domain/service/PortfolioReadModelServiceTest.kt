@@ -162,6 +162,38 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `overview marks cached market valuations as stale with cache-specific issue`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = vwce.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            valuation = InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-10")
+            ),
+            fromCache = true
+        )
+
+        val overview = fixture.service.overview()
+        val holding = fixture.service.holdings().single()
+
+        assertEquals(ValuationState.STALE, overview.valuationState)
+        assertEquals(HoldingValuationStatus.STALE, holding.valuationStatus)
+        assertEquals("Using cached market valuation from 2026-03-10.", holding.valuationIssue)
+        assertEquals(BigDecimal("2195.00"), overview.totalCurrentValuePln)
+    }
+
+    @Test
     fun `overview resolves missing fx from historical rates`() = runBlocking {
         val fixture = portfolioFixture()
         fixture.accountRepository.save(account(baseCurrency = "USD"))

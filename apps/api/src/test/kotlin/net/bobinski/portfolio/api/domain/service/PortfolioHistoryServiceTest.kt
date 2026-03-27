@@ -138,6 +138,39 @@ class PortfolioHistoryServiceTest {
     }
 
     @Test
+    fun `daily history counts cached histories and reference series as degraded`() = runBlocking {
+        val fixture = historyFixture()
+        val account = account()
+        val instrument = etfInstrument()
+        fixture.accountRepository.save(account)
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(buyTransaction(instrument.id))
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.00")
+            ),
+            fromCache = true
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-01", "4.00")),
+            fromCache = true
+        )
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-01", "12000.00")),
+            fromCache = true
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(1, history.instrumentHistoryIssueCount)
+        assertEquals(2, history.referenceSeriesIssueCount)
+        assertEquals(ValuationState.STALE, history.valuationState)
+        assertEquals(BigDecimal("2095.00"), history.points.last().totalCurrentValuePln)
+    }
+
+    @Test
     fun `daily history resolves missing fx from historical rates`() = runBlocking {
         val fixture = historyFixture()
         fixture.accountRepository.save(account())

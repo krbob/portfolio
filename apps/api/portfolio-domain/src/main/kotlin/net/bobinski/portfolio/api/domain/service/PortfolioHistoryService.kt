@@ -356,8 +356,12 @@ class PortfolioHistoryService(
             }
         }
         val staleInstrumentIds = buildSet {
-            instrumentLookups.forEach { (instrumentId, lookup) ->
-                if (instrumentId in successfulInstrumentIds && lookup.lastEntry()?.key?.let { isStale(it, until) } == true) {
+            instrumentResults.forEach { (instrumentId, result) ->
+                if (instrumentId !in successfulInstrumentIds || result !is HistoricalInstrumentValuationResult.Success) {
+                    return@forEach
+                }
+                val lookup = instrumentLookups[instrumentId] ?: return@forEach
+                if (result.fromCache || lookup.lastEntry()?.key?.let { isStale(it, until) } == true) {
                     add(instrumentId)
                 }
             }
@@ -367,14 +371,16 @@ class PortfolioHistoryService(
                     return@forEach
                 }
                 if (lotDates.any { purchaseDate ->
-                        edoLotLookups[EdoLotKey(instrument.id, purchaseDate)]?.lastEntry()?.key?.let { isStale(it, until) } == true
+                        val result = edoLotResults[EdoLotKey(instrument.id, purchaseDate)] as? HistoricalInstrumentValuationResult.Success
+                        result?.fromCache == true ||
+                            edoLotLookups[EdoLotKey(instrument.id, purchaseDate)]?.lastEntry()?.key?.let { isStale(it, until) } == true
                     }
                 ) {
                     add(instrument.id)
                 }
             }
         }
-        val issueCount = usedInstrumentIds.subtract(successfulInstrumentIds).size
+        val issueCount = usedInstrumentIds.subtract(successfulInstrumentIds).size + staleInstrumentIds.size
         val successCount = successfulInstrumentIds.size
         val valuationState = when {
             usedInstrumentIds.isEmpty() -> ValuationState.MARK_TO_MARKET
@@ -411,7 +417,9 @@ class PortfolioHistoryService(
                 is ReferenceSeriesResult.Success -> gold.prices.toLookup()
                 is ReferenceSeriesResult.Failure -> TreeMap()
             },
-            issueCount = listOf(usd, gold).count { it is ReferenceSeriesResult.Failure }
+            issueCount = listOf(usd, gold).count { result ->
+                result is ReferenceSeriesResult.Failure || (result is ReferenceSeriesResult.Success && result.fromCache)
+            }
         )
     }
 
@@ -483,6 +491,9 @@ class PortfolioHistoryService(
                         until = until,
                         prices = result.prices.toLookup()
                     )
+                    if (result.fromCache) {
+                        additionalIssueCount += 1
+                    }
                 }
                 is ReferenceSeriesResult.Failure -> {
                     additionalIssueCount += 1
@@ -493,7 +504,7 @@ class PortfolioHistoryService(
         BenchmarkLoads(
             indices = indices,
             issueCount = listOf(
-                if (equity is ReferenceSeriesResult.Failure) 1 else 0,
+                if (equity is ReferenceSeriesResult.Failure || (equity is ReferenceSeriesResult.Success && equity.fromCache)) 1 else 0,
                 inflation.issueCount,
                 targetMixLookup.issueCount,
                 additionalIssueCount
@@ -536,7 +547,7 @@ class PortfolioHistoryService(
                 monthlyMultipliers = monthlyMultipliers,
                 availableUntil = series.until
             ),
-            issueCount = 0
+            issueCount = if (series.fromCache) 1 else 0
         )
     }
 

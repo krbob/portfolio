@@ -41,6 +41,7 @@ import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.MarketDataFailureAuditService
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteEdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteHistoricalInstrumentValuationProvider
@@ -101,21 +102,24 @@ fun appModule(
         RemoteCurrentInstrumentValuationProvider(
             config = get(),
             stockAnalystClient = get(),
-            marketDataFailureAuditService = get()
+            marketDataFailureAuditService = get(),
+            snapshotCacheService = get()
         )
     }
     single<HistoricalInstrumentValuationProvider> {
         RemoteHistoricalInstrumentValuationProvider(
             config = get(),
             stockAnalystClient = get(),
-            marketDataFailureAuditService = get()
+            marketDataFailureAuditService = get(),
+            snapshotCacheService = get()
         )
     }
     single<EdoLotValuationProvider> {
         RemoteEdoLotValuationProvider(
             config = get(),
             edoCalculatorClient = get(),
-            marketDataFailureAuditService = get()
+            marketDataFailureAuditService = get(),
+            snapshotCacheService = get()
         )
     }
     single<ReferenceSeriesProvider> {
@@ -123,7 +127,8 @@ fun appModule(
             config = get(),
             stockAnalystClient = get(),
             goldApiClient = get(),
-            marketDataFailureAuditService = get()
+            marketDataFailureAuditService = get(),
+            snapshotCacheService = get()
         )
     }
     single<FxRateHistoryProvider> {
@@ -135,7 +140,8 @@ fun appModule(
     single<InflationAdjustmentProvider> {
         RemoteInflationAdjustmentProvider(
             config = get(),
-            edoCalculatorClient = get()
+            edoCalculatorClient = get(),
+            snapshotCacheService = get()
         )
     }
     single {
@@ -174,6 +180,7 @@ fun appModule(
     }
 
     single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
+    single { MarketDataSnapshotCacheService(appPreferenceService = get()) }
     single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { MarketDataFailureAuditService(auditLogService = get()) }
