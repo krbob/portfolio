@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { API_UNAUTHORIZED_EVENT } from '../api/http'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession, useLogin } from '../hooks/use-auth-session'
-import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { SectionHeader } from './ui'
 import { btnPrimary, input } from '../lib/styles'
 
@@ -13,7 +13,6 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
-  const { isPolish } = useI18n()
   const queryClient = useQueryClient()
   const metaQuery = useAppMeta()
   const authSessionQuery = useAuthSession()
@@ -22,9 +21,7 @@ export function AuthGate({ children }: AuthGateProps) {
         ? metaQuery.error.message
       : authSessionQuery.error instanceof Error
         ? authSessionQuery.error.message
-        : isPolish
-          ? 'Aplikacja nie mogła wczytać wymaganego stanu startowego.'
-          : 'The app could not load required startup state.'
+        : t('auth.startupError')
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -41,9 +38,9 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <AuthLayout>
         <SectionHeader
-          eyebrow={isPolish ? 'Łączenie' : 'Connecting'}
-          title={isPolish ? 'Sprawdzanie sesji' : 'Checking session'}
-          description={isPolish ? 'Ładowanie metadanych i stanu uwierzytelnienia.' : 'Loading metadata and authentication state.'}
+          eyebrow={t('auth.connecting')}
+          title={t('auth.checkingSession')}
+          description={t('auth.checkingSessionDesc')}
         />
       </AuthLayout>
     )
@@ -53,8 +50,8 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <AuthLayout>
         <SectionHeader
-          eyebrow={isPolish ? 'Problem z połączeniem' : 'Connection issue'}
-          title={isPolish ? 'Nie można połączyć się z Portfolio' : 'Portfolio is not reachable'}
+          eyebrow={t('auth.connectionIssue')}
+          title={t('auth.notReachable')}
           description={startupErrorMessage}
         />
       </AuthLayout>
@@ -62,7 +59,7 @@ export function AuthGate({ children }: AuthGateProps) {
   }
 
   if (authSessionQuery.data.authEnabled && !authSessionQuery.data.authenticated) {
-    return <LoginCard stage={metaQuery.data.stage} isPolish={isPolish} />
+    return <LoginCard stage={metaQuery.data.stage} />
   }
 
   return <>{children}</>
@@ -78,7 +75,7 @@ function AuthLayout({ children }: { children: ReactNode }) {
   )
 }
 
-function LoginCard({ stage, isPolish }: { stage: string; isPolish: boolean }) {
+function LoginCard({ stage }: { stage: string }) {
   const loginMutation = useLogin()
   const [password, setPassword] = useState('')
 
@@ -106,8 +103,8 @@ function LoginCard({ stage, isPolish }: { stage: string; isPolish: boolean }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              aria-label={isPolish ? 'Hasło' : 'Password'}
-              placeholder={isPolish ? 'Wpisz hasło' : 'Enter password'}
+              aria-label={t('auth.password')}
+              placeholder={t('auth.enterPassword')}
             />
 
             <button
@@ -115,17 +112,17 @@ function LoginCard({ stage, isPolish }: { stage: string; isPolish: boolean }) {
               className={`${btnPrimary} mt-4 w-full`}
               disabled={loginMutation.isPending || password.trim().length === 0}
             >
-              {loginMutation.isPending ? (isPolish ? 'Odblokowywanie...' : 'Unlocking...') : (isPolish ? 'Odblokuj' : 'Unlock')}
+              {loginMutation.isPending ? t('auth.unlocking') : t('auth.unlock')}
             </button>
           </form>
 
           {loginMutation.isError && (
             <p className="mt-3 text-sm text-red-400">
-              {loginMutation.error instanceof Error ? loginMutation.error.message : isPolish ? 'Logowanie nie powiodło się.' : 'Login failed.'}
+              {loginMutation.error instanceof Error ? loginMutation.error.message : t('auth.loginFailed')}
             </p>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-zinc-600">{isPolish ? 'Self-hosted tracker portfela' : 'Self-hosted portfolio tracker'}</p>
+        <p className="mt-4 text-center text-xs text-zinc-600">{t('auth.selfHosted')}</p>
       </div>
     </div>
   )

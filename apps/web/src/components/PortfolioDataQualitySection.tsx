@@ -2,29 +2,25 @@ import { Card, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
-import { useI18n } from '../lib/i18n'
+import { getActiveUiLanguage } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioDataQualitySection() {
-  const { isPolish } = useI18n()
   const { summary, isLoading, error, refetchAll } = usePortfolioDataQuality()
 
   return (
     <Card as="section" id="data-quality">
       <SectionHeader
-        eyebrow={isPolish ? 'Jakość danych' : 'Data quality'}
-        title={isPolish ? 'Zaufanie do danych portfela' : 'Portfolio data trust'}
-        description={isPolish
-          ? 'Sprawdź pokrycie wyceny, benchmarków, CPI oraz ostatnie odświeżenie większych modeli odczytowych.'
-          : 'Inspect valuation coverage, benchmark coverage, CPI coverage and the latest heavy read-model refresh.'}
+        eyebrow={t('dataQuality.eyebrow')}
+        title={t('dataQuality.title')}
+        description={t('dataQuality.description')}
       />
 
       {isLoading && (
         <LoadingState
-          title={isPolish ? 'Ładowanie jakości danych' : 'Loading data quality'}
-          description={isPolish
-            ? 'Składanie sygnałów z wyceny, historii, benchmarków i pamięci modeli odczytowych.'
-            : 'Combining valuation, history, benchmark and read-model cache signals.'}
+          title={t('dataQuality.loadingTitle')}
+          description={t('dataQuality.loadingDescription')}
           variant="inline"
           blocks={3}
         />
@@ -32,10 +28,8 @@ export function PortfolioDataQualitySection() {
 
       {!isLoading && error && !summary && (
         <ErrorState
-          title={isPolish ? 'Jakość danych niedostępna' : 'Data quality unavailable'}
-          description={isPolish
-            ? 'Nie udało się złożyć sygnałów jakości danych. Spróbuj ponownie.'
-            : 'Portfolio could not assemble the current data-quality signals. Retry now.'}
+          title={t('dataQuality.errorTitle')}
+          description={t('dataQuality.errorDescription')}
           onRetry={() => void refetchAll()}
           className="border-0 bg-transparent px-0 py-8"
         />
@@ -45,24 +39,24 @@ export function PortfolioDataQualitySection() {
         <>
           <div className="grid grid-cols-2 gap-4 mb-4 xl:grid-cols-5">
             <MetricCard
-              label={isPolish ? 'Status' : 'Status'}
-              value={overallStatusLabel(summary.overallStatus, isPolish)}
+              label={t('dataQuality.status')}
+              value={overallStatusLabel(summary.overallStatus)}
             />
             <MetricCard
-              label={isPolish ? 'Wycena' : 'Valuation'}
+              label={t('dataQuality.valuation')}
               value={summary.valuationCoverageLabel}
             />
             <MetricCard
-              label={isPolish ? 'Benchmarki' : 'Benchmarks'}
+              label={t('dataQuality.benchmarks')}
               value={summary.benchmarkCoverageLabel}
             />
             <MetricCard
-              label={isPolish ? 'CPI do' : 'CPI through'}
+              label={t('dataQuality.cpiThrough')}
               value={summary.cpiCoverageThroughLabel}
             />
             <MetricCard
-              label={isPolish ? 'Ostatni refresh' : 'Last refresh'}
-              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : notApplicableLabel(isPolish)}
+              label={t('dataQuality.lastRefresh')}
+              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : notApplicableLabel(getActiveUiLanguage() === 'pl')}
             />
           </div>
 
@@ -75,7 +69,7 @@ export function PortfolioDataQualitySection() {
                     <p className="mt-1 text-sm text-zinc-500">{check.message}</p>
                   </div>
                   <span className={`${badge} ${qualityBadgeVariant(check.status)}`}>
-                    {overallStatusLabel(check.status, isPolish)}
+                    {overallStatusLabel(check.status)}
                   </span>
                 </div>
               </article>
@@ -84,9 +78,7 @@ export function PortfolioDataQualitySection() {
 
           {summary.checks.some((check) => check.status === 'WARN') ? (
             <p className="mt-4 text-sm text-zinc-500">
-              {isPolish
-                ? 'Szczegóły awarii upstreamów znajdziesz niżej w audycie operacyjnym i panelu gotowości środowiska.'
-                : 'Detailed upstream failures appear below in the operational audit and runtime readiness panels.'}
+              {t('dataQuality.upstreamHint')}
             </p>
           ) : null}
         </>
@@ -104,25 +96,14 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function overallStatusLabel(status: 'PASS' | 'WARN' | 'INFO', isPolish: boolean) {
-  if (isPolish) {
-    switch (status) {
-      case 'PASS':
-        return 'OK'
-      case 'WARN':
-        return 'UWAGA'
-      case 'INFO':
-        return 'INFO'
-    }
-  }
-
+function overallStatusLabel(status: 'PASS' | 'WARN' | 'INFO') {
   switch (status) {
     case 'PASS':
-      return 'Healthy'
+      return t('dataQuality.statusPass')
     case 'WARN':
-      return 'Degraded'
+      return t('dataQuality.statusWarn')
     case 'INFO':
-      return 'Info'
+      return t('dataQuality.statusInfo')
   }
 }
 

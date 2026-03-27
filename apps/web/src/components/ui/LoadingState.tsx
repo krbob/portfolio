@@ -1,5 +1,5 @@
 import { Card } from './Card'
-import { useI18n } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 
 interface LoadingStateProps {
   title?: string
@@ -16,7 +16,6 @@ export function LoadingState({
   className = '',
   variant = 'card',
 }: LoadingStateProps) {
-  const { isPolish } = useI18n()
   const gridClassName =
     blocks === 4
       ? 'sm:grid-cols-2 lg:grid-cols-4'
@@ -32,15 +31,13 @@ export function LoadingState({
     <Card className={`${surfaceClassName} ${className}`}>
       <div className="mx-auto max-w-lg text-center">
         <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          {isPolish ? 'Ładowanie' : 'Loading'}
+          {t('ui.loadingEyebrow')}
         </p>
         <h3 className="mt-2 text-lg font-semibold text-zinc-100">
-          {title ?? (isPolish ? 'Ładowanie portfela' : 'Loading portfolio')}
+          {title ?? t('ui.loadingTitle')}
         </h3>
         <p className="mt-2 text-sm text-zinc-500">
-          {description ?? (isPolish
-            ? 'Pobieranie najnowszych pozycji, wycen i modeli odczytowych portfela.'
-            : 'Fetching the latest holdings, valuation and portfolio read models.')}
+          {description ?? t('ui.loadingDescription')}
         </p>
       </div>
       <div className={`mt-8 grid gap-3 ${gridClassName}`}>

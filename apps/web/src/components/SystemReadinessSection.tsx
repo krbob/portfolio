@@ -1,47 +1,46 @@
 import { useAppReadiness } from '../hooks/use-app-readiness'
 import { Card, SectionHeader } from './ui'
 import { formatDateTime } from '../lib/format'
-import { useI18n } from '../lib/i18n'
+import { getActiveUiLanguage } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { labelReadinessStatus } from '../lib/labels'
 import { badge, badgeVariants } from '../lib/styles'
 
 export function SystemReadinessSection() {
-  const { isPolish } = useI18n()
+  const isPolish = getActiveUiLanguage() === 'pl'
   const readinessQuery = useAppReadiness()
   const readiness = readinessQuery.data
 
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Stan systemu' : 'Health'}
-        title={isPolish ? 'Gotowość środowiska' : 'Runtime readiness'}
-        description={isPolish
-          ? 'Sprawdź bazę danych, kopie zapasowe, źródła danych rynkowych i logowanie, zanim zaufasz stanowi portfela.'
-          : 'Verify storage, backups, market-data wiring and authentication before trusting the portfolio state.'}
+        eyebrow={t('readiness.eyebrow')}
+        title={t('readiness.title')}
+        description={t('readiness.description')}
       />
 
-      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Sprawdzanie usług i zależności środowiska...' : 'Checking runtime dependencies...'}</p>}
+      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">{t('readiness.loading')}</p>}
       {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
 
       {readiness && (
         <>
           <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{isPolish ? 'Stan ogólny' : 'Overall status'}</span>
+              <span className="text-xs text-zinc-500">{t('readiness.overallStatus')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{formatOverallStatus(readiness.status)}</strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{isPolish ? 'Blokery' : 'Blocking issues'}</span>
+              <span className="text-xs text-zinc-500">{t('readiness.blockingIssues')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{countChecks(readiness.checks, 'FAIL')}</strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{isPolish ? 'Uwagi' : 'Advisory notices'}</span>
+              <span className="text-xs text-zinc-500">{t('readiness.advisoryNotices')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">
                 {countChecks(readiness.checks, 'WARN') + countChecks(readiness.checks, 'INFO')}
               </strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{isPolish ? 'Sprawdzone o' : 'Checked at'}</span>
+              <span className="text-xs text-zinc-500">{t('readiness.checkedAt')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{formatDateTime(readiness.checkedAt)}</strong>
             </article>
           </div>
@@ -55,20 +54,20 @@ export function SystemReadinessSection() {
                     <p className="text-sm text-zinc-500">{check.key}</p>
                   </div>
                   <span className={`${badge} ${readinessBadgeVariant(check.status)}`}>
-                    {labelCheckStatus(check.status, isPolish)}
+                    {labelCheckStatus(check.status)}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">{formatCheckMessage(check, isPolish)}</p>
                 {check.details && Object.keys(check.details).length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
                     <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                      {isPolish ? 'Szczegóły upstreamu' : 'Upstream details'}
+                      {t('readiness.upstreamDetails')}
                     </summary>
                     <dl className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
                       {Object.entries(check.details).map(([key, value]) => (
                         <div className="contents" key={key}>
                           <dt className="text-xs uppercase tracking-[0.2em] text-zinc-600">
-                            {labelDetailKey(key, isPolish)}
+                            {labelDetailKey(key)}
                           </dt>
                           <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>
                         </div>
@@ -111,35 +110,29 @@ function readinessBadgeVariant(status: string) {
   }
 }
 
-function labelCheckStatus(status: string, isPolish: boolean) {
-  if (!isPolish) {
-    return status
+function labelCheckStatus(status: string) {
+  const keyMap: Record<string, 'readiness.checkStatusPass' | 'readiness.checkStatusWarn' | 'readiness.checkStatusFail' | 'readiness.checkStatusInfo'> = {
+    PASS: 'readiness.checkStatusPass',
+    WARN: 'readiness.checkStatusWarn',
+    FAIL: 'readiness.checkStatusFail',
+    INFO: 'readiness.checkStatusInfo',
   }
 
-  switch (status) {
-    case 'PASS':
-      return 'OK'
-    case 'WARN':
-      return 'UWAGA'
-    case 'FAIL':
-      return 'BŁĄD'
-    case 'INFO':
-      return 'INFO'
-    default:
-      return status
-  }
+  const key = keyMap[status]
+  return key ? t(key) : status
 }
 
-function labelDetailKey(key: string, isPolish: boolean) {
-  const labels: Record<string, string> = {
-    upstream: isPolish ? 'Usługa' : 'Upstream',
-    operation: isPolish ? 'Operacja' : 'Operation',
-    symbol: isPolish ? 'Symbol' : 'Symbol',
-    statusCode: isPolish ? 'Status HTTP' : 'HTTP status',
-    responseBodyPreview: isPolish ? 'Treść odpowiedzi' : 'Response body',
+function labelDetailKey(key: string) {
+  const keyMap: Record<string, 'readiness.detailUpstream' | 'readiness.detailOperation' | 'readiness.detailSymbol' | 'readiness.detailStatusCode' | 'readiness.detailResponseBody'> = {
+    upstream: 'readiness.detailUpstream',
+    operation: 'readiness.detailOperation',
+    symbol: 'readiness.detailSymbol',
+    statusCode: 'readiness.detailStatusCode',
+    responseBodyPreview: 'readiness.detailResponseBody',
   }
 
-  return labels[key] ?? key
+  const messageKey = keyMap[key]
+  return messageKey ? t(messageKey) : key
 }
 
 function formatCheckLabel(key: string, label: string, isPolish: boolean) {

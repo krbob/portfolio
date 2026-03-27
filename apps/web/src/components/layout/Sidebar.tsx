@@ -6,6 +6,7 @@ import { StatusDot } from '../ui/StatusDot'
 import { btnGhost } from '../../lib/styles'
 import { navSections, type NavItem } from './navigation'
 import { useI18n } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 
 interface SidebarProps {
   className?: string
@@ -69,7 +70,6 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
     readinessStatus: readinessQuery.data?.status,
     blockingChecks,
     advisoryChecks,
-    isPolish,
   })
 
   return (
@@ -77,7 +77,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
       <div className="px-5 py-6">
         <h1 className="text-xl font-bold tracking-tight text-zinc-100">Portfolio</h1>
         <p className="mt-1 text-xs text-zinc-600">
-          {isPolish ? 'Przestrzeń inwestora długoterminowego' : 'Long-term investing workspace'}
+          {t('layout.tagline')}
         </p>
       </div>
 
@@ -97,16 +97,16 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
           <div className="flex items-center gap-2">
             <StatusDot status={systemStatus.dot} />
             <span className="text-xs font-medium text-zinc-400">
-              {isPolish ? 'Stan systemu' : 'Runtime health'}
+              {t('layout.runtimeHealth')}
             </span>
           </div>
           <span className="text-xs text-zinc-500">{systemStatus.label}</span>
         </div>
         <p className="mt-1 text-xs text-zinc-600">
           {readinessQuery.isLoading
-            ? (isPolish ? 'Sprawdzanie usług i zależności...' : 'Checking dependencies...')
+            ? t('layout.checkingDeps')
             : readinessQuery.isError
-              ? (isPolish ? 'Nie udało się odpytać endpointu gotowości.' : 'Could not reach readiness endpoint.')
+              ? t('layout.readinessUnreachable')
               : isPolish
                 ? `${blockingChecks} blokad · ${advisoryChecks} uwag`
                 : `${blockingChecks} blockers · ${advisoryChecks} notices`}
@@ -116,7 +116,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
           onClick={onNavigate}
           className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
         >
-          {isPolish ? 'Otwórz stan systemu' : 'Open health'}
+          {t('layout.openHealth')}
         </NavLink>
         {authSessionQuery.data?.authEnabled && (
           <button
@@ -127,11 +127,11 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
               logoutMutation.mutate()
             }}
             disabled={logoutMutation.isPending}
-            title={isPolish ? 'Wyloguj' : 'Sign out'}
+            title={t('layout.signOut')}
           >
             {logoutMutation.isPending
-              ? (isPolish ? 'Wylogowywanie...' : 'Signing out...')
-              : (isPolish ? 'Wyloguj' : 'Sign out')}
+              ? t('layout.signingOut')
+              : t('layout.signOut')}
           </button>
         )}
       </div>
@@ -145,28 +145,26 @@ function resolveStatus({
   readinessStatus,
   blockingChecks,
   advisoryChecks,
-  isPolish,
 }: {
   metaError: boolean
   readinessError: boolean
   readinessStatus: string | undefined
   blockingChecks: number
   advisoryChecks: number
-  isPolish: boolean
 }): { dot: 'healthy' | 'warning' | 'error' | 'unknown'; label: string } {
-  if (metaError || readinessError) return { dot: 'error', label: isPolish ? 'Błąd' : 'Error' }
-  if (!readinessStatus) return { dot: 'unknown', label: isPolish ? 'Łączenie' : 'Connecting' }
-  if (readinessStatus === 'READY') return { dot: 'healthy', label: isPolish ? 'Gotowy' : 'Healthy' }
+  if (metaError || readinessError) return { dot: 'error', label: t('layout.statusError') }
+  if (!readinessStatus) return { dot: 'unknown', label: t('layout.statusConnecting') }
+  if (readinessStatus === 'READY') return { dot: 'healthy', label: t('layout.statusHealthy') }
   if (readinessStatus === 'DEGRADED') {
     if (blockingChecks > 0) {
-      return { dot: 'warning', label: isPolish ? 'Ograniczony' : 'Degraded' }
+      return { dot: 'warning', label: t('layout.statusDegraded') }
     }
     if (advisoryChecks > 0) {
-      return { dot: 'warning', label: isPolish ? 'Uwagi' : 'Advisory' }
+      return { dot: 'warning', label: t('layout.statusAdvisory') }
     }
-    return { dot: 'warning', label: isPolish ? 'Ograniczony' : 'Degraded' }
+    return { dot: 'warning', label: t('layout.statusDegraded') }
   }
-  return { dot: 'error', label: isPolish ? 'Niegotowy' : 'Not ready' }
+  return { dot: 'error', label: t('layout.statusNotReady') }
 }
 
 function countChecks(checks: Array<{ status: string }> | undefined, status: 'FAIL' | 'WARN' | 'INFO') {

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useI18n } from '../../lib/i18n'
+import { getActiveUiLanguage } from '../../lib/i18n'
+import { t } from '../../lib/messages'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { language, isPolish } = useI18n()
   const location = useLocation()
   const mainRef = useRef<HTMLElement | null>(null)
   const [isMobileNavMounted, setIsMobileNavMounted] = useState(false)
@@ -13,7 +13,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const isMobileNavMountedRef = useRef(false)
   const openAnimationFrameRef = useRef<number | null>(null)
   const previousPathRef = useRef(location.pathname)
-  const currentTitle = resolveRouteTitle(location.pathname, language)
+  const currentTitle = resolveRouteTitle(location.pathname, getActiveUiLanguage())
 
   function openMobileNav() {
     isMobileNavMountedRef.current = true
@@ -157,7 +157,7 @@ export function Layout({ children }: { children: ReactNode }) {
               type="button"
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
               onClick={openMobileNav}
-              aria-label={isPolish ? 'Otwórz nawigację' : 'Open navigation'}
+              aria-label={t('layout.openNavigation')}
               aria-expanded={isMobileNavVisible}
               aria-controls="mobile-navigation"
             >
@@ -207,7 +207,7 @@ export function Layout({ children }: { children: ReactNode }) {
             }}
             role="dialog"
             aria-modal="true"
-            aria-label={isPolish ? 'Nawigacja' : 'Navigation'}
+            aria-label={t('layout.navigation')}
           >
             <Sidebar onNavigate={closeMobileNav} />
           </aside>

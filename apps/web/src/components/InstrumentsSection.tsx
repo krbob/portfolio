@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useCreateInstrument, useUpdateInstrument, useInstruments } from '../hooks/use-write-model'
-import { useI18n } from '../lib/i18n'
+import { getActiveUiLanguage } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
 import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
@@ -54,7 +55,7 @@ const initialForm = {
 }
 
 export function InstrumentsSection() {
-  const { isPolish } = useI18n()
+  const isPolish = getActiveUiLanguage() === 'pl'
   const instrumentsQuery = useInstruments()
   const createInstrumentMutation = useCreateInstrument()
   const updateInstrumentMutation = useUpdateInstrument()
@@ -156,22 +157,20 @@ export function InstrumentsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
-        title={isPolish ? 'Instrumenty' : 'Instruments'}
-        description={isPolish
-          ? 'Trzymaj ETF-y, benchmarki i miesięczne serie EDO w jednym katalogu instrumentów.'
-          : 'Keep ETF, benchmark, and monthly EDO series in one canonical catalog.'}
+        eyebrow={t('instruments.eyebrow')}
+        title={t('instruments.title')}
+        description={t('instruments.description')}
       />
 
       {isEditing && (
         <p className="text-sm font-medium text-blue-400 mb-2">
-          {isPolish ? 'Edytuj instrument' : 'Edit instrument'}
+          {t('instruments.editInstrument')}
         </p>
       )}
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
-          <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
+          <span className={labelClass}>{t('instruments.name')}</span>
           <input
             className={input}
             value={form.name}
@@ -183,7 +182,7 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Rodzaj' : 'Kind'}</span>
+          <span className={labelClass}>{t('instruments.kind')}</span>
           <select className={input} value={form.kind} onChange={(event) => handleKindChange(event.target.value)} disabled={isEditing}>
             <option value="ETF">{labelInstrumentKind('ETF')}</option>
             <option value="STOCK">{labelInstrumentKind('STOCK')}</option>
@@ -194,7 +193,7 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Klasa aktywów' : 'Asset class'}</span>
+          <span className={labelClass}>{t('instruments.assetClass')}</span>
           <select
             className={input}
             value={form.assetClass}
@@ -213,7 +212,7 @@ export function InstrumentsSection() {
 
         {!isEdo && (
           <div>
-            <span className={labelClass}>{isPolish ? 'Symbol' : 'Symbol'}</span>
+            <span className={labelClass}>{t('instruments.symbol')}</span>
             <input
               className={input}
               value={form.symbol}
@@ -224,7 +223,7 @@ export function InstrumentsSection() {
         )}
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Waluta' : 'Currency'}</span>
+          <span className={labelClass}>{t('instruments.currency')}</span>
           <input
             className={input}
             value={form.currency}
@@ -237,7 +236,7 @@ export function InstrumentsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Źródło wyceny' : 'Valuation source'}</span>
+          <span className={labelClass}>{t('instruments.valuationSource')}</span>
           <select
             className={input}
             value={form.valuationSource}
@@ -254,7 +253,7 @@ export function InstrumentsSection() {
         {isEdo && (
           <>
             <div>
-              <span className={labelClass}>{isPolish ? 'Miesiąc serii' : 'Series month'}</span>
+              <span className={labelClass}>{t('instruments.seriesMonth')}</span>
               <div className="grid grid-cols-2 gap-2">
                 <select
                   className={input}
@@ -286,7 +285,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>{isPolish ? 'Oprocentowanie 1. okresu (bps)' : 'First period rate (bps)'}</span>
+              <span className={labelClass}>{t('instruments.firstPeriodRate')}</span>
               <input
                 className={input}
                 type="number"
@@ -303,7 +302,7 @@ export function InstrumentsSection() {
             </div>
 
             <div>
-              <span className={labelClass}>{isPolish ? 'Marża (bps)' : 'Margin (bps)'}</span>
+              <span className={labelClass}>{t('instruments.margin')}</span>
               <input
                 className={input}
                 type="number"
@@ -321,14 +320,14 @@ export function InstrumentsSection() {
         <div className="col-span-full flex items-center gap-3 mt-2">
           <button className={btnPrimary} type="submit" disabled={activeMutation.isPending}>
             {activeMutation.isPending
-              ? (isPolish ? 'Zapisywanie...' : 'Saving...')
+              ? t('common.saving')
               : isEditing
-                ? (isPolish ? 'Zapisz zmiany' : 'Save changes')
-                : (isPolish ? 'Dodaj instrument' : 'Add instrument')}
+                ? t('instruments.saveChanges')
+                : t('instruments.addInstrument')}
           </button>
           {isEditing && (
             <button className={btnSecondary} type="button" onClick={handleCancelEdit}>
-              {isPolish ? 'Anuluj' : 'Cancel'}
+              {t('common.cancel')}
             </button>
           )}
           {activeMutation.error && (
@@ -338,9 +337,9 @@ export function InstrumentsSection() {
       </form>
 
       <div className="space-y-3 mt-4">
-        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie instrumentów...' : 'Loading instruments...'}</p>}
+        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-500">{t('instruments.loading')}</p>}
         {instrumentsQuery.isError && <p className="text-sm text-red-400">{instrumentsQuery.error.message}</p>}
-        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak instrumentów.' : 'No instruments yet.'}</p>}
+        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{t('instruments.empty')}</p>}
         {instrumentsQuery.data?.map((instrument) => (
           <article
             className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between cursor-pointer hover:border-zinc-700 transition-colors"

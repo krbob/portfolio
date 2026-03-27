@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useAccounts, useCreateAccount } from '../hooks/use-write-model'
-import { useI18n } from '../lib/i18n'
+import { t } from '../lib/messages'
 import { labelAccountType } from '../lib/labels'
 import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
 
@@ -13,7 +13,6 @@ const initialForm = {
 }
 
 export function AccountsSection() {
-  const { isPolish } = useI18n()
   const accountsQuery = useAccounts()
   const createAccountMutation = useCreateAccount()
   const [form, setForm] = useState(initialForm)
@@ -29,16 +28,14 @@ export function AccountsSection() {
   return (
     <Card>
       <SectionHeader
-        eyebrow={isPolish ? 'Model zapisu' : 'Write model'}
-        title={isPolish ? 'Konta' : 'Accounts'}
-        description={isPolish
-          ? 'Zapisz miejsca przechowywania aktywów, zanim nałożysz na nie analitykę portfela.'
-          : 'Capture where assets are held before layering portfolio analytics on top.'}
+        eyebrow={t('accounts.eyebrow')}
+        title={t('accounts.title')}
+        description={t('accounts.description')}
       />
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
-          <span className={labelClass}>{isPolish ? 'Nazwa' : 'Name'}</span>
+          <span className={labelClass}>{t('accounts.name')}</span>
           <input
             className={input}
             value={form.name}
@@ -49,7 +46,7 @@ export function AccountsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Instytucja' : 'Institution'}</span>
+          <span className={labelClass}>{t('accounts.institution')}</span>
           <input
             className={input}
             value={form.institution}
@@ -62,7 +59,7 @@ export function AccountsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Typ' : 'Type'}</span>
+          <span className={labelClass}>{t('accounts.type')}</span>
           <select
             className={input}
             value={form.type}
@@ -75,7 +72,7 @@ export function AccountsSection() {
         </div>
 
         <div>
-          <span className={labelClass}>{isPolish ? 'Waluta bazowa' : 'Base currency'}</span>
+          <span className={labelClass}>{t('accounts.baseCurrency')}</span>
           <input
             className={input}
             value={form.baseCurrency}
@@ -89,16 +86,16 @@ export function AccountsSection() {
 
         <div className="col-span-full flex items-center gap-3 mt-2">
           <button className={btnPrimary} type="submit" disabled={createAccountMutation.isPending}>
-            {createAccountMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Dodaj konto' : 'Add account')}
+            {createAccountMutation.isPending ? t('common.saving') : t('accounts.addAccount')}
           </button>
           {createAccountMutation.error && <p className="text-sm text-red-400">{createAccountMutation.error.message}</p>}
         </div>
       </form>
 
       <div className="space-y-3 mt-4">
-        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Ładowanie kont...' : 'Loading accounts...'}</p>}
+        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">{t('accounts.loading')}</p>}
         {accountsQuery.isError && <p className="text-sm text-red-400">{accountsQuery.error.message}</p>}
-        {sortedAccounts.length === 0 && !accountsQuery.isLoading && <p className="text-sm text-zinc-500">{isPolish ? 'Brak kont.' : 'No accounts yet.'}</p>}
+        {sortedAccounts.length === 0 && !accountsQuery.isLoading && <p className="text-sm text-zinc-500">{t('accounts.empty')}</p>}
         {sortedAccounts.map((account) => (
           <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={account.id}>
             <div>
