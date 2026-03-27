@@ -107,10 +107,26 @@ export function TransactionJournal({
     () => [...accountOptions].sort(compareAccountsByDisplayOrder),
     [accountOptions],
   )
-  const sortedInstrumentOptions = useMemo(
-    () => [...instrumentOptions].sort(compareInstrumentsByName),
-    [instrumentOptions],
-  )
+  const lastUsedByInstrumentId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const tx of transactions) {
+      if (tx.instrumentId && (!map.has(tx.instrumentId) || tx.tradeDate > map.get(tx.instrumentId)!)) {
+        map.set(tx.instrumentId, tx.tradeDate)
+      }
+    }
+    return map
+  }, [transactions])
+
+  const sortedInstrumentOptions = useMemo(() => {
+    return [...instrumentOptions].sort((a, b) => {
+      const aDate = lastUsedByInstrumentId.get(a.id)
+      const bDate = lastUsedByInstrumentId.get(b.id)
+      if (aDate && bDate) return bDate.localeCompare(aDate)
+      if (aDate) return -1
+      if (bDate) return 1
+      return compareInstrumentsByName(a, b)
+    })
+  }, [instrumentOptions, lastUsedByInstrumentId])
 
   const canSubmit = useMemo(() => {
     return form.accountId !== '' && (!requiresInstrument || form.instrumentId !== '')
