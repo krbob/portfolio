@@ -2066,6 +2066,7 @@ describe('App', () => {
       expect(grossAmountInput).toHaveValue('246.90')
     })
 
+    fireEvent.change(dialogScope.getByLabelText(/^currency$/i), { target: { value: 'USD' } })
     fireEvent.change(dialogScope.getByLabelText(/^fx rate to pln$/i), { target: { value: '4,0321' } })
     fireEvent.click(dialogScope.getByRole('button', { name: /add transaction/i }))
 

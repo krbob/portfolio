@@ -1031,18 +1031,20 @@ export function TransactionJournal({
                 />
               </label>
 
-              <label>
-                <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
-                <input
-                  className={input}
-                  inputMode="decimal"
-                  value={form.fxRateToPln}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
-                  }
-                  placeholder={isPolish ? '4,0321' : '4.0321'}
-                />
-              </label>
+              {form.currency !== 'PLN' && (
+                <label>
+                  <span className={labelClass}>{isPolish ? 'Kurs FX do PLN' : 'FX rate to PLN'}</span>
+                  <input
+                    className={input}
+                    inputMode="decimal"
+                    value={form.fxRateToPln}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, fxRateToPln: event.target.value }))
+                    }
+                    placeholder={isPolish ? '4,0321' : '4.0321'}
+                  />
+                </label>
+              )}
 
               <label className="col-span-2">
                 <span className={labelClass}>{isPolish ? 'Notatki' : 'Notes'}</span>
