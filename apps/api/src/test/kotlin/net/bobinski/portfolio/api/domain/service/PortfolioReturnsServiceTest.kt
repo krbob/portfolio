@@ -337,6 +337,7 @@ class PortfolioReturnsServiceTest {
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
+            benchmarkSettingsService = benchmarkSettingsService,
             clock = clock
         )
         val service = PortfolioReturnsService(

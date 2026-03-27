@@ -220,13 +220,12 @@ class PortfolioHistoryServiceTest {
         val history = fixture.service.dailyHistory()
         val lastPoint = history.points.last()
 
-        assertEquals(0, history.benchmarkSeriesIssueCount)
         assertTrue(history.points.first().portfolioPerformanceIndex!!.compareTo(BigDecimal("100")) == 0)
-        assertNotNull(lastPoint.equityBenchmarkIndex)
-        assertNotNull(lastPoint.inflationBenchmarkIndex)
-        assertNotNull(lastPoint.targetMixBenchmarkIndex)
-        assertTrue(lastPoint.equityBenchmarkIndex!!.compareTo(BigDecimal("121")) == 0)
-        assertTrue(lastPoint.targetMixBenchmarkIndex!!.compareTo(BigDecimal("118.81")) == 0)
+        assertNotNull(lastPoint.benchmarkIndices["VWRA"])
+        assertNotNull(lastPoint.benchmarkIndices["INFLATION"])
+        assertNotNull(lastPoint.benchmarkIndices["TARGET_MIX"])
+        assertTrue(lastPoint.benchmarkIndices["VWRA"]!!.compareTo(BigDecimal("121")) == 0)
+        assertTrue(lastPoint.benchmarkIndices["TARGET_MIX"]!!.compareTo(BigDecimal("118.81")) == 0)
     }
 
     @Test
@@ -279,9 +278,9 @@ class PortfolioHistoryServiceTest {
 
         val history = fixture.service.dailyHistory()
 
-        assertEquals(null, history.points.first().targetMixBenchmarkIndex)
-        assertTrue(history.points[1].targetMixBenchmarkIndex!!.compareTo(BigDecimal("100")) == 0)
-        assertNotNull(history.points.last().targetMixBenchmarkIndex)
+        assertEquals(null, history.points.first().benchmarkIndices["TARGET_MIX"])
+        assertTrue(history.points[1].benchmarkIndices["TARGET_MIX"]!!.compareTo(BigDecimal("100")) == 0)
+        assertNotNull(history.points.last().benchmarkIndices["TARGET_MIX"])
     }
 
     @Test
@@ -306,8 +305,8 @@ class PortfolioHistoryServiceTest {
         val history = fixture.service.dailyHistory()
         val lastPoint = history.points.last()
 
-        assertNotNull(lastPoint.inflationBenchmarkIndex)
-        assertTrue(lastPoint.inflationBenchmarkIndex!!.compareTo(BigDecimal("100")) > 0)
+        assertNotNull(lastPoint.benchmarkIndices["INFLATION"])
+        assertTrue(lastPoint.benchmarkIndices["INFLATION"]!!.compareTo(BigDecimal("100")) > 0)
     }
 
     @Test
@@ -365,6 +364,20 @@ class PortfolioHistoryServiceTest {
         val referenceProvider = FakeReferenceSeriesProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
+        val appPreferenceRepository = net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository(),
+            clock = clock
+        )
+        val benchmarkSettingsService = PortfolioBenchmarkSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = net.bobinski.portfolio.api.config.AppJsonFactory.create(),
+                clock = clock
+            ),
+            auditLogService = auditLogService,
+            clock = clock
+        )
         val service = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -375,6 +388,7 @@ class PortfolioHistoryServiceTest {
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
+            benchmarkSettingsService = benchmarkSettingsService,
             clock = clock
         )
         return HistoryFixture(

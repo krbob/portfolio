@@ -130,7 +130,7 @@ class PortfolioReturnsService(
                 portfolioMetric = nominalPln,
                 pinned = benchmarkSettings.isPinned(BenchmarkKey.VWRA),
                 values = history.points.mapNotNull { point ->
-                    point.equityBenchmarkIndex?.let { value ->
+                    point.benchmarkIndices[BenchmarkKey.VWRA.name]?.let { value ->
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
@@ -143,7 +143,7 @@ class PortfolioReturnsService(
                 portfolioMetric = nominalPln,
                 pinned = benchmarkSettings.isPinned(BenchmarkKey.INFLATION),
                 values = history.points.mapNotNull { point ->
-                    point.inflationBenchmarkIndex?.let { value ->
+                    point.benchmarkIndices[BenchmarkKey.INFLATION.name]?.let { value ->
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
@@ -156,7 +156,7 @@ class PortfolioReturnsService(
                 portfolioMetric = nominalPln,
                 pinned = benchmarkSettings.isPinned(BenchmarkKey.TARGET_MIX),
                 values = history.points.mapNotNull { point ->
-                    point.targetMixBenchmarkIndex?.let { value ->
+                    point.benchmarkIndices[BenchmarkKey.TARGET_MIX.name]?.let { value ->
                         ValuationPoint(date = point.date, value = value)
                     }
                 }

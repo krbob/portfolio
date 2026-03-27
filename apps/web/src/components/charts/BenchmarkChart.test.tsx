@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
 import { BenchmarkChart } from './BenchmarkChart'
 
@@ -16,6 +17,32 @@ function setLanguage(language: 'pl' | 'en') {
   })
 }
 
+const samplePoints: PortfolioDailyHistoryPoint[] = [
+  {
+    date: '2026-03-01',
+    totalBookValuePln: '1000.00',
+    totalCurrentValuePln: '1000.00',
+    netContributionsPln: '1000.00',
+    cashBalancePln: '1000.00',
+    totalCurrentValueUsd: '250.00',
+    netContributionsUsd: '250.00',
+    cashBalanceUsd: '250.00',
+    totalCurrentValueAu: null,
+    netContributionsAu: null,
+    cashBalanceAu: null,
+    equityCurrentValuePln: '0.00',
+    bondCurrentValuePln: '0.00',
+    cashCurrentValuePln: '1000.00',
+    equityAllocationPct: '0.00',
+    bondAllocationPct: '0.00',
+    cashAllocationPct: '100.00',
+    portfolioPerformanceIndex: '100.00',
+    benchmarkIndices: { VWRA: '100.00', INFLATION: '101.00' },
+    activeHoldingCount: 0,
+    valuedHoldingCount: 0,
+  },
+]
+
 describe('BenchmarkChart', () => {
   afterEach(() => cleanup())
 
@@ -24,7 +51,7 @@ describe('BenchmarkChart', () => {
 
     render(
       <I18nProvider>
-        <BenchmarkChart points={[]} />
+        <BenchmarkChart points={samplePoints} />
       </I18nProvider>,
     )
 
@@ -40,15 +67,15 @@ describe('BenchmarkChart', () => {
 
     render(
       <I18nProvider>
-        <BenchmarkChart points={[]} />
+        <BenchmarkChart points={samplePoints} />
       </I18nProvider>,
     )
 
     const select = screen.getByLabelText('Wybierz benchmark') as HTMLSelectElement
-    expect(select.value).toBe('equityBenchmarkIndex')
+    expect(select.value).toBe('VWRA')
 
-    await user.selectOptions(select, 'inflationBenchmarkIndex')
+    await user.selectOptions(select, 'INFLATION')
 
-    expect(select.value).toBe('inflationBenchmarkIndex')
+    expect(select.value).toBe('INFLATION')
   })
 })

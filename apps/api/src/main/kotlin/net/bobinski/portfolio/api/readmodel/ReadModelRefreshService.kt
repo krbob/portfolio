@@ -217,9 +217,7 @@ private fun PortfolioDailyHistoryPoint.toRefreshResponse(): PortfolioDailyHistor
     bondAllocationPct = bondAllocationPct.toPlainString(),
     cashAllocationPct = cashAllocationPct.toPlainString(),
     portfolioPerformanceIndex = portfolioPerformanceIndex?.toPlainString(),
-    equityBenchmarkIndex = equityBenchmarkIndex?.toPlainString(),
-    inflationBenchmarkIndex = inflationBenchmarkIndex?.toPlainString(),
-    targetMixBenchmarkIndex = targetMixBenchmarkIndex?.toPlainString(),
+    benchmarkIndices = benchmarkIndices.mapValues { (_, v) -> v.toPlainString() },
     activeHoldingCount = activeHoldingCount,
     valuedHoldingCount = valuedHoldingCount
 )

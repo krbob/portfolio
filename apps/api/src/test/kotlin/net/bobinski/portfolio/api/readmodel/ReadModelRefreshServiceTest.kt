@@ -88,6 +88,7 @@ class ReadModelRefreshServiceTest {
             referenceSeriesProvider = NoopReferenceSeriesProvider(),
             inflationAdjustmentProvider = NoopInflationAdjustmentProvider(),
             transactionFxConversionService = TransactionFxConversionService(NoopFxRateHistoryProvider()),
+            benchmarkSettingsService = benchmarkSettingsService,
             clock = clock
         )
         val returnsService = PortfolioReturnsService(

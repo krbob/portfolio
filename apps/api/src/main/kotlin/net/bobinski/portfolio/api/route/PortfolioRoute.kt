@@ -237,9 +237,7 @@ data class PortfolioDailyHistoryPointResponse(
     val bondAllocationPct: String,
     val cashAllocationPct: String,
     val portfolioPerformanceIndex: String?,
-    val equityBenchmarkIndex: String?,
-    val inflationBenchmarkIndex: String?,
-    val targetMixBenchmarkIndex: String?,
+    val benchmarkIndices: Map<String, String> = emptyMap(),
     val activeHoldingCount: Int,
     val valuedHoldingCount: Int
 )
@@ -462,9 +460,7 @@ private fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPointR
     bondAllocationPct = bondAllocationPct.toPlainString(),
     cashAllocationPct = cashAllocationPct.toPlainString(),
     portfolioPerformanceIndex = portfolioPerformanceIndex?.toPlainString(),
-    equityBenchmarkIndex = equityBenchmarkIndex?.toPlainString(),
-    inflationBenchmarkIndex = inflationBenchmarkIndex?.toPlainString(),
-    targetMixBenchmarkIndex = targetMixBenchmarkIndex?.toPlainString(),
+    benchmarkIndices = benchmarkIndices.mapValues { (_, v) -> v.toPlainString() },
     activeHoldingCount = activeHoldingCount,
     valuedHoldingCount = valuedHoldingCount
 )

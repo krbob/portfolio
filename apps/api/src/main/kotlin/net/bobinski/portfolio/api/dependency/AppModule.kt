@@ -279,6 +279,7 @@ fun appModule(
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
             transactionFxConversionService = get(),
+            benchmarkSettingsService = get(),
             clock = get(),
             marketDataStaleAfterDays = marketDataConfig.staleAfterDays
         )

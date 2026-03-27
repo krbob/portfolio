@@ -1071,9 +1071,9 @@ export interface components {
             bondAllocationPct: string;
             cashAllocationPct: string;
             portfolioPerformanceIndex?: string | null;
-            equityBenchmarkIndex?: string | null;
-            inflationBenchmarkIndex?: string | null;
-            targetMixBenchmarkIndex?: string | null;
+            benchmarkIndices?: {
+                [key: string]: string;
+            };
             activeHoldingCount: number;
             valuedHoldingCount: number;
         };

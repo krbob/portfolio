@@ -42,6 +42,7 @@ class PortfolioHistoryService(
     private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val inflationAdjustmentProvider: InflationAdjustmentProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
+    private val benchmarkSettingsService: PortfolioBenchmarkSettingsService,
     private val clock: Clock,
     private val marketDataStaleAfterDays: Long = 3
 ) {
@@ -257,9 +258,6 @@ class PortfolioHistoryService(
                 bondAllocationPct = totalCurrentValuePln.ratioOf(bondCurrentValuePln),
                 cashAllocationPct = totalCurrentValuePln.ratioOf(cashCurrentValuePln),
                 portfolioPerformanceIndex = null,
-                equityBenchmarkIndex = null,
-                inflationBenchmarkIndex = null,
-                targetMixBenchmarkIndex = null,
                 activeHoldingCount = activeHoldings.size,
                 valuedHoldingCount = valuedHoldingCount
             )
@@ -425,11 +423,13 @@ class PortfolioHistoryService(
         val bondDeferred = async { referenceSeriesProvider.bondBenchmarkPln(from = from, to = until) }
         val targetsDeferred = async { portfolioTargetRepository.list() }
         val inflationDeferred = async { loadInflationBenchmark(from = from, until = until) }
+        val settingsDeferred = async { benchmarkSettingsService.settings() }
 
         val equity = equityDeferred.await()
         val bond = bondDeferred.await()
         val targets = targetsDeferred.await()
         val inflation = inflationDeferred.await()
+        val settings = settingsDeferred.await()
         val equityLookup = when (equity) {
             is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
                 from = from,
@@ -456,14 +456,41 @@ class PortfolioHistoryService(
             bondBenchmark = bondLookup
         )
 
+        val indices = mutableMapOf<String, TreeMap<LocalDate, BigDecimal>>()
+        indices[BenchmarkKey.VWRA.name] = equityLookup
+        indices[BenchmarkKey.INFLATION.name] = inflation.lookup
+        indices[BenchmarkKey.TARGET_MIX.name] = targetMixLookup.lookup
+
+        val additionalBenchmarks = settings.activeReferenceBenchmarks()
+        val additionalResults = additionalBenchmarks.map { ref ->
+            async {
+                ref.key.name to referenceSeriesProvider.benchmarkPln(symbol = ref.symbol, from = from, to = until)
+            }
+        }.awaitAll()
+
+        var additionalIssueCount = 0
+        additionalResults.forEach { (keyName, result) ->
+            when (result) {
+                is ReferenceSeriesResult.Success -> {
+                    indices[keyName] = buildNormalizedIndexLookup(
+                        from = from,
+                        until = until,
+                        prices = result.prices.toLookup()
+                    )
+                }
+                is ReferenceSeriesResult.Failure -> {
+                    additionalIssueCount += 1
+                }
+            }
+        }
+
         BenchmarkLoads(
-            equityBenchmark = equityLookup,
-            inflationBenchmark = inflation.lookup,
-            targetMixBenchmark = targetMixLookup.lookup,
+            indices = indices,
             issueCount = listOf(
                 if (equity is ReferenceSeriesResult.Failure) 1 else 0,
                 inflation.issueCount,
-                targetMixLookup.issueCount
+                targetMixLookup.issueCount,
+                additionalIssueCount
             ).sum()
         )
     }
@@ -528,11 +555,12 @@ class PortfolioHistoryService(
         val portfolioPerformanceLookup = buildPortfolioPerformanceIndex(points)
 
         return points.map { point ->
+            val dateIndices = benchmarkLoads.indices.mapNotNull { (key, lookup) ->
+                lookup.lookupOn(point.date)?.let { key to it }
+            }.toMap()
             point.copy(
                 portfolioPerformanceIndex = portfolioPerformanceLookup.lookupOn(point.date),
-                equityBenchmarkIndex = benchmarkLoads.equityBenchmark.lookupOn(point.date),
-                inflationBenchmarkIndex = benchmarkLoads.inflationBenchmark.lookupOn(point.date),
-                targetMixBenchmarkIndex = benchmarkLoads.targetMixBenchmark.lookupOn(point.date)
+                benchmarkIndices = dateIndices
             )
         }
     }
@@ -928,9 +956,7 @@ class PortfolioHistoryService(
     )
 
     private data class BenchmarkLoads(
-        val equityBenchmark: TreeMap<LocalDate, BigDecimal>,
-        val inflationBenchmark: TreeMap<LocalDate, BigDecimal>,
-        val targetMixBenchmark: TreeMap<LocalDate, BigDecimal>,
+        val indices: Map<String, TreeMap<LocalDate, BigDecimal>>,
         val issueCount: Int
     )
 
@@ -981,9 +1007,7 @@ data class PortfolioDailyHistoryPoint(
     val bondAllocationPct: BigDecimal,
     val cashAllocationPct: BigDecimal,
     val portfolioPerformanceIndex: BigDecimal?,
-    val equityBenchmarkIndex: BigDecimal?,
-    val inflationBenchmarkIndex: BigDecimal?,
-    val targetMixBenchmarkIndex: BigDecimal?,
+    val benchmarkIndices: Map<String, BigDecimal> = emptyMap(),
     val activeHoldingCount: Int,
     val valuedHoldingCount: Int
 )
