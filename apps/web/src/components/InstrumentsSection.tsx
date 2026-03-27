@@ -49,8 +49,8 @@ const initialForm = {
   currency: 'USD',
   valuationSource: 'STOCK_ANALYST',
   seriesMonth: currentSeriesMonth,
-  firstPeriodRateBps: 650,
-  marginBps: 200,
+  firstPeriodRateBps: '650',
+  marginBps: '200',
 }
 
 export function InstrumentsSection() {
@@ -98,8 +98,8 @@ export function InstrumentsSection() {
       currency: instrument.currency,
       valuationSource: instrument.valuationSource,
       seriesMonth: instrument.edoTerms?.seriesMonth ?? currentSeriesMonth,
-      firstPeriodRateBps: instrument.edoTerms?.firstPeriodRateBps ?? 650,
-      marginBps: instrument.edoTerms?.marginBps ?? 200,
+      firstPeriodRateBps: String(instrument.edoTerms?.firstPeriodRateBps ?? 650),
+      marginBps: String(instrument.edoTerms?.marginBps ?? 200),
     })
   }
 
@@ -113,8 +113,8 @@ export function InstrumentsSection() {
     const edoTerms = isEdo
       ? {
           seriesMonth: form.seriesMonth,
-          firstPeriodRateBps: form.firstPeriodRateBps,
-          marginBps: form.marginBps,
+          firstPeriodRateBps: Number(form.firstPeriodRateBps),
+          marginBps: Number(form.marginBps),
         }
       : null
 
@@ -295,7 +295,7 @@ export function InstrumentsSection() {
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    firstPeriodRateBps: Number(event.target.value),
+                    firstPeriodRateBps: event.target.value,
                   }))
                 }
                 required
@@ -310,7 +310,7 @@ export function InstrumentsSection() {
                 step={10}
                 value={form.marginBps}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, marginBps: Number(event.target.value) }))
+                  setForm((current) => ({ ...current, marginBps: event.target.value }))
                 }
                 required
               />
