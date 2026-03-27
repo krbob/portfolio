@@ -14,11 +14,17 @@ import java.util.UUID
 class InstrumentService(
     private val instrumentRepository: InstrumentRepository,
     private val auditLogService: AuditLogService,
+    private val valuationProbeService: ValuationProbeService,
     private val clock: Clock
 ) {
     suspend fun list(): List<Instrument> = instrumentRepository.list()
 
     suspend fun create(command: CreateInstrumentCommand): Instrument {
+        val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
+        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null) {
+            valuationProbeService.verifyStockAnalystSymbol(symbol)
+        }
+
         val now = Instant.now(clock)
         val instrument = instrumentRepository.save(
             Instrument(
@@ -26,7 +32,7 @@ class InstrumentService(
                 name = command.name.trim(),
                 kind = command.kind,
                 assetClass = command.assetClass,
-                symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() },
+                symbol = symbol,
                 currency = command.currency.uppercase(),
                 valuationSource = command.valuationSource,
                 edoTerms = command.edoTerms,

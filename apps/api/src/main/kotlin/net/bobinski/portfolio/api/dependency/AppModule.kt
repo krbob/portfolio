@@ -47,6 +47,8 @@ import net.bobinski.portfolio.api.marketdata.service.RemoteCurrentInstrumentValu
 import net.bobinski.portfolio.api.marketdata.service.RemoteFxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteInflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
+import net.bobinski.portfolio.api.marketdata.service.RemoteValuationProbeService
+import net.bobinski.portfolio.api.domain.service.ValuationProbeService
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
@@ -167,7 +169,19 @@ fun appModule(
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { MarketDataFailureAuditService(auditLogService = get()) }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
-    single { InstrumentService(instrumentRepository = get(), auditLogService = get(), clock = get()) }
+    if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
+        single<ValuationProbeService> {
+            RemoteValuationProbeService(
+                marketDataConfig = get(),
+                stockAnalystClient = get()
+            )
+        }
+    } else {
+        single<ValuationProbeService> { object : ValuationProbeService {
+            override suspend fun verifyStockAnalystSymbol(symbol: String) {}
+        } }
+    }
+    single { InstrumentService(instrumentRepository = get(), auditLogService = get(), valuationProbeService = get(), clock = get()) }
     single {
         TransactionImportProfileService(
             repository = get(),
