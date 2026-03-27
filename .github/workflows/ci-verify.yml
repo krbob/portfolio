@@ -95,3 +95,73 @@ jobs:
 
       - name: Run SQLite Docker smoke test
         run: ./scripts/smoke-test-sqlite-stack.sh
+
+  smoke-browser-docker:
+    name: Browser E2E smoke
+    runs-on: ubuntu-latest
+    needs:
+      - api
+      - web
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Run browser E2E smoke test
+        run: ./scripts/smoke-test-browser-stack.sh
+
+      - name: Upload browser smoke traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-test-results
+          path: apps/web/test-results
+          if-no-files-found: ignore
+
+  smoke-auth-docker:
+    name: Auth Docker smoke
+    runs-on: ubuntu-latest
+    needs:
+      - api
+      - web
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Run auth Docker smoke test
+        run: ./scripts/smoke-test-auth-stack.sh
+
+      - name: Upload auth smoke traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-smoke-test-results
+          path: apps/web/test-results
+          if-no-files-found: ignore

@@ -10,6 +10,7 @@ apps/api/data/
 apps/web/node_modules/
 apps/web/dist/
 apps/web/coverage/
+apps/web/test-results/
 *.tsbuildinfo
 
 *.log
