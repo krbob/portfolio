@@ -37,7 +37,7 @@ export function PortfolioBenchmarkSettingsSection() {
     setCustomSymbol(settingsQuery.data.customSymbol ?? '')
   }, [settingsQuery.data])
 
-  const options = settingsQuery.data?.options ?? []
+  const options = useMemo(() => settingsQuery.data?.options ?? [], [settingsQuery.data?.options])
   const groupedOptions = useMemo(() => {
     return {
       system: options.filter((option) => option.kind === 'SYSTEM'),

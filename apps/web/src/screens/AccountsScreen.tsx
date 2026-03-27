@@ -26,8 +26,8 @@ export function AccountsScreen() {
   const accountsQuery = usePortfolioAccounts()
   const holdingsQuery = usePortfolioHoldings()
   const reorderAccountsMutation = useReorderAccounts()
-  const accounts = accountsQuery.data ?? []
-  const holdings = holdingsQuery.data ?? []
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
+  const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
   const [orderedAccounts, setOrderedAccounts] = useState(accounts)
   const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null)
   const [dropTargetAccountId, setDropTargetAccountId] = useState<string | null>(null)

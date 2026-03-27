@@ -29,7 +29,7 @@ export function DashboardScreen() {
   const dataQuality = usePortfolioDataQuality()
   const overview = overviewQuery.data
 
-  const allPoints = historyQuery.data?.points ?? []
+  const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const chartPoints = useMemo(() => filterHistoryPoints(allPoints, range), [allPoints, range])
   const latestPoint = chartPoints.at(-1) ?? allPoints.at(-1)
   const previousPoint = chartPoints.at(-2) ?? allPoints.at(-2)

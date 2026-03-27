@@ -30,8 +30,8 @@ export function InstrumentsScreen() {
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
 
-  const catalog = instrumentsQuery.data ?? []
-  const holdings = holdingsQuery.data ?? []
+  const catalog = useMemo(() => instrumentsQuery.data ?? [], [instrumentsQuery.data])
+  const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
   const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
   const [sortState, setSortState] = usePersistentState<SortState>(INSTRUMENTS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string | null>(null)

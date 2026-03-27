@@ -28,8 +28,8 @@ export function PerformanceScreen() {
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
 
-  const allPoints = historyQuery.data?.points ?? []
-  const allPeriods = returnsQuery.data?.periods ?? []
+  const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
+  const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
   const filteredPoints = useMemo(() => filterByPeriod(allPoints, period), [allPoints, period])
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
   const returnsDisplayAvailable = isMarketValuationState(historyQuery.data?.valuationState)

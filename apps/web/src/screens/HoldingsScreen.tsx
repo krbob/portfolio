@@ -47,7 +47,7 @@ export function HoldingsScreen() {
   const { isPolish } = useI18n()
   const navigate = useNavigate()
   const holdingsQuery = usePortfolioHoldings()
-  const holdings = holdingsQuery.data ?? []
+  const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
   const [accountFilter, setAccountFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.accountFilter, 'ALL', { validate: isStringValue })
   const [assetClassFilter, setAssetClassFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.assetClassFilter, 'ALL', { validate: isStringValue })
   const [statusFilter, setStatusFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.statusFilter, 'ALL', { validate: isStringValue })

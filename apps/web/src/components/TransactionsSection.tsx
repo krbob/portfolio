@@ -57,7 +57,7 @@ export function TransactionsSection() {
 
   const accountOptions = accountsQuery.data ?? []
   const instrumentOptions = instrumentsQuery.data ?? []
-  const importProfiles = transactionImportProfilesQuery.data ?? []
+  const importProfiles = useMemo(() => transactionImportProfilesQuery.data ?? [], [transactionImportProfilesQuery.data])
   const transactions = transactionsQuery.data ?? []
 
   const hasWorkspaceData =
