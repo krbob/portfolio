@@ -47,6 +47,8 @@ export const initialForm = {
   notes: '',
 }
 
+export type TransactionFormState = typeof initialForm
+
 export const initialJournalFilters = {
   search: '',
   accountId: 'ALL',
@@ -56,6 +58,8 @@ export const initialJournalFilters = {
   sort: 'tradeDate-desc',
   pageSize: '10',
 }
+
+export type JournalFilters = typeof initialJournalFilters
 
 export type ImportMappingField =
   | 'account'
