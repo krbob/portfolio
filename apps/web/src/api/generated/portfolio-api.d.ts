@@ -200,6 +200,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/instruments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update an instrument
+         * @description Updates mutable properties of an existing instrument such as name, symbol, currency, valuation source and EDO terms.
+         */
+        put: operations["updateInstrument"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/overview": {
         parameters: {
             query?: never;
@@ -926,6 +946,14 @@ export interface components {
             name: string;
             kind: string;
             assetClass: string;
+            symbol?: string | null;
+            currency: string;
+            valuationSource: string;
+            edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
+        };
+        /** net.bobinski.portfolio.api.route.UpdateInstrumentRequest */
+        UpdateInstrumentRequest: {
+            name: string;
             symbol?: string | null;
             currency: string;
             valuationSource: string;
@@ -1847,6 +1875,31 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentResponse"];
+                };
+            };
+        };
+    };
+    updateInstrument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateInstrumentRequest"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

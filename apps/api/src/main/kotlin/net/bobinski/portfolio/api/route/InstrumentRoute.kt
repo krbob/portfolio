@@ -6,6 +6,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -15,6 +16,8 @@ import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.service.CreateInstrumentCommand
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.UpdateInstrumentCommand
+import java.util.UUID
 import org.koin.ktor.ext.inject
 import java.time.YearMonth
 
@@ -52,8 +55,40 @@ fun Route.instrumentRoute() {
             description = "Creates a new instrument definition, including valuation source and optional EDO terms.",
             tag = "Instruments"
         )
+
+        route("/{id}") {
+            put {
+                val id = parseUuid(call.parameters["id"]!!, "id")
+                val request = call.receive<UpdateInstrumentRequest>()
+                val instrument = instrumentService.update(
+                    UpdateInstrumentCommand(
+                        id = id,
+                        name = request.name,
+                        symbol = request.symbol,
+                        currency = request.currency,
+                        valuationSource = ValuationSource.valueOf(request.valuationSource),
+                        edoTerms = request.edoTerms?.toDomain()
+                    )
+                )
+                call.respond(instrument.toResponse())
+            }.documented(
+                operationId = "updateInstrument",
+                summary = "Update an instrument",
+                description = "Updates mutable properties of an existing instrument such as name, symbol, currency, valuation source and EDO terms.",
+                tag = "Instruments"
+            )
+        }
     }
 }
+
+@Serializable
+data class UpdateInstrumentRequest(
+    val name: String,
+    val symbol: String? = null,
+    val currency: String,
+    val valuationSource: String,
+    val edoTerms: EdoTermsRequest? = null
+)
 
 @Serializable
 data class CreateInstrumentRequest(
@@ -100,6 +135,12 @@ private fun EdoTermsRequest.toDomain(): EdoTerms = EdoTerms(
     firstPeriodRateBps = firstPeriodRateBps,
     marginBps = marginBps
 )
+
+private fun parseUuid(value: String, field: String): UUID = try {
+    UUID.fromString(value)
+} catch (_: IllegalArgumentException) {
+    throw IllegalArgumentException("$field must be a valid UUID.")
+}
 
 private fun Instrument.toResponse(): InstrumentResponse = InstrumentResponse(
     id = id.toString(),

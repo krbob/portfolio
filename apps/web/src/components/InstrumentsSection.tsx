@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
-import { useCreateInstrument, useInstruments } from '../hooks/use-write-model'
+import { useCreateInstrument, useUpdateInstrument, useInstruments } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
-import { label as labelClass, input, btnPrimary, badge, badgeVariants } from '../lib/styles'
+import { label as labelClass, input, btnPrimary, btnSecondary, badge, badgeVariants } from '../lib/styles'
 
 const currentSeriesMonth = new Date().toISOString().slice(0, 7)
 
@@ -57,9 +57,13 @@ export function InstrumentsSection() {
   const { isPolish } = useI18n()
   const instrumentsQuery = useInstruments()
   const createInstrumentMutation = useCreateInstrument()
+  const updateInstrumentMutation = useUpdateInstrument()
   const [form, setForm] = useState(initialForm)
+  const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null)
 
+  const isEditing = editingInstrumentId !== null
   const isEdo = form.kind === 'BOND_EDO'
+  const activeMutation = isEditing ? updateInstrumentMutation : createInstrumentMutation
 
   function handleKindChange(nextKind: string) {
     setForm((current) => {
@@ -84,28 +88,69 @@ export function InstrumentsSection() {
     })
   }
 
+  function handleEditClick(instrument: NonNullable<typeof instrumentsQuery.data>[number]) {
+    setEditingInstrumentId(instrument.id)
+    setForm({
+      name: instrument.name,
+      kind: instrument.kind,
+      assetClass: instrument.assetClass,
+      symbol: instrument.symbol ?? '',
+      currency: instrument.currency,
+      valuationSource: instrument.valuationSource,
+      seriesMonth: instrument.edoTerms?.seriesMonth ?? currentSeriesMonth,
+      firstPeriodRateBps: instrument.edoTerms?.firstPeriodRateBps ?? 650,
+      marginBps: instrument.edoTerms?.marginBps ?? 200,
+    })
+  }
+
+  function handleCancelEdit() {
+    setEditingInstrumentId(null)
+    setForm(initialForm)
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    createInstrumentMutation.mutate(
-      {
-        name: form.name,
-        kind: form.kind,
-        assetClass: form.assetClass,
-        symbol: form.symbol || null,
-        currency: form.currency,
-        valuationSource: form.valuationSource,
-        edoTerms: isEdo
-          ? {
-              seriesMonth: form.seriesMonth,
-              firstPeriodRateBps: form.firstPeriodRateBps,
-              marginBps: form.marginBps,
-            }
-          : null,
-      },
-      {
-        onSuccess: () => setForm(initialForm),
-      },
-    )
+    const edoTerms = isEdo
+      ? {
+          seriesMonth: form.seriesMonth,
+          firstPeriodRateBps: form.firstPeriodRateBps,
+          marginBps: form.marginBps,
+        }
+      : null
+
+    if (isEditing) {
+      updateInstrumentMutation.mutate(
+        {
+          id: editingInstrumentId,
+          name: form.name,
+          symbol: form.symbol || null,
+          currency: form.currency,
+          valuationSource: form.valuationSource,
+          edoTerms,
+        },
+        {
+          onSuccess: () => {
+            setForm(initialForm)
+            setEditingInstrumentId(null)
+          },
+        },
+      )
+    } else {
+      createInstrumentMutation.mutate(
+        {
+          name: form.name,
+          kind: form.kind,
+          assetClass: form.assetClass,
+          symbol: form.symbol || null,
+          currency: form.currency,
+          valuationSource: form.valuationSource,
+          edoTerms,
+        },
+        {
+          onSuccess: () => setForm(initialForm),
+        },
+      )
+    }
   }
 
   return (
@@ -117,6 +162,12 @@ export function InstrumentsSection() {
           ? 'Trzymaj ETF-y, benchmarki i miesięczne serie EDO w jednym katalogu instrumentów.'
           : 'Keep ETF, benchmark, and monthly EDO series in one canonical catalog.'}
       />
+
+      {isEditing && (
+        <p className="text-sm font-medium text-blue-400 mb-2">
+          {isPolish ? 'Edytuj instrument' : 'Edit instrument'}
+        </p>
+      )}
 
       <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
         <div>
@@ -133,7 +184,7 @@ export function InstrumentsSection() {
 
         <div>
           <span className={labelClass}>{isPolish ? 'Rodzaj' : 'Kind'}</span>
-          <select className={input} value={form.kind} onChange={(event) => handleKindChange(event.target.value)}>
+          <select className={input} value={form.kind} onChange={(event) => handleKindChange(event.target.value)} disabled={isEditing}>
             <option value="ETF">{labelInstrumentKind('ETF')}</option>
             <option value="STOCK">{labelInstrumentKind('STOCK')}</option>
             <option value="BOND_EDO">{labelInstrumentKind('BOND_EDO')}</option>
@@ -150,6 +201,7 @@ export function InstrumentsSection() {
             onChange={(event) =>
               setForm((current) => ({ ...current, assetClass: event.target.value }))
             }
+            disabled={isEditing}
           >
             <option value="EQUITIES">{labelAssetClass('EQUITIES')}</option>
             <option value="BONDS">{labelAssetClass('BONDS')}</option>
@@ -265,11 +317,20 @@ export function InstrumentsSection() {
         )}
 
         <div className="col-span-full flex items-center gap-3 mt-2">
-          <button className={btnPrimary} type="submit" disabled={createInstrumentMutation.isPending}>
-            {createInstrumentMutation.isPending ? (isPolish ? 'Zapisywanie...' : 'Saving...') : (isPolish ? 'Dodaj instrument' : 'Add instrument')}
+          <button className={btnPrimary} type="submit" disabled={activeMutation.isPending}>
+            {activeMutation.isPending
+              ? (isPolish ? 'Zapisywanie...' : 'Saving...')
+              : isEditing
+                ? (isPolish ? 'Zapisz zmiany' : 'Save changes')
+                : (isPolish ? 'Dodaj instrument' : 'Add instrument')}
           </button>
-          {createInstrumentMutation.error && (
-            <p className="text-sm text-red-400">{createInstrumentMutation.error.message}</p>
+          {isEditing && (
+            <button className={btnSecondary} type="button" onClick={handleCancelEdit}>
+              {isPolish ? 'Anuluj' : 'Cancel'}
+            </button>
+          )}
+          {activeMutation.error && (
+            <p className="text-sm text-red-400">{activeMutation.error.message}</p>
           )}
         </div>
       </form>
@@ -279,7 +340,11 @@ export function InstrumentsSection() {
         {instrumentsQuery.isError && <p className="text-sm text-red-400">{instrumentsQuery.error.message}</p>}
         {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{isPolish ? 'Brak instrumentów.' : 'No instruments yet.'}</p>}
         {instrumentsQuery.data?.map((instrument) => (
-          <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={instrument.id}>
+          <article
+            className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between cursor-pointer hover:border-zinc-700 transition-colors"
+            key={instrument.id}
+            onClick={() => handleEditClick(instrument)}
+          >
             <div>
               <strong className="text-sm text-zinc-100">{instrument.name}</strong>
               <p className="text-sm text-zinc-500">

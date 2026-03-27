@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.domain.service
 
+import net.bobinski.portfolio.api.domain.error.ResourceNotFoundException
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.EdoTerms
@@ -56,12 +57,55 @@ class InstrumentService(
         )
         return instrument
     }
+
+    suspend fun update(command: UpdateInstrumentCommand): Instrument {
+        val existing = instrumentRepository.get(command.id)
+            ?: throw ResourceNotFoundException("Instrument not found: ${command.id}")
+
+        val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
+        if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null) {
+            valuationProbeService.verifyStockAnalystSymbol(symbol)
+        }
+
+        val now = Instant.now(clock)
+        val updated = instrumentRepository.save(
+            existing.copy(
+                name = command.name.trim(),
+                symbol = symbol,
+                currency = command.currency.uppercase(),
+                valuationSource = command.valuationSource,
+                edoTerms = command.edoTerms,
+                updatedAt = now
+            )
+        )
+        auditLogService.record(
+            category = AuditEventCategory.INSTRUMENTS,
+            action = "INSTRUMENT_UPDATED",
+            entityType = "INSTRUMENT",
+            entityId = updated.id.toString(),
+            message = "Updated instrument ${updated.name}.",
+            metadata = buildMap {
+                put("currency", updated.currency)
+                updated.symbol?.let { put("symbol", it) }
+            }
+        )
+        return updated
+    }
 }
 
 data class CreateInstrumentCommand(
     val name: String,
     val kind: InstrumentKind,
     val assetClass: AssetClass,
+    val symbol: String?,
+    val currency: String,
+    val valuationSource: ValuationSource,
+    val edoTerms: EdoTerms? = null
+)
+
+data class UpdateInstrumentCommand(
+    val id: UUID,
+    val name: String,
     val symbol: String?,
     val currency: String,
     val valuationSource: ValuationSource,

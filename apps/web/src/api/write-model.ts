@@ -145,6 +145,23 @@ export function createInstrument(payload: CreateInstrumentPayload) {
   })
 }
 
+export interface UpdateInstrumentPayload {
+  id: string
+  name: string
+  symbol?: string | null
+  currency: string
+  valuationSource: string
+  edoTerms?: { seriesMonth: string; firstPeriodRateBps: number; marginBps: number } | null
+}
+
+export function updateInstrument(payload: UpdateInstrumentPayload) {
+  const { id, ...body } = payload
+  return requestJson<Instrument>(`/api/v1/instruments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
 export function listTransactions() {
   return requestJson<Transaction[]>('/api/v1/transactions')
 }

@@ -56,8 +56,10 @@ import {
   type RestorePortfolioBackupPayload,
   type RestorePortfolioBackupResult,
   type TransactionImportProfile,
+  type UpdateInstrumentPayload,
   type UpdateTransactionPayload,
   type UpdateTransactionImportProfilePayload,
+  updateInstrument,
 } from '../api/write-model'
 
 export function useAccounts() {
@@ -112,6 +114,22 @@ export function useCreateInstrument() {
         queryClient.invalidateQueries({ queryKey: ['instruments'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
+  })
+}
+
+export function useUpdateInstrument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: UpdateInstrumentPayload) => updateInstrument(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['instruments'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },

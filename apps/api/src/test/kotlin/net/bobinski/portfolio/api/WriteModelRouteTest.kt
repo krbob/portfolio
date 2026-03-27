@@ -151,6 +151,90 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `instruments can be updated`() = testApplication {
+        application {
+            module()
+        }
+
+        val instrumentId = createEtfInstrument()
+
+        val updateResponse = client.put("/v1/instruments/$instrumentId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "VWCE",
+                  "symbol": "VWCE.DE",
+                  "currency": "EUR",
+                  "valuationSource": "MANUAL"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, updateResponse.status)
+        val body = updateResponse.bodyAsText()
+        assertTrue(body.contains("\"name\": \"VWCE\""))
+        assertTrue(body.contains("\"symbol\": \"VWCE.DE\""))
+        assertTrue(body.contains("\"currency\": \"EUR\""))
+        assertTrue(body.contains("\"valuationSource\": \"MANUAL\""))
+        assertTrue(body.contains("\"kind\": \"ETF\""))
+    }
+
+    @Test
+    fun `edo instrument terms can be updated`() = testApplication {
+        application {
+            module()
+        }
+
+        val instrumentId = createEdoInstrument()
+
+        val updateResponse = client.put("/v1/instruments/$instrumentId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "EDO0336",
+                  "currency": "PLN",
+                  "valuationSource": "EDO_CALCULATOR",
+                  "edoTerms": {
+                    "seriesMonth": "2026-03",
+                    "firstPeriodRateBps": 600,
+                    "marginBps": 175
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, updateResponse.status)
+        assertTrue(updateResponse.bodyAsText().contains("\"firstPeriodRateBps\": 600"))
+        assertTrue(updateResponse.bodyAsText().contains("\"marginBps\": 175"))
+    }
+
+    @Test
+    fun `updating a non-existent instrument returns not found`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.put("/v1/instruments/00000000-0000-0000-0000-000000000099") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Ghost",
+                  "currency": "PLN",
+                  "valuationSource": "MANUAL"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
     fun `transactions return not found when account is missing`() = testApplication {
         application {
             module()
