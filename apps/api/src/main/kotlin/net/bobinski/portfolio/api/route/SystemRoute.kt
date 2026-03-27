@@ -27,7 +27,7 @@ fun Route.systemRoute(application: Application) {
                     name = application.appName(),
                     stage = application.appStage(),
                     version = application.appVersion(),
-                    persistenceMode = application.persistenceMode(),
+                    persistenceMode = PERSISTENCE_MODE,
                     authEnabled = authConfig.enabled
                 )
             )
@@ -44,7 +44,7 @@ fun Route.systemRoute(application: Application) {
                     name = application.appName(),
                     stage = application.appStage(),
                     version = application.appVersion(),
-                    persistenceMode = application.persistenceMode(),
+                    persistenceMode = PERSISTENCE_MODE,
                     auth = AuthSummary(
                         enabled = authConfig.enabled,
                         mode = if (authConfig.enabled) "PASSWORD" else "DISABLED"
@@ -52,7 +52,7 @@ fun Route.systemRoute(application: Application) {
                     stack = StackSummary(
                         web = "React 19 + TypeScript + Vite",
                         api = "Kotlin 2.3 + Ktor 3",
-                        database = application.databaseSummary()
+                        database = DATABASE_SUMMARY
                     ),
                     stockAnalystUiUrl = marketDataConfig.stockAnalystUiUrl,
                     capabilities = listOf(
@@ -90,9 +90,8 @@ private fun Application.appStage(): String =
 
 private fun Application.appVersion(): String = this::class.java.`package`.implementationVersion ?: "0.1.0-dev"
 
-private fun Application.persistenceMode(): String = "SQLITE"
-
-private fun Application.databaseSummary(): String = "SQLite"
+private const val PERSISTENCE_MODE = "SQLITE"
+private const val DATABASE_SUMMARY = "SQLite"
 
 @Serializable
 data class HealthResponse(

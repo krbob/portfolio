@@ -140,9 +140,7 @@ class TransactionService(
         val account = accountRepository.get(command.accountId)
             ?: throw ResourceNotFoundException("Account ${command.accountId} was not found.")
 
-        if (!account.isActive) {
-            throw IllegalArgumentException("Transactions cannot target inactive accounts.")
-        }
+        require(account.isActive) { "Transactions cannot target inactive accounts." }
 
         val instrument = command.instrumentId?.let { instrumentId ->
             instrumentRepository.get(instrumentId)

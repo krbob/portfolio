@@ -194,7 +194,7 @@ fun appModule(
         }
     } else {
         single<ValuationProbeService> { object : ValuationProbeService {
-            override suspend fun verifyStockAnalystSymbol(symbol: String) {}
+            override suspend fun verifyStockAnalystSymbol(symbol: String) = Unit
         } }
     }
     single { InstrumentService(instrumentRepository = get(), auditLogService = get(), valuationProbeService = get(), clock = get()) }

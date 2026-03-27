@@ -129,7 +129,7 @@ class JdbcWriteRepositoriesTest {
 
                 override suspend fun save(transaction: Transaction): Transaction {
                     if (transaction.id == failingTransactionId) {
-                        throw IllegalStateException("Simulated transaction write failure.")
+                        error("Simulated transaction write failure.")
                     }
                     return transactionDelegate.save(transaction)
                 }

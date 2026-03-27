@@ -282,9 +282,7 @@ class PortfolioBackupService(
         require(BACKUP_FILE_NAME_PATTERN.matches(fileName)) { "Backup file name is not valid." }
 
         val resolved = backupDirectory().resolve(fileName).normalize()
-        if (!resolved.startsWith(backupDirectory())) {
-            throw IllegalArgumentException("Backup file name is not valid.")
-        }
+        require(resolved.startsWith(backupDirectory())) { "Backup file name is not valid." }
         if (!Files.exists(resolved) || !Files.isRegularFile(resolved)) {
             throw ResourceNotFoundException("Backup $fileName was not found.")
         }

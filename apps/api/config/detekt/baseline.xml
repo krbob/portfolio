@@ -3,9 +3,6 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:MarketDataFailureAuditService.kt$MarketDataFailureAuditService$suspend fun recordFailure( upstream: String, operation: String, reason: String, symbol: String? = null, instrumentId: String? = null, instrumentName: String? = null, valuationSource: String? = null, purchaseDate: LocalDate? = null, from: LocalDate? = null, to: LocalDate? = null, exception: Throwable? = null )</ID>
-    <ID>EmptyFunctionBlock:AppModule.kt$&lt;no name provided>${}</ID>
-    <ID>FunctionOnlyReturningConstant:SystemRoute.kt$private fun Application.databaseSummary(): String</ID>
-    <ID>FunctionOnlyReturningConstant:SystemRoute.kt$private fun Application.persistenceMode(): String</ID>
     <ID>LongMethod:AppModule.kt$fun appModule( config: PersistenceConfig, marketDataConfig: MarketDataConfig, backupConfig: BackupConfig, readModelRefreshConfig: ReadModelRefreshConfig, authConfig: AuthConfig, repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME )</ID>
     <ID>LongMethod:PortfolioOperationsModels.kt$internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest</ID>
     <ID>LongMethod:PortfolioOperationsModels.kt$internal fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse</ID>
@@ -27,9 +24,5 @@
     <ID>TooGenericExceptionCaught:RemoteInflationAdjustmentProvider.kt$RemoteInflationAdjustmentProvider$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:RemoteReferenceSeriesProvider.kt$RemoteReferenceSeriesProvider$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:RemoteValuationProbeService.kt$RemoteValuationProbeService$e: Exception</ID>
-    <ID>TooGenericExceptionThrown:ReadModelRefreshServiceTest.kt$ReadModelRefreshServiceTest.NoopEdoLotValuationProvider$throw RuntimeException("EDO lot provider boom")</ID>
-    <ID>TooGenericExceptionThrown:ReadModelRefreshServiceTest.kt$ReadModelRefreshServiceTest.ThrowingHistoricalProvider$throw RuntimeException("History provider boom")</ID>
-    <ID>UseCheckOrError:JdbcWriteRepositoriesTest.kt$JdbcWriteRepositoriesTest.&lt;no name provided>$throw IllegalStateException("Simulated transaction write failure.")</ID>
-    <ID>UseRequire:PortfolioBackupService.kt$PortfolioBackupService$throw IllegalArgumentException("Backup file name is not valid.")</ID>
   </CurrentIssues>
 </SmellBaseline>

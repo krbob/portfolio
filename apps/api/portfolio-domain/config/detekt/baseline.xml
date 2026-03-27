@@ -31,7 +31,5 @@
     <ID>NestedBlockDepth:PortfolioHistoryService.kt$PortfolioHistoryService$suspend fun dailyHistory(): PortfolioDailyHistory</ID>
     <ID>NestedBlockDepth:PortfolioReadModelService.kt$PortfolioReadModelService$private suspend fun buildLedgerSnapshot(): PortfolioLedgerSnapshot</ID>
     <ID>ThrowsCount:TransactionCsvImportService.kt$TransactionCsvImportService$private fun parseCommand( row: List&lt;String>, rowNumber: Int, headerLookup: Map&lt;String, Int>, profile: TransactionImportProfile, accountLookup: Map&lt;String, Set&lt;UUID>>, instrumentLookup: Map&lt;String, Set&lt;UUID>> ): CreateTransactionCommand</ID>
-    <ID>ThrowsCount:TransactionService.kt$TransactionService$private suspend fun validateReferences(command: CreateTransactionCommand)</ID>
-    <ID>UseRequire:TransactionService.kt$TransactionService$throw IllegalArgumentException("Transactions cannot target inactive accounts.")</ID>
   </CurrentIssues>
 </SmellBaseline>
