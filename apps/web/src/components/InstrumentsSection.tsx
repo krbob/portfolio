@@ -290,6 +290,7 @@ export function InstrumentsSection() {
               <input
                 className={input}
                 type="number"
+                step={10}
                 value={form.firstPeriodRateBps}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -306,6 +307,7 @@ export function InstrumentsSection() {
               <input
                 className={input}
                 type="number"
+                step={10}
                 value={form.marginBps}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, marginBps: Number(event.target.value) }))
