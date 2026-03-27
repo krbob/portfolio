@@ -48,6 +48,25 @@ describe('buildPortfolioDataQualitySummary', () => {
     const refreshCheck = summary?.checks.find((check) => check.key === 'refresh')
     expect(refreshCheck?.status).toBe('WARN')
     expect(refreshCheck?.message).toContain('benchmark refresh timed out')
+    expect(refreshCheck?.message).not.toContain('2026-03-20T13:05:00Z')
+  })
+
+  it('formats the last successful refresh timestamp for display', () => {
+    const summary = buildPortfolioDataQualitySummary({
+      overview: overview(),
+      history: history(),
+      returns: returns(),
+      cacheSnapshots: cacheSnapshots(),
+      refreshStatus: refreshStatus(),
+      isPolish: false,
+      now: new Date('2026-03-20T12:00:00Z'),
+    })
+
+    const refreshCheck = summary?.checks.find((check) => check.key === 'refresh')
+    expect(refreshCheck?.status).toBe('PASS')
+    expect(refreshCheck?.message).toContain('Last successful refresh:')
+    expect(refreshCheck?.message).toContain('2026')
+    expect(refreshCheck?.message).not.toContain('2026-03-20T12:02:00Z')
   })
 
   it('does not warn on benchmarks when all configured benchmarks are still available', () => {

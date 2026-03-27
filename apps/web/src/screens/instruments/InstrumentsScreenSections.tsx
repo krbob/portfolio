@@ -1,6 +1,6 @@
 import type { PortfolioHolding } from '../../api/read-model'
 import { Card } from '../../components/ui'
-import { formatCurrencyPln, formatDate, formatNumber } from '../../lib/format'
+import { formatCurrency, formatCurrencyPln, formatDate, formatNumber } from '../../lib/format'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
 import { t } from '../../lib/messages'
 import {
@@ -8,7 +8,7 @@ import {
   formatHoldingGainPreview,
   formatHoldingQuantity,
 } from '../../lib/portfolio-presentation'
-import { badge, th, thRight } from '../../lib/styles'
+import { badge, btnGhost, th, thRight } from '../../lib/styles'
 import { isMarketValuedStatus } from '../../lib/valuation'
 import type { InstrumentRow, SortField, SortState } from './InstrumentsScreenModel'
 import { labelInstrumentStatus, statusVariant } from './InstrumentsScreenModel'
@@ -41,11 +41,14 @@ export function InstrumentDetailsCard({
   row,
   holdings,
   isPolish,
+  analysisUrl,
 }: {
   row: InstrumentRow
   holdings: PortfolioHolding[]
   isPolish: boolean
+  analysisUrl: string | null
 }) {
+  const representativeHolding = holdings.find((holding) => holding.currentPriceNative != null || holding.currentPricePln != null) ?? null
   const edoLots = holdings.flatMap((holding) => (holding.edoLots ?? []).map((lot) => ({
     accountId: holding.accountId,
     accountName: holding.accountName,
@@ -64,12 +67,24 @@ export function InstrumentDetailsCard({
             {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)} · {row.instrument.currency}
           </p>
         </div>
-        <span className={`${badge} ${statusVariant(row.status)}`}>
-          {labelInstrumentStatus(row.status, isPolish)}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {analysisUrl ? (
+            <a
+              href={analysisUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={btnGhost}
+            >
+              {t('instrumentDetails.openStockAnalyst')}
+            </a>
+          ) : null}
+          <span className={`${badge} ${statusVariant(row.status)}`}>
+            {labelInstrumentStatus(row.status, isPolish)}
+          </span>
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <InstrumentDetailMetric
           label={t('instrumentDetails.activeAccounts')}
           value={String(row.accountCount)}
@@ -87,6 +102,11 @@ export function InstrumentDetailsCard({
           value={formatCurrencyPln(row.totalCurrentValuePln)}
           detail={describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
           tone={row.valuedHoldingCount === 0 ? 'default' : row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
+        />
+        <InstrumentDetailMetric
+          label={t('instrumentDetails.currentMarketPrice')}
+          value={formatInstrumentCurrentPrice(row.instrument.currency, representativeHolding)}
+          detail={formatInstrumentCurrentPriceDetail(row.instrument.currency, representativeHolding)}
         />
       </div>
 
@@ -183,6 +203,30 @@ export function InstrumentDetailsCard({
       )}
     </Card>
   )
+}
+
+function formatInstrumentCurrentPrice(currency: string, holding: PortfolioHolding | null) {
+  if (!holding) {
+    return t('instrumentDetails.bookBasis')
+  }
+
+  if (holding.currentPriceNative != null) {
+    return formatCurrency(holding.currentPriceNative, currency)
+  }
+
+  return formatCurrencyPln(holding.currentPricePln)
+}
+
+function formatInstrumentCurrentPriceDetail(currency: string, holding: PortfolioHolding | null) {
+  if (!holding) {
+    return undefined
+  }
+
+  if (holding.currentPriceNative != null && currency !== 'PLN' && holding.currentPricePln != null) {
+    return `${t('holdings.currentPricePlnPerUnit')}: ${formatCurrencyPln(holding.currentPricePln)}`
+  }
+
+  return undefined
 }
 
 export function SortableHeader({

@@ -3,13 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
 import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
+import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
+import { useInstruments } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
-import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
+import { formatCurrency, formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { usePersistentState } from '../lib/persistence'
+import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
 import type { TransactionRouteState } from '../lib/transaction-composer'
 import { isMarketValuedStatus } from '../lib/valuation'
 import {
@@ -46,8 +49,14 @@ const HOLDINGS_PREFERENCE_KEYS = {
 export function HoldingsScreen() {
   const { isPolish } = useI18n()
   const navigate = useNavigate()
+  const appMetaQuery = useAppMeta()
   const holdingsQuery = usePortfolioHoldings()
+  const instrumentsQuery = useInstruments()
   const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
+  const instrumentsById = useMemo(
+    () => new Map((instrumentsQuery.data ?? []).map((instrument) => [instrument.id, instrument])),
+    [instrumentsQuery.data],
+  )
   const [accountFilter, setAccountFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.accountFilter, 'ALL', { validate: isStringValue })
   const [assetClassFilter, setAssetClassFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.assetClassFilter, 'ALL', { validate: isStringValue })
   const [statusFilter, setStatusFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.statusFilter, 'ALL', { validate: isStringValue })
@@ -117,6 +126,11 @@ export function HoldingsScreen() {
 
   const selectedHolding =
     filteredHoldings.find((h) => holdingKey(h) === selectedHoldingKey) ?? null
+  const selectedHoldingInstrument = selectedHolding ? instrumentsById.get(selectedHolding.instrumentId) ?? null : null
+  const stockAnalystAnalysisUrl = buildStockAnalystAnalysisUrl(
+    appMetaQuery.data?.stockAnalystUiUrl,
+    selectedHoldingInstrument?.valuationSource === 'STOCK_ANALYST' ? selectedHoldingInstrument.symbol : null,
+  )
 
   const totalValue = filteredHoldings.reduce(
     (sum, h) => sum + asNumber(h.currentValuePln ?? h.bookValuePln ?? '0'),
@@ -374,21 +388,43 @@ export function HoldingsScreen() {
       {/* Selected holding detail */}
       {selectedHolding && (
         <div className={`${card} mt-4`}>
-          <div className="mb-4 flex items-start justify-between">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-zinc-100">{selectedHolding.instrumentName}</h3>
               <p className="mt-0.5 text-sm text-zinc-500">
                 {selectedHolding.accountName} · {labelInstrumentKind(selectedHolding.kind)} · {labelAssetClass(selectedHolding.assetClass)}
               </p>
             </div>
-            <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).className}`}>
-              {holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).label}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {stockAnalystAnalysisUrl ? (
+                <a
+                  href={stockAnalystAnalysisUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className={btnGhost}
+                >
+                  {t('instrumentDetails.openStockAnalyst')}
+                </a>
+              ) : null}
+              <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).className}`}>
+                {holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).label}
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <DetailStat label={t('holdings.quantity')} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} />
-            <DetailStat label={t('holdings.avgCost')} value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)} />
-            <DetailStat label={t('holdings.currentPrice')} value={formatCurrencyPln(selectedHolding.currentPricePln)} />
+            <DetailStat
+              label={t('holdings.avgCostPlnPerUnit')}
+              value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)}
+              detail={selectedHolding.currency !== 'PLN'
+                ? formatMessage(t('holdings.instrumentCurrency'), { currency: selectedHolding.currency })
+                : null}
+            />
+            <DetailStat
+              label={t('holdings.currentPrice')}
+              value={formatHoldingCurrentPrice(selectedHolding)}
+              detail={formatHoldingCurrentPriceDetail(selectedHolding)}
+            />
             <DetailStat label={t('holdings.currentValue')} value={formatCurrencyPln(selectedHolding.currentValuePln ?? selectedHolding.bookValuePln)} />
             <DetailStat label={t('holdings.bookValue')} value={formatCurrencyPln(selectedHolding.bookValuePln)} />
             <DetailStat
@@ -487,6 +523,26 @@ export function HoldingsScreen() {
 
     navigate('/transactions', { state })
   }
+}
+
+function formatHoldingCurrentPrice(holding: PortfolioHolding) {
+  if (holding.currentPriceNative != null) {
+    return formatCurrency(holding.currentPriceNative, holding.currency)
+  }
+
+  return formatCurrencyPln(holding.currentPricePln)
+}
+
+function formatHoldingCurrentPriceDetail(holding: PortfolioHolding) {
+  if (holding.currentPriceNative != null && holding.currency !== 'PLN' && holding.currentPricePln != null) {
+    return `${t('holdings.currentPricePlnPerUnit')}: ${formatCurrencyPln(holding.currentPricePln)}`
+  }
+
+  if (holding.currentPriceNative == null && holding.currency !== 'PLN') {
+    return formatMessage(t('holdings.instrumentCurrency'), { currency: holding.currency })
+  }
+
+  return null
 }
 
 // --- Sub-components ---

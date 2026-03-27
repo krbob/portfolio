@@ -10,6 +10,7 @@ interface CurrentInstrumentValuationProvider {
 
 data class InstrumentValuation(
     val pricePerUnitPln: BigDecimal,
+    val pricePerUnitNative: BigDecimal? = null,
     val valuedAt: LocalDate,
     val currentRatePercent: BigDecimal? = null
 )

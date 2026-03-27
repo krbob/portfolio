@@ -43,6 +43,7 @@ class MarketDataSnapshotCacheService(
                 identity = identity,
                 valuedAt = valuation.valuedAt.toString(),
                 pricePerUnitPln = valuation.pricePerUnitPln.toPlainString(),
+                pricePerUnitNative = valuation.pricePerUnitNative?.toPlainString(),
                 currentRatePercent = valuation.currentRatePercent?.toPlainString()
             )
         )
@@ -56,6 +57,7 @@ class MarketDataSnapshotCacheService(
 
         return InstrumentValuation(
             pricePerUnitPln = stored.pricePerUnitPln.toBigDecimal(),
+            pricePerUnitNative = stored.pricePerUnitNative?.toBigDecimal(),
             valuedAt = LocalDate.parse(stored.valuedAt),
             currentRatePercent = stored.currentRatePercent?.toBigDecimal()
         )
@@ -319,6 +321,7 @@ internal data class StoredQuoteSnapshot(
     val identity: String,
     val valuedAt: String,
     val pricePerUnitPln: String,
+    val pricePerUnitNative: String? = null,
     val currentRatePercent: String? = null
 )
 

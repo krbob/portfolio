@@ -347,7 +347,13 @@ export function TransactionJournalComposer({
               {t('journal.grossAmount')}
             </label>
             <div className="mb-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
-              <span>{grossAmountMode === 'auto' && requiresInstrument ? t('journal.grossAmountAuto') : t('journal.grossAmountManual')}</span>
+              <span>
+                {requiresInstrument
+                  ? grossAmountMode === 'auto'
+                    ? t('journal.grossAmountAuto')
+                    : t('journal.grossAmountManual')
+                  : t('journal.grossAmountDirect')}
+              </span>
               {requiresInstrument && (
                 <button type="button" className={btnGhost} onClick={onApplySuggestedGrossAmount}>
                   {t('journal.recalculate')}
@@ -399,16 +405,20 @@ export function TransactionJournalComposer({
           </label>
 
           {form.currency !== 'PLN' && (
-            <label>
-              <span className={labelClass}>{t('journal.fxRateToPln')}</span>
+            <div>
+              <label className={labelClass} htmlFor="transaction-fx-rate-to-pln">
+                {t('journal.fxRateToPln')}
+              </label>
               <input
+                id="transaction-fx-rate-to-pln"
                 className={input}
                 inputMode="decimal"
                 value={form.fxRateToPln}
                 onChange={(event) => onFxRateChange(event.target.value)}
                 placeholder={decimalSeparator === ',' ? '4,0321' : '4.0321'}
               />
-            </label>
+              <p className="mt-1 text-xs text-zinc-500">{t('journal.fxRateHint')}</p>
+            </div>
           )}
 
           <label className="col-span-2">

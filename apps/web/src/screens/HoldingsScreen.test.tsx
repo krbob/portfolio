@@ -2,11 +2,21 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { HoldingsScreen } from './HoldingsScreen'
+import { useAppMeta } from '../hooks/use-app-meta'
 import { I18nProvider } from '../lib/i18n'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
+import { useInstruments } from '../hooks/use-write-model'
 
 vi.mock('../hooks/use-read-model', () => ({
   usePortfolioHoldings: vi.fn(),
+}))
+
+vi.mock('../hooks/use-write-model', () => ({
+  useInstruments: vi.fn(),
+}))
+
+vi.mock('../hooks/use-app-meta', () => ({
+  useAppMeta: vi.fn(),
 }))
 
 function setLanguage(language: 'pl' | 'en') {
@@ -25,6 +35,12 @@ describe('HoldingsScreen', () => {
   it('describes an empty holdings view without implying missing setup', () => {
     setLanguage('pl')
 
+    vi.mocked(useAppMeta).mockReturnValue({
+      data: { stockAnalystUiUrl: null },
+    } as unknown as ReturnType<typeof useAppMeta>)
+    vi.mocked(useInstruments).mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useInstruments>)
     vi.mocked(usePortfolioHoldings).mockReturnValue({
       data: [],
       isLoading: false,

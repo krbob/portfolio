@@ -66,11 +66,11 @@ class StartupValidationTest {
     }
 
     @Test
-    fun `startup validation rejects malformed market data base urls`() {
+    fun `startup validation rejects malformed market data api urls`() {
         assertThrows(IllegalArgumentException::class.java) {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
-                marketDataConfig = validMarketDataConfig().copy(stockAnalystBaseUrl = "stock.local"),
+                marketDataConfig = validMarketDataConfig().copy(stockAnalystApiUrl = "stock.local"),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -207,9 +207,9 @@ class StartupValidationTest {
 
     private fun validMarketDataConfig() = MarketDataConfig(
         enabled = true,
-        stockAnalystBaseUrl = "http://127.0.0.1:18080",
-        edoCalculatorBaseUrl = "http://127.0.0.1:18081",
-        goldApiBaseUrl = "https://api.gold-api.com",
+        stockAnalystApiUrl = "http://127.0.0.1:18080",
+        edoCalculatorApiUrl = "http://127.0.0.1:18081",
+        goldApiUrl = "https://api.gold-api.com",
         goldApiKey = null,
         usdPlnSymbol = "PLN=X",
         goldBenchmarkSymbol = "GC=F",

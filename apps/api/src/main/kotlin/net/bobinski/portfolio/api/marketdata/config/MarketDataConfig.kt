@@ -5,9 +5,10 @@ import io.ktor.server.config.propertyOrNull
 
 data class MarketDataConfig(
     val enabled: Boolean,
-    val stockAnalystBaseUrl: String,
-    val edoCalculatorBaseUrl: String,
-    val goldApiBaseUrl: String,
+    val stockAnalystApiUrl: String,
+    val stockAnalystUiUrl: String? = null,
+    val edoCalculatorApiUrl: String,
+    val goldApiUrl: String,
     val goldApiKey: String?,
     val staleAfterDays: Long = 3,
     val usdPlnSymbol: String,
@@ -20,20 +21,25 @@ data class MarketDataConfig(
             enabled = readSetting("PORTFOLIO_MARKET_DATA_ENABLED", config, "portfolio.marketData.enabled")
                 ?.let(::toBooleanStrictOrNullSafe)
                 ?: true,
-            stockAnalystBaseUrl = readSetting(
-                "PORTFOLIO_STOCK_ANALYST_BASE_URL",
+            stockAnalystApiUrl = readSetting(
+                "PORTFOLIO_STOCK_ANALYST_API_URL",
                 config,
-                "portfolio.marketData.stockAnalystBaseUrl"
+                "portfolio.marketData.stockAnalystApiUrl"
             ) ?: "http://127.0.0.1:18080",
-            edoCalculatorBaseUrl = readSetting(
-                "PORTFOLIO_EDO_CALCULATOR_BASE_URL",
+            stockAnalystUiUrl = readSetting(
+                "PORTFOLIO_STOCK_ANALYST_UI_URL",
                 config,
-                "portfolio.marketData.edoCalculatorBaseUrl"
+                "portfolio.marketData.stockAnalystUiUrl"
+            )?.takeIf { it.isNotBlank() },
+            edoCalculatorApiUrl = readSetting(
+                "PORTFOLIO_EDO_CALCULATOR_API_URL",
+                config,
+                "portfolio.marketData.edoCalculatorApiUrl"
             ) ?: "http://127.0.0.1:18081",
-            goldApiBaseUrl = readSetting(
-                "PORTFOLIO_GOLD_API_BASE_URL",
+            goldApiUrl = readSetting(
+                "PORTFOLIO_GOLD_API_URL",
                 config,
-                "portfolio.marketData.goldApiBaseUrl"
+                "portfolio.marketData.goldApiUrl"
             ) ?: "https://api.gold-api.com",
             goldApiKey = readSetting(
                 "PORTFOLIO_GOLD_API_KEY",

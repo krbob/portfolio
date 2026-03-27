@@ -54,9 +54,9 @@ class RemoteValuationProbeServiceTest {
     fun `verification is skipped when market data is disabled`() = runBlocking {
         val config = MarketDataConfig(
             enabled = false,
-            stockAnalystBaseUrl = "http://127.0.0.1:1",
-            edoCalculatorBaseUrl = "http://127.0.0.1:1",
-            goldApiBaseUrl = "http://127.0.0.1:1",
+            stockAnalystApiUrl = "http://127.0.0.1:1",
+            edoCalculatorApiUrl = "http://127.0.0.1:1",
+            goldApiUrl = "http://127.0.0.1:1",
             goldApiKey = null,
             usdPlnSymbol = "PLN=X",
             goldBenchmarkSymbol = "GC=F",
@@ -77,9 +77,9 @@ class RemoteValuationProbeServiceTest {
     fun `unreachable service throws descriptive error`() = runBlocking {
         val config = MarketDataConfig(
             enabled = true,
-            stockAnalystBaseUrl = "http://127.0.0.1:1",
-            edoCalculatorBaseUrl = "http://127.0.0.1:1",
-            goldApiBaseUrl = "http://127.0.0.1:1",
+            stockAnalystApiUrl = "http://127.0.0.1:1",
+            edoCalculatorApiUrl = "http://127.0.0.1:1",
+            goldApiUrl = "http://127.0.0.1:1",
             goldApiKey = null,
             usdPlnSymbol = "PLN=X",
             goldBenchmarkSymbol = "GC=F",
@@ -102,9 +102,9 @@ class RemoteValuationProbeServiceTest {
     private fun buildService(port: Int): RemoteValuationProbeService {
         val config = MarketDataConfig(
             enabled = true,
-            stockAnalystBaseUrl = "http://127.0.0.1:$port",
-            edoCalculatorBaseUrl = "http://127.0.0.1:1",
-            goldApiBaseUrl = "http://127.0.0.1:1",
+            stockAnalystApiUrl = "http://127.0.0.1:$port",
+            edoCalculatorApiUrl = "http://127.0.0.1:1",
+            goldApiUrl = "http://127.0.0.1:1",
             goldApiKey = null,
             usdPlnSymbol = "PLN=X",
             goldBenchmarkSymbol = "GC=F",

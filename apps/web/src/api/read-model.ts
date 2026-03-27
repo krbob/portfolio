@@ -4,8 +4,17 @@ import { requestJson } from './http'
 export type PortfolioOverview =
   paths['/v1/portfolio/overview']['get']['responses'][200]['content']['application/json']
 
-export type PortfolioHolding =
+type GeneratedPortfolioHolding =
   paths['/v1/portfolio/holdings']['get']['responses'][200]['content']['application/json'][number]
+
+type GeneratedPortfolioHoldingEdoLot =
+  NonNullable<GeneratedPortfolioHolding['edoLots']>[number]
+
+export type PortfolioHolding =
+  Omit<GeneratedPortfolioHolding, 'edoLots'> & {
+    currentPriceNative?: string | null
+    edoLots?: Array<GeneratedPortfolioHoldingEdoLot & { currentPriceNative?: string | null }>
+  }
 
 export type PortfolioAccountSummary =
   paths['/v1/portfolio/accounts']['get']['responses'][200]['content']['application/json'][number]

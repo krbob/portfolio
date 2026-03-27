@@ -33,8 +33,9 @@ portfolio:
     sessionMaxAgeDays: 30
   marketData:
     enabled: false
-    stockAnalystBaseUrl: "http://127.0.0.1:18080"
-    edoCalculatorBaseUrl: "http://127.0.0.1:18081"
+    stockAnalystApiUrl: "http://127.0.0.1:18080"
+    stockAnalystUiUrl: ""
+    edoCalculatorApiUrl: "http://127.0.0.1:18081"
     usdPlnSymbol: "PLN=X"
     goldBenchmarkSymbol: "GC=F"
     equityBenchmarkSymbol: "VWRA.L"

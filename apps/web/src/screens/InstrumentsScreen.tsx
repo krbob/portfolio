@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
+import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln } from '../lib/format'
@@ -16,6 +17,7 @@ import {
   formatPortfolioGainDisplay,
   parsePortfolioNumber,
 } from '../lib/portfolio-presentation'
+import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
 import { badge, td, tdRight, tr } from '../lib/styles'
 import { InstrumentDetailsCard, InstrumentSummaryTile, SortableHeader } from './instruments/InstrumentsScreenSections'
 import { buildInstrumentRows, compareRows, defaultSort, isSortState, labelInstrumentStatus, statusVariant } from './instruments/InstrumentsScreenModel'
@@ -27,6 +29,7 @@ const INSTRUMENTS_PREFERENCE_KEYS = {
 
 export function InstrumentsScreen() {
   const { isPolish } = useI18n()
+  const appMetaQuery = useAppMeta()
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
 
@@ -50,6 +53,10 @@ export function InstrumentsScreen() {
       .filter((holding) => holding.instrumentId === selectedRow?.instrument.id)
       .sort((left, right) => parsePortfolioNumber(right.currentValuePln ?? right.bookValuePln) - parsePortfolioNumber(left.currentValuePln ?? left.bookValuePln)),
     [holdings, selectedRow?.instrument.id],
+  )
+  const stockAnalystAnalysisUrl = buildStockAnalystAnalysisUrl(
+    appMetaQuery.data?.stockAnalystUiUrl,
+    selectedRow?.instrument.valuationSource === 'STOCK_ANALYST' ? selectedRow.instrument.symbol : null,
   )
 
   useEffect(() => {
@@ -257,6 +264,7 @@ export function InstrumentsScreen() {
               row={selectedRow}
               holdings={selectedHoldings}
               isPolish={isPolish}
+              analysisUrl={stockAnalystAnalysisUrl}
             />
           )}
         </div>

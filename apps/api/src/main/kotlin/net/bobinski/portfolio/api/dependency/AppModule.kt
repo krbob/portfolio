@@ -95,9 +95,9 @@ fun appModule(
     single { authConfig }
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
-    single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystBaseUrl) }
-    single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiBaseUrl) }
-    single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorBaseUrl) }
+    single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl) }
+    single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiUrl) }
+    single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl) }
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
             config = get(),
@@ -265,9 +265,9 @@ fun appModule(
             transactionRepository = get(),
             marketDataCacheFingerprint = listOf(
                 marketDataConfig.enabled.toString(),
-                marketDataConfig.stockAnalystBaseUrl,
-                marketDataConfig.edoCalculatorBaseUrl,
-                marketDataConfig.goldApiBaseUrl,
+                marketDataConfig.stockAnalystApiUrl,
+                marketDataConfig.edoCalculatorApiUrl,
+                marketDataConfig.goldApiUrl,
                 marketDataConfig.goldApiKey.orEmpty(),
                 marketDataConfig.staleAfterDays.toString(),
                 marketDataConfig.usdPlnSymbol,

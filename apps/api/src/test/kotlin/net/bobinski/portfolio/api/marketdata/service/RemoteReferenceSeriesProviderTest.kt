@@ -42,9 +42,9 @@ class RemoteReferenceSeriesProviderTest {
             val provider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
-                    stockAnalystBaseUrl = server.baseUrl,
-                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
-                    goldApiBaseUrl = server.baseUrl,
+                    stockAnalystApiUrl = server.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = server.baseUrl,
                     goldApiKey = "gold-key",
                     usdPlnSymbol = "PLN=X",
                     goldBenchmarkSymbol = "GC=F",
@@ -102,9 +102,9 @@ class RemoteReferenceSeriesProviderTest {
             val provider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
-                    stockAnalystBaseUrl = server.baseUrl,
-                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
-                    goldApiBaseUrl = server.baseUrl,
+                    stockAnalystApiUrl = server.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = server.baseUrl,
                     goldApiKey = null,
                     usdPlnSymbol = "PLN=X",
                     goldBenchmarkSymbol = "GC=F",
@@ -170,9 +170,9 @@ class RemoteReferenceSeriesProviderTest {
             val warmProvider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
-                    stockAnalystBaseUrl = successServer.baseUrl,
-                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
-                    goldApiBaseUrl = successServer.baseUrl,
+                    stockAnalystApiUrl = successServer.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = successServer.baseUrl,
                     goldApiKey = null,
                     usdPlnSymbol = "PLN=X",
                     goldBenchmarkSymbol = "GC=F",
@@ -215,9 +215,9 @@ class RemoteReferenceSeriesProviderTest {
             val fallbackProvider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
                     enabled = true,
-                    stockAnalystBaseUrl = failingServer.baseUrl,
-                    edoCalculatorBaseUrl = "http://127.0.0.1:9",
-                    goldApiBaseUrl = failingServer.baseUrl,
+                    stockAnalystApiUrl = failingServer.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = failingServer.baseUrl,
                     goldApiKey = null,
                     usdPlnSymbol = "PLN=X",
                     goldBenchmarkSymbol = "GC=F",

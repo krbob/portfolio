@@ -94,9 +94,9 @@ class SystemReadinessServiceTest {
 
     private fun marketDataConfig(baseUrl: String) = MarketDataConfig(
         enabled = true,
-        stockAnalystBaseUrl = baseUrl,
-        edoCalculatorBaseUrl = baseUrl,
-        goldApiBaseUrl = baseUrl,
+        stockAnalystApiUrl = baseUrl,
+        edoCalculatorApiUrl = baseUrl,
+        goldApiUrl = baseUrl,
         goldApiKey = null,
         usdPlnSymbol = "PLN=X",
         goldBenchmarkSymbol = "GC=F",

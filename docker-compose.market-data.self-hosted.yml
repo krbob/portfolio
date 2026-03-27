@@ -2,8 +2,8 @@ services:
   portfolio-api:
     environment:
       PORTFOLIO_MARKET_DATA_ENABLED: "true"
-      PORTFOLIO_STOCK_ANALYST_BASE_URL: "http://stock-analyst:8080"
-      PORTFOLIO_EDO_CALCULATOR_BASE_URL: "http://edo-calculator:8080"
+      PORTFOLIO_STOCK_ANALYST_API_URL: "http://stock-analyst:8080"
+      PORTFOLIO_EDO_CALCULATOR_API_URL: "http://edo-calculator:8080"
     depends_on:
       - stock-analyst
       - edo-calculator

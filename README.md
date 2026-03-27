@@ -73,8 +73,9 @@ In the default local compose mode:
 ### 2. Local app stack with remote market data
 
 ```dotenv
-PORTFOLIO_STOCK_ANALYST_BASE_URL=https://your-stock-analyst.example/api
-PORTFOLIO_EDO_CALCULATOR_BASE_URL=https://your-edo-calculator.example
+PORTFOLIO_STOCK_ANALYST_API_URL=https://your-stock-analyst.example/api
+PORTFOLIO_STOCK_ANALYST_UI_URL=https://your-stock-analyst.example
+PORTFOLIO_EDO_CALCULATOR_API_URL=https://your-edo-calculator.example
 ```
 
 ```bash
@@ -179,11 +180,14 @@ docker compose up -d
 ### Market data
 
 - `PORTFOLIO_MARKET_DATA_ENABLED`
-- `PORTFOLIO_STOCK_ANALYST_BASE_URL`
-- `PORTFOLIO_EDO_CALCULATOR_BASE_URL`
-- `PORTFOLIO_GOLD_API_BASE_URL`
+- `PORTFOLIO_STOCK_ANALYST_API_URL`
+- `PORTFOLIO_STOCK_ANALYST_UI_URL`
+- `PORTFOLIO_EDO_CALCULATOR_API_URL`
+- `PORTFOLIO_GOLD_API_URL`
 - `PORTFOLIO_GOLD_API_KEY`
 - `PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS`
+
+`PORTFOLIO_STOCK_ANALYST_UI_URL` is optional. Set it only when you want the UI to open an external stock-analyst page for instruments backed by that upstream.
 
 ### Backups
 

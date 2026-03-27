@@ -8,6 +8,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.auth.config.AuthConfig
+import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.system.SystemReadiness
 import net.bobinski.portfolio.api.system.SystemReadinessCheck
 import net.bobinski.portfolio.api.system.SystemReadinessService
@@ -15,6 +16,7 @@ import org.koin.ktor.ext.inject
 
 fun Route.systemRoute(application: Application) {
     val authConfig = AuthConfig.from(application.environment.config)
+    val marketDataConfig = MarketDataConfig.from(application.environment.config)
     val readinessService: SystemReadinessService by inject()
 
     route("/v1") {
@@ -52,6 +54,7 @@ fun Route.systemRoute(application: Application) {
                         api = "Kotlin 2.3 + Ktor 3",
                         database = application.databaseSummary()
                     ),
+                    stockAnalystUiUrl = marketDataConfig.stockAnalystUiUrl,
                     capabilities = listOf(
                         "Transaction-based portfolio accounting",
                         "Full daily history reconstruction",
@@ -109,6 +112,7 @@ data class AppMetaResponse(
     val persistenceMode: String,
     val auth: AuthSummary,
     val stack: StackSummary,
+    val stockAnalystUiUrl: String? = null,
     val capabilities: List<String>
 )
 

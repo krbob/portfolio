@@ -21,10 +21,11 @@ class StockAnalystClient(
     private val json: Json,
     private val baseUrl: String
 ) {
-    suspend fun quoteInPln(symbol: String): StockAnalystQuote = withContext(Dispatchers.IO) {
+    suspend fun quote(symbol: String, currency: String? = null): StockAnalystQuote = withContext(Dispatchers.IO) {
         val encodedSymbol = URLEncoder.encode(symbol, StandardCharsets.UTF_8).replace("+", "%20")
+        val currencyQuery = currency?.let { "?currency=$it" } ?: ""
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("${baseUrl.trimEnd('/')}/quote/$encodedSymbol?currency=PLN"))
+            .uri(URI.create("${baseUrl.trimEnd('/')}/quote/$encodedSymbol$currencyQuery"))
             .timeout(Duration.ofSeconds(10))
             .GET()
             .build()
@@ -49,6 +50,8 @@ class StockAnalystClient(
             lastPrice = payload.lastPrice
         )
     }
+
+    suspend fun quoteInPln(symbol: String): StockAnalystQuote = quote(symbol = symbol, currency = "PLN")
 
     suspend fun history(
         symbol: String,

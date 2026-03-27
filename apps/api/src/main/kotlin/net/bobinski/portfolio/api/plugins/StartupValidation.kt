@@ -36,14 +36,14 @@ internal fun validateStartupConfiguration(
     val databasePath = validateDatabasePath(persistenceConfig.databasePath)
 
     if (marketDataConfig.enabled) {
-        require(marketDataConfig.stockAnalystBaseUrl.isHttpUrl()) {
-            "Market data requires a valid stock analyst HTTP base URL."
+        require(marketDataConfig.stockAnalystApiUrl.isHttpUrl()) {
+            "Market data requires a valid stock analyst HTTP API URL."
         }
-        require(marketDataConfig.edoCalculatorBaseUrl.isHttpUrl()) {
-            "Market data requires a valid EDO calculator HTTP base URL."
+        require(marketDataConfig.edoCalculatorApiUrl.isHttpUrl()) {
+            "Market data requires a valid EDO calculator HTTP API URL."
         }
-        require(marketDataConfig.goldApiKey == null || marketDataConfig.goldApiBaseUrl.isHttpUrl()) {
-            "Gold API integration requires a valid HTTP base URL."
+        require(marketDataConfig.goldApiKey == null || marketDataConfig.goldApiUrl.isHttpUrl()) {
+            "Gold API integration requires a valid HTTP API URL."
         }
         require(marketDataConfig.staleAfterDays > 0) {
             "Market data stale-after threshold must be positive."

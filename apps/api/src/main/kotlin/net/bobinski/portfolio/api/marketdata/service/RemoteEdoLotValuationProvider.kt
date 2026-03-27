@@ -24,6 +24,7 @@ class RemoteEdoLotValuationProvider(
             val value = edoCalculatorClient.unitValueInPln(terms = lotTerms)
             val valuation = InstrumentValuation(
                 pricePerUnitPln = value.totalValue,
+                pricePerUnitNative = value.totalValue,
                 valuedAt = value.asOf,
                 currentRatePercent = value.currentRatePercent
             )

@@ -74,10 +74,13 @@ class RemoteCurrentInstrumentValuationProvider(
                 type = InstrumentValuationFailureType.UNSUPPORTED,
                 reason = "Instrument does not define a market symbol."
             )
-        val quote = stockAnalystClient.quoteInPln(symbol)
+        val nativeQuote = stockAnalystClient.quote(symbol)
+        val nativeCurrency = nativeQuote.currency?.uppercase() ?: instrument.currency.uppercase()
+        val plnQuote = if (nativeCurrency == "PLN") nativeQuote else stockAnalystClient.quoteInPln(symbol)
         val valuation = InstrumentValuation(
-            pricePerUnitPln = quote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
-            valuedAt = quote.date
+            pricePerUnitPln = plnQuote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
+            pricePerUnitNative = nativeQuote.lastPrice.toBigDecimal().setScale(4, RoundingMode.HALF_UP),
+            valuedAt = plnQuote.date
         )
         snapshotCacheService.putQuote(identity = stockQuoteIdentity(symbol), valuation = valuation)
         return InstrumentValuationResult.Success(valuation = valuation)

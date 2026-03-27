@@ -880,6 +880,7 @@ export interface components {
             persistenceMode: string;
             auth: components["schemas"]["AuthSummary"];
             stack: components["schemas"]["StackSummary"];
+            stockAnalystUiUrl?: string | null;
             capabilities: string[];
         };
         /** net.bobinski.portfolio.api.route.ReadinessCheckResponse */
@@ -1018,6 +1019,7 @@ export interface components {
             purchaseDate: string;
             quantity: string;
             costBasisPln: string;
+            currentPriceNative?: string | null;
             currentPricePln?: string | null;
             currentValuePln?: string | null;
             unrealizedGainPln?: string | null;
@@ -1039,6 +1041,7 @@ export interface components {
             averageCostPerUnitPln: string;
             costBasisPln: string;
             bookValuePln: string;
+            currentPriceNative?: string | null;
             currentPricePln?: string | null;
             currentValuePln?: string | null;
             unrealizedGainPln?: string | null;

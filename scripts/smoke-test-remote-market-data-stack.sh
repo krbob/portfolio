@@ -5,8 +5,8 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 
-: "${PORTFOLIO_STOCK_ANALYST_BASE_URL:?set PORTFOLIO_STOCK_ANALYST_BASE_URL before running the remote market-data smoke test}"
-: "${PORTFOLIO_EDO_CALCULATOR_BASE_URL:?set PORTFOLIO_EDO_CALCULATOR_BASE_URL before running the remote market-data smoke test}"
+: "${PORTFOLIO_STOCK_ANALYST_API_URL:?set PORTFOLIO_STOCK_ANALYST_API_URL before running the remote market-data smoke test}"
+: "${PORTFOLIO_EDO_CALCULATOR_API_URL:?set PORTFOLIO_EDO_CALCULATOR_API_URL before running the remote market-data smoke test}"
 
 export COMPOSE_PROJECT_NAME=${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_PROJECT_NAME:-portfolio-remote-market-data-smoke}
 export PORTFOLIO_API_PORT=${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_API_PORT:-28084}

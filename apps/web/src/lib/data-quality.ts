@@ -6,7 +6,7 @@ import type {
   ReadModelCacheSnapshot,
 } from '../api/read-model'
 import type { ReadModelRefreshStatus } from '../api/write-model'
-import { formatYearMonth } from './format'
+import { formatDateTime, formatYearMonth } from './format'
 import type { UiLanguage } from './i18n'
 import { formatMessage, tFor } from './messages'
 
@@ -340,7 +340,7 @@ function buildRefreshCheck({
       label,
       status: 'WARN',
       message: formatMessage(tFor('dataQualityLib.refreshWarn', lang), {
-        failureAt: refreshStatus.lastFailureAt,
+        failureAt: formatDateTime(refreshStatus.lastFailureAt),
         failureMessage,
       }),
     }
@@ -352,7 +352,7 @@ function buildRefreshCheck({
       label,
       status: 'PASS',
       message: formatMessage(tFor('dataQualityLib.refreshPass', lang), {
-        refreshedAt: lastSuccessfulRefreshAt,
+        refreshedAt: formatDateTime(lastSuccessfulRefreshAt),
       }),
     }
   }

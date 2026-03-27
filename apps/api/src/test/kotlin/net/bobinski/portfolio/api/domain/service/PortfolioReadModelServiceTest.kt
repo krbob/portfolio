@@ -74,6 +74,36 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `holdings expose current market price in native currency alongside PLN`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = vwce.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("520.00"),
+                pricePerUnitNative = BigDecimal("129.87"),
+                valuedAt = LocalDate.parse("2026-03-10")
+            )
+        )
+
+        val holding = fixture.service.holdings().single()
+
+        assertEquals(BigDecimal("129.87"), holding.currentPriceNative)
+        assertEquals(BigDecimal("520.00"), holding.currentPricePln)
+        assertEquals(BigDecimal("5200.00"), holding.currentValuePln)
+    }
+
+    @Test
     fun `overview falls back to book basis for unvalued holdings`() = runBlocking {
         val fixture = portfolioFixture()
         fixture.accountRepository.save(account())

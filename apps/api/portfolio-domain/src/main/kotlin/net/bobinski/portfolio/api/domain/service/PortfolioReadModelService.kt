@@ -158,6 +158,7 @@ class PortfolioReadModelService(
                     },
                     costBasisPln = holding.costBasisPln.money(),
                     bookValuePln = holding.costBasisPln.money(),
+                    currentPriceNative = holding.currentPriceNative?.nativePrice(),
                     currentPricePln = holding.currentPricePln?.money(),
                     currentValuePln = holding.currentValuePln?.money(),
                     unrealizedGainPln = holding.unrealizedGainPln?.money(),
@@ -428,6 +429,7 @@ class PortfolioReadModelService(
                 instrument = holding.instrument,
                 quantity = holding.quantity,
                 costBasisPln = holding.costBasisPln,
+                currentPriceNative = null,
                 currentPricePln = null,
                 currentValuePln = null,
                 unrealizedGainPln = null,
@@ -443,6 +445,7 @@ class PortfolioReadModelService(
                 instrument = holding.instrument,
                 quantity = holding.quantity,
                 costBasisPln = holding.costBasisPln,
+                currentPriceNative = null,
                 currentPricePln = null,
                 currentValuePln = null,
                 unrealizedGainPln = null,
@@ -479,6 +482,7 @@ class PortfolioReadModelService(
                 instrument = holding.instrument,
                 quantity = holding.quantity,
                 costBasisPln = holding.costBasisPln,
+                currentPriceNative = null,
                 currentPricePln = null,
                 currentValuePln = null,
                 unrealizedGainPln = null,
@@ -491,6 +495,7 @@ class PortfolioReadModelService(
                         purchaseDate = aggregatedLot.purchaseDate,
                         quantity = aggregatedLot.quantity.quantity(),
                         costBasisPln = aggregatedLot.costBasisPln.money(),
+                        currentPriceNative = null,
                         currentPricePln = null,
                         currentValuePln = null,
                         unrealizedGainPln = null,
@@ -519,6 +524,16 @@ class PortfolioReadModelService(
         } else {
             currentValuePln.divide(holding.quantity, 8, RoundingMode.HALF_UP)
         }.money()
+        val currentValueNative = successfulResults
+            .mapNotNull { (lot, result) ->
+                result.valuation.pricePerUnitNative?.multiply(lot.quantity, MONEY_CONTEXT)
+            }
+            .takeIf { it.size == successfulResults.size }
+            ?.fold(BigDecimal.ZERO) { total, value -> total.add(value, MONEY_CONTEXT) }
+        val currentPriceNative = currentValueNative
+            ?.takeIf { holding.quantity.signum() != 0 }
+            ?.divide(holding.quantity, 8, RoundingMode.HALF_UP)
+            ?.nativePrice()
         val valuedAt = successfulResults.maxOfOrNull { (_, result) -> result.valuation.valuedAt }
         val valuationStatus = if (successfulResults.any { (_, result) -> isStale(result) }) {
             HoldingValuationStatus.STALE
@@ -531,6 +546,7 @@ class PortfolioReadModelService(
             instrument = holding.instrument,
             quantity = holding.quantity,
             costBasisPln = holding.costBasisPln,
+            currentPriceNative = currentPriceNative,
             currentPricePln = currentPricePln,
             currentValuePln = currentValuePln,
             unrealizedGainPln = currentValuePln.subtract(holding.costBasisPln, MONEY_CONTEXT).money(),
@@ -549,6 +565,7 @@ class PortfolioReadModelService(
                     purchaseDate = lot.purchaseDate,
                     quantity = lot.quantity.quantity(),
                     costBasisPln = lot.costBasisPln.money(),
+                    currentPriceNative = valuation.pricePerUnitNative?.nativePrice(),
                     currentPricePln = valuation.pricePerUnitPln.money(),
                     currentValuePln = lotCurrentValue,
                     unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
@@ -568,6 +585,7 @@ class PortfolioReadModelService(
             instrument = instrument,
             quantity = quantity,
             costBasisPln = costBasisPln,
+            currentPriceNative = null,
             currentPricePln = null,
             currentValuePln = null,
             unrealizedGainPln = null,
@@ -582,6 +600,7 @@ class PortfolioReadModelService(
             instrument = instrument,
             quantity = quantity,
             costBasisPln = costBasisPln,
+            currentPriceNative = null,
             currentPricePln = null,
             currentValuePln = null,
             unrealizedGainPln = null,
@@ -601,6 +620,7 @@ class PortfolioReadModelService(
             instrument = instrument,
             quantity = quantity,
             costBasisPln = costBasisPln,
+            currentPriceNative = valuation.pricePerUnitNative?.nativePrice(),
             currentPricePln = valuation.pricePerUnitPln.money(),
             currentValuePln = currentValuePln,
             unrealizedGainPln = currentValuePln.subtract(costBasisPln, MONEY_CONTEXT).money(),
@@ -663,6 +683,8 @@ class PortfolioReadModelService(
     }
 
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
+
+    private fun BigDecimal.nativePrice(): BigDecimal = setScale(4, RoundingMode.HALF_UP).stripTrailingZeros()
 
     private fun BigDecimal.quantity(): BigDecimal = setScale(8, RoundingMode.HALF_UP).stripTrailingZeros()
 
@@ -774,6 +796,7 @@ class PortfolioReadModelService(
         val instrument: Instrument,
         val quantity: BigDecimal,
         val costBasisPln: BigDecimal,
+        val currentPriceNative: BigDecimal?,
         val currentPricePln: BigDecimal?,
         val currentValuePln: BigDecimal?,
         val unrealizedGainPln: BigDecimal?,
@@ -875,6 +898,7 @@ data class HoldingSnapshot(
     val averageCostPerUnitPln: BigDecimal,
     val costBasisPln: BigDecimal,
     val bookValuePln: BigDecimal,
+    val currentPriceNative: BigDecimal?,
     val currentPricePln: BigDecimal?,
     val currentValuePln: BigDecimal?,
     val unrealizedGainPln: BigDecimal?,
@@ -889,6 +913,7 @@ data class EdoLotSnapshot(
     val purchaseDate: LocalDate,
     val quantity: BigDecimal,
     val costBasisPln: BigDecimal,
+    val currentPriceNative: BigDecimal?,
     val currentPricePln: BigDecimal?,
     val currentValuePln: BigDecimal?,
     val unrealizedGainPln: BigDecimal?,
