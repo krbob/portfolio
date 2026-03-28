@@ -181,16 +181,6 @@ describe('App', () => {
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/top positions/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/largest line/i)).length).toBeGreaterThan(0)
-    const nativeCashBalancesHeading = await screen.findByText(/native cash balances/i)
-    const nativeCashBalancesCard = nativeCashBalancesHeading.closest('div')
-    expect(nativeCashBalancesCard).not.toBeNull()
-    expect(within(nativeCashBalancesCard as HTMLElement).getByText(/^USD$/i)).toBeInTheDocument()
-
-    const netContributionsByCurrencyHeading = await screen.findByText(/net contributions by currency/i)
-    const netContributionsByCurrencyCard = netContributionsByCurrencyHeading.closest('div')
-    expect(netContributionsByCurrencyCard).not.toBeNull()
-    expect(within(netContributionsByCurrencyCard as HTMLElement).getByText(/^USD$/i)).toBeInTheDocument()
-
     fireEvent.click(await screen.findByText(/^reserve$/i))
 
     expect(await screen.findByText(/has no active positions yet/i)).toBeInTheDocument()

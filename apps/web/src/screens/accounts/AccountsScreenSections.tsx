@@ -1,6 +1,6 @@
 import type { PortfolioAccountSummary, PortfolioHolding } from '../../api/read-model'
 import { Card } from '../../components/ui'
-import { formatCurrency, formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../../lib/format'
+import { formatCurrencyPln, formatPercent } from '../../lib/format'
 import { labelAccountType, labelAssetClass } from '../../lib/labels'
 import {
   describeHoldingGainValue,
@@ -47,15 +47,10 @@ export function AccountDetailsCard({
   holdings: PortfolioHolding[]
   isPolish: boolean
 }) {
-  const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
-  const contributionBreakdown = formatCurrencyBreakdown(account.netContributionBalances)
   const largestHolding = holdings[0] ?? null
   const cashSharePct = parsePortfolioNumber(account.totalCurrentValuePln) > 0
     ? (parsePortfolioNumber(account.cashBalancePln) / parsePortfolioNumber(account.totalCurrentValuePln)) * 100
     : 0
-  const showBreakdownPanels =
-    hasMeaningfulCurrencyBreakdown(account.cashBalances) ||
-    hasMeaningfulCurrencyBreakdown(account.netContributionBalances)
 
   return (
     <Card>
@@ -78,33 +73,20 @@ export function AccountDetailsCard({
         <AccountDetailMetric
           label={t('accountDetails.cash')}
           value={formatCurrencyPln(account.cashBalancePln)}
-          detail={cashBreakdown ?? formatPercent(cashSharePct)}
+          detail={formatPercent(cashSharePct)}
         />
         <AccountDetailMetric
           label={t('accountDetails.invested')}
           value={formatCurrencyPln(account.investedCurrentValuePln)}
           detail={formatMessage(t('accountDetails.holdingsCount'), { count: account.activeHoldingCount })}
+          tone={account.valuedHoldingCount === 0 ? 'default' : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
         />
         <AccountDetailMetric
           label={t('accountDetails.netContributions')}
           value={formatCurrencyPln(account.netContributionsPln)}
-          detail={contributionBreakdown ?? describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, isPolish)}
-          tone={account.valuedHoldingCount === 0 ? 'default' : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0 ? 'success' : 'warning'}
+          detail={describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, isPolish)}
         />
       </div>
-
-      {showBreakdownPanels && (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <CurrencyBreakdownCard
-            title={t('accountDetails.nativeCashBalances')}
-            items={account.cashBalances}
-          />
-          <CurrencyBreakdownCard
-            title={t('accountDetails.netContributionsByCurrency')}
-            items={account.netContributionBalances}
-          />
-        </div>
-      )}
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
@@ -179,40 +161,5 @@ function AccountDetailMetric({
   )
 }
 
-function CurrencyBreakdownCard({
-  title,
-  items,
-}: {
-  title: string
-  items: PortfolioAccountSummary['cashBalances'] | PortfolioAccountSummary['netContributionBalances'] | undefined
-}) {
-  const rows = items ?? []
 
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</p>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">
-          {t('accountDetails.noCurrencyData')}
-        </p>
-      ) : (
-        <div className="mt-3 space-y-2">
-          {rows.map((row) => (
-            <div className="flex items-center justify-between gap-3" key={`${title}-${row.currency}`}>
-              <span className="text-sm text-zinc-400">{row.currency}</span>
-              <div className="text-right">
-                <p className="tabular-nums text-sm font-medium text-zinc-100">
-                  {formatCurrency(row.amount, row.currency)}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {t('accountDetails.bookLabel')} {formatCurrencyPln(row.bookValuePln)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 

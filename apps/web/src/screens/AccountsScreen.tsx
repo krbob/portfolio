@@ -5,7 +5,7 @@ import { PageHeader } from '../components/layout'
 import { Card, EmptyState, ErrorState, LoadingState, SectionHeader, SortableHeader } from '../components/ui'
 import type { SortState, SortDirection } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
-import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
+import { formatCurrencyPln, formatPercent } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType } from '../lib/labels'
 import { formatMessage, t } from '../lib/messages'
@@ -172,7 +172,6 @@ export function AccountsContent() {
                     {sortedAccounts.map((account) => {
                       const gainPct = calculateGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
                       const isSelected = selectedAccount?.accountId === account.accountId
-                      const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
                       return (
                         <tr
                           className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
@@ -208,9 +207,7 @@ export function AccountsContent() {
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.cashBalancePln)}</p>
                               <p className="text-xs text-zinc-500">
-                                {hasMeaningfulCurrencyBreakdown(account.cashBalances)
-                                  ? cashBreakdown
-                                  : `${t('accountsScreen.netContributions')} ${formatCurrencyPln(account.netContributionsPln)}`}
+                                {t('accountsScreen.netContributions')} {formatCurrencyPln(account.netContributionsPln)}
                               </p>
                             </div>
                           </td>
