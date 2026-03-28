@@ -6,7 +6,6 @@ import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
-import { formatCurrencyBreakdown, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
@@ -80,11 +79,8 @@ export function DashboardScreen() {
   const equityPct = overview && totalCurrentValue > 0 ? (Number(displayedEquityValuePln) / totalCurrentValue) * 100 : 0
   const bondPct = overview && totalCurrentValue > 0 ? (Number(displayedBondValuePln) / totalCurrentValue) * 100 : 0
   const cashPct = overview && totalCurrentValue > 0 ? (Number(displayedCashValuePln) / totalCurrentValue) * 100 : 0
-  const cashBreakdownSubtitle = hasMeaningfulCurrencyBreakdown(overview?.cashBalances) ? formatCurrencyBreakdown(overview?.cashBalances)
-    : undefined
-  const contributionBreakdownSubtitle = hasMeaningfulCurrencyBreakdown(overview?.netContributionBalances)
-    ? formatCurrencyBreakdown(overview?.netContributionBalances)
-    : undefined
+  const cashBreakdownSubtitle = undefined
+  const contributionBreakdownSubtitle = undefined
 
   const configuredBuckets = useMemo(
     () => allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? [],
