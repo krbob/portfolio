@@ -30,7 +30,6 @@ fun Application.configureBackupLifecycle() {
         val backupService = get<PortfolioBackupService>()
         job = scope.launch {
             while (isActive) {
-                delay(backupConfig.intervalMinutes * 60_000)
                 runCatching {
                     backupService.runScheduledBackup()
                 }.onSuccess { backup ->
@@ -38,6 +37,7 @@ fun Application.configureBackupLifecycle() {
                 }.onFailure { exception ->
                     logger.warn("Scheduled portfolio backup failed.", exception)
                 }
+                delay(backupConfig.intervalMinutes * 60_000)
             }
         }
     }
