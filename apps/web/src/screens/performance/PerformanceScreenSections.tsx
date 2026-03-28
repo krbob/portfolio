@@ -213,7 +213,7 @@ export function ReturnsTab({
               <th className={th}>{t('performanceSections.period')}</th>
               <th className={thRight}>PLN MWRR</th>
               <th className={thRight}>PLN TWR</th>
-              <th className={thRight}>USD MWRR</th>
+              {!isReal && <th className={thRight}>USD MWRR</th>}
               <th className={thRight}>{t('performanceSections.annualized')}</th>
               <th className={thRight}>{t('performanceSections.days')}</th>
             </tr>
@@ -240,9 +240,11 @@ export function ReturnsTab({
                   <td className={tdRight}>
                     <ReturnValue value={pln?.timeWeightedReturn} available={returnsDisplayAvailable} />
                   </td>
-                  <td className={tdRight}>
-                    <ReturnValue value={isReal ? null : p.nominalUsd?.moneyWeightedReturn} available={returnsDisplayAvailable} />
-                  </td>
+                  {!isReal && (
+                    <td className={tdRight}>
+                      <ReturnValue value={p.nominalUsd?.moneyWeightedReturn} available={returnsDisplayAvailable} />
+                    </td>
+                  )}
                   <td className={tdRight}>
                     <ReturnValue value={pln?.annualizedMoneyWeightedReturn} available={returnsDisplayAvailable} />
                   </td>
