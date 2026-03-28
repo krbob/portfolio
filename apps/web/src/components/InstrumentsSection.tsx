@@ -37,7 +37,7 @@ const initialForm = {
 }
 
 export function InstrumentsSection() {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   const instrumentsQuery = useInstruments()
   const createInstrumentMutation = useCreateInstrument()
   const updateInstrumentMutation = useUpdateInstrument()
@@ -247,7 +247,7 @@ export function InstrumentsSection() {
                   }}
                 >
                   {MONTHS.map((m) => (
-                    <option key={m.value} value={m.value}>{isPolish ? m.pl : m.en}</option>
+                    <option key={m.value} value={m.value}>{m[language]}</option>
                   ))}
                 </select>
                 <select

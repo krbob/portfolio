@@ -2,8 +2,7 @@ import { useCallback } from 'react'
 import { AreaSeries, LineSeries, type IChartApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
-import { useI18n } from '../../lib/i18n'
-import { t } from '../../lib/messages'
+import { formatMessage, t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
 
 interface PortfolioValueChartProps {
@@ -23,7 +22,6 @@ export function PortfolioValueChart({
   height = 320,
   title = 'Portfolio Value',
 }: PortfolioValueChartProps) {
-  const { isPolish } = useI18n()
   const onChart = useCallback(
     (chart: IChartApi) => {
       const valueSeries = chart.addSeries(AreaSeries, {
@@ -58,11 +56,11 @@ export function PortfolioValueChart({
   return (
     <ChartContainer
       height={height}
-      title={isPolish && title === 'Portfolio Value' ? t('portfolioValue.title') : title}
-      subtitle={isPolish ? `Wartość vs wpłaty w ${unit}` : `Value vs contributions in ${unit}`}
+      title={title === 'Portfolio Value' ? t('portfolioValue.title') : title}
+      subtitle={formatMessage(t('portfolioValue.subtitle'), { unit })}
       legend={
         <>
-          <ChartLegendItem color={chartPalette.portfolio} label={isPolish ? `Wartość (${unit})` : `Value (${unit})`} />
+          <ChartLegendItem color={chartPalette.portfolio} label={formatMessage(t('portfolioValue.valueLegend'), { unit })} />
           <ChartLegendItem color={chartPalette.contributions} label={t('portfolioValue.contributions')} dashed />
         </>
       }

@@ -16,7 +16,8 @@ interface AuditEventLike {
 }
 
 export function formatAuditEventTitle(action: string, isPolish: boolean) {
-  return isPolish ? labelAuditAction(action) : humanizeAuditAction(action)
+  const lang = toLanguage(isPolish)
+  return lang === 'pl' ? labelAuditAction(action) : humanizeAuditAction(action)
 }
 
 export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean) {
@@ -343,13 +344,14 @@ function translateMetadataValue(key: string, value: string, isPolish: boolean) {
 }
 
 function summarizeMix(rawMix: string, isPolish: boolean) {
+  const lang = toLanguage(isPolish)
   return rawMix
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => {
       const [assetClass, weight] = entry.split('=')
-      const label = isPolish ? labelAssetClass(assetClass) : assetClass
+      const label = lang === 'pl' ? labelAssetClass(assetClass) : assetClass
       const pct = Number(weight) * 100
       return Number.isFinite(pct) ? `${label} ${pct.toFixed(2)}%` : label
     })

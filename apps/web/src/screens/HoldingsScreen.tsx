@@ -224,9 +224,7 @@ export function HoldingsContent() {
         <HoldingSummaryTile
           label={t('holdings.dataIssues')}
           value={String(marketIssueCount + fxIssueCount + staleCount)}
-          detail={isPolish
-            ? `${marketIssueCount} cen · ${fxIssueCount} FX · ${staleCount} opóźnionych`
-            : `${marketIssueCount} quotes · ${fxIssueCount} FX · ${staleCount} stale`}
+          detail={formatMessage(t('holdings.dataIssuesDetail'), { market: marketIssueCount, fx: fxIssueCount, stale: staleCount })}
           tone={marketIssueCount + fxIssueCount + staleCount > 0 ? 'warning' : 'default'}
         />
       </div>
@@ -237,9 +235,7 @@ export function HoldingsContent() {
           activeCount={activeFilterCount}
           onClear={clearFilters}
           summary={activeFilterCount > 0
-            ? isPolish
-              ? `${filteredHoldings.length} z ${holdings.length} pozycji`
-              : `${filteredHoldings.length} of ${holdings.length} positions`
+            ? formatMessage(t('holdings.filterSummary'), { visible: filteredHoldings.length, total: holdings.length })
             : undefined}
         >
           <FilterSelect
@@ -283,7 +279,6 @@ export function HoldingsContent() {
           staleCount={staleCount}
           marketIssueCount={marketIssueCount}
           fxIssueCount={fxIssueCount}
-          isPolish={isPolish}
         />
       ) : null}
 
@@ -434,13 +429,9 @@ export function HoldingsContent() {
             />
           </div>
           <div className="mt-3 text-xs text-zinc-500">
-            {isPolish
-              ? `${selectedHolding.transactionCount} transakcji · ${selectedHolding.currency}`
-              : `${selectedHolding.transactionCount} transactions · ${selectedHolding.currency}`}
+            {`${formatMessage(t('holdings.transactionDetail'), { count: selectedHolding.transactionCount })} · ${selectedHolding.currency}`}
             {selectedHolding.valuedAt
-              ? isPolish
-                ? ` · wycena ${formatDate(selectedHolding.valuedAt)}`
-                : ` · valued ${formatDate(selectedHolding.valuedAt)}`
+              ? ` · ${t('holdings.valuedAtDetail')} ${formatDate(selectedHolding.valuedAt)}`
               : ''}
           </div>
           {selectedHolding.valuationIssue && (
@@ -475,9 +466,10 @@ export function HoldingsContent() {
                       {t('holdings.redeemEdo')}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500">
-                      {isPolish
-                        ? `${selectedHolding.edoLots?.length ?? 0} aktywne partie${selectedHolding.edoLots?.[0]?.purchaseDate ? ` od ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Otwórz wykup z już wybraną serią i kontem.`
-                        : `${selectedHolding.edoLots?.length ?? 0} active lots${selectedHolding.edoLots?.[0]?.purchaseDate ? ` starting from ${formatDate(selectedHolding.edoLots[0].purchaseDate)}` : ''}. Open redemption with this series and account preselected.`}
+                      {formatMessage(t('holdings.redeemDetail'), {
+                        count: selectedHolding.edoLots?.length ?? 0,
+                        suffix: selectedHolding.edoLots?.[0]?.purchaseDate ? formatMessage(t('holdings.redeemLotSuffix'), { date: formatDate(selectedHolding.edoLots[0].purchaseDate) }) : '',
+                      })}
                     </p>
                   </div>
                 <div className="flex flex-wrap gap-2">
@@ -493,9 +485,7 @@ export function HoldingsContent() {
                     className={btnPrimary}
                     onClick={() => openRedeemFlow(selectedHolding, selectedHolding.quantity)}
                   >
-                    {isPolish
-                      ? `Wykup wszystko (${formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} szt.)`
-                      : `Redeem all (${formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} units)`}
+                    {formatMessage(t('holdings.redeemAllButton'), { count: formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 }) })}
                   </button>
                 </div>
               </div>
@@ -596,14 +586,12 @@ function HoldingsValuationBanner({
   staleCount,
   marketIssueCount,
   fxIssueCount,
-  isPolish,
 }: {
   totalCount: number
   valuedCount: number
   staleCount: number
   marketIssueCount: number
   fxIssueCount: number
-  isPolish: boolean
 }) {
   const fullyBookBased = valuedCount === 0
 
@@ -625,28 +613,24 @@ function HoldingsValuationBanner({
             {fullyBookBased
               ? t('holdings.bookBasisReturnHint')
               : staleCount > 0 && marketIssueCount + fxIssueCount === 0
-                ? (isPolish
-                    ? `${valuedCount} z ${totalCount} pozycji ma wycenę rynkową, w tym ${staleCount} opóźnionych.`
-                    : `${valuedCount} of ${totalCount} holdings have market valuation, including ${staleCount} stale.`)
-              : (isPolish
-                  ? `${valuedCount} z ${totalCount} pozycji ma wycenę rynkową.`
-                  : `${valuedCount} of ${totalCount} holdings have market valuation.`)}
+                ? formatMessage(t('holdings.staleBannerDetail'), { valued: valuedCount, total: totalCount, stale: staleCount })
+                : formatMessage(t('holdings.mixedBannerDetail'), { valued: valuedCount, total: totalCount })}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {staleCount > 0 ? (
             <span className={`${badge} ${badgeVariants.info}`}>
-              {isPolish ? `${staleCount} opóźnionych` : `${staleCount} stale`}
+              {formatMessage(t('holdings.staleBadge'), { count: staleCount })}
             </span>
           ) : null}
           {marketIssueCount > 0 ? (
             <span className={`${badge} ${badgeVariants.warning}`}>
-              {isPolish ? `${marketIssueCount} bez ceny` : `${marketIssueCount} without quote`}
+              {formatMessage(t('holdings.missingQuoteBadge'), { count: marketIssueCount })}
             </span>
           ) : null}
           {fxIssueCount > 0 ? (
             <span className={`${badge} ${badgeVariants.warning}`}>
-              {isPolish ? `${fxIssueCount} bez FX` : `${fxIssueCount} missing FX`}
+              {formatMessage(t('holdings.missingFxBadge'), { count: fxIssueCount })}
             </span>
           ) : null}
         </div>

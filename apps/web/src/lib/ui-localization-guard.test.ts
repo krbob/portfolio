@@ -34,6 +34,11 @@ describe('ui localization guard', () => {
 
     expect(unexpected).toEqual([])
   })
+
+  it('does not use isPolish ternary in production code', () => {
+    const violations = collectIsPolishTernaries()
+    expect(violations).toEqual([])
+  })
 })
 
 function collectRawUiLiterals() {
@@ -105,4 +110,45 @@ function normalizeRawText(text: string) {
 
 function isUserFacingLiteral(text: string) {
   return text.length > 0 && /[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/.test(text)
+}
+
+function collectIsPolishTernaries(): Array<{ file: string; line: number; text: string }> {
+  const results: Array<{ file: string; line: number; text: string }> = []
+  const srcDir = sourceRoot
+
+  function walk(dir: string) {
+    for (const entry of fs.readdirSync(dir)) {
+      const fullPath = path.join(dir, entry)
+      const stats = fs.statSync(fullPath)
+
+      if (stats.isDirectory()) {
+        if (entry === 'generated' || entry === 'messages' || entry === 'node_modules') continue
+        walk(fullPath)
+        continue
+      }
+
+      if (!(fullPath.endsWith('.ts') || fullPath.endsWith('.tsx'))) continue
+      if (fullPath.includes('.test.')) continue
+
+      const source = fs.readFileSync(fullPath, 'utf8')
+      const lines = source.split('\n')
+
+      for (let i = 0; i < lines.length; i++) {
+        if (/isPolish\s*\?/.test(lines[i])) {
+          const relativePath = path.relative(sourceRoot, fullPath)
+          const trimmed = lines[i].trim()
+
+          // Allow toLanguage helpers and type annotations
+          if (/return isPolish \? ['"]pl['"] : ['"]en['"]/.test(trimmed)) continue
+          if (/isPolish \? ['"],['"] : ['"]\.['"]/.test(trimmed)) continue
+          if (/_isPolish\??:/.test(trimmed)) continue
+
+          results.push({ file: relativePath, line: i + 1, text: trimmed })
+        }
+      }
+    }
+  }
+
+  walk(srcDir)
+  return results
 }

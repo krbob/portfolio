@@ -6,8 +6,8 @@ import type {
   TransactionImportProfile,
   UpdateTransactionImportProfilePayload,
 } from '../../api/write-model'
-import { useI18n } from '../../lib/i18n'
-import { t } from '../../lib/messages'
+import { getActiveUiLanguage } from '../../lib/i18n'
+import { formatMessage, t } from '../../lib/messages'
 import { card } from '../../lib/styles'
 import {
   buildImportProfilePayload,
@@ -57,13 +57,12 @@ export function TransactionImportProfiles({
   onDirtyChange,
   onTemplateChange,
 }: TransactionImportProfilesProps) {
-  const { isPolish } = useI18n()
-
   const [importProfileForm, setImportProfileForm] = useState<ImportProfileFormState>(createInitialImportProfileForm)
   const [importProfileFeedback, setImportProfileFeedback] = useState<string | null>(null)
   const [pendingDeleteImportProfileId, setPendingDeleteImportProfileId] = useState<string | null>(null)
 
   const sortedAccountOptions = useMemo(() => [...accounts].sort(compareAccountsByDisplayOrder), [accounts])
+  const isPolish = getActiveUiLanguage() === 'pl'
   const localizedImportMappingFields = useMemo(() => getImportMappingFields(isPolish), [isPolish])
   const importProfilePayload = useMemo(() => buildImportProfilePayload(importProfileForm), [importProfileForm])
   const selectedImportProfilePayload = useMemo(
@@ -167,7 +166,7 @@ export function TransactionImportProfiles({
           onSuccess: (profile) => {
             setPendingSavedImportProfile(profile)
             setImportProfileFeedback(
-              isPolish ? `Zaktualizowano profil importu "${profile.name}".` : `Updated import profile "${profile.name}".`,
+              formatMessage(t('importProfiles.updatedFeedback'), { name: profile.name }),
             )
             setSelectedImportProfileId(profile.id)
             setImportProfileForm(importProfileToForm(profile))
@@ -181,7 +180,7 @@ export function TransactionImportProfiles({
       onSuccess: (profile) => {
         setPendingSavedImportProfile(profile)
         setImportProfileFeedback(
-          isPolish ? `Utworzono profil importu "${profile.name}".` : `Created import profile "${profile.name}".`,
+          formatMessage(t('importProfiles.createdFeedback'), { name: profile.name }),
         )
         setSelectedImportProfileId(profile.id)
         setImportProfileForm(importProfileToForm(profile))
@@ -209,7 +208,7 @@ export function TransactionImportProfiles({
         setPendingSavedImportProfile(null)
         setPendingDeleteImportProfileId(null)
         setImportProfileFeedback(
-          isPolish ? `Usunięto profil importu "${selectedImportProfile.name}".` : `Deleted import profile "${selectedImportProfile.name}".`,
+          formatMessage(t('importProfiles.deletedFeedback'), { name: selectedImportProfile.name }),
         )
         setSelectedImportProfileId(nextProfileId)
       },

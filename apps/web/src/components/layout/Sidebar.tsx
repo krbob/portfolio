@@ -6,7 +6,7 @@ import { StatusDot } from '../ui/StatusDot'
 import { btnGhost } from '../../lib/styles'
 import { navSections, type NavItem } from './navigation'
 import { useI18n } from '../../lib/i18n'
-import { t } from '../../lib/messages'
+import { formatMessage, t } from '../../lib/messages'
 
 interface SidebarProps {
   className?: string
@@ -56,7 +56,7 @@ function NavSection({
 }
 
 export function Sidebar({ className = '', onNavigate }: SidebarProps) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const metaQuery = useAppMeta()
   const readinessQuery = useAppReadiness()
   const authSessionQuery = useAuthSession()
@@ -85,7 +85,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
         {navSections.map((section) => (
           <NavSection
             key={section.label.en}
-            label={isPolish ? section.label.pl : section.label.en}
+            label={section.label[language]}
             items={section.items}
             onNavigate={onNavigate}
           />
@@ -107,9 +107,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
             ? t('layout.checkingDeps')
             : readinessQuery.isError
               ? t('layout.readinessUnreachable')
-              : isPolish
-                ? `${blockingChecks} blokad · ${advisoryChecks} uwag`
-                : `${blockingChecks} blockers · ${advisoryChecks} notices`}
+              : formatMessage(t('layout.healthSummary'), { blockers: blockingChecks, notices: advisoryChecks })}
         </p>
         <NavLink
           to="/settings#health"

@@ -649,7 +649,6 @@ export function TransactionJournal({
           latestTradeDateInFilteredJournal={latestTradeDateInFilteredJournal}
           currentPage={currentPage}
           totalPages={totalPages}
-          isPolish={isPolish}
           onToggleComposer={() => {
             if (composerOpen) {
               closeComposer()
@@ -679,7 +678,6 @@ export function TransactionJournal({
           createPending={createTransactionMutation.isPending}
           updatePending={updateTransactionMutation.isPending}
           submitErrorMessage={submitErrorMessage}
-          isPolish={isPolish}
           onClose={closeComposer}
           onSubmit={handleSubmit}
           onAccountChange={handleAccountChange}

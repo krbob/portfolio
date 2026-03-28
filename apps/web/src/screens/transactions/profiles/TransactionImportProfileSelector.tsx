@@ -1,6 +1,5 @@
 import { DangerConfirmInline } from '../../../components/DangerConfirmInline'
-import { useI18n } from '../../../lib/i18n'
-import { t } from '../../../lib/messages'
+import { formatMessage, t } from '../../../lib/messages'
 import { btnDanger, btnSecondary, filterInput, label as labelClass } from '../../../lib/styles'
 import type { TransactionImportProfile } from '../../../api/write-model'
 import { NEW_IMPORT_PROFILE_ID } from '../transactions-helpers'
@@ -30,8 +29,6 @@ export function TransactionImportProfileSelector({
   onCancelDeleteImportProfile,
   onConfirmDeleteImportProfile,
 }: TransactionImportProfileSelectorProps) {
-  const { isPolish } = useI18n()
-
   return (
     <>
       <div className="mb-4 flex items-center gap-3">
@@ -69,7 +66,7 @@ export function TransactionImportProfileSelector({
 
       {selectedImportProfile && pendingDeleteImportProfileId === selectedImportProfile.id && (
         <DangerConfirmInline
-          title={isPolish ? `Usunąć profil "${selectedImportProfile.name}"?` : `Delete profile "${selectedImportProfile.name}"?`}
+          title={formatMessage(t('importProfiles.deleteConfirmTitle'), { name: selectedImportProfile.name })}
           description={t('importProfiles.deleteConfirmDescription')}
           confirmLabel={t('importProfiles.deleteProfile')}
           confirmPendingLabel={t('importProfiles.deleting')}

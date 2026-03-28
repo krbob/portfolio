@@ -1,7 +1,7 @@
 import { Card, SectionHeader } from '../../../components/ui'
-import { notApplicableLabel } from '../../../lib/availability'
+import { activeNotApplicableLabel } from '../../../lib/availability'
 import { formatDate } from '../../../lib/format'
-import { t } from '../../../lib/messages'
+import { formatMessage, t } from '../../../lib/messages'
 import { btnGhost, btnPrimary, btnSecondary } from '../../../lib/styles'
 
 interface TransactionJournalSummaryProps {
@@ -15,7 +15,6 @@ interface TransactionJournalSummaryProps {
   latestTradeDateInFilteredJournal: string | null
   currentPage: number
   totalPages: number
-  isPolish: boolean
   onToggleComposer: () => void
   onResetJournalFilters: () => void
 }
@@ -49,7 +48,6 @@ export function TransactionJournalSummary({
   latestTradeDateInFilteredJournal,
   currentPage,
   totalPages,
-  isPolish,
   onToggleComposer,
   onResetJournalFilters,
 }: TransactionJournalSummaryProps) {
@@ -79,12 +77,12 @@ export function TransactionJournalSummary({
         <JournalSummaryTile
           label={t('journal.rowsInView')}
           value={sortedRowCount.toString()}
-          hint={isPolish ? `${journalRowCount} łącznie` : `${journalRowCount} total`}
+          hint={formatMessage(t('journal.totalHint'), { count: journalRowCount })}
         />
         <JournalSummaryTile
           label={t('journal.accountsInView')}
           value={accountsInFilteredJournal.toString()}
-          hint={isPolish ? `${pagedRowCount} na tej stronie` : `${pagedRowCount} on this page`}
+          hint={formatMessage(t('journal.pagedHint'), { count: pagedRowCount })}
         />
         <JournalSummaryTile
           label={t('journal.instrumentsInView')}
@@ -96,9 +94,9 @@ export function TransactionJournalSummary({
           value={
             latestTradeDateInFilteredJournal
               ? formatDate(latestTradeDateInFilteredJournal)
-              : notApplicableLabel(isPolish)
+              : activeNotApplicableLabel()
           }
-          hint={isPolish ? `Strona ${currentPage} / ${totalPages}` : `Page ${currentPage} / ${totalPages}`}
+          hint={formatMessage(t('journal.pageLabel'), { current: currentPage, total: totalPages })}
         />
       </div>
     </Card>

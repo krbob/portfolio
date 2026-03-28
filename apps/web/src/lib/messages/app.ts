@@ -215,4 +215,7 @@ export const appMessages = {
   'portfolio.title': { pl: 'Portfel', en: 'Portfolio' },
   'portfolio.holdingsTab': { pl: 'Pozycje', en: 'Holdings' },
   'portfolio.accountsTab': { pl: 'Konta', en: 'Accounts' },
+  'portfolioValue.subtitle': { pl: 'Wartość vs wpłaty w {unit}', en: 'Value vs contributions in {unit}' },
+  'portfolioValue.valueLegend': { pl: 'Wartość ({unit})', en: 'Value ({unit})' },
+  'layout.healthSummary': { pl: '{blockers} blokad · {notices} uwag', en: '{blockers} blockers · {notices} notices' },
 } satisfies MessageCatalog

@@ -1,15 +1,17 @@
+import { tFor } from './messages'
+import type { UiLanguage } from './i18n'
 import { t } from './messages'
 
 export function unavailableLabel(isPolish: boolean) {
-  return isPolish ? 'Niedostępne' : 'Unavailable'
+  return tFor('common.unavailable', toLanguage(isPolish))
 }
 
 export function notApplicableLabel(isPolish: boolean) {
-  return isPolish ? 'n/d' : 'n/a'
+  return tFor('common.na', toLanguage(isPolish))
 }
 
 export function missingDataLabel(isPolish: boolean) {
-  return isPolish ? 'b/d' : 'N/A'
+  return tFor('common.missingData', toLanguage(isPolish))
 }
 
 export function activeUnavailableLabel() {
@@ -22,4 +24,8 @@ export function activeNotApplicableLabel() {
 
 export function activeMissingDataLabel() {
   return t('common.missingData')
+}
+
+function toLanguage(isPolish: boolean): UiLanguage {
+  return isPolish ? 'pl' : 'en'
 }

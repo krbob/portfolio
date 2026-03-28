@@ -2,9 +2,8 @@ import type { Dispatch, SetStateAction } from 'react'
 import { DangerConfirmInline } from '../../../components/DangerConfirmInline'
 import { EmptyState, SectionHeader } from '../../../components/ui'
 import { formatCurrency, formatDate, formatNumber } from '../../../lib/format'
-import { useI18n } from '../../../lib/i18n'
 import { labelTransactionType } from '../../../lib/labels'
-import { t } from '../../../lib/messages'
+import { formatMessage, t } from '../../../lib/messages'
 import {
   badge,
   btnDanger,
@@ -65,8 +64,6 @@ export function TransactionJournalReview({
   onCancelDeleteTransaction,
   onConfirmDeleteTransaction,
 }: TransactionJournalReviewProps) {
-  const { isPolish } = useI18n()
-
   const hasActiveJournalFilters =
     journalFilters.search !== '' ||
     journalFilters.accountId !== 'ALL' ||
@@ -186,9 +183,7 @@ export function TransactionJournalReview({
 
         <div className="mb-4 flex items-center justify-between text-sm text-zinc-500">
           <span>
-            {isPolish
-              ? `Wyświetlono ${pagedRows.length} z ${sortedRows.length} pasujących wierszy (${journalRowsCount} łącznie).`
-              : `Showing ${pagedRows.length} of ${sortedRows.length} matching rows (${journalRowsCount} total).`}
+            {formatMessage(t('journal.showingRows'), { paged: pagedRows.length, sorted: sortedRows.length, total: journalRowsCount })}
           </span>
 
           <div className="flex items-center gap-2">
@@ -213,7 +208,7 @@ export function TransactionJournalReview({
             >
               {t('journal.previous')}
             </button>
-            <span>{isPolish ? `Strona ${currentPage} / ${totalPages}` : `Page ${currentPage} / ${totalPages}`}</span>
+            <span>{formatMessage(t('journal.pageLabel'), { current: currentPage, total: totalPages })}</span>
             <button
               type="button"
               className={btnSecondary}
@@ -265,11 +260,9 @@ export function TransactionJournalReview({
               <p className="mt-1 text-sm text-zinc-400">
                 {accountName}
                 {instrumentSymbol ? ` · ${instrumentSymbol}` : ''}
-                {isPolish ? ` · transakcja ${formatDate(transaction.tradeDate)}` : ` · trade ${formatDate(transaction.tradeDate)}`}
+                {` · ${t('journal.tradePrefix')} ${formatDate(transaction.tradeDate)}`}
                 {transaction.settlementDate
-                  ? isPolish
-                    ? ` · rozliczenie ${formatDate(transaction.settlementDate)}`
-                    : ` · settle ${formatDate(transaction.settlementDate)}`
+                  ? ` · ${t('journal.settlementPrefix')} ${formatDate(transaction.settlementDate)}`
                   : ''}
               </p>
 
@@ -327,11 +320,7 @@ export function TransactionJournalReview({
 
             {pendingDeleteTransactionId === transaction.id && (
               <DangerConfirmInline
-                title={
-                  isPolish
-                    ? `Usunąć transakcję ${labelTransactionType(transaction.type)} z dnia ${transaction.tradeDate}?`
-                    : `Delete transaction ${transaction.type} on ${transaction.tradeDate}?`
-                }
+                title={formatMessage(t('journal.deleteConfirmTitle'), { type: labelTransactionType(transaction.type), date: transaction.tradeDate })}
                 description={t('journal.deleteDescription')}
                 confirmLabel={t('journal.deleteTransaction')}
                 confirmPendingLabel={t('journal.deleting')}

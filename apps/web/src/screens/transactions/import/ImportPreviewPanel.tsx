@@ -1,6 +1,5 @@
-import { useI18n } from '../../../lib/i18n'
 import { labelImportRowStatus } from '../../../lib/labels'
-import { t } from '../../../lib/messages'
+import { formatMessage, t } from '../../../lib/messages'
 import { badge } from '../../../lib/styles'
 import type { ImportTransactionsPreviewResult } from '../../../api/write-model'
 import { buildImportPreviewSummary, importPreviewBadgeVariant, type ImportPreviewStatusFilter } from '../transactions-helpers'
@@ -20,8 +19,6 @@ export function ImportPreviewPanel({
   onStatusFilterChange,
   rows,
 }: ImportPreviewPanelProps) {
-  const { isPolish } = useI18n()
-
   return (
     <div className="mt-6">
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -63,19 +60,11 @@ export function ImportPreviewPanel({
         >
           {(
             [
-              ['ALL', isPolish ? `Wszystkie (${preview.totalRowCount})` : `All (${preview.totalRowCount})`],
-              [
-                'IMPORTABLE',
-                isPolish ? `Do importu (${preview.importableRowCount})` : `Importable (${preview.importableRowCount})`,
-              ],
-              [
-                'DUPLICATE_EXISTING',
-                isPolish
-                  ? `Istniejące (${preview.duplicateExistingCount})`
-                  : `Existing (${preview.duplicateExistingCount})`,
-              ],
-              ['DUPLICATE_BATCH', isPolish ? `Paczka (${preview.duplicateBatchCount})` : `Batch (${preview.duplicateBatchCount})`],
-              ['INVALID', isPolish ? `Błędne (${preview.invalidRowCount})` : `Invalid (${preview.invalidRowCount})`],
+              ['ALL', formatMessage(t('import.filterAll'), { count: preview.totalRowCount })],
+              ['IMPORTABLE', formatMessage(t('import.filterImportable'), { count: preview.importableRowCount })],
+              ['DUPLICATE_EXISTING', formatMessage(t('import.filterExisting'), { count: preview.duplicateExistingCount })],
+              ['DUPLICATE_BATCH', formatMessage(t('import.filterBatch'), { count: preview.duplicateBatchCount })],
+              ['INVALID', formatMessage(t('import.filterInvalid'), { count: preview.invalidRowCount })],
             ] as const
           ).map(([status, statusLabel]) => (
             <button

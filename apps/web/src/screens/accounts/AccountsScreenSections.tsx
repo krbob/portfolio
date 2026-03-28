@@ -10,7 +10,7 @@ import {
   parsePortfolioNumber,
   portfolioValuationStateVariant,
 } from '../../lib/portfolio-presentation'
-import { t } from '../../lib/messages'
+import { formatMessage, t } from '../../lib/messages'
 import { badge } from '../../lib/styles'
 import { isMarketValuedStatus } from '../../lib/valuation'
 
@@ -83,7 +83,7 @@ export function AccountDetailsCard({
         <AccountDetailMetric
           label={t('accountDetails.invested')}
           value={formatCurrencyPln(account.investedCurrentValuePln)}
-          detail={isPolish ? `${account.activeHoldingCount} pozycji` : `${account.activeHoldingCount} holdings`}
+          detail={formatMessage(t('accountDetails.holdingsCount'), { count: account.activeHoldingCount })}
         />
         <AccountDetailMetric
           label={t('accountDetails.netContributions')}

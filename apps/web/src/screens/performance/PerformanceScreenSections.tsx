@@ -6,7 +6,7 @@ import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
 import { useI18n } from '../../lib/i18n'
 import { translateBenchmarkLabel } from '../../lib/labels'
-import { t } from '../../lib/messages'
+import { formatMessage, t } from '../../lib/messages'
 import { card, td, tdRight, th, thRight, tr } from '../../lib/styles'
 
 export type Period = 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX'
@@ -40,8 +40,6 @@ export function ChartsTab({
   benchmarkOrder: string[]
   customBenchmarkLabel?: string
 }) {
-  const { isPolish } = useI18n()
-
   if (historyQuery.isLoading && points.length === 0) {
     return (
       <LoadingState
@@ -104,7 +102,7 @@ export function ChartsTab({
           contributionsKey={series.contributionsKey}
           unit={unit}
           height={360}
-          title={isPolish ? `Wartość portfela (${unit})` : `Portfolio Value (${unit})`}
+          title={formatMessage(t('performanceSections.chartTitle'), { unit })}
         />
       </div>
 
@@ -134,7 +132,6 @@ export function ReturnsTab({
   period: Period
   onPeriodChange: (period: Period) => void
 }) {
-  const { isPolish } = useI18n()
   const data = returnsQuery.data
 
   if (returnsQuery.isLoading) {
@@ -241,9 +238,7 @@ export function ReturnsTab({
       </div>
       {realCoverageUntil ? (
         <p className="text-xs text-zinc-500">
-          {isPolish
-            ? `Realny PLN używa tylko pełnych miesięcy pokrytych CPI; bieżące pokrycie CPI do ${realCoverageUntil}.`
-            : `Real PLN uses CPI-covered full months only; current CPI coverage through ${realCoverageUntil}.`}
+          {formatMessage(t('performanceSections.cpiCoverageNote'), { coverageUntil: realCoverageUntil })}
         </p>
       ) : null}
 
@@ -255,9 +250,7 @@ export function ReturnsTab({
                 {t('performanceSections.benchmarks')}
               </h3>
               <p className="mt-1 text-sm text-zinc-500">
-                {isPolish
-                  ? `Nadwyżka TWR względem benchmarków dla okresu ${selectedBenchmarkPeriod.label}.`
-                  : `Time-weighted excess return versus the selected period. Details below for ${selectedBenchmarkPeriod.label}.`}
+                {formatMessage(t('performanceSections.benchmarkExcessDetail'), { label: selectedBenchmarkPeriod.label })}
               </p>
             </div>
           </div>
@@ -390,7 +383,6 @@ function ReturnsBreakdownCard({
   selectedPeriod: Period
   onPeriodChange: (period: Period) => void
 }) {
-  const { isPolish } = useI18n()
   const breakdown = period.breakdown
 
   return (
@@ -400,12 +392,8 @@ function ReturnsBreakdownCard({
           <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.valueBridge')}</h3>
           <p className="mt-1 text-sm text-zinc-500">
             {returnsDisplayAvailable
-              ? (isPolish
-                ? `Otwarcie, przepływy zewnętrzne, dochód, koszty i reszta przypisana do rynku + FX dla okresu ${period.label}.`
-                : `Opening value, external flows, income, costs and the residual attributed to market + FX for ${period.label}.`)
-              : (isPolish
-                ? `Otwarcie i zamknięcie są dostępne, ale reszta nadal używa bieżącej podstawy wyceny dla okresu ${period.label}.`
-                : `Opening and closing values are available, but the residual still follows the current valuation basis for ${period.label}.`)}
+              ? formatMessage(t('performanceSections.bridgeAvailableDetail'), { label: period.label })
+              : formatMessage(t('performanceSections.bridgeUnavailableDetail'), { label: period.label })}
           </p>
         </div>
         <div className="flex items-center justify-between gap-3">

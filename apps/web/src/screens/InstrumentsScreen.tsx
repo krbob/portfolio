@@ -8,7 +8,7 @@ import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { usePersistentState } from '../lib/persistence'
 import {
   describeHoldingGainRate,
@@ -39,7 +39,6 @@ export function InstrumentsScreen() {
 }
 
 function InstrumentsPageHeaderContent() {
-  const { isPolish } = useI18n()
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
   const catalog = useMemo(() => instrumentsQuery.data ?? [], [instrumentsQuery.data])
@@ -54,7 +53,7 @@ function InstrumentsPageHeaderContent() {
   return (
     <>
       <Badge variant="default">
-        {rows.length} {isPolish ? (rows.length === 1 ? 'instrument' : 'instrumentów') : 'instruments'}
+        {rows.length} {rows.length === 1 ? t('instrumentsScreen.instrumentBadgeSingular') : t('instrumentsScreen.instrumentBadge')}
       </Badge>
       {rows.length > 0 && (
         <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValuePln)}</span>
@@ -143,12 +142,12 @@ export function InstrumentsManagement() {
           <InstrumentSummaryTile
             label={t('instrumentsScreen.catalog')}
             value={String(rows.length)}
-            detail={isPolish ? `${activeRows.length} aktywnych w portfelu` : `${activeRows.length} active in portfolio`}
+            detail={formatMessage(t('instrumentsScreen.activeInPortfolio'), { count: activeRows.length })}
           />
           <InstrumentSummaryTile
             label={t('instrumentsScreen.totalValue')}
             value={formatCurrencyPln(totalValuePln)}
-            detail={isPolish ? `${activeRows.length} pozycji po zsumowaniu wszystkich rachunków` : `${activeRows.length} aggregates across accounts`}
+            detail={formatMessage(t('instrumentsScreen.aggregateDetail'), { count: activeRows.length })}
           />
           <InstrumentSummaryTile
             label={t('instrumentsScreen.unrealizedPL')}
@@ -162,10 +161,8 @@ export function InstrumentsManagement() {
             detail={degradedCount === 0
               ? staleCount === 0
                 ? t('instrumentsScreen.freshValuation')
-                : (isPolish ? `${staleCount} ma wycenę rynkową z opóźnieniem` : `${staleCount} have stale market valuation`)
-              : (isPolish
-                  ? `Część instrumentów korzysta z niepełnej lub księgowej wyceny${staleCount > 0 ? ` · ${staleCount} z opóźnieniem` : ''}`
-                  : `Some series fall back to book basis${staleCount > 0 ? ` · ${staleCount} stale` : ''}`)}
+                : formatMessage(t('instrumentsScreen.staleValuation'), { count: staleCount })
+              : `${t('instrumentsScreen.degradedDetail')}${staleCount > 0 ? ` · ${formatMessage(t('instrumentsScreen.staleSuffix'), { count: staleCount })}` : ''}`}
             tone={degradedCount === 0 && staleCount === 0 ? 'success' : 'warning'}
           />
         </div>

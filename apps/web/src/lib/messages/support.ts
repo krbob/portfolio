@@ -152,4 +152,47 @@ export const supportMessages = {
     en: 'Last successful refresh: {refreshedAt}.',
   },
   'dataQualityLib.noRefreshYet': { pl: 'Modele odczytowe nie były jeszcze odświeżane w tle.', en: 'Read models have not been refreshed in the background yet.' },
+  'presentation.partialValuationDescription': {
+    pl: '{valued}/{active} pozycji z wyceną rynkową',
+    en: '{valued}/{active} holdings with market valuation',
+  },
+  'presentation.partialValuationRate': {
+    pl: '{valued}/{active} pozycji wycenionych',
+    en: '{valued}/{active} holdings valued',
+  },
+  'presentation.descBookOnly': {
+    pl: '{accounts} kont · {holdings} pozycji · wycena księgowa',
+    en: '{accounts} accounts · {holdings} holdings · book basis',
+  },
+  'presentation.descPartiallyValued': {
+    pl: '{accounts} kont · {valued}/{active} pozycji wycenionych',
+    en: '{accounts} accounts · {valued}/{active} holdings valued',
+  },
+  'presentation.descStale': {
+    pl: '{accounts} kont · {holdings} pozycji · ostatnie dostępne ceny',
+    en: '{accounts} accounts · {holdings} holdings · latest available prices',
+  },
+  'presentation.descMarket': {
+    pl: '{accounts} kont · {holdings} pozycji',
+    en: '{accounts} accounts · {holdings} holdings',
+  },
+  'presentation.sliceBase': { pl: '{pct} portfela', en: '{pct} of portfolio' },
+  'presentation.staleValuationBasis': {
+    pl: '{valued} z {active} pozycji ma ostatnią dostępną wycenę rynkową',
+    en: '{valued} of {active} holdings have the latest available market valuation',
+  },
+  'presentation.marketValuationBasis': {
+    pl: '{valued} z {active} pozycji ma wycenę rynkową',
+    en: '{valued} of {active} holdings have market valuations',
+  },
+  'backups.createdFeedback': {
+    pl: 'Utworzono kopię zapasową {fileName} z {accountCount} kontami, {appPreferenceCount} ustawieniami aplikacji, {instrumentCount} instrumentami, {targetCount} celami, {transactionCount} transakcjami i {importProfileCount} profilami importu.',
+    en: 'Created backup {fileName} with {accountCount} accounts, {appPreferenceCount} app settings, {instrumentCount} instruments, {targetCount} targets, {transactionCount} transactions and {importProfileCount} import profiles.',
+  },
+  'backups.restoredFeedback': {
+    pl: 'Przywrócono {fileName} w trybie {mode}: {accountCount} kont, {appPreferenceCount} ustawień aplikacji, {instrumentCount} instrumentów, {targetCount} celów, {transactionCount} transakcji i {importProfileCount} profili importu.{safetyBackup}',
+    en: 'Restored {fileName} in {mode} mode: {accountCount} accounts, {appPreferenceCount} app settings, {instrumentCount} instruments, {targetCount} targets, {transactionCount} transactions and {importProfileCount} import profiles.{safetyBackup}',
+  },
+  'backups.safetyBackupSuffix': { pl: ' Kopia bezpieczeństwa: {fileName}.', en: ' Safety backup: {fileName}.' },
+  'backups.downloadedFeedback': { pl: 'Pobrano {fileName}.', en: 'Downloaded {fileName}.' },
 } satisfies MessageCatalog

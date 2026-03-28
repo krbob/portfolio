@@ -3,7 +3,7 @@ import type { Account, Instrument } from '../../../api/write-model'
 import { Modal } from '../../../components/ui/Modal'
 import { formatCurrency, formatDate, formatNumber } from '../../../lib/format'
 import { labelTransactionType } from '../../../lib/labels'
-import { t } from '../../../lib/messages'
+import { formatMessage, t } from '../../../lib/messages'
 import {
   badge,
   btnGhost,
@@ -54,7 +54,6 @@ interface TransactionJournalComposerProps {
   createPending: boolean
   updatePending: boolean
   submitErrorMessage: string | null
-  isPolish: boolean
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onAccountChange: (accountId: string) => void
@@ -94,7 +93,6 @@ export function TransactionJournalComposer({
   createPending,
   updatePending,
   submitErrorMessage,
-  isPolish,
   onClose,
   onSubmit,
   onAccountChange,
@@ -225,9 +223,7 @@ export function TransactionJournalComposer({
                 <p className="mt-4 text-sm text-zinc-500">{t('journal.loadingEdoLots')}</p>
               ) : holdingsErrorMessage ? (
                 <p className="mt-4 text-sm text-amber-300">
-                  {isPolish
-                    ? `Nie udało się pobrać aktywnych partii EDO: ${holdingsErrorMessage}`
-                    : `Failed to load active EDO lots: ${holdingsErrorMessage}`}
+                  {formatMessage(t('journal.edoLotsError'), { message: holdingsErrorMessage })}
                 </p>
               ) : form.accountId === '' ? (
                 <p className="mt-4 text-sm text-zinc-500">{t('journal.selectAccountForLots')}</p>
@@ -272,15 +268,11 @@ export function TransactionJournalComposer({
                             <div>
                               <p className="text-sm font-medium text-zinc-100">{formatDate(lot.purchaseDate)}</p>
                               <p className="mt-1 text-sm text-zinc-500">
-                                {isPolish
-                                  ? `${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} szt. · koszt ${formatCurrency(lot.costBasisPln, 'PLN')}`
-                                  : `${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} units · cost ${formatCurrency(lot.costBasisPln, 'PLN')}`}
+                                {`${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} ${t('journal.lotUnits')} · ${t('journal.lotCost')} ${formatCurrency(lot.costBasisPln, 'PLN')}`}
                               </p>
                               <p className="mt-1 text-sm text-zinc-500">
                                 {lot.currentValuePln != null
-                                  ? isPolish
-                                    ? `Bieżąca wartość ${formatCurrency(lot.currentValuePln, 'PLN')} · wynik ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
-                                    : `Current value ${formatCurrency(lot.currentValuePln, 'PLN')} · P/L ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
+                                  ? `${t('journal.lotCurrentValue')} ${formatCurrency(lot.currentValuePln, 'PLN')} · ${t('journal.lotPL')} ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
                                   : lot.valuationIssue ?? t('journal.lotValuationUnavailable')}
                               </p>
                             </div>
@@ -290,9 +282,7 @@ export function TransactionJournalComposer({
                                 <span className={badge}>
                                   {fullyConsumed
                                     ? t('journal.fullyConsumedFifo')
-                                    : isPolish
-                                      ? `FIFO: ${formatNumber(lotPreview.consumedQuantity, { maximumFractionDigits: 0 })} szt.`
-                                      : `FIFO: ${formatNumber(lotPreview.consumedQuantity, { maximumFractionDigits: 0 })} units`}
+                                    : formatMessage(t('journal.fifoUnits'), { count: formatNumber(lotPreview.consumedQuantity, { maximumFractionDigits: 0 }) })}
                                 </span>
                               )}
                               <button
@@ -307,9 +297,7 @@ export function TransactionJournalComposer({
 
                           {lotPreview != null && lotPreview.consumedQuantity > 0 && (
                             <p className="mt-3 text-sm text-zinc-400">
-                              {isPolish
-                                ? `Po podglądzie FIFO zostanie ${formatNumber(lotPreview.remainingQuantity, { maximumFractionDigits: 0 })} szt. z tej partii.`
-                                : `FIFO preview leaves ${formatNumber(lotPreview.remainingQuantity, { maximumFractionDigits: 0 })} units in this lot.`}
+                              {formatMessage(t('journal.fifoRemainder'), { count: formatNumber(lotPreview.remainingQuantity, { maximumFractionDigits: 0 }) })}
                             </p>
                           )}
                         </div>
@@ -319,9 +307,7 @@ export function TransactionJournalComposer({
 
                   {redeemPreview.unmatchedQuantity > 0 && (
                     <p className="text-sm text-amber-300">
-                      {isPolish
-                        ? `Wpisana liczba sztuk przekracza dostępne partie o ${formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })} szt.`
-                        : `The entered quantity exceeds available lots by ${formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })} units.`}
+                      {formatMessage(t('journal.quantityExceedsLots'), { count: formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 }) })}
                     </p>
                   )}
                 </div>
@@ -337,7 +323,7 @@ export function TransactionJournalComposer({
                 inputMode="decimal"
                 value={form.unitPrice}
                 onChange={(event) => onUnitPriceChange(event.target.value)}
-                placeholder={isPolish ? '123,45' : '123.45'}
+                placeholder={decimalSeparator === ',' ? '123,45' : '123.45'}
               />
             </label>
           )}

@@ -12,7 +12,7 @@ import { formatBytes, formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-copy'
 import { labelAuditOutcome } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
 export function PortfolioBackupsSection() {
@@ -36,9 +36,15 @@ export function PortfolioBackupsSection() {
     try {
       const result = await runBackupMutation.mutateAsync()
       setFeedback(
-        isPolish
-          ? `Utworzono kopię zapasową ${result.fileName} z ${result.accountCount} kontami, ${result.appPreferenceCount} ustawieniami aplikacji, ${result.instrumentCount} instrumentami, ${result.targetCount} celami, ${result.transactionCount} transakcjami i ${result.importProfileCount} profilami importu.`
-          : `Created backup ${result.fileName} with ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.`,
+        formatMessage(t('backups.createdFeedback'), {
+          fileName: result.fileName,
+          accountCount: result.accountCount,
+          appPreferenceCount: result.appPreferenceCount,
+          instrumentCount: result.instrumentCount,
+          targetCount: result.targetCount,
+          transactionCount: result.transactionCount,
+          importProfileCount: result.importProfileCount,
+        }),
       )
     } catch (error) {
       setActionError(error instanceof Error ? error.message : t('backups.backupFailed'))
@@ -56,9 +62,17 @@ export function PortfolioBackupsSection() {
         confirmation: restoreMode === 'REPLACE' ? restoreConfirmation : undefined,
       })
       setFeedback(
-        isPolish
-          ? `Przywrócono ${result.fileName} w trybie ${result.mode}: ${result.accountCount} kont, ${result.appPreferenceCount} ustawień aplikacji, ${result.instrumentCount} instrumentów, ${result.targetCount} celów, ${result.transactionCount} transakcji i ${result.importProfileCount} profili importu.${result.safetyBackupFileName ? ` Kopia bezpieczeństwa: ${result.safetyBackupFileName}.` : ''}`
-          : `Restored ${result.fileName} in ${result.mode} mode: ${result.accountCount} accounts, ${result.appPreferenceCount} app settings, ${result.instrumentCount} instruments, ${result.targetCount} targets, ${result.transactionCount} transactions and ${result.importProfileCount} import profiles.${result.safetyBackupFileName ? ` Safety backup: ${result.safetyBackupFileName}.` : ''}`,
+        formatMessage(t('backups.restoredFeedback'), {
+          fileName: result.fileName,
+          mode: result.mode,
+          accountCount: result.accountCount,
+          appPreferenceCount: result.appPreferenceCount,
+          instrumentCount: result.instrumentCount,
+          targetCount: result.targetCount,
+          transactionCount: result.transactionCount,
+          importProfileCount: result.importProfileCount,
+          safetyBackup: result.safetyBackupFileName ? formatMessage(t('backups.safetyBackupSuffix'), { fileName: result.safetyBackupFileName }) : '',
+        }),
       )
       setRestoreConfirmation('')
     } catch (error) {
@@ -72,7 +86,7 @@ export function PortfolioBackupsSection() {
 
     try {
       const downloadedFileName = await downloadBackupMutation.mutateAsync(fileName)
-      setFeedback(isPolish ? `Pobrano ${downloadedFileName}.` : `Downloaded ${downloadedFileName}.`)
+      setFeedback(formatMessage(t('backups.downloadedFeedback'), { fileName: downloadedFileName }))
     } catch (error) {
       setActionError(error instanceof Error ? error.message : t('backups.downloadFailed'))
     }
@@ -145,7 +159,7 @@ export function PortfolioBackupsSection() {
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="text-sm text-zinc-500">{t('backups.directory')}: {backupsQuery.data?.directory ?? (isPolish ? 'Ładowanie...' : 'Loading...')}</p>
+        <p className="text-sm text-zinc-500">{t('backups.directory')}: {backupsQuery.data?.directory ?? `${t('common.loading')}...`}</p>
         <p className="text-sm text-zinc-500">
           {t('backups.replaceNotice')}
         </p>

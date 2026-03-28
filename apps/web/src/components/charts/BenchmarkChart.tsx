@@ -36,7 +36,7 @@ export function BenchmarkChart({
   customBenchmarkLabel,
   benchmarkOrder,
 }: BenchmarkChartProps) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const benchmarkSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
 
@@ -59,7 +59,7 @@ export function BenchmarkChart({
   const label = BENCHMARK_LABELS[activeKey]
   const displayLabel = activeKey === 'CUSTOM' && customBenchmarkLabel
     ? customBenchmarkLabel
-    : label ? (isPolish ? label.pl : label.en) : activeKey
+    : label ? (language === 'pl' ? label.pl : label.en) : activeKey
 
   // Initial chart setup — only depends on points (not activeKey)
   const onChart = useCallback(
@@ -127,7 +127,7 @@ export function BenchmarkChart({
                 const l = BENCHMARK_LABELS[key]
                 const optionLabel = key === 'CUSTOM' && customBenchmarkLabel
                   ? customBenchmarkLabel
-                  : l ? (isPolish ? l.pl : l.en) : key
+                  : l ? (language === 'pl' ? l.pl : l.en) : key
                 return (
                   <option key={key} value={key}>{optionLabel}</option>
                 )

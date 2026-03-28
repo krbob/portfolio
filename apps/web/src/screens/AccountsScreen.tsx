@@ -8,7 +8,7 @@ import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import {
   calculateGainPct,
   describeHoldingGainRate,
@@ -98,7 +98,7 @@ export function AccountsContent() {
           <AccountSummaryTile
             label={t('accountsScreen.accountValue')}
             value={formatCurrencyPln(totalValuePln)}
-            detail={isPolish ? `${totalHoldings} pozycji aktywnych` : `${totalHoldings} active holdings`}
+            detail={formatMessage(t('accountsScreen.activeHoldings'), { count: totalHoldings })}
           />
           <AccountSummaryTile
             label={t('accountsScreen.cashOnAccounts')}
@@ -210,12 +210,8 @@ export function AccountsContent() {
                                 setDraggedAccountId(null)
                                 setDropTargetAccountId(null)
                               }}
-                              aria-label={isPolish
-                                ? `Przeciągnij ${account.accountName}, aby zmienić kolejność`
-                                : `Drag ${account.accountName} to reorder`}
-                              title={isPolish
-                                ? `Przeciągnij ${account.accountName}, aby zmienić kolejność`
-                                : `Drag ${account.accountName} to reorder`}
+                              aria-label={formatMessage(t('accountsScreen.dragLabel'), { name: account.accountName })}
+                              title={formatMessage(t('accountsScreen.dragLabel'), { name: account.accountName })}
                             >
                               <DragHandleIcon />
                             </div>
