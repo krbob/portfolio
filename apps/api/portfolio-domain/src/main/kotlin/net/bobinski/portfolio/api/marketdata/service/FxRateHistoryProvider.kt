@@ -9,7 +9,8 @@ interface FxRateHistoryProvider {
 
 sealed interface FxRateHistoryResult {
     data class Success(
-        val prices: List<HistoricalPricePoint>
+        val prices: List<HistoricalPricePoint>,
+        val fromCache: Boolean = false
     ) : FxRateHistoryResult
 
     data class Failure(

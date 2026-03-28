@@ -134,7 +134,8 @@ fun appModule(
     single<FxRateHistoryProvider> {
         RemoteFxRateHistoryProvider(
             config = get(),
-            stockAnalystClient = get()
+            stockAnalystClient = get(),
+            snapshotCacheService = get()
         )
     }
     single<InflationAdjustmentProvider> {
