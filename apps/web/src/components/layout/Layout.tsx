@@ -181,7 +181,7 @@ export function Layout({ children }: { children: ReactNode }) {
               paddingBottom: 'var(--safe-bottom)',
             }}
           >
-            <div className="mx-auto max-w-7xl p-4 sm:p-5 lg:p-8">{children}</div>
+            <div className="mx-auto max-w-[100rem] p-4 sm:p-5 lg:p-8">{children}</div>
           </div>
         </main>
       </div>
