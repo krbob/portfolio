@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, LoadingState, StatCard, TabBar } from '../components/ui'
-import { usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
+import { usePortfolioDailyHistory, usePortfolioHoldings, usePortfolioReturns } from '../hooks/use-read-model'
 import { usePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
 import { resolveBenchmarkOrder } from '../lib/benchmarks'
@@ -19,6 +19,7 @@ import {
   seriesForUnit,
   TABS,
 } from './performance/PerformanceScreenSections'
+import { PerformanceContributors } from './performance/PerformanceContributors'
 import type { Period, Tab, Unit } from './performance/PerformanceScreenSections'
 
 export function PerformanceScreen() {
@@ -29,6 +30,7 @@ export function PerformanceScreen() {
 
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
+  const holdingsQuery = usePortfolioHoldings()
   const benchmarkSettingsQuery = usePortfolioBenchmarkSettings()
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
@@ -121,6 +123,9 @@ export function PerformanceScreen() {
           subtitle={!returnsDisplayAvailable || inceptionPeriod?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
       </div>
+
+      {/* Top/bottom contributors */}
+      <PerformanceContributors holdings={holdingsQuery.data ?? []} />
 
       {/* Tab bar */}
       <TabBar

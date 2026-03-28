@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getActiveUiLanguage } from '../../lib/i18n'
 import { t } from '../../lib/messages'
+import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
 
@@ -182,6 +183,7 @@ export function Layout({ children }: { children: ReactNode }) {
             }}
           >
             <div className="mx-auto max-w-[100rem] p-4 sm:p-5 lg:p-8">{children}</div>
+            <QuickAddTransactionButton />
           </div>
         </main>
       </div>
