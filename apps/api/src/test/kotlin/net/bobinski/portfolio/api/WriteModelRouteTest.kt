@@ -1,9 +1,9 @@
 package net.bobinski.portfolio.api
 
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
-import io.ktor.client.request.delete
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -40,13 +40,12 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.Created, createResponse.status)
         assertTrue(createResponse.bodyAsText().contains("\"type\": \"BROKERAGE\""))
-        assertTrue(createResponse.bodyAsText().contains("\"displayOrder\": 0"))
         assertEquals(HttpStatusCode.OK, listResponse.status)
         assertTrue(listResponse.bodyAsText().contains("\"name\": \"Interactive Brokers\""))
     }
 
     @Test
-    fun `accounts keep stable display order as they are created`() = testApplication {
+    fun `accounts are listed in creation order`() = testApplication {
         application {
             module()
         }
@@ -83,39 +82,7 @@ class WriteModelRouteTest {
 
         assertEquals(HttpStatusCode.Created, firstResponse.status)
         assertEquals(HttpStatusCode.Created, secondResponse.status)
-        assertTrue(firstResponse.bodyAsText().contains("\"displayOrder\": 0"))
-        assertTrue(secondResponse.bodyAsText().contains("\"displayOrder\": 1"))
         assertEquals(HttpStatusCode.OK, listResponse.status)
-        assertTrue(body.indexOf("\"name\": \"First\"") < body.indexOf("\"name\": \"Second\""))
-    }
-
-    @Test
-    fun `accounts can be reordered explicitly`() = testApplication {
-        application {
-            module()
-        }
-
-        val firstAccountId = createAccount(name = "First")
-        val secondAccountId = createAccount(name = "Second")
-        val thirdAccountId = createAccount(name = "Third")
-
-        val reorderResponse = client.put("/v1/accounts/order") {
-            contentType(ContentType.Application.Json)
-            setBody(
-                """
-                {
-                  "accountIds": ["$thirdAccountId", "$firstAccountId", "$secondAccountId"]
-                }
-                """.trimIndent()
-            )
-        }
-        val listResponse = client.get("/v1/accounts")
-        val body = listResponse.bodyAsText()
-
-        assertEquals(HttpStatusCode.OK, reorderResponse.status)
-        assertTrue(reorderResponse.bodyAsText().contains("\"displayOrder\": 0"))
-        assertEquals(HttpStatusCode.OK, listResponse.status)
-        assertTrue(body.indexOf("\"name\": \"Third\"") < body.indexOf("\"name\": \"First\""))
         assertTrue(body.indexOf("\"name\": \"First\"") < body.indexOf("\"name\": \"Second\""))
     }
 

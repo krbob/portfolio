@@ -141,7 +141,7 @@ export interface paths {
         };
         /**
          * List accounts
-         * @description Returns all configured portfolio accounts ordered by their display order.
+         * @description Returns all configured portfolio accounts ordered by creation date.
          */
         get: operations["listAccounts"];
         put?: never;
@@ -150,26 +150,6 @@ export interface paths {
          * @description Creates a new portfolio account with its institution, type and base currency.
          */
         post: operations["createAccount"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/accounts/order": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Reorder accounts
-         * @description Updates the display order for accounts using the supplied ordered list of account IDs.
-         */
-        put: operations["reorderAccounts"];
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -920,7 +900,6 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
-            displayOrder: number;
             isActive: boolean;
             createdAt: string;
             updatedAt: string;
@@ -931,10 +910,6 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
-        };
-        /** net.bobinski.portfolio.api.route.ReorderAccountsRequest */
-        ReorderAccountsRequest: {
-            accountIds: string[];
         };
         /** net.bobinski.portfolio.api.route.EdoTermsResponse */
         EdoTermsResponse: {
@@ -1058,7 +1033,6 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
-            displayOrder: number;
             valuationState: string;
             totalBookValuePln: string;
             totalCurrentValuePln: string;
@@ -1868,29 +1842,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountResponse"];
-                };
-            };
-        };
-    };
-    reorderAccounts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReorderAccountsRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AccountResponse"][];
                 };
             };
         };

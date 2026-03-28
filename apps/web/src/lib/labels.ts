@@ -350,8 +350,6 @@ export function labelAuditAction(value: string) {
     switch (value) {
       case 'ACCOUNT_CREATED':
         return 'Dodano konto'
-      case 'ACCOUNT_ORDER_UPDATED':
-        return 'Zmieniono kolejność kont'
       case 'BACKUP_CREATED':
         return 'Utworzono kopię zapasową'
       case 'BACKUP_CREATE_FAILED':

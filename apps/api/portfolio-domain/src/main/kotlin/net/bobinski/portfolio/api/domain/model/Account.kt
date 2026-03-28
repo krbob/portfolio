@@ -9,7 +9,6 @@ data class Account(
     val institution: String,
     val type: AccountType,
     val baseCurrency: String,
-    val displayOrder: Int = 0,
     val isActive: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant
@@ -18,7 +17,6 @@ data class Account(
         require(name.isNotBlank()) { "Account name must not be blank." }
         require(institution.isNotBlank()) { "Institution must not be blank." }
         require(isIsoCurrencyCode(baseCurrency)) { "Base currency must be a 3-letter ISO code." }
-        require(displayOrder >= 0) { "Display order must not be negative." }
     }
 }
 

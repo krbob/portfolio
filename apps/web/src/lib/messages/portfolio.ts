@@ -109,9 +109,7 @@ export const portfolioMessages = {
   'accountsScreen.staleFallback': { pl: 'Część rachunków korzysta z wyceny opóźnionej lub księgowej', en: 'Some accounts use stale or book valuation' },
   'accountsScreen.readModel': { pl: 'Model odczytowy', en: 'Read model' },
   'accountsScreen.accountOverview': { pl: 'Przegląd rachunków', en: 'Account overview' },
-  'accountsScreen.overviewDescription': { pl: 'Wartość, gotówka i status wyceny w podziale na rachunki. Kolejność możesz ustawić ręcznie.', en: 'Value, cash and valuation status split by account, with manual ordering controlled from this view.' },
-  'accountsScreen.dragHint': { pl: 'Przeciągnij uchwyt po lewej, aby ustawić kolejność kont.', en: 'Drag the handle on the left to set the account order.' },
-  'accountsScreen.savingOrder': { pl: 'Zapisywanie kolejności...', en: 'Saving order...' },
+  'accountsScreen.overviewDescription': { pl: 'Wartość, gotówka i status wyceny w podziale na rachunki.', en: 'Value, cash and valuation status split by account.' },
   'accountsScreen.noAccountsTitle': { pl: 'Brak kont', en: 'No accounts yet' },
   'accountsScreen.noAccountsDescription': { pl: 'Dodaj pierwszy rachunek po prawej stronie, aby zacząć przypisywać do niego transakcje.', en: 'Add the first account on the right to start assigning transactions to it.' },
   'accountsScreen.order': { pl: 'Kolejność', en: 'Order' },
@@ -313,7 +311,6 @@ export const portfolioMessages = {
   'holdings.redeemAllButton': { pl: 'Wykup wszystko ({count} szt.)', en: 'Redeem all ({count} units)' },
   'holdings.redeemLotSuffix': { pl: ' od {date}', en: ' starting from {date}' },
   'accountsScreen.activeHoldings': { pl: '{count} pozycji aktywnych', en: '{count} active holdings' },
-  'accountsScreen.dragLabel': { pl: 'Przeciągnij {name}, aby zmienić kolejność', en: 'Drag {name} to reorder' },
   'accountDetails.holdingsCount': { pl: '{count} pozycji', en: '{count} holdings' },
   'performanceSections.chartTitle': { pl: 'Wartość portfela ({unit})', en: 'Portfolio Value ({unit})' },
   'performanceSections.cpiCoverageNote': {

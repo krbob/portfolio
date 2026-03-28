@@ -16,9 +16,9 @@ class JdbcAccountRepository(
         connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
-                select id, name, institution, type, base_currency, display_order, is_active, created_at, updated_at
+                select id, name, institution, type, base_currency, is_active, created_at, updated_at
                 from accounts
-                order by display_order asc, created_at asc, name asc
+                order by created_at asc, name asc
                 """.trimIndent()
             ).use { statement ->
                 statement.executeQuery().use { resultSet ->
@@ -35,7 +35,7 @@ class JdbcAccountRepository(
         connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
-                select id, name, institution, type, base_currency, display_order, is_active, created_at, updated_at
+                select id, name, institution, type, base_currency, is_active, created_at, updated_at
                 from accounts
                 where id = ?
                 """.trimIndent()
@@ -80,14 +80,13 @@ class JdbcAccountRepository(
         prepareStatement(
             """
             insert into accounts (
-                id, name, institution, type, base_currency, display_order, is_active, created_at, updated_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, name, institution, type, base_currency, is_active, created_at, updated_at
+            ) values (?, ?, ?, ?, ?, ?, ?, ?)
             on conflict(id) do update set
                 name = excluded.name,
                 institution = excluded.institution,
                 type = excluded.type,
                 base_currency = excluded.base_currency,
-                display_order = excluded.display_order,
                 is_active = excluded.is_active,
                 updated_at = excluded.updated_at
             """.trimIndent()
@@ -97,10 +96,9 @@ class JdbcAccountRepository(
             statement.setString(3, account.institution)
             statement.setString(4, account.type.name)
             statement.setString(5, account.baseCurrency)
-            statement.setInt(6, account.displayOrder)
-            statement.setBooleanAsInteger(7, account.isActive)
-            statement.setInstant(8, account.createdAt)
-            statement.setInstant(9, account.updatedAt)
+            statement.setBooleanAsInteger(6, account.isActive)
+            statement.setInstant(7, account.createdAt)
+            statement.setInstant(8, account.updatedAt)
             statement.executeUpdate()
         }
     }
@@ -111,7 +109,6 @@ class JdbcAccountRepository(
         institution = getString("institution"),
         type = AccountType.valueOf(getString("type")),
         baseCurrency = getString("base_currency"),
-        displayOrder = getInt("display_order"),
         isActive = booleanFromInteger("is_active"),
         createdAt = instant("created_at"),
         updatedAt = instant("updated_at")

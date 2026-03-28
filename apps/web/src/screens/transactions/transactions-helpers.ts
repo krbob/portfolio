@@ -475,16 +475,9 @@ export function compareNumbers(left: string, right: string) {
 }
 
 export function compareAccountsByDisplayOrder(
-  left: { displayOrder?: number; createdAt: string; name: string },
-  right: { displayOrder?: number; createdAt: string; name: string },
+  left: { createdAt: string; name: string },
+  right: { createdAt: string; name: string },
 ) {
-  const leftOrder = left.displayOrder ?? Number.MAX_SAFE_INTEGER
-  const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER
-
-  if (leftOrder !== rightOrder) {
-    return leftOrder - rightOrder
-  }
-
   if (left.createdAt !== right.createdAt) {
     return left.createdAt.localeCompare(right.createdAt)
   }

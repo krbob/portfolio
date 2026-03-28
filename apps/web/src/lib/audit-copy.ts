@@ -30,8 +30,6 @@ export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean
       const accountName = extractMessagePart(event.message, /^Created account (.+)\.$/)
       return accountName ? `Dodano konto ${accountName}.` : 'Dodano nowe konto.'
     }
-    case 'ACCOUNT_ORDER_UPDATED':
-      return 'Zmieniono kolejność wyświetlania kont.'
     case 'BACKUP_CREATED': {
       const fileName = event.entityId ?? extractMessagePart(event.message, /^Created .+ backup (.+)\.$/)
       return fileName ? `Utworzono kopię zapasową ${fileName}.` : 'Utworzono kopię zapasową.'
@@ -217,8 +215,6 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, isPo
     institution: tFor('auditCopy.metaInstitution', lang),
     type: tFor('auditCopy.metaType', lang),
     baseCurrency: tFor('auditCopy.metaBaseCurrency', lang),
-    displayOrder: tFor('auditCopy.metaDisplayOrder', lang),
-    orderedAccountIds: tFor('auditCopy.metaOrderedAccountIds', lang),
     kind: tFor('auditCopy.metaKind', lang),
     assetClass: tFor('auditCopy.metaAssetClass', lang),
     currency: tFor('auditCopy.metaCurrency', lang),

@@ -16,7 +16,7 @@ export function AccountsSection() {
   const accountsQuery = useAccounts()
   const createAccountMutation = useCreateAccount()
   const [form, setForm] = useState(initialForm)
-  const sortedAccounts = [...(accountsQuery.data ?? [])].sort(compareAccountsByDisplayOrder)
+  const sortedAccounts = accountsQuery.data ?? []
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -110,22 +110,4 @@ export function AccountsSection() {
       </div>
     </Card>
   )
-}
-
-function compareAccountsByDisplayOrder(
-  left: { displayOrder?: number; createdAt: string; name: string },
-  right: { displayOrder?: number; createdAt: string; name: string },
-) {
-  const leftOrder = left.displayOrder ?? Number.MAX_SAFE_INTEGER
-  const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER
-
-  if (leftOrder !== rightOrder) {
-    return leftOrder - rightOrder
-  }
-
-  if (left.createdAt !== right.createdAt) {
-    return left.createdAt.localeCompare(right.createdAt)
-  }
-
-  return left.name.localeCompare(right.name)
 }

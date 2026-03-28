@@ -165,7 +165,6 @@ class PortfolioStateRouteTest {
         assertTrue(exportResponse.bodyAsText().contains("\"targets\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"importProfiles\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"name\": \"Primary\""))
-        assertTrue(exportResponse.bodyAsText().contains("\"displayOrder\": 0"))
         assertEquals(HttpStatusCode.OK, importResponse.status)
         assertTrue(importResponse.bodyAsText().contains("\"mode\": \"REPLACE\""))
         assertTrue(importResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))

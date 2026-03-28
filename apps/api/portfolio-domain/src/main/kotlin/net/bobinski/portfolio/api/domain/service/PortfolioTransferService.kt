@@ -40,7 +40,7 @@ class PortfolioTransferService(
 ) {
     suspend fun exportState(): PortfolioSnapshot {
         val accounts = accountRepository.list()
-            .sortedWith(compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
+            .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
         val appPreferences = appPreferenceRepository.list().sortedBy(AppPreference::key)
         val instruments = instrumentRepository.list().sortedBy(Instrument::createdAt)
         val targets = portfolioTargetRepository.list()
@@ -92,7 +92,7 @@ class PortfolioTransferService(
             }
 
             val accounts = prepared.accounts
-                .sortedWith(compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() }))
+                .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
                 .map { account -> accountRepository.save(account) }
             val appPreferences = prepared.appPreferences
                 .sortedWith(compareBy<AppPreference>({ it.key }, { it.updatedAt }))
@@ -626,7 +626,7 @@ class PortfolioTransferService(
         institution = institution,
         type = type.name,
         baseCurrency = baseCurrency,
-        displayOrder = displayOrder,
+        displayOrder = 0,
         isActive = isActive,
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString()
@@ -705,7 +705,6 @@ class PortfolioTransferService(
         institution = institution,
         type = AccountType.valueOf(type),
         baseCurrency = baseCurrency,
-        displayOrder = displayOrder,
         isActive = isActive,
         createdAt = Instant.parse(createdAt),
         updatedAt = Instant.parse(updatedAt)
@@ -808,7 +807,7 @@ data class AccountSnapshot(
     val institution: String,
     val type: String,
     val baseCurrency: String,
-    val displayOrder: Int,
+    val displayOrder: Int = 0,
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String

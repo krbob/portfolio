@@ -20,7 +20,7 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(7, appliedMigrationCount(connection))
+                    assertEquals(8, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))

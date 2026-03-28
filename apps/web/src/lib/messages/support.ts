@@ -62,8 +62,6 @@ export const supportMessages = {
   'auditCopy.metaInstitution': { pl: 'Instytucja', en: 'Institution' },
   'auditCopy.metaType': { pl: 'Typ', en: 'Type' },
   'auditCopy.metaBaseCurrency': { pl: 'Waluta bazowa', en: 'Base currency' },
-  'auditCopy.metaDisplayOrder': { pl: 'Kolejność', en: 'Display order' },
-  'auditCopy.metaOrderedAccountIds': { pl: 'Id kont w kolejności', en: 'Ordered account ids' },
   'auditCopy.metaKind': { pl: 'Rodzaj instrumentu', en: 'Instrument kind' },
   'auditCopy.metaAssetClass': { pl: 'Klasa aktywów', en: 'Asset class' },
   'auditCopy.metaCurrency': { pl: 'Waluta', en: 'Currency' },

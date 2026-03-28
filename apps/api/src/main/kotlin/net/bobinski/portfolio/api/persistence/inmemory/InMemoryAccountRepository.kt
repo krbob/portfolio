@@ -9,7 +9,7 @@ class InMemoryAccountRepository : AccountRepository {
     private val accounts = ConcurrentHashMap<UUID, Account>()
 
     override suspend fun list(): List<Account> = accounts.values.sortedWith(
-        compareBy<Account>({ it.displayOrder }, { it.createdAt }, { it.name.lowercase() })
+        compareBy<Account>({ it.createdAt }, { it.name.lowercase() })
     )
 
     override suspend fun get(id: UUID): Account? = accounts[id]
