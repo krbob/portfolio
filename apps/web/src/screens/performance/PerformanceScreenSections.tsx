@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPeriod } from '../../api/read-model'
 import { AllocationTimeChart, BenchmarkChart, PortfolioValueChart } from '../../components/charts'
 import { ErrorState, LoadingState, StatePanel, SegmentedControl } from '../../components/ui'
@@ -133,6 +134,7 @@ export function ReturnsTab({
   onPeriodChange: (period: Period) => void
 }) {
   const data = returnsQuery.data
+  const [returnsMode, setReturnsMode] = useState<'nominal' | 'real'>('nominal')
 
   if (returnsQuery.isLoading) {
     return (
@@ -166,6 +168,7 @@ export function ReturnsTab({
   const realCoverageUntil = findRealPlnCoverageMonth(data.periods)
   const selectedPeriod = findSelectedReturnPeriod(data.periods, period)
   const selectedBenchmarkPeriod = selectedPeriod?.benchmarks.length ? selectedPeriod : null
+  const isReal = returnsMode === 'real'
 
   return (
     <div className="space-y-4">
@@ -186,6 +189,22 @@ export function ReturnsTab({
         />
       ) : null}
 
+      <div className="flex items-center justify-between gap-3">
+        <SegmentedControl
+          options={[
+            { value: 'nominal', label: t('performanceSections.nominal') },
+            { value: 'real', label: t('performanceSections.real') },
+          ]}
+          value={returnsMode}
+          onChange={(v) => setReturnsMode(v as 'nominal' | 'real')}
+        />
+        {isReal && realCoverageUntil ? (
+          <p className="text-xs text-zinc-500">
+            {formatMessage(t('performanceSections.cpiCoverageNote'), { coverageUntil: realCoverageUntil })}
+          </p>
+        ) : null}
+      </div>
+
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900">
         <table className="w-full">
@@ -194,53 +213,47 @@ export function ReturnsTab({
               <th className={th}>{t('performanceSections.period')}</th>
               <th className={thRight}>PLN MWRR</th>
               <th className={thRight}>PLN TWR</th>
-              <th className={thRight}>{t('performanceSections.realPln')}</th>
               <th className={thRight}>USD MWRR</th>
               <th className={thRight}>{t('performanceSections.annualized')}</th>
               <th className={thRight}>{t('performanceSections.days')}</th>
             </tr>
           </thead>
           <tbody>
-            {data.periods.map((p) => (
-              <tr
-                key={p.key}
-                className={`${tr} ${p.key === selectedPeriod?.key ? 'bg-zinc-800/30' : p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
-              >
-                <td className={`${td} font-medium text-zinc-200`}>
-                  {p.label}
-                  {p.clippedToInception && (
-                    <span className="ml-1.5 text-xs text-zinc-600">
-                      {t('performanceSections.clipped')}
-                    </span>
-                  )}
-                </td>
-                <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.moneyWeightedReturn} available={returnsDisplayAvailable} />
-                </td>
-                <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.timeWeightedReturn} available={returnsDisplayAvailable} />
-                </td>
-                <td className={tdRight}>
-                  <ReturnValue value={p.realPln?.moneyWeightedReturn} available={returnsDisplayAvailable} />
-                </td>
-                <td className={tdRight}>
-                  <ReturnValue value={p.nominalUsd?.moneyWeightedReturn} available={returnsDisplayAvailable} />
-                </td>
-                <td className={tdRight}>
-                  <ReturnValue value={p.nominalPln?.annualizedMoneyWeightedReturn} available={returnsDisplayAvailable} />
-                </td>
-                <td className={`${tdRight} text-zinc-500`}>{p.dayCount}</td>
-              </tr>
-            ))}
+            {data.periods.map((p) => {
+              const pln = isReal ? p.realPln : p.nominalPln
+              return (
+                <tr
+                  key={p.key}
+                  className={`${tr} ${p.key === selectedPeriod?.key ? 'bg-zinc-800/30' : p.key === 'MAX' ? 'bg-zinc-800/20' : ''}`}
+                >
+                  <td className={`${td} font-medium text-zinc-200`}>
+                    {p.label}
+                    {p.clippedToInception && (
+                      <span className="ml-1.5 text-xs text-zinc-600">
+                        {t('performanceSections.clipped')}
+                      </span>
+                    )}
+                  </td>
+                  <td className={tdRight}>
+                    <ReturnValue value={pln?.moneyWeightedReturn} available={returnsDisplayAvailable} />
+                  </td>
+                  <td className={tdRight}>
+                    <ReturnValue value={pln?.timeWeightedReturn} available={returnsDisplayAvailable} />
+                  </td>
+                  <td className={tdRight}>
+                    <ReturnValue value={isReal ? null : p.nominalUsd?.moneyWeightedReturn} available={returnsDisplayAvailable} />
+                  </td>
+                  <td className={tdRight}>
+                    <ReturnValue value={pln?.annualizedMoneyWeightedReturn} available={returnsDisplayAvailable} />
+                  </td>
+                  <td className={`${tdRight} text-zinc-500`}>{p.dayCount}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
       </div>
-      {realCoverageUntil ? (
-        <p className="text-xs text-zinc-500">
-          {formatMessage(t('performanceSections.cpiCoverageNote'), { coverageUntil: realCoverageUntil })}
-        </p>
-      ) : null}
 
       {selectedBenchmarkPeriod ? (
         <div className={card}>

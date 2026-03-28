@@ -253,6 +253,8 @@ export const portfolioMessages = {
   'performanceSections.returnsUnavailableTitle': { pl: 'Zwroty są chwilowo niewiarygodne', en: 'Returns are temporarily unavailable' },
   'performanceSections.returnsUnavailableDescription': { pl: 'Historia portfela nie ma obecnie wystarczającego pokrycia wyceną rynkową, więc metryki zwrotu pokazujemy jako b/d zamiast udawać 0,00%.', en: 'Portfolio history currently lacks enough market valuation coverage, so return metrics are shown as N/A instead of pretending they are 0.00%.' },
   'performanceSections.period': { pl: 'Okres', en: 'Period' },
+  'performanceSections.nominal': { pl: 'Nominalne', en: 'Nominal' },
+  'performanceSections.real': { pl: 'Realne (po inflacji)', en: 'Real (inflation-adjusted)' },
   'performanceSections.realPln': { pl: 'PLN po inflacji', en: 'Real PLN' },
   'performanceSections.annualized': { pl: 'Rocznie', en: 'Annualized' },
   'performanceSections.days': { pl: 'Dni', en: 'Days' },
