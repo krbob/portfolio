@@ -58,13 +58,13 @@ export function SettingsScreen() {
       <StaleMarketDataAlert alert={staleAlert.alert} />
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">
-        {activeSection && (
+        {activeSection != null && (
           <button
             type="button"
             onClick={() => setActiveSection(null)}
             className="whitespace-nowrap rounded-full border border-blue-600 bg-blue-600/20 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-600/30"
           >
-            {t('settings.navAll')}
+{'\u2190'}
           </button>
         )}
         {SETTINGS_SECTIONS.map((section) => (
@@ -272,13 +272,10 @@ function MobileSection({
   sectionIds: string[]
   children: ReactNode
 }) {
-  const isVisible =
-    activeSection == null ||
-    sectionIds.length === 0 ||
-    sectionIds.includes(activeSection)
+  const matchesActive = sectionIds.length === 0 || sectionIds.includes(activeSection ?? '')
 
   return (
-    <div className={isVisible ? 'block' : 'hidden xl:block'}>
+    <div className={matchesActive ? 'block' : 'hidden xl:block'}>
       {children}
     </div>
   )
