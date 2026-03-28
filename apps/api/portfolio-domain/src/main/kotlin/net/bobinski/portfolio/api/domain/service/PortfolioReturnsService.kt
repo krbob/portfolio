@@ -339,8 +339,12 @@ class PortfolioReturnsService(
             return null
         }
 
-        val realFrom = realFromMonth.atDay(1)
+        val earliestValueDate = values.minOfOrNull { it.date } ?: return null
+        val realFrom = maxOf(realFromMonth.atDay(1), earliestValueDate)
         val realUntil = realUntilExclusive.atDay(1).minusDays(1)
+        if (!realFrom.isBefore(realUntil)) {
+            return null
+        }
         val nominalMetric = calculateMetric(
             start = realFrom,
             end = realUntil,
