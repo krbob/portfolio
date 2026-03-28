@@ -732,11 +732,7 @@ class PortfolioReturnsService(
         setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
 
     private fun alignedRealStartMonth(date: LocalDate): YearMonth =
-        if (date.dayOfMonth == 1) {
-            YearMonth.from(date)
-        } else {
-            YearMonth.from(date).plusMonths(1)
-        }
+        YearMonth.from(date)
 
     private fun latestCompletePortfolioMonthExclusive(date: LocalDate): YearMonth =
         if (date.dayOfMonth == date.lengthOfMonth()) {

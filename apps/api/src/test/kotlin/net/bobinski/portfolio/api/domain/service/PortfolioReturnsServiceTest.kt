@@ -231,12 +231,12 @@ class PortfolioReturnsServiceTest {
         )
         fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
         fixture.inflationProvider.result = InflationAdjustmentResult.Success(
-            from = YearMonth.parse("2025-04"),
+            from = YearMonth.parse("2025-03"),
             until = YearMonth.parse("2026-03"),
             multiplier = BigDecimal("1.05")
         )
         fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
-            from = YearMonth.parse("2025-04"),
+            from = YearMonth.parse("2025-03"),
             until = YearMonth.parse("2026-03"),
             firstMultiplier = BigDecimal("1.05")
         )
@@ -248,7 +248,7 @@ class PortfolioReturnsServiceTest {
 
         assertEquals(BigDecimal("0.1"), oneYear.nominalPln!!.moneyWeightedReturn)
         assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.moneyWeightedReturn)
-        assertEquals(YearMonth.parse("2025-04"), oneYearInflation.from)
+        assertEquals(YearMonth.parse("2025-03"), oneYearInflation.from)
         assertEquals(YearMonth.parse("2026-03"), oneYearInflation.until)
     }
 
