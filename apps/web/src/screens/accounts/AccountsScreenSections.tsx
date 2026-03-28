@@ -47,7 +47,6 @@ export function AccountDetailsCard({
   holdings: PortfolioHolding[]
   isPolish: boolean
 }) {
-  const largestHolding = holdings[0] ?? null
   const cashSharePct = parsePortfolioNumber(account.totalCurrentValuePln) > 0
     ? (parsePortfolioNumber(account.cashBalancePln) / parsePortfolioNumber(account.totalCurrentValuePln)) * 100
     : 0
@@ -89,14 +88,7 @@ export function AccountDetailsCard({
       </div>
 
       <div className="mt-6">
-        <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium text-zinc-100">{t('accountDetails.topPositions')}</h4>
-          {largestHolding && (
-            <p className="text-xs text-zinc-500">
-              {t('accountDetails.largestLine')}: {largestHolding.instrumentName}
-            </p>
-          )}
-        </div>
+        <h4 className="text-sm font-medium text-zinc-100">{t('accountDetails.topPositions')}</h4>
 
         {holdings.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500">

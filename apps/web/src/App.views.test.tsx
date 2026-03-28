@@ -180,7 +180,7 @@ describe('App', () => {
     expect(await screen.findByText(/81.45% of portfolio/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/top positions/i)).toBeInTheDocument()
-    expect((await screen.findAllByText(/largest line/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/top positions/i)).length).toBeGreaterThan(0)
     fireEvent.click(await screen.findByText(/^reserve$/i))
 
     expect(await screen.findByText(/has no active positions yet/i)).toBeInTheDocument()
