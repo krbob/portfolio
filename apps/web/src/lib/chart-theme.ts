@@ -49,6 +49,12 @@ export function createPortfolioChartOptions(width: number, height: number) {
     timeScale: {
       borderColor: chartPalette.border,
     },
+    handleScroll: {
+      mouseWheel: false,
+    },
+    handleScale: {
+      mouseWheel: false,
+    },
     crosshair: {
       vertLine: { color: chartPalette.crosshair, style: 3 },
       horzLine: { color: chartPalette.crosshair, style: 3 },
