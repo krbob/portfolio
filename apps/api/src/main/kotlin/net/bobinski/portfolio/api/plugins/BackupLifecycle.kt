@@ -33,7 +33,11 @@ fun Application.configureBackupLifecycle() {
                 runCatching {
                     backupService.runScheduledBackup()
                 }.onSuccess { backup ->
-                    logger.info("Scheduled portfolio backup created: {}", backup.fileName)
+                    if (backup != null) {
+                        logger.info("Scheduled portfolio backup created: {}", backup.fileName)
+                    } else {
+                        logger.debug("Scheduled portfolio backup skipped — recent backup exists.")
+                    }
                 }.onFailure { exception ->
                     logger.warn("Scheduled portfolio backup failed.", exception)
                 }

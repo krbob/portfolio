@@ -190,7 +190,16 @@ class PortfolioBackupService(
         )
     }
 
-    suspend fun runScheduledBackup(): PortfolioBackupRecord = createBackup(trigger = BackupTrigger.SCHEDULED)
+    suspend fun runScheduledBackup(): PortfolioBackupRecord? = operationMutex.withLock {
+        val latestBackup = listBackupsUnlocked().firstOrNull()
+        if (latestBackup != null) {
+            val age = java.time.Duration.between(latestBackup.createdAt, clock.instant())
+            if (age < java.time.Duration.ofMinutes(config.intervalMinutes.toLong())) {
+                return@withLock null
+            }
+        }
+        createBackupUnlocked(BackupTrigger.SCHEDULED)
+    }
 
     private fun listBackupsUnlocked(): List<PortfolioBackupRecord> {
         val directory = backupDirectory()
