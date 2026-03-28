@@ -15,6 +15,7 @@ const dotColors: Record<string, string> = {
 
 export function StatCard({ label, value, subtitle, change, dot, hero }: StatCardProps) {
   const dotClass = dot ? dotColors[dot] ?? dot : undefined
+  const isZero = value === '0' || value === '0,00 zł' || value === '0.00 zł'
 
   return (
     <div className="min-h-[5.5rem] rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:min-h-[6rem] sm:p-5">
@@ -28,7 +29,7 @@ export function StatCard({ label, value, subtitle, change, dot, hero }: StatCard
             ? `${value.length > 10 ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl'} text-zinc-50`
             : 'text-[1.5rem] sm:text-2xl'
         } ${
-          change === 'positive' ? 'text-emerald-400' : change === 'negative' ? 'text-red-400' : ''
+          isZero ? 'text-zinc-600' : change === 'positive' ? 'text-emerald-400' : change === 'negative' ? 'text-red-400' : ''
         }`}
       >
         {value}

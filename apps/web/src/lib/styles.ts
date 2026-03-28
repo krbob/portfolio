@@ -49,14 +49,14 @@ export const badgeVariants = {
 export const txBadgeVariants = {
   BUY: 'bg-emerald-500/15 text-emerald-400',
   SELL: 'bg-red-500/15 text-red-400',
-  REDEEM: 'bg-sky-500/15 text-sky-400',
-  DIVIDEND: 'bg-blue-500/15 text-blue-400',
-  DEPOSIT: 'bg-zinc-500/15 text-zinc-400',
+  REDEEM: 'bg-red-500/15 text-red-400',
+  DIVIDEND: 'bg-emerald-500/15 text-emerald-400',
+  DEPOSIT: 'bg-blue-500/15 text-blue-400',
   WITHDRAWAL: 'bg-amber-500/15 text-amber-400',
   FEE: 'bg-zinc-500/15 text-zinc-400',
-  TAX: 'bg-red-500/15 text-red-400',
+  TAX: 'bg-zinc-500/15 text-zinc-400',
   INTEREST: 'bg-emerald-500/15 text-emerald-400',
-  CORRECTION: 'bg-amber-500/15 text-amber-400',
+  CORRECTION: 'bg-zinc-500/15 text-zinc-400',
 } as const
 
 // Valuation status badge colors
