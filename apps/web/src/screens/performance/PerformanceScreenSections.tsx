@@ -189,6 +189,7 @@ export function ReturnsTab({
         />
       ) : null}
 
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900">
         <table className="w-full">
           <thead>
@@ -236,6 +237,7 @@ export function ReturnsTab({
             ))}
           </tbody>
         </table>
+      </div>
       </div>
       {realCoverageUntil ? (
         <p className="text-xs text-zinc-500">

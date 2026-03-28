@@ -339,7 +339,7 @@ export function HoldingsScreen() {
                       tabIndex={0}
                     >
                       <td className={td}>
-                        <div className="font-medium text-zinc-100">{holding.instrumentName}</div>
+                        <span className="block max-w-[16rem] truncate font-medium text-zinc-100" title={holding.instrumentName}>{holding.instrumentName}</span>
                         <div className="text-xs text-zinc-500">
                           {labelInstrumentKind(holding.kind)} · {holding.currency}
                         </div>
