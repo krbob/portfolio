@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { MobileAppSection } from '../components/MobileAppSection'
 import { MarketDataSnapshotsSection } from '../components/MarketDataSnapshotsSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
@@ -31,6 +32,20 @@ const SETTINGS_SECTIONS = [
 
 export function SettingsScreen() {
   const staleAlert = useStaleMarketDataAlert()
+  const location = useLocation()
+  const [activeSection, setActiveSection] = useState<string | null>(() => {
+    const hash = location.hash.replace('#', '')
+    return hash || null
+  })
+
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    setActiveSection(hash || null)
+  }, [location.hash])
+
+  const handleNavClick = useCallback((sectionId: string) => {
+    setActiveSection(sectionId)
+  }, [])
 
   return (
     <>
@@ -39,11 +54,25 @@ export function SettingsScreen() {
       <StaleMarketDataAlert alert={staleAlert.alert} />
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">
+        {activeSection && (
+          <button
+            type="button"
+            onClick={() => setActiveSection(null)}
+            className="whitespace-nowrap rounded-full border border-blue-600 bg-blue-600/20 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-600/30"
+          >
+            {t('settings.navAll')}
+          </button>
+        )}
         {SETTINGS_SECTIONS.map((section) => (
           <a
             key={section.id}
             href={`#${section.id}`}
-            className="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            onClick={() => handleNavClick(section.id)}
+            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              activeSection === section.id
+                ? 'border-blue-600 bg-blue-600/20 text-blue-300'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+            }`}
           >
             {t(section.labelKey)}
           </a>
@@ -129,81 +158,112 @@ export function SettingsScreen() {
         </aside>
 
         <div className="space-y-12">
-          <section id="setup-guide" className="scroll-mt-24">
-            <PortfolioSetupGuideSection />
-          </section>
-
-          <SettingsGroup
-            eyebrow={t('settings.portfolioEyebrow')}
-            title={t('settings.portfolioTitle')}
-            description={t('settings.portfolioDescription')}
-          >
-            <section id="targets" className="scroll-mt-24">
-              <PortfolioTargetsSection />
+          <MobileSection activeSection={activeSection} sectionIds={[]}>
+            <section id="setup-guide" className="scroll-mt-24">
+              <PortfolioSetupGuideSection />
             </section>
+          </MobileSection>
 
-            <section id="benchmarks" className="scroll-mt-24">
-              <PortfolioBenchmarkSettingsSection />
-            </section>
-          </SettingsGroup>
+          <MobileSection activeSection={activeSection} sectionIds={['targets', 'benchmarks']}>
+            <SettingsGroup
+              eyebrow={t('settings.portfolioEyebrow')}
+              title={t('settings.portfolioTitle')}
+              description={t('settings.portfolioDescription')}
+            >
+              <section id="targets" className="scroll-mt-24">
+                <PortfolioTargetsSection />
+              </section>
 
-          <SettingsGroup
-            eyebrow={t('settings.operationsEyebrow')}
-            title={t('settings.operationsTitle')}
-            description={t('settings.operationsDescription')}
-          >
-            <section id="transfer" className="scroll-mt-24">
-              <PortfolioStateSection />
-            </section>
+              <section id="benchmarks" className="scroll-mt-24">
+                <PortfolioBenchmarkSettingsSection />
+              </section>
+            </SettingsGroup>
+          </MobileSection>
 
-            <section id="backups" className="scroll-mt-24">
-              <PortfolioBackupsSection />
-            </section>
+          <MobileSection activeSection={activeSection} sectionIds={['transfer', 'backups', 'market-data', 'cache']}>
+            <SettingsGroup
+              eyebrow={t('settings.operationsEyebrow')}
+              title={t('settings.operationsTitle')}
+              description={t('settings.operationsDescription')}
+            >
+              <section id="transfer" className="scroll-mt-24">
+                <PortfolioStateSection />
+              </section>
 
-            <section id="market-data" className="scroll-mt-24">
-              <MarketDataSnapshotsSection />
-            </section>
+              <section id="backups" className="scroll-mt-24">
+                <PortfolioBackupsSection />
+              </section>
 
-            <section id="cache" className="scroll-mt-24">
-              <ReadModelCacheSection />
-            </section>
-          </SettingsGroup>
+              <section id="market-data" className="scroll-mt-24">
+                <MarketDataSnapshotsSection />
+              </section>
 
-          <SettingsGroup
-            eyebrow={t('settings.diagnosticsEyebrow')}
-            title={t('settings.diagnosticsTitle')}
-            description={t('settings.diagnosticsDescription')}
-          >
-            <section id="health" className="scroll-mt-24">
-              <SystemReadinessSection />
-            </section>
+              <section id="cache" className="scroll-mt-24">
+                <ReadModelCacheSection />
+              </section>
+            </SettingsGroup>
+          </MobileSection>
 
-            <section id="data-quality" className="scroll-mt-24">
-              <PortfolioDataQualitySection />
-            </section>
+          <MobileSection activeSection={activeSection} sectionIds={['health', 'data-quality', 'audit']}>
+            <SettingsGroup
+              eyebrow={t('settings.diagnosticsEyebrow')}
+              title={t('settings.diagnosticsTitle')}
+              description={t('settings.diagnosticsDescription')}
+            >
+              <section id="health" className="scroll-mt-24">
+                <SystemReadinessSection />
+              </section>
 
-            <Card as="section" id="audit" className="scroll-mt-24">
-              <SectionHeader
-                eyebrow={t('settings.auditEyebrow')}
-                title={t('settings.auditTitle')}
-                description={t('settings.auditDescription')}
-              />
-              <OperationalAuditPanel />
-            </Card>
-          </SettingsGroup>
+              <section id="data-quality" className="scroll-mt-24">
+                <PortfolioDataQualitySection />
+              </section>
 
-          <SettingsGroup
-            eyebrow={t('settings.companionEyebrow')}
-            title={t('settings.companionTitle')}
-            description={t('settings.companionDescription')}
-          >
-            <section id="mobile-app" className="scroll-mt-24">
-              <MobileAppSection />
-            </section>
-          </SettingsGroup>
+              <Card as="section" id="audit" className="scroll-mt-24">
+                <SectionHeader
+                  eyebrow={t('settings.auditEyebrow')}
+                  title={t('settings.auditTitle')}
+                  description={t('settings.auditDescription')}
+                />
+                <OperationalAuditPanel />
+              </Card>
+            </SettingsGroup>
+          </MobileSection>
+
+          <MobileSection activeSection={activeSection} sectionIds={['mobile-app']}>
+            <SettingsGroup
+              eyebrow={t('settings.companionEyebrow')}
+              title={t('settings.companionTitle')}
+              description={t('settings.companionDescription')}
+            >
+              <section id="mobile-app" className="scroll-mt-24">
+                <MobileAppSection />
+              </section>
+            </SettingsGroup>
+          </MobileSection>
         </div>
       </div>
     </>
+  )
+}
+
+function MobileSection({
+  activeSection,
+  sectionIds,
+  children,
+}: {
+  activeSection: string | null
+  sectionIds: string[]
+  children: ReactNode
+}) {
+  const isVisible =
+    activeSection == null ||
+    sectionIds.length === 0 ||
+    sectionIds.includes(activeSection)
+
+  return (
+    <div className={isVisible ? 'block' : 'hidden xl:block'}>
+      {children}
+    </div>
   )
 }
 

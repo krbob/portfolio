@@ -100,21 +100,25 @@ export function PerformanceScreen() {
         <StatCard
           label={t('performance.latestValue')}
           value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
+          subtitle={!latest ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label="YTD MWRR"
           value={formatReturn(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
           change={returnChange(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
+          subtitle={!returnsDisplayAvailable || ytdPeriod?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label="1Y MWRR"
           value={formatReturn(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
           change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
+          subtitle={!returnsDisplayAvailable || y1Period?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label={t('performance.inceptionMwrr')}
           value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
           change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
+          subtitle={!returnsDisplayAvailable || inceptionPeriod?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
       </div>
 

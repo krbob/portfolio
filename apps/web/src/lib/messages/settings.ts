@@ -102,6 +102,7 @@ export const settingsMessages = {
   'readiness.detailResponseBody': { pl: 'Treść odpowiedzi', en: 'Response body' },
   'settings.title': { pl: 'Ustawienia', en: 'Settings' },
   'settings.navLabel': { pl: 'Nawigacja ustawień', en: 'Settings navigation' },
+  'settings.navAll': { pl: 'Wszystkie', en: 'All' },
   'settings.navHealth': { pl: 'Stan systemu', en: 'Health' },
   'settings.navDataQuality': { pl: 'Jakość danych', en: 'Data quality' },
   'settings.navTargets': { pl: 'Cele', en: 'Targets' },

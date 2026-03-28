@@ -105,6 +105,7 @@ export const appMessages = {
   },
   'performance.emptyAction': { pl: 'Otwórz transakcje', en: 'Open Transactions' },
   'performance.latestValue': { pl: 'Ostatnia wartość', en: 'Latest Value' },
+  'performance.noDataSubtitle': { pl: 'Brak danych za wybrany okres', en: 'No data for selected period' },
   'performance.inceptionMwrr': { pl: 'MWRR od początku', en: 'Inception MWRR' },
   'performance.tabCharts': { pl: 'Wykresy', en: 'Charts' },
   'performance.tabReturns': { pl: 'Zwroty', en: 'Returns' },

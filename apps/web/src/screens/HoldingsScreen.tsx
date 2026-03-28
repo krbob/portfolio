@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
@@ -62,6 +62,7 @@ export function HoldingsScreen() {
   const [statusFilter, setStatusFilter] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.statusFilter, 'ALL', { validate: isStringValue })
   const [searchQuery, setSearchQuery] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.searchQuery, '', { validate: isStringValue })
   const [selectedHoldingKey, setSelectedHoldingKey] = useState<string | null>(null)
+  const holdingDetailRef = useRef<HTMLDivElement>(null)
   const [sortState, setSortState] = usePersistentState<SortState>(HOLDINGS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase())
 
@@ -103,6 +104,12 @@ export function HoldingsScreen() {
       setStatusFilter('ALL')
     }
   }, [filterOptions.statuses, holdingsQuery.isLoading, setStatusFilter, statusFilter])
+
+  useEffect(() => {
+    if (selectedHoldingKey && holdingDetailRef.current?.scrollIntoView) {
+      holdingDetailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [selectedHoldingKey])
 
   const activeFilterCount =
     (accountFilter !== 'ALL' ? 1 : 0) +
@@ -327,7 +334,7 @@ export function HoldingsScreen() {
                     <tr
                       key={key}
                       className={`${tr} cursor-pointer transition-colors ${
-                        isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/30'
+                        isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : 'hover:bg-zinc-800/30'
                       }`}
                       onClick={() => setSelectedHoldingKey(key)}
                       onKeyDown={(event) => {
@@ -387,7 +394,7 @@ export function HoldingsScreen() {
 
       {/* Selected holding detail */}
       {selectedHolding && (
-        <div className={`${card} mt-4`}>
+        <div ref={holdingDetailRef} className={`${card} mt-4`}>
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-zinc-100">{selectedHolding.instrumentName}</h3>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { PageHeader } from '../components/layout'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
@@ -54,6 +54,8 @@ export function InstrumentsScreen() {
       .sort((left, right) => parsePortfolioNumber(right.currentValuePln ?? right.bookValuePln) - parsePortfolioNumber(left.currentValuePln ?? left.bookValuePln)),
     [holdings, selectedRow?.instrument.id],
   )
+  const detailRef = useRef<HTMLDivElement>(null)
+
   const stockAnalystAnalysisUrl = buildStockAnalystAnalysisUrl(
     appMetaQuery.data?.stockAnalystUiUrl,
     selectedRow?.instrument.valuationSource === 'STOCK_ANALYST' ? selectedRow.instrument.symbol : null,
@@ -69,6 +71,12 @@ export function InstrumentsScreen() {
       setSelectedInstrumentId(sortedRows[0]?.instrument.id ?? null)
     }
   }, [sortedRows, selectedInstrumentId])
+
+  useEffect(() => {
+    if (selectedInstrumentId && detailRef.current?.scrollIntoView) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [selectedInstrumentId])
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
     return (
@@ -260,12 +268,14 @@ export function InstrumentsScreen() {
           </Card>
 
           {selectedRow && (
-            <InstrumentDetailsCard
-              row={selectedRow}
-              holdings={selectedHoldings}
-              isPolish={isPolish}
-              analysisUrl={stockAnalystAnalysisUrl}
-            />
+            <div ref={detailRef}>
+              <InstrumentDetailsCard
+                row={selectedRow}
+                holdings={selectedHoldings}
+                isPolish={isPolish}
+                analysisUrl={stockAnalystAnalysisUrl}
+              />
+            </div>
           )}
         </div>
 

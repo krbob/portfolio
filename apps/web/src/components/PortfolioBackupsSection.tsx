@@ -258,7 +258,7 @@ export function PortfolioBackupsSection() {
         eyebrow={t('backups.auditEyebrow')}
         title={t('backups.auditTitle')}
         description={t('backups.auditDescription')}
-        className="mb-4 mt-8"
+        className="mb-4 mt-4"
       />
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
