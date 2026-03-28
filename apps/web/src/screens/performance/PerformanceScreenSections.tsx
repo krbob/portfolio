@@ -228,6 +228,11 @@ export function ReturnsTab({
                 >
                   <td className={`${td} font-medium text-zinc-200`}>
                     {p.label}
+                    {isReal && p.inflationFrom && p.inflationUntil && (
+                      <span className="ml-1.5 text-xs text-zinc-600">
+                        ({formatYearMonth(p.inflationFrom)} – {formatYearMonth(p.inflationUntil)})
+                      </span>
+                    )}
                     {p.clippedToInception && (
                       <span className="ml-1.5 text-xs text-zinc-600">
                         {t('performanceSections.clipped')}
