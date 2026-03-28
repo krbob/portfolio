@@ -441,6 +441,11 @@ export function HoldingsContent() {
           )}
           {selectedHolding.kind === 'BOND_EDO' && (selectedHolding.edoLots?.length ?? 0) > 0 ? (
             <div className="mt-4 space-y-3">
+              {selectedHolding.edoLots?.[0]?.currentRatePercent && (
+                <p className="text-sm text-zinc-400">
+                  {t('holdings.rate')}: {formatNumber(selectedHolding.edoLots[0].currentRatePercent, { maximumFractionDigits: 2 })}%
+                </p>
+              )}
               {selectedHolding.edoLots?.map((lot) => (
                 <div
                   key={`${lot.purchaseDate}-${lot.quantity}`}
@@ -453,11 +458,6 @@ export function HoldingsContent() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
-                    {lot.currentRatePercent && (
-                      <p className="text-xs text-zinc-400">
-                        {t('holdings.rate')}: {formatNumber(lot.currentRatePercent, { maximumFractionDigits: 2 })}%
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}

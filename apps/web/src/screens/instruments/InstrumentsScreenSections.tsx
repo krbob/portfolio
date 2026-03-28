@@ -171,6 +171,11 @@ export function InstrumentDetailsCard({
       {edoLots.length > 0 && (
         <div className="mt-6">
           <h4 className="text-sm font-medium text-zinc-100">{t('instrumentDetails.edoLots')}</h4>
+          {edoLots[0]?.currentRatePercent && (
+            <p className="mt-2 text-sm text-zinc-400">
+              {t('instrumentDetails.rate')}: {formatNumber(edoLots[0].currentRatePercent, { maximumFractionDigits: 2 })}%
+            </p>
+          )}
           <div className="mt-3 space-y-2">
             {edoLots.map((lot) => (
               <div
@@ -190,11 +195,6 @@ export function InstrumentDetailsCard({
                       ? formatHoldingGainPreview(lot.unrealizedGainPln, isPolish)
                       : t('instrumentDetails.bookBasis')}
                   </p>
-                  {lot.currentRatePercent && (
-                    <p className="text-xs text-zinc-400">
-                      {t('instrumentDetails.rate')}: {formatNumber(lot.currentRatePercent, { maximumFractionDigits: 2 })}%
-                    </p>
-                  )}
                 </div>
               </div>
             ))}
