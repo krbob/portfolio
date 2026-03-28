@@ -42,7 +42,7 @@ export function DashboardHeroStats({
   bondPct: number
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         label={labelPrimaryPortfolioValueMetric(valuationState, isPolish)}
         value={formatCurrencyPln(displayedTotalValuePln)}
@@ -364,7 +364,7 @@ export function DashboardQuickStats({
   cashBreakdownSubtitle?: string
 }) {
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         label={t('dashboardSections.unrealizedPL')}
         value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
