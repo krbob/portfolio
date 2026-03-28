@@ -266,6 +266,7 @@ export const portfolioMessages = {
   'performanceSections.benchTwr': { pl: 'TWR benchmarku', en: 'Bench TWR' },
   'performanceSections.valueBridge': { pl: 'Rozbicie zmiany wartości', en: 'Value-change bridge' },
   'performanceSections.valueBridgePeriod': { pl: 'Okres mostu wyniku', en: 'Value bridge period' },
+  'performanceSections.returnsPeriodLabel': { pl: 'Okres zwrotów', en: 'Returns period' },
   'performanceSections.from': { pl: 'Od', en: 'From' },
   'performanceSections.until': { pl: 'Do', en: 'Until' },
   'performanceSections.netChange': { pl: 'Zmiana netto', en: 'Net change' },

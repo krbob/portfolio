@@ -180,12 +180,20 @@ export function ReturnsTab({
         />
       ) : null}
 
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-zinc-400">{t('performanceSections.period')}</span>
+        <SegmentedControl
+          options={PERIODS.map((value) => ({ value, label: value }))}
+          value={period}
+          onChange={(value) => onPeriodChange(value as Period)}
+          ariaLabel={t('performanceSections.returnsPeriodLabel')}
+        />
+      </div>
+
       {selectedPeriod ? (
         <ReturnsBreakdownCard
           period={selectedPeriod}
           returnsDisplayAvailable={returnsDisplayAvailable}
-          selectedPeriod={period}
-          onPeriodChange={onPeriodChange}
         />
       ) : null}
 
@@ -395,36 +403,21 @@ function BenchmarkCard({
 function ReturnsBreakdownCard({
   period,
   returnsDisplayAvailable,
-  selectedPeriod,
-  onPeriodChange,
 }: {
   period: PortfolioReturnPeriod
   returnsDisplayAvailable: boolean
-  selectedPeriod: Period
-  onPeriodChange: (period: Period) => void
 }) {
   const breakdown = period.breakdown
 
   return (
     <div className={card}>
-      <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.valueBridge')}</h3>
-          <p className="mt-1 text-sm text-zinc-500">
-            {returnsDisplayAvailable
-              ? formatMessage(t('performanceSections.bridgeAvailableDetail'), { label: period.label })
-              : formatMessage(t('performanceSections.bridgeUnavailableDetail'), { label: period.label })}
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-medium text-zinc-400">{t('performanceSections.period')}</span>
-          <SegmentedControl
-            options={PERIODS.map((value) => ({ value, label: value }))}
-            value={selectedPeriod}
-            onChange={(value) => onPeriodChange(value as Period)}
-            ariaLabel={t('performanceSections.valueBridgePeriod')}
-          />
-        </div>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.valueBridge')}</h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          {returnsDisplayAvailable
+            ? formatMessage(t('performanceSections.bridgeAvailableDetail'), { label: period.label })
+            : formatMessage(t('performanceSections.bridgeUnavailableDetail'), { label: period.label })}
+        </p>
       </div>
 
       {breakdown ? (
