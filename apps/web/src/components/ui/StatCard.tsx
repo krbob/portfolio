@@ -27,7 +27,7 @@ export function StatCard({ label, value, subtitle, change, dot, hero }: StatCard
         className={`mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums ${
           hero
             ? `${value.length > 10 ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl'} text-zinc-50`
-            : 'text-[1.5rem] sm:text-2xl'
+            : value.length > 10 ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl'
         } ${
           isZero ? 'text-zinc-600' : change === 'positive' ? 'text-emerald-400' : change === 'negative' ? 'text-red-400' : ''
         }`}
