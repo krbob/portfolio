@@ -1,5 +1,6 @@
 import type { MarketDataSnapshot, PortfolioOverview } from '../api/read-model'
 import type { AppReadiness } from '../api/system'
+import { formatDateTime } from './format'
 import type { UiLanguage } from './i18n'
 import { formatMessage, tFor } from './messages'
 
@@ -41,7 +42,7 @@ export function buildStaleMarketDataAlert({
   const parts = [
     tFor('staleAlert.messageBase', language),
     latestSnapshotAt
-      ? formatMessage(tFor('staleAlert.messageSnapshot', language), { timestamp: latestSnapshotAt })
+      ? formatMessage(tFor('staleAlert.messageSnapshot', language), { timestamp: formatDateTime(latestSnapshotAt) })
       : tFor('staleAlert.messageSnapshotMissing', language),
     upstreamLabel
       ? formatMessage(tFor('staleAlert.messageUpstream', language), { upstream: upstreamLabel })

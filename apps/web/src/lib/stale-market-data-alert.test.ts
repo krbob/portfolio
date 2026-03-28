@@ -30,7 +30,7 @@ describe('buildStaleMarketDataAlert', () => {
     expect(alert?.latestSnapshotAt).toBe('2026-03-27T08:30:00Z')
     expect(alert?.upstreamLabel).toBe('Stock Analyst')
     expect(alert?.valuationCoverageLabel).toBe('4 / 5')
-    expect(alert?.message).toContain('2026-03-27T08:30:00Z')
+    expect(alert?.message).toContain('27')
     expect(alert?.message).toContain('Otwarte luki wyceny: 2.')
   })
 
