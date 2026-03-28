@@ -8,9 +8,9 @@ import {
   formatHoldingGainPreview,
   formatHoldingQuantity,
 } from '../../lib/portfolio-presentation'
-import { badge, btnGhost, th, thRight } from '../../lib/styles'
+import { badge, btnGhost } from '../../lib/styles'
 import { isMarketValuedStatus } from '../../lib/valuation'
-import type { InstrumentRow, SortField, SortState } from './InstrumentsScreenModel'
+import type { InstrumentRow } from './InstrumentsScreenModel'
 import { labelInstrumentStatus, statusVariant } from './InstrumentsScreenModel'
 
 export function InstrumentSummaryTile({
@@ -229,38 +229,6 @@ function formatInstrumentCurrentPriceDetail(currency: string, holding: Portfolio
   return undefined
 }
 
-export function SortableHeader({
-  sort,
-  field,
-  label,
-  onToggle,
-  align,
-}: {
-  sort: SortState
-  field: SortField
-  label: string
-  onToggle: (s: SortState) => void
-  align?: 'right'
-}) {
-  const isActive = sort.field === field
-  const arrow = !isActive ? '↕' : sort.direction === 'asc' ? '↑' : '↓'
-  const base = align === 'right' ? thRight : th
-
-  return (
-    <th className={base}>
-      <button
-        type="button"
-        className={`inline-flex items-center gap-1 ${isActive ? 'text-zinc-300' : ''}`}
-        onClick={() =>
-          onToggle({ field, direction: isActive && sort.direction === 'desc' ? 'asc' : 'desc' })
-        }
-      >
-        {label}
-        <span className="text-[10px]">{arrow}</span>
-      </button>
-    </th>
-  )
-}
 
 function InstrumentDetailMetric({
   label,

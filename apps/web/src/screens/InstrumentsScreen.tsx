@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { PageHeader } from '../components/layout'
-import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
+import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader, SortableHeader } from '../components/ui'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
@@ -19,7 +19,7 @@ import {
 } from '../lib/portfolio-presentation'
 import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
 import { badge, td, tdRight, tr } from '../lib/styles'
-import { InstrumentDetailsCard, InstrumentSummaryTile, SortableHeader } from './instruments/InstrumentsScreenSections'
+import { InstrumentDetailsCard, InstrumentSummaryTile } from './instruments/InstrumentsScreenSections'
 import { buildInstrumentRows, compareRows, defaultSort, isSortState, labelInstrumentStatus, statusVariant } from './instruments/InstrumentsScreenModel'
 import type { SortState } from './instruments/InstrumentsScreenModel'
 

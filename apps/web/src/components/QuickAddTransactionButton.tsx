@@ -11,8 +11,8 @@ export function QuickAddTransactionButton() {
   return (
     <button
       onClick={() => navigate('/transactions', { state: { transactionDraft: {} } })}
-      className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition-transform hover:scale-105 active:scale-95 sm:h-12 sm:w-auto sm:rounded-xl sm:px-4 sm:gap-2"
-      style={{ bottom: 'max(1.5rem, calc(var(--safe-bottom, 0px) + 1.5rem))' }}
+      className="fixed bottom-8 right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition-transform hover:scale-105 active:scale-95 sm:h-12 sm:w-auto sm:rounded-xl sm:px-5 sm:gap-2"
+      style={{ bottom: 'max(2rem, calc(var(--safe-bottom, 0px) + 2rem))', right: 'max(2rem, calc(var(--safe-right, 0px) + 2rem))' }}
       aria-label={t('layout.quickAddTransaction')}
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 sm:h-5 sm:w-5">

@@ -2,7 +2,8 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
-import { FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
+import { FilterBar, EmptyState, ErrorState, LoadingState, StatePanel, SortableHeader } from '../components/ui'
+import type { SortState, SortDirection } from '../components/ui'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
@@ -16,7 +17,7 @@ import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
 import type { TransactionRouteState } from '../lib/transaction-composer'
 import { isMarketValuedStatus } from '../lib/valuation'
 import {
-  btnGhost, btnPrimary, card, cardFlush, th, thRight, td, tdRight, tr,
+  btnGhost, btnPrimary, card, cardFlush, td, tdRight, tr,
   filterInput, label as labelClass, badge, badgeVariants,
 } from '../lib/styles'
 
@@ -29,14 +30,9 @@ type SortField =
   | 'unrealizedGainPln'
   | 'valuationStatus'
 
-type SortDirection = 'asc' | 'desc'
+type HoldingsSortState = SortState<SortField>
 
-interface SortState {
-  field: SortField
-  direction: SortDirection
-}
-
-const defaultSort: SortState = { field: 'currentValuePln', direction: 'desc' }
+const defaultSort: HoldingsSortState = { field: 'currentValuePln', direction: 'desc' }
 
 const HOLDINGS_PREFERENCE_KEYS = {
   accountFilter: 'portfolio:view:holdings:account-filter',
@@ -72,7 +68,7 @@ export function HoldingsContent() {
   const [searchQuery, setSearchQuery] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.searchQuery, '', { validate: isStringValue })
   const [selectedHoldingKey, setSelectedHoldingKey] = useState<string | null>(null)
   const holdingDetailRef = useRef<HTMLDivElement>(null)
-  const [sortState, setSortState] = usePersistentState<SortState>(HOLDINGS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
+  const [sortState, setSortState] = usePersistentState<HoldingsSortState>(HOLDINGS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase())
 
   const filterOptions = useMemo(
@@ -671,39 +667,6 @@ function FilterSelect({
   )
 }
 
-function SortableHeader({
-  sort,
-  field,
-  label,
-  onToggle,
-  align,
-}: {
-  sort: SortState
-  field: SortField
-  label: string
-  onToggle: (s: SortState) => void
-  align?: 'right'
-}) {
-  const isActive = sort.field === field
-  const arrow = !isActive ? '↕' : sort.direction === 'asc' ? '↑' : '↓'
-  const base = align === 'right' ? thRight : th
-
-  return (
-    <th className={base}>
-      <button
-        type="button"
-        className={`inline-flex items-center gap-1 ${isActive ? 'text-zinc-300' : ''}`}
-        onClick={() =>
-          onToggle({ field, direction: isActive && sort.direction === 'desc' ? 'asc' : 'desc' })
-        }
-      >
-        {label}
-        <span className="text-[10px]">{arrow}</span>
-      </button>
-    </th>
-  )
-}
-
 // --- Utilities ---
 
 function isStringValue(value: unknown): value is string {
@@ -724,16 +687,16 @@ function isSortDirection(value: unknown): value is SortDirection {
   return value === 'asc' || value === 'desc'
 }
 
-function isSortState(value: unknown): value is SortState {
+function isSortState(value: unknown): value is HoldingsSortState {
   if (typeof value !== 'object' || value == null) {
     return false
   }
 
-  const candidate = value as Partial<SortState>
+  const candidate = value as Partial<HoldingsSortState>
   return isSortField(candidate.field) && isSortDirection(candidate.direction)
 }
 
-function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: SortState) {
+function compareHoldings(a: PortfolioHolding, b: PortfolioHolding, sort: HoldingsSortState) {
   const f = sort.direction === 'asc' ? 1 : -1
   switch (sort.field) {
     case 'instrumentName': return f * a.instrumentName.localeCompare(b.instrumentName)

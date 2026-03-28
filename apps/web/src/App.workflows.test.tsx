@@ -1897,31 +1897,7 @@ describe('App', () => {
     }
   })
 
-  it('reorders accounts from the accounts screen', async () => {
-    const writeModelAccounts = [
-      {
-        id: 'acc-a',
-        name: 'Alpha',
-        institution: 'Broker A',
-        type: 'BROKERAGE',
-        baseCurrency: 'PLN',
-        displayOrder: 0,
-        isActive: true,
-        createdAt: '2026-03-01T12:00:00Z',
-        updatedAt: '2026-03-01T12:00:00Z',
-      },
-      {
-        id: 'acc-b',
-        name: 'Beta',
-        institution: 'Broker B',
-        type: 'BROKERAGE',
-        baseCurrency: 'PLN',
-        displayOrder: 1,
-        isActive: true,
-        createdAt: '2026-03-02T12:00:00Z',
-        updatedAt: '2026-03-02T12:00:00Z',
-      },
-    ]
+  it('sorts accounts by column header on the accounts screen', async () => {
     const portfolioAccounts = [
       {
         accountId: 'acc-a',
@@ -1964,11 +1940,9 @@ describe('App', () => {
         valuationIssueCount: 0,
       },
     ]
-    const reorderPayloads: string[][] = []
 
-    globalThis.fetch = vi.fn(async (input, init) => {
+    globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
-      const method = init?.method ?? (input instanceof Request ? input.method : 'GET')
 
       if (url.includes('/api/v1/auth/session')) {
         return new Response(
@@ -2013,27 +1987,6 @@ describe('App', () => {
         )
       }
 
-      if (url.includes('/api/v1/accounts/order') && method === 'PUT') {
-        const body = JSON.parse(String(init?.body ?? '{}')) as { accountIds: string[] }
-        reorderPayloads.push(body.accountIds)
-
-        body.accountIds.forEach((accountId, index) => {
-          const writeModelAccount = writeModelAccounts.find((account) => account.id === accountId)
-          if (writeModelAccount) {
-            writeModelAccount.displayOrder = index
-          }
-          const portfolioAccount = portfolioAccounts.find((account) => account.accountId === accountId)
-          if (portfolioAccount) {
-            portfolioAccount.displayOrder = index
-          }
-        })
-
-        writeModelAccounts.sort((left, right) => left.displayOrder - right.displayOrder)
-        portfolioAccounts.sort((left, right) => left.displayOrder - right.displayOrder)
-
-        return new Response(JSON.stringify(writeModelAccounts), { status: 200 })
-      }
-
       if (url.includes('/api/v1/portfolio/accounts')) {
         return new Response(JSON.stringify(portfolioAccounts), { status: 200 })
       }
@@ -2043,7 +1996,7 @@ describe('App', () => {
       }
 
       if (url.includes('/api/v1/accounts')) {
-        return new Response(JSON.stringify(writeModelAccounts), { status: 200 })
+        return new Response(JSON.stringify([]), { status: 200 })
       }
 
       if (url.includes('/api/v1/portfolio/audit/events')) {
@@ -2069,41 +2022,35 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    const dragBetaHandleName = /drag beta to reorder|przeciągnij beta, aby zmienić kolejność/i
-
     expect(await screen.findByRole('heading', { name: /portfolio|portfel/i, level: 2 })).toBeInTheDocument()
+
+    // Default sort is by value descending: Alpha (1100) before Beta (900)
     const alphaCells = await screen.findAllByText(/^Alpha$/)
     const betaCells = await screen.findAllByText(/^Beta$/)
     await waitFor(() => {
       expect(appearsBefore(alphaCells[0], betaCells[0])).toBe(true)
     })
 
-    const betaRow = betaCells[0]?.closest('tr')
-    expect(betaRow).not.toBeNull()
-    if (!betaRow) {
-      throw new Error('Beta row did not render')
-    }
+    // Click the Account column header to sort by name descending (first click on a new field defaults to desc)
+    const table = screen.getByRole('table')
+    const accountColumnHeader = within(table).getByRole('button', { name: /account|konto/i })
+    fireEvent.click(accountColumnHeader)
 
-    const alphaRow = alphaCells[0]?.closest('tr')
-    expect(alphaRow).not.toBeNull()
-    if (!alphaRow) {
-      throw new Error('Alpha row did not render')
-    }
-
-    const dragHandle = within(betaRow).getByLabelText(dragBetaHandleName)
-    fireEvent.dragStart(dragHandle)
-    fireEvent.dragOver(alphaRow)
-    fireEvent.drop(alphaRow)
-    fireEvent.dragEnd(dragHandle)
-
-    await waitFor(() => {
-      expect(reorderPayloads).toEqual([['acc-b', 'acc-a']])
-    })
-
+    // Beta (B) should be before Alpha (A) in descending name order
     await waitFor(() => {
       const alpha = screen.getAllByText(/^Alpha$/)[0]
       const beta = screen.getAllByText(/^Beta$/)[0]
       expect(appearsBefore(beta, alpha)).toBe(true)
+    })
+
+    // Click the Account column header again to sort by name ascending
+    fireEvent.click(accountColumnHeader)
+
+    // Alpha (A) should now be before Beta (B) in ascending name order
+    await waitFor(() => {
+      const alpha = screen.getAllByText(/^Alpha$/)[0]
+      const beta = screen.getAllByText(/^Beta$/)[0]
+      expect(appearsBefore(alpha, beta)).toBe(true)
     })
   })
 

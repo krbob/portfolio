@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PortfolioAccountSummary } from '../api/read-model'
 import { AccountsSection } from '../components/AccountsSection'
 import { PageHeader } from '../components/layout'
-import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
+import { Card, EmptyState, ErrorState, LoadingState, SectionHeader, SortableHeader } from '../components/ui'
+import type { SortState, SortDirection } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
-import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { labelAccountType } from '../lib/labels'
 import { formatMessage, t } from '../lib/messages'
+import { usePersistentState } from '../lib/persistence'
 import {
   calculateGainPct,
   describeHoldingGainRate,
@@ -18,8 +19,24 @@ import {
   parsePortfolioNumber,
   portfolioValuationStateVariant,
 } from '../lib/portfolio-presentation'
-import { AccountDetailsCard, AccountSummaryTile, DragHandleIcon } from './accounts/AccountsScreenSections'
-import { badge, td, tdRight, th, thRight, tr } from '../lib/styles'
+import { AccountDetailsCard, AccountSummaryTile } from './accounts/AccountsScreenSections'
+import { badge, td, tdRight, thRight, tr } from '../lib/styles'
+
+type AccountSortField =
+  | 'accountName'
+  | 'type'
+  | 'holdingCount'
+  | 'cashBalancePln'
+  | 'totalCurrentValuePln'
+  | 'unrealizedGainPln'
+
+type AccountsSortState = SortState<AccountSortField>
+
+const defaultSort: AccountsSortState = { field: 'totalCurrentValuePln', direction: 'desc' }
+
+const ACCOUNTS_PREFERENCE_KEYS = {
+  sortState: 'portfolio:view:accounts:sort-state',
+} as const
 
 export function AccountsScreen() {
   return (
@@ -34,12 +51,9 @@ export function AccountsContent() {
   const { isPolish } = useI18n()
   const accountsQuery = usePortfolioAccounts()
   const holdingsQuery = usePortfolioHoldings()
-  const reorderAccountsMutation = useReorderAccounts()
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
-  const [orderedAccounts, setOrderedAccounts] = useState(accounts)
-  const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null)
-  const [dropTargetAccountId, setDropTargetAccountId] = useState<string | null>(null)
+  const [sortState, setSortState] = usePersistentState<AccountsSortState>(ACCOUNTS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isAccountsSortState })
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const totalValuePln = accounts.reduce((sum, account) => sum + parsePortfolioNumber(account.totalCurrentValuePln), 0)
   const totalCashPln = accounts.reduce((sum, account) => sum + parsePortfolioNumber(account.cashBalancePln), 0)
@@ -47,7 +61,11 @@ export function AccountsContent() {
   const degradedCount = accounts.filter((account) => account.valuationState !== 'MARK_TO_MARKET').length
   const totalHoldings = accounts.reduce((sum, account) => sum + account.activeHoldingCount, 0)
   const totalValuedHoldings = accounts.reduce((sum, account) => sum + account.valuedHoldingCount, 0)
-  const selectedAccount = orderedAccounts.find((account) => account.accountId === selectedAccountId) ?? orderedAccounts[0] ?? null
+  const sortedAccounts = useMemo(
+    () => [...accounts].sort((a, b) => compareAccounts(a, b, sortState)),
+    [accounts, sortState],
+  )
+  const selectedAccount = sortedAccounts.find((account) => account.accountId === selectedAccountId) ?? sortedAccounts[0] ?? null
   const selectedAccountHoldings = useMemo(
     () => holdings
       .filter((holding) => holding.accountId === selectedAccount?.accountId)
@@ -56,19 +74,15 @@ export function AccountsContent() {
   )
 
   useEffect(() => {
-    setOrderedAccounts(accounts)
-  }, [accounts])
-
-  useEffect(() => {
-    if (orderedAccounts.length === 0) {
+    if (sortedAccounts.length === 0) {
       setSelectedAccountId(null)
       return
     }
 
-    if (!selectedAccountId || !orderedAccounts.some((account) => account.accountId === selectedAccountId)) {
-      setSelectedAccountId(orderedAccounts[0]?.accountId ?? null)
+    if (!selectedAccountId || !sortedAccounts.some((account) => account.accountId === selectedAccountId)) {
+      setSelectedAccountId(sortedAccounts[0]?.accountId ?? null)
     }
-  }, [orderedAccounts, selectedAccountId])
+  }, [sortedAccounts, selectedAccountId])
 
   if (accountsQuery.isLoading || holdingsQuery.isLoading) {
     return (
@@ -131,19 +145,6 @@ export function AccountsContent() {
                 title={t('accountsScreen.accountOverview')}
                 description={t('accountsScreen.overviewDescription')}
               />
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                <span>
-                  {t('accountsScreen.dragHint')}
-                </span>
-                {reorderAccountsMutation.isPending && (
-                  <span className="text-blue-400">
-                    {t('accountsScreen.savingOrder')}
-                  </span>
-                )}
-                {reorderAccountsMutation.error && (
-                  <span className="text-red-400">{reorderAccountsMutation.error.message}</span>
-                )}
-              </div>
             </div>
 
             {accounts.length === 0 ? (
@@ -158,64 +159,27 @@ export function AccountsContent() {
                 <table className="min-w-full">
                   <thead className="bg-zinc-950/30">
                     <tr>
-                      <th className="w-14 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        <span className="sr-only">{t('accountsScreen.order')}</span>
-                      </th>
-                      <th className={th}>{t('accountsScreen.accountColumn')}</th>
-                      <th className={th}>{t('accountsScreen.type')}</th>
-                      <th className={thRight}>{t('accountsScreen.holdingsColumn')}</th>
-                      <th className={thRight}>{t('accountsScreen.cash')}</th>
-                      <th className={thRight}>{t('accountsScreen.value')}</th>
-                      <th className={thRight}>{t('accountsScreen.pl')}</th>
+                      <SortableHeader sort={sortState} field="accountName" label={t('accountsScreen.accountColumn')} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="type" label={t('accountsScreen.type')} onToggle={setSortState} />
+                      <SortableHeader sort={sortState} field="holdingCount" label={t('accountsScreen.holdingsColumn')} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="cashBalancePln" label={t('accountsScreen.cash')} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="totalCurrentValuePln" label={t('accountsScreen.value')} onToggle={setSortState} align="right" />
+                      <SortableHeader sort={sortState} field="unrealizedGainPln" label={t('accountsScreen.pl')} onToggle={setSortState} align="right" />
                       <th className={thRight}>{t('accountsScreen.statusColumn')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orderedAccounts.map((account) => {
+                    {sortedAccounts.map((account) => {
                       const gainPct = calculateGainPct(account.totalCurrentValuePln, account.totalBookValuePln)
                       const isSelected = selectedAccount?.accountId === account.accountId
                       const cashBreakdown = formatCurrencyBreakdown(account.cashBalances)
                       return (
                         <tr
-                          className={`${tr} cursor-pointer ${draggedAccountId === account.accountId ? 'opacity-60' : ''} ${dropTargetAccountId === account.accountId ? 'bg-zinc-950/30' : ''} ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                          className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
                           key={account.accountId}
                           aria-selected={isSelected}
                           onClick={() => setSelectedAccountId(account.accountId)}
-                          onDragOver={(event) => {
-                            event.preventDefault()
-                            if (draggedAccountId && draggedAccountId !== account.accountId) {
-                              setDropTargetAccountId(account.accountId)
-                            }
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault()
-                            handleDrop(account.accountId)
-                          }}
                         >
-                          <td className="w-14 px-3 py-3 text-sm">
-                            <div
-                              className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/50 transition ${
-                                reorderAccountsMutation.isPending
-                                  ? 'cursor-not-allowed text-zinc-700'
-                                  : 'cursor-grab text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 active:cursor-grabbing'
-                              }`}
-                              draggable={!reorderAccountsMutation.isPending}
-                              onClick={(event) => event.stopPropagation()}
-                              onDragStart={(event) => {
-                                event.stopPropagation()
-                                setDraggedAccountId(account.accountId)
-                              }}
-                              onDragEnd={(event) => {
-                                event.stopPropagation()
-                                setDraggedAccountId(null)
-                                setDropTargetAccountId(null)
-                              }}
-                              aria-label={formatMessage(t('accountsScreen.dragLabel'), { name: account.accountName })}
-                              title={formatMessage(t('accountsScreen.dragLabel'), { name: account.accountName })}
-                            >
-                              <DragHandleIcon />
-                            </div>
-                          </td>
                           <td className={td}>
                             <div>
                               <p className="font-medium text-zinc-100">{account.accountName}</p>
@@ -301,51 +265,43 @@ export function AccountsContent() {
       </div>
     </>
   )
-
-  function handleDrop(targetAccountId: string) {
-    if (reorderAccountsMutation.isPending || draggedAccountId == null || draggedAccountId === targetAccountId) {
-      setDraggedAccountId(null)
-      setDropTargetAccountId(null)
-      return
-    }
-
-    const currentIndex = orderedAccounts.findIndex((account) => account.accountId === draggedAccountId)
-    const targetIndex = orderedAccounts.findIndex((account) => account.accountId === targetAccountId)
-
-    setDraggedAccountId(null)
-    setDropTargetAccountId(null)
-
-    if (currentIndex < 0 || targetIndex < 0) {
-      return
-    }
-
-    const insertionIndex = targetIndex
-    if (currentIndex === insertionIndex) {
-      return
-    }
-
-    persistOrder(moveItem(orderedAccounts, currentIndex, insertionIndex))
-  }
-
-  function persistOrder(nextAccounts: PortfolioAccountSummary[]) {
-    const previousAccounts = orderedAccounts
-    setOrderedAccounts(nextAccounts)
-    reorderAccountsMutation.mutate(
-      {
-        accountIds: nextAccounts.map((account) => account.accountId),
-      },
-      {
-        onError: () => {
-          setOrderedAccounts(previousAccounts)
-        },
-      },
-    )
-  }
 }
 
-function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
-  const nextItems = [...items]
-  const [item] = nextItems.splice(fromIndex, 1)
-  nextItems.splice(toIndex, 0, item)
-  return nextItems
+function isAccountSortField(value: unknown): value is AccountSortField {
+  return value === 'accountName'
+    || value === 'type'
+    || value === 'holdingCount'
+    || value === 'cashBalancePln'
+    || value === 'totalCurrentValuePln'
+    || value === 'unrealizedGainPln'
+}
+
+function isSortDirection(value: unknown): value is SortDirection {
+  return value === 'asc' || value === 'desc'
+}
+
+function isAccountsSortState(value: unknown): value is AccountsSortState {
+  if (typeof value !== 'object' || value == null) {
+    return false
+  }
+
+  const candidate = value as Partial<AccountsSortState>
+  return isAccountSortField(candidate.field) && isSortDirection(candidate.direction)
+}
+
+function compareAccounts(a: PortfolioAccountSummary, b: PortfolioAccountSummary, sort: AccountsSortState) {
+  const f = sort.direction === 'asc' ? 1 : -1
+  switch (sort.field) {
+    case 'accountName': return f * a.accountName.localeCompare(b.accountName)
+    case 'type': return f * labelAccountType(a.type).localeCompare(labelAccountType(b.type))
+    case 'holdingCount': return f * (a.activeHoldingCount - b.activeHoldingCount)
+    case 'cashBalancePln': return f * (parsePortfolioNumber(a.cashBalancePln) - parsePortfolioNumber(b.cashBalancePln))
+    case 'totalCurrentValuePln': return f * (parsePortfolioNumber(a.totalCurrentValuePln) - parsePortfolioNumber(b.totalCurrentValuePln))
+    case 'unrealizedGainPln': {
+      const gainA = parsePortfolioNumber(a.totalCurrentValuePln) - parsePortfolioNumber(a.totalBookValuePln)
+      const gainB = parsePortfolioNumber(b.totalCurrentValuePln) - parsePortfolioNumber(b.totalBookValuePln)
+      return f * (gainA - gainB)
+    }
+    default: return 0
+  }
 }
