@@ -20,13 +20,12 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(8, appliedMigrationCount(connection))
+                    assertEquals(9, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
                     assertTrue(tableExists(connection, "transactions"))
                     assertTrue(tableExists(connection, "portfolio_targets"))
-                    assertTrue(tableExists(connection, "daily_snapshots"))
                     assertTrue(tableExists(connection, "audit_events"))
                     assertTrue(tableExists(connection, "read_model_snapshots"))
                     assertTrue(tableExists(connection, "transaction_import_profiles"))
