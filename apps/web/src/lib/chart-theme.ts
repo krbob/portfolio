@@ -12,7 +12,7 @@ export const chartPalette = {
   equities: '#3b82f6',   // blue-500
   bonds: '#f59e0b',      // amber-500
   cash: '#71717a',       // zinc-500
-  contributions: '#52525b', // zinc-600 dashed
+  contributions: '#a1a1aa', // zinc-400 dashed
 
   // Area fills
   portfolioFill: 'rgba(59, 130, 246, 0.18)',
