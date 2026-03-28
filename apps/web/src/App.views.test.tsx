@@ -165,14 +165,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/accounts']}>
+      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^accounts$/i })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByRole('heading', { name: /^portfolio$/i })).length).toBeGreaterThan(0)
     expect(await screen.findByText(/account overview/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/primary/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/reserve/i)).length).toBeGreaterThan(0)
@@ -625,14 +625,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/accounts']}>
+      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^accounts$/i })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByRole('heading', { name: /^portfolio$/i })).length).toBeGreaterThan(0)
     const holdingTitle = (await screen.findAllByText(/^VWRA$/i))[0]!
     const holdingCard = holdingTitle.closest('div')?.parentElement
     expect(holdingCard).not.toBeNull()
@@ -1018,14 +1018,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/holdings']}>
+      <MemoryRouter initialEntries={['/portfolio']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect((await screen.findAllByRole('heading', { name: /^portfolio$/i })).length).toBeGreaterThan(0)
     expect(await screen.findByText('Delta Bonds')).toBeInTheDocument()
     expect(screen.queryByText('Alpha Growth')).not.toBeInTheDocument()
   })
@@ -1117,14 +1117,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/holdings']}>
+      <MemoryRouter initialEntries={['/portfolio']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect((await screen.findAllByRole('heading', { name: /^portfolio$/i })).length).toBeGreaterThan(0)
     expect(await screen.findByText('+12.50%')).toBeInTheDocument()
 
     const vwraRow = (await screen.findAllByRole('row')).find((row) => within(row).queryByText('VWRA'))

@@ -2,7 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
-import { Badge, FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
+import { FilterBar, EmptyState, ErrorState, LoadingState, StatePanel } from '../components/ui'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
@@ -47,6 +47,15 @@ const HOLDINGS_PREFERENCE_KEYS = {
 } as const
 
 export function HoldingsScreen() {
+  return (
+    <>
+      <PageHeader title={t('holdings.title')} />
+      <HoldingsContent />
+    </>
+  )
+}
+
+export function HoldingsContent() {
   const { isPolish } = useI18n()
   const navigate = useNavigate()
   const appMetaQuery = useAppMeta()
@@ -161,55 +170,36 @@ export function HoldingsScreen() {
 
   if (holdingsQuery.isLoading) {
     return (
-      <>
-        <PageHeader title={t('holdings.title')} />
-        <LoadingState
-          title={t('holdings.loadingTitle')}
-          description={t('holdings.loadingDescription')}
-          blocks={4}
-        />
-      </>
+      <LoadingState
+        title={t('holdings.loadingTitle')}
+        description={t('holdings.loadingDescription')}
+        blocks={4}
+      />
     )
   }
 
   if (holdingsQuery.isError) {
     return (
-      <>
-        <PageHeader title={t('holdings.title')} />
-        <ErrorState
-          title={t('holdings.errorTitle')}
-          description={t('holdings.errorDescription')}
-          onRetry={() => void holdingsQuery.refetch()}
-        />
-      </>
+      <ErrorState
+        title={t('holdings.errorTitle')}
+        description={t('holdings.errorDescription')}
+        onRetry={() => void holdingsQuery.refetch()}
+      />
     )
   }
 
   if (holdings.length === 0) {
     return (
-      <>
-        <PageHeader title={t('holdings.title')} />
-        <EmptyState
-          title={t('holdings.emptyTitle')}
-          description={t('holdings.emptyDescription')}
-          action={{ label: t('holdings.emptyAction'), to: '/transactions' }}
-        />
-      </>
+      <EmptyState
+        title={t('holdings.emptyTitle')}
+        description={t('holdings.emptyDescription')}
+        action={{ label: t('holdings.emptyAction'), to: '/transactions' }}
+      />
     )
   }
 
   return (
     <>
-      <PageHeader title={t('holdings.title')}>
-        <Badge variant="default">
-          {activeFilterCount > 0
-            ? isPolish
-              ? `${filteredHoldings.length} z ${holdings.length} pozycji`
-              : `${filteredHoldings.length} of ${holdings.length} positions`
-            : `${holdings.length} ${t('holdings.positions')}`}
-        </Badge>
-        <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValue)}</span>
-      </PageHeader>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <HoldingSummaryTile

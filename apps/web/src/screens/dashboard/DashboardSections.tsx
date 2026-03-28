@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioOverview } from '../../api/read-model'
+import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
 import { MiniChart } from '../../components/charts'
 import { Badge, ErrorState, LoadingState, StatCard, StatePanel } from '../../components/ui'
 import { missingDataLabel } from '../../lib/availability'
@@ -394,6 +394,42 @@ export function DashboardQuickStats({
         value={labelPortfolioValuationBasis(valuationState, isPolish)}
         subtitle={describePortfolioValuationBasis(overview, isPolish)}
       />
+    </div>
+  )
+}
+
+export function DashboardContributorsCard({ holdings }: { holdings: PortfolioHolding[] }) {
+  const ranked = holdings
+    .filter((h) => h.unrealizedGainPln != null)
+    .map((h) => ({ instrumentName: h.instrumentName, gain: Number(h.unrealizedGainPln) }))
+    .filter((h) => !Number.isNaN(h.gain))
+
+  if (ranked.length === 0) {
+    return null
+  }
+
+  const topGainer = [...ranked].sort((a, b) => b.gain - a.gain)[0]
+  const topLoser = [...ranked].sort((a, b) => a.gain - b.gain)[0]
+
+  return (
+    <div className={`${card} mt-4`}>
+      <h3 className="mb-3 text-sm font-medium text-zinc-400">{t('dashboard.contributors')}</h3>
+      <div className="grid grid-cols-2 gap-4">
+        {topGainer && (
+          <div>
+            <p className="text-xs font-medium text-zinc-500">{t('dashboard.topGainer')}</p>
+            <p className="mt-1 truncate text-sm font-medium text-zinc-100">{topGainer.instrumentName}</p>
+            <p className="mt-0.5 text-sm font-medium text-emerald-400">{formatSignedCurrencyPln(topGainer.gain)}</p>
+          </div>
+        )}
+        {topLoser && (
+          <div>
+            <p className="text-xs font-medium text-zinc-500">{t('dashboard.topLoser')}</p>
+            <p className="mt-1 truncate text-sm font-medium text-zinc-100">{topLoser.instrumentName}</p>
+            <p className={`mt-0.5 text-sm font-medium ${topLoser.gain >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedCurrencyPln(topLoser.gain)}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

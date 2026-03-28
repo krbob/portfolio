@@ -209,4 +209,10 @@ export const appMessages = {
   'auth.unlock': { pl: 'Odblokuj', en: 'Unlock' },
   'auth.loginFailed': { pl: 'Logowanie nie powiodło się.', en: 'Login failed.' },
   'auth.selfHosted': { pl: 'Self-hosted tracker portfela', en: 'Self-hosted portfolio tracker' },
+  'dashboard.contributors': { pl: 'Wpływ na portfel', en: 'Portfolio impact' },
+  'dashboard.topGainer': { pl: 'Najlepsza pozycja', en: 'Top gainer' },
+  'dashboard.topLoser': { pl: 'Najsłabsza pozycja', en: 'Top loser' },
+  'portfolio.title': { pl: 'Portfel', en: 'Portfolio' },
+  'portfolio.holdingsTab': { pl: 'Pozycje', en: 'Holdings' },
+  'portfolio.accountsTab': { pl: 'Konta', en: 'Accounts' },
 } satisfies MessageCatalog

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PortfolioAccountSummary } from '../api/read-model'
 import { AccountsSection } from '../components/AccountsSection'
 import { PageHeader } from '../components/layout'
-import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
+import { Card, EmptyState, ErrorState, LoadingState, SectionHeader } from '../components/ui'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { useReorderAccounts } from '../hooks/use-write-model'
 import { formatCurrencyBreakdown, formatCurrencyPln, formatPercent, hasMeaningfulCurrencyBreakdown } from '../lib/format'
@@ -22,6 +22,15 @@ import { AccountDetailsCard, AccountSummaryTile, DragHandleIcon } from './accoun
 import { badge, td, tdRight, th, thRight, tr } from '../lib/styles'
 
 export function AccountsScreen() {
+  return (
+    <>
+      <PageHeader title={t('accountsScreen.title')} />
+      <AccountsContent />
+    </>
+  )
+}
+
+export function AccountsContent() {
   const { isPolish } = useI18n()
   const accountsQuery = usePortfolioAccounts()
   const holdingsQuery = usePortfolioHoldings()
@@ -63,40 +72,26 @@ export function AccountsScreen() {
 
   if (accountsQuery.isLoading || holdingsQuery.isLoading) {
     return (
-      <>
-        <PageHeader title={t('accountsScreen.title')} />
-        <LoadingState
-          title={t('accountsScreen.loadingTitle')}
-          description={t('accountsScreen.loadingDescription')}
-          blocks={4}
-        />
-      </>
+      <LoadingState
+        title={t('accountsScreen.loadingTitle')}
+        description={t('accountsScreen.loadingDescription')}
+        blocks={4}
+      />
     )
   }
 
   if (accountsQuery.isError || holdingsQuery.isError) {
     return (
-      <>
-        <PageHeader title={t('accountsScreen.title')} />
-        <ErrorState
-          title={t('accountsScreen.errorTitle')}
-          description={t('accountsScreen.errorDescription')}
-          onRetry={() => void Promise.all([accountsQuery.refetch(), holdingsQuery.refetch()])}
-        />
-      </>
+      <ErrorState
+        title={t('accountsScreen.errorTitle')}
+        description={t('accountsScreen.errorDescription')}
+        onRetry={() => void Promise.all([accountsQuery.refetch(), holdingsQuery.refetch()])}
+      />
     )
   }
 
   return (
     <>
-      <PageHeader title={t('accountsScreen.title')}>
-        <Badge variant="default">
-          {accounts.length} {isPolish ? (accounts.length === 1 ? 'konto' : (accounts.length % 10 >= 2 && accounts.length % 10 <= 4 && (accounts.length % 100 < 12 || accounts.length % 100 > 14)) ? 'konta' : 'kont') : 'accounts'}
-        </Badge>
-        {accounts.length > 0 && (
-          <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValuePln)}</span>
-        )}
-      </PageHeader>
 
       {accounts.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

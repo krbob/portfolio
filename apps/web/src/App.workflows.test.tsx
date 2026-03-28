@@ -775,7 +775,7 @@ describe('App', () => {
     })
 
     const view = render(
-      <MemoryRouter initialEntries={['/holdings']}>
+      <MemoryRouter initialEntries={['/portfolio']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -783,7 +783,7 @@ describe('App', () => {
     )
     const scope = within(view.container)
 
-    expect((await scope.findAllByRole('heading', { name: /^holdings$/i })).length).toBeGreaterThan(0)
+    expect((await scope.findAllByRole('heading', { name: /^portfolio$/i })).length).toBeGreaterThan(0)
 
     fireEvent.click(await scope.findByText(/EDO0336/))
     fireEvent.click(await scope.findByRole('button', { name: /redeem all/i }))
@@ -2062,7 +2062,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/accounts']}>
+      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -2071,7 +2071,7 @@ describe('App', () => {
 
     const dragBetaHandleName = /drag beta to reorder|przeciągnij beta, aby zmienić kolejność/i
 
-    expect(await screen.findByRole('heading', { name: /accounts|konta/i, level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /portfolio|portfel/i, level: 2 })).toBeInTheDocument()
     const alphaCells = await screen.findAllByText(/^Alpha$/)
     const betaCells = await screen.findAllByText(/^Beta$/)
     await waitFor(() => {

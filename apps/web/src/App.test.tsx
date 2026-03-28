@@ -404,8 +404,7 @@ describe('App', () => {
 
     // Sidebar navigation links
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^accounts$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^portfolio$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
 
     // Sidebar runtime status
@@ -573,14 +572,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/holdings']}>
+      <MemoryRouter initialEntries={['/portfolio']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^holdings$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^portfolio$/i })).toBeInTheDocument()
     expect(await screen.findByText(/valuation mode/i)).toBeInTheDocument()
     expect(await screen.findByText(/this view currently relies on book basis/i)).toBeInTheDocument()
     expect(await screen.findByText(/^no valuation$/i)).toBeInTheDocument()

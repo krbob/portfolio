@@ -5,7 +5,7 @@ import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
-import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
+import { usePortfolioAllocation, usePortfolioHoldings, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { formatCurrencyBreakdown, hasMeaningfulCurrencyBreakdown } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
@@ -13,6 +13,7 @@ import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
 import {
   DashboardAllocationBar,
+  DashboardContributorsCard,
   DashboardDataQualityCard,
   DashboardHeroStats,
   DashboardHistoryCard,
@@ -28,6 +29,7 @@ export function DashboardScreen() {
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const allocationQuery = usePortfolioAllocation()
+  const holdingsQuery = usePortfolioHoldings()
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
   const overview = overviewQuery.data
@@ -150,7 +152,7 @@ export function DashboardScreen() {
         <EmptyState
           title={t('dashboard.welcomeTitle')}
           description={t('dashboard.welcomeDescription')}
-          action={{ label: t('dashboard.welcomeAction'), to: '/accounts' }}
+          action={{ label: t('dashboard.welcomeAction'), to: '/portfolio?tab=accounts' }}
         />
       </>
     )
@@ -217,6 +219,8 @@ export function DashboardScreen() {
           />
         </div>
       </div>
+
+      <DashboardContributorsCard holdings={holdingsQuery.data ?? []} />
 
       <DashboardQuickStats
         isPolish={isPolish}
