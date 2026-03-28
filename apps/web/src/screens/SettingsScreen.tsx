@@ -13,15 +13,19 @@ import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
+import { TransactionImportSection } from '../components/TransactionImportSection'
 import { Card, SectionHeader } from '../components/ui'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { t } from '../lib/messages'
+import { InstrumentsManagement } from './InstrumentsScreen'
 
 const SETTINGS_SECTIONS = [
   { id: 'health', labelKey: 'settings.navHealth' },
   { id: 'data-quality', labelKey: 'settings.navDataQuality' },
+  { id: 'instruments', labelKey: 'settings.navInstruments' },
   { id: 'targets', labelKey: 'settings.navTargets' },
   { id: 'benchmarks', labelKey: 'settings.navBenchmarks' },
+  { id: 'csv-import', labelKey: 'settings.navCsvImport' },
   { id: 'transfer', labelKey: 'settings.navTransfer' },
   { id: 'backups', labelKey: 'settings.navBackups' },
   { id: 'market-data', labelKey: 'settings.navMarketData' },
@@ -88,13 +92,17 @@ export function SettingsScreen() {
                   {t('settings.portfolioEyebrow')}
                 </p>
                 <div className="mt-3 space-y-1.5">
-                  {(['settings.navTargets', 'settings.navBenchmarks'] as const).map((key) => (
+                  {([
+                      { key: 'settings.navInstruments', id: 'instruments' },
+                      { key: 'settings.navTargets', id: 'targets' },
+                      { key: 'settings.navBenchmarks', id: 'benchmarks' },
+                    ] as const).map((item) => (
                     <a
-                      key={key}
-                      href={`#${key === 'settings.navTargets' ? 'targets' : 'benchmarks'}`}
+                      key={item.key}
+                      href={`#${item.id}`}
                       className="block rounded-lg border border-transparent px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"
                     >
-                      {t(key)}
+                      {t(item.key)}
                     </a>
                   ))}
                 </div>
@@ -105,6 +113,7 @@ export function SettingsScreen() {
                 </p>
                 <div className="mt-3 space-y-1.5">
                     {([
+                      { key: 'settings.navCsvImport', id: 'csv-import' },
                       { key: 'settings.navTransfer', id: 'transfer' },
                       { key: 'settings.navBackups', id: 'backups' },
                       { key: 'settings.navMarketData', id: 'market-data' },
@@ -164,12 +173,16 @@ export function SettingsScreen() {
             </section>
           </MobileSection>
 
-          <MobileSection activeSection={activeSection} sectionIds={['targets', 'benchmarks']}>
+          <MobileSection activeSection={activeSection} sectionIds={['instruments', 'targets', 'benchmarks']}>
             <SettingsGroup
               eyebrow={t('settings.portfolioEyebrow')}
               title={t('settings.portfolioTitle')}
               description={t('settings.portfolioDescription')}
             >
+              <section id="instruments" className="scroll-mt-24">
+                <InstrumentsManagement />
+              </section>
+
               <section id="targets" className="scroll-mt-24">
                 <PortfolioTargetsSection />
               </section>
@@ -180,12 +193,16 @@ export function SettingsScreen() {
             </SettingsGroup>
           </MobileSection>
 
-          <MobileSection activeSection={activeSection} sectionIds={['transfer', 'backups', 'market-data', 'cache']}>
+          <MobileSection activeSection={activeSection} sectionIds={['csv-import', 'transfer', 'backups', 'market-data', 'cache']}>
             <SettingsGroup
               eyebrow={t('settings.operationsEyebrow')}
               title={t('settings.operationsTitle')}
               description={t('settings.operationsDescription')}
             >
+              <section id="csv-import" className="scroll-mt-24">
+                <TransactionImportSection />
+              </section>
+
               <section id="transfer" className="scroll-mt-24">
                 <PortfolioStateSection />
               </section>

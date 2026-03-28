@@ -2107,7 +2107,7 @@ describe('App', () => {
     })
   })
 
-  it('resets journal row count tile when switching away from the journal workspace', async () => {
+  it('shows journal row count tile on the transactions screen', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
@@ -2124,12 +2124,6 @@ describe('App', () => {
         return new Response(JSON.stringify([{ id: 'acc-1', name: 'Main', kind: 'BROKERAGE', currency: 'PLN', createdAt: '2026-03-13T12:00:00Z', updatedAt: '2026-03-13T12:00:00Z' }]), { status: 200 })
       }
       if (url.includes('/api/v1/instruments')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
-      if (url.includes('/api/v1/transactions/import/profiles')) {
-        return new Response(JSON.stringify([]), { status: 200 })
-      }
-      if (url.includes('/api/v1/portfolio/audit/events')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
       if (url.includes('/api/v1/portfolio/holdings')) {
@@ -2154,17 +2148,9 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    // Wait for journal to load — both summary tiles show "2"
+    // Wait for journal to load — the journal rows in view tile shows "2"
     const rowCountTile = await screen.findByText(/journal rows in view|wiersze dziennika/i)
     const tileContainer = rowCountTile.closest('article')!
-    await waitFor(() => {
-      expect(tileContainer.querySelector('strong')!.textContent).toBe('2')
-    })
-
-    // Switch to Import workspace
-    fireEvent.click(screen.getByRole('tab', { name: /import/i }))
-
-    // The "Journal rows in view" tile should now show total transactions count (2), not a stale filtered value
     await waitFor(() => {
       expect(tileContainer.querySelector('strong')!.textContent).toBe('2')
     })

@@ -150,7 +150,7 @@ describe('App', () => {
       }
 
       if (url.includes('/api/v1/accounts')) {
-        return new Response(JSON.stringify([]), { status: 200 })
+        return new Response(JSON.stringify(null), { status: 404 })
       }
 
       throw new Error(`Unhandled fetch in accounts screen test: ${url}`)
@@ -375,7 +375,7 @@ describe('App', () => {
         )
       }
 
-      throw new Error(`Unhandled fetch in instruments screen test: ${url}`)
+      return new Response(JSON.stringify(null), { status: 404 })
     })
 
     const queryClient = new QueryClient({
@@ -387,14 +387,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/instruments']}>
+      <MemoryRouter initialEntries={['/settings#instruments']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^instruments$/i })).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
     expect(await screen.findByText(/instrument overview/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/vwra/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/edo0336/i)).length).toBeGreaterThan(0)
@@ -506,7 +506,7 @@ describe('App', () => {
         )
       }
 
-      throw new Error(`Unhandled fetch in instrument book-basis test: ${url}`)
+      return new Response(JSON.stringify(null), { status: 404 })
     })
 
     const queryClient = new QueryClient({
@@ -518,14 +518,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/instruments']}>
+      <MemoryRouter initialEntries={['/settings#instruments']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^instruments$/i })).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
     expect(await screen.findByText(/no market valuation for active holdings/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/book basis/i)).length).toBeGreaterThan(0)
@@ -610,7 +610,7 @@ describe('App', () => {
       }
 
       if (url.includes('/api/v1/accounts')) {
-        return new Response(JSON.stringify([]), { status: 200 })
+        return new Response(JSON.stringify(null), { status: 404 })
       }
 
       throw new Error(`Unhandled fetch in account holding preview test: ${url}`)
@@ -711,7 +711,7 @@ describe('App', () => {
         ]), { status: 200 })
       }
 
-      throw new Error(`Unhandled fetch in instrument holding preview test: ${url}`)
+      return new Response(JSON.stringify(null), { status: 404 })
     })
 
     const queryClient = new QueryClient({
@@ -723,14 +723,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/instruments']}>
+      <MemoryRouter initialEntries={['/settings#instruments']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^instruments$/i })).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
     const accountName = (await screen.findAllByText(/^Primary$/i))[0]!
     const holdingCard = accountName.closest('div')?.parentElement
     expect(holdingCard).not.toBeNull()
@@ -872,7 +872,7 @@ describe('App', () => {
         )
       }
 
-      throw new Error(`Unhandled fetch in instrument sorting test: ${url}`)
+      return new Response(JSON.stringify(null), { status: 404 })
     })
 
     const queryClient = new QueryClient({
@@ -884,7 +884,7 @@ describe('App', () => {
     })
 
     const view = render(
-      <MemoryRouter initialEntries={['/instruments']}>
+      <MemoryRouter initialEntries={['/settings#instruments']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -918,7 +918,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/instruments']}>
+      <MemoryRouter initialEntries={['/settings#instruments']}>
         <QueryClientProvider client={persistedQueryClient}>
           <App />
         </QueryClientProvider>

@@ -9,7 +9,7 @@ import { createAppFetchMock, createStorageMock, createTestQueryClient } from './
 const ROUTE_CASES = [
   { route: '/', heading: 'Pulpit' },
   { route: '/accounts', heading: 'Konta' },
-  { route: '/instruments', heading: 'Instrumenty' },
+  { route: '/instruments', heading: 'Ustawienia' },
   { route: '/transactions', heading: 'Transakcje' },
   { route: '/holdings', heading: 'Pozycje' },
   { route: '/performance', heading: 'Wyniki' },

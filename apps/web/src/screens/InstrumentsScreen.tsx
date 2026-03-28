@@ -28,6 +28,42 @@ const INSTRUMENTS_PREFERENCE_KEYS = {
 } as const
 
 export function InstrumentsScreen() {
+  return (
+    <>
+      <PageHeader title={t('instrumentsScreen.title')}>
+        <InstrumentsPageHeaderContent />
+      </PageHeader>
+      <InstrumentsManagement />
+    </>
+  )
+}
+
+function InstrumentsPageHeaderContent() {
+  const { isPolish } = useI18n()
+  const instrumentsQuery = useInstruments()
+  const holdingsQuery = usePortfolioHoldings()
+  const catalog = useMemo(() => instrumentsQuery.data ?? [], [instrumentsQuery.data])
+  const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
+  const rows = useMemo(() => buildInstrumentRows(catalog, holdings), [catalog, holdings])
+  const totalValuePln = rows.reduce((sum, row) => sum + row.totalCurrentValuePln, 0)
+
+  if (instrumentsQuery.isLoading || holdingsQuery.isLoading || rows.length === 0) {
+    return null
+  }
+
+  return (
+    <>
+      <Badge variant="default">
+        {rows.length} {isPolish ? (rows.length === 1 ? 'instrument' : 'instrumentów') : 'instruments'}
+      </Badge>
+      {rows.length > 0 && (
+        <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValuePln)}</span>
+      )}
+    </>
+  )
+}
+
+export function InstrumentsManagement() {
   const { isPolish } = useI18n()
   const appMetaQuery = useAppMeta()
   const instrumentsQuery = useInstruments()
@@ -80,43 +116,28 @@ export function InstrumentsScreen() {
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
     return (
-      <>
-        <PageHeader title={t('instrumentsScreen.title')} />
-        <LoadingState
-          title={t('instrumentsScreen.loadingTitle')}
-          description={t('instrumentsScreen.loadingDescription')}
-          blocks={4}
-        />
-      </>
+      <LoadingState
+        title={t('instrumentsScreen.loadingTitle')}
+        description={t('instrumentsScreen.loadingDescription')}
+        blocks={4}
+      />
     )
   }
 
   if (instrumentsQuery.isError || holdingsQuery.isError) {
     return (
-      <>
-        <PageHeader title={t('instrumentsScreen.title')} />
-        <ErrorState
-          title={t('instrumentsScreen.errorTitle')}
-          description={t('instrumentsScreen.errorDescription')}
-          onRetry={() => {
-            void Promise.all([instrumentsQuery.refetch(), holdingsQuery.refetch()])
-          }}
-        />
-      </>
+      <ErrorState
+        title={t('instrumentsScreen.errorTitle')}
+        description={t('instrumentsScreen.errorDescription')}
+        onRetry={() => {
+          void Promise.all([instrumentsQuery.refetch(), holdingsQuery.refetch()])
+        }}
+      />
     )
   }
 
   return (
     <>
-      <PageHeader title={t('instrumentsScreen.title')}>
-        <Badge variant="default">
-          {rows.length} {isPolish ? (rows.length === 1 ? 'instrument' : 'instrumentów') : 'instruments'}
-        </Badge>
-        {rows.length > 0 && (
-          <span className="text-sm tabular-nums text-zinc-400">{formatCurrencyPln(totalValuePln)}</span>
-        )}
-      </PageHeader>
-
       {rows.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <InstrumentSummaryTile

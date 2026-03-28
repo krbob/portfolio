@@ -406,7 +406,6 @@ describe('App', () => {
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^holdings$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^accounts$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^instruments$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
 
     // Sidebar runtime status
