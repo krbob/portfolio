@@ -7,7 +7,7 @@
 Represents where assets are held.
 
 - examples: brokerage account, bond register, cash account
-- has institution, type, base currency, display order, and active flag
+- has institution, type, base currency, and active flag
 - remains stable even as holdings change over time
 
 ### Instrument

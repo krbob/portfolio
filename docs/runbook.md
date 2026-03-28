@@ -29,8 +29,11 @@ curl -sSf http://127.0.0.1:4174/api/v1/meta
 Then confirm in the UI:
 
 - login still works if auth is enabled
+- `Portfolio` screen shows both Holdings and Accounts tabs
 - `Settings -> Health` is readable
+- `Settings -> Instruments` shows the instrument catalog
 - `Settings -> Import / export` preview still opens
+- `Settings -> CSV Import` shows import profiles
 - `Settings -> Targets` still shows current target history
 
 ## Import and restore workflow
