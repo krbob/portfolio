@@ -102,7 +102,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
           </div>
           <span className="text-xs text-zinc-500">{systemStatus.label}</span>
         </div>
-        <p className="mt-1 text-xs text-zinc-600">
+        <p className="mt-1 text-xs text-zinc-500">
           {readinessQuery.isLoading
             ? t('layout.checkingDeps')
             : readinessQuery.isError

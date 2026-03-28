@@ -173,6 +173,7 @@ export const appMessages = {
   'ui.empty': { pl: 'Pusto', en: 'Empty' },
   'ui.clear': { pl: 'Wyczyść', en: 'Clear' },
   'layout.openNavigation': { pl: 'Otwórz nawigację', en: 'Open navigation' },
+  'layout.closeNavigation': { pl: 'Zamknij nawigację', en: 'Close navigation' },
   'layout.navigation': { pl: 'Nawigacja', en: 'Navigation' },
   'layout.tagline': { pl: 'Przestrzeń inwestora długoterminowego', en: 'Long-term investing workspace' },
   'layout.runtimeHealth': { pl: 'Stan systemu', en: 'Runtime health' },
