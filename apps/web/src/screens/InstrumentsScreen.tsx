@@ -107,10 +107,12 @@ export function InstrumentsManagement() {
     }
   }, [sortedRows, selectedInstrumentId])
 
+  const hasScrolledRef = useRef(false)
   useEffect(() => {
-    if (selectedInstrumentId && detailRef.current?.scrollIntoView) {
+    if (selectedInstrumentId && detailRef.current?.scrollIntoView && hasScrolledRef.current) {
       detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
+    hasScrolledRef.current = true
   }, [selectedInstrumentId])
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {

@@ -68,6 +68,7 @@ export function HoldingsContent() {
   const [searchQuery, setSearchQuery] = usePersistentState(HOLDINGS_PREFERENCE_KEYS.searchQuery, '', { validate: isStringValue })
   const [selectedHoldingKey, setSelectedHoldingKey] = useState<string | null>(null)
   const holdingDetailRef = useRef<HTMLDivElement>(null)
+  const hasScrolledRef = useRef(false)
   const [sortState, setSortState] = usePersistentState<HoldingsSortState>(HOLDINGS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isSortState })
   const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase())
 
@@ -111,9 +112,10 @@ export function HoldingsContent() {
   }, [filterOptions.statuses, holdingsQuery.isLoading, setStatusFilter, statusFilter])
 
   useEffect(() => {
-    if (selectedHoldingKey && holdingDetailRef.current?.scrollIntoView) {
+    if (selectedHoldingKey && holdingDetailRef.current?.scrollIntoView && hasScrolledRef.current) {
       holdingDetailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
+    hasScrolledRef.current = true
   }, [selectedHoldingKey])
 
   const activeFilterCount =
