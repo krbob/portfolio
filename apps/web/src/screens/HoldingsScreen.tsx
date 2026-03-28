@@ -399,20 +399,8 @@ export function HoldingsContent() {
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <DetailStat label={t('holdings.quantity')} value={formatNumber(selectedHolding.quantity, { maximumFractionDigits: 0 })} />
-            <DetailStat
-              label={t('holdings.avgCostPlnPerUnit')}
-              value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)}
-              detail={selectedHolding.currency !== 'PLN'
-                ? formatMessage(t('holdings.instrumentCurrency'), { currency: selectedHolding.currency })
-                : null}
-            />
-            <DetailStat
-              label={t('holdings.currentPrice')}
-              value={formatHoldingCurrentPrice(selectedHolding)}
-              detail={formatHoldingCurrentPriceDetail(selectedHolding)}
-            />
             <DetailStat label={t('holdings.currentValue')} value={formatCurrencyPln(selectedHolding.currentValuePln ?? selectedHolding.bookValuePln)} />
             <DetailStat label={t('holdings.bookValue')} value={formatCurrencyPln(selectedHolding.bookValuePln)} />
             <DetailStat
@@ -424,6 +412,22 @@ export function HoldingsContent() {
               className={gainColor(selectedHolding.unrealizedGainPln)}
             />
           </div>
+          {selectedHolding.currency !== 'PLN' && selectedHolding.currentPriceNative != null && (
+            <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <DetailStat
+                label={formatMessage(t('holdings.priceInCurrency'), { currency: selectedHolding.currency })}
+                value={formatCurrency(selectedHolding.currentPriceNative, selectedHolding.currency)}
+              />
+              <DetailStat
+                label={t('holdings.pricePln')}
+                value={formatCurrencyPln(selectedHolding.currentPricePln)}
+              />
+              <DetailStat
+                label={t('holdings.avgCostPlnPerUnit')}
+                value={formatCurrencyPln(selectedHolding.averageCostPerUnitPln)}
+              />
+            </div>
+          )}
           <div className="mt-3 text-xs text-zinc-500">
             {`${formatMessage(t('holdings.transactionDetail'), { count: selectedHolding.transactionCount })} · ${selectedHolding.currency}`}
             {selectedHolding.valuedAt
@@ -508,25 +512,6 @@ export function HoldingsContent() {
   }
 }
 
-function formatHoldingCurrentPrice(holding: PortfolioHolding) {
-  if (holding.currentPriceNative != null) {
-    return formatCurrency(holding.currentPriceNative, holding.currency)
-  }
-
-  return formatCurrencyPln(holding.currentPricePln)
-}
-
-function formatHoldingCurrentPriceDetail(holding: PortfolioHolding) {
-  if (holding.currentPriceNative != null && holding.currency !== 'PLN' && holding.currentPricePln != null) {
-    return `${t('holdings.currentPricePlnPerUnit')}: ${formatCurrencyPln(holding.currentPricePln)}`
-  }
-
-  if (holding.currentPriceNative == null && holding.currency !== 'PLN') {
-    return formatMessage(t('holdings.instrumentCurrency'), { currency: holding.currency })
-  }
-
-  return null
-}
 
 // --- Sub-components ---
 

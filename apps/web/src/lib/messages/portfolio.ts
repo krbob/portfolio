@@ -68,6 +68,8 @@ export const portfolioMessages = {
   'holdings.currentPrice': { pl: 'Bieżąca cena', en: 'Current Price' },
   'holdings.avgCostPlnPerUnit': { pl: 'Śr. koszt / szt. (PLN)', en: 'Avg Cost / unit (PLN)' },
   'holdings.currentPricePlnPerUnit': { pl: 'Bieżąca cena / szt. (PLN)', en: 'Current Price / unit (PLN)' },
+  'holdings.priceInCurrency': { pl: 'Cena ({currency})', en: 'Price ({currency})' },
+  'holdings.pricePln': { pl: 'Cena (PLN)', en: 'Price (PLN)' },
   'holdings.instrumentCurrency': { pl: 'Waluta instrumentu: {currency}', en: 'Instrument currency: {currency}' },
   'holdings.currentValue': { pl: 'Bieżąca wartość', en: 'Current Value' },
   'holdings.bookValue': { pl: 'Wartość księgowa', en: 'Book Value' },
