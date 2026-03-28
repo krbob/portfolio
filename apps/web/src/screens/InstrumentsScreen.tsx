@@ -107,12 +107,12 @@ export function InstrumentsManagement() {
     }
   }, [sortedRows, selectedInstrumentId])
 
-  const hasScrolledRef = useRef(false)
+  const userSelectedRef = useRef(false)
   useEffect(() => {
-    if (selectedInstrumentId && detailRef.current?.scrollIntoView && hasScrolledRef.current) {
+    if (selectedInstrumentId && detailRef.current?.scrollIntoView && userSelectedRef.current) {
       detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-    hasScrolledRef.current = true
+    userSelectedRef.current = false
   }, [selectedInstrumentId])
 
   if (instrumentsQuery.isLoading || holdingsQuery.isLoading) {
@@ -210,7 +210,7 @@ export function InstrumentsManagement() {
                           className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
                           key={row.instrument.id}
                           aria-selected={isSelected}
-                          onClick={() => setSelectedInstrumentId(row.instrument.id)}
+                          onClick={() => { userSelectedRef.current = true; setSelectedInstrumentId(row.instrument.id) }}
                         >
                           <td className={td}>
                             <div>
