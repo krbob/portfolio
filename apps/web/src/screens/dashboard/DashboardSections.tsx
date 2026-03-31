@@ -328,9 +328,8 @@ const bucketColor: Record<string, string> = {
 function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) {
   const actual = Number(bucket.currentWeightPct)
   const target = Number(bucket.targetWeightPct ?? 0)
-  const scale = Math.max(actual, target, 1) * 1.25
-  const barWidth = (actual / scale) * 100
-  const markerPos = (target / scale) * 100
+  const barWidth = actual
+  const markerPos = target
   const withinTolerance = bucket.withinTolerance
   const color = bucketColor[bucket.assetClass] ?? 'bg-zinc-500'
 
