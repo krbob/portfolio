@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPeriod } from '../../api/read-model'
 import { AllocationTimeChart, BenchmarkChart, PortfolioValueChart } from '../../components/charts'
-import { ErrorState, LoadingState, StatePanel, SegmentedControl } from '../../components/ui'
+import { ErrorState, StatePanel, SegmentedControl } from '../../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
 import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
@@ -43,10 +43,10 @@ export function ChartsTab({
 }) {
   if (historyQuery.isLoading && points.length === 0) {
     return (
-      <LoadingState
-        title={t('performanceSections.loadingCharts')}
-        description={t('performanceSections.loadingChartsDescription')}
-      />
+      <div className="space-y-4">
+        <div className="h-[320px] animate-pulse rounded-xl border border-zinc-800 bg-zinc-950/70" />
+        <div className="h-[200px] animate-pulse rounded-xl border border-zinc-800 bg-zinc-950/70" />
+      </div>
     )
   }
 
@@ -138,10 +138,10 @@ export function ReturnsTab({
 
   if (returnsQuery.isLoading) {
     return (
-      <LoadingState
-        title={t('performanceSections.loadingReturns')}
-        description={t('performanceSections.loadingReturnsDescription')}
-      />
+      <div className="space-y-3">
+        <div className="h-32 animate-pulse rounded-xl border border-zinc-800 bg-zinc-950/70" />
+        <div className="h-64 animate-pulse rounded-xl border border-zinc-800 bg-zinc-950/70" />
+      </div>
     )
   }
 

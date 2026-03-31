@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
 import { MiniChart } from '../../components/charts'
-import { Badge, ErrorState, LoadingState, StatCard, StatePanel } from '../../components/ui'
+import { Badge, ErrorState, StatCard, StatePanel } from '../../components/ui'
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
@@ -164,12 +164,7 @@ export function DashboardHistoryCard({
         </div>
       </div>
       {isLoading && chartPoints.length === 0 ? (
-        <LoadingState
-          title={t('dashboardSections.loadingHistory')}
-          description={t('dashboardSections.loadingHistoryDescription')}
-          variant="inline"
-          blocks={2}
-        />
+        <div className="h-[200px] animate-pulse rounded-xl bg-zinc-800/50" />
       ) : isError && chartPoints.length === 0 ? (
         <ErrorState
           title={t('dashboardSections.historyUnavailable')}
@@ -233,13 +228,14 @@ export function DashboardTargetDriftCard({
       </div>
 
       {isLoading ? (
-        <div className="py-8">
-          <LoadingState
-            title={t('dashboardSections.loadingTargetAllocation')}
-            description={t('dashboardSections.loadingTargetDescription')}
-            variant="inline"
-            blocks={2}
-          />
+        <div className="space-y-3 py-4">
+          <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-800/50" />
+          <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800/30" />
+          <div className="mt-2 space-y-2">
+            <div className="h-2.5 animate-pulse rounded-full bg-zinc-800/50" />
+            <div className="h-2.5 animate-pulse rounded-full bg-zinc-800/50" />
+            <div className="h-2.5 animate-pulse rounded-full bg-zinc-800/50" />
+          </div>
         </div>
       ) : isError ? (
         <ErrorState
