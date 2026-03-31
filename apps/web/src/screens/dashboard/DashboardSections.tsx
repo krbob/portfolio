@@ -338,8 +338,8 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
           style={{ left: `${markerPos}%` }}
         />
       </div>
-      <span className={`w-24 shrink-0 text-right text-xs tabular-nums ${withinTolerance ? 'text-zinc-400' : 'text-amber-400'}`}>
-        {formatPercent(actual)} / {formatPercent(target)}
+      <span className={`w-20 shrink-0 text-right text-xs tabular-nums ${withinTolerance ? 'text-zinc-400' : 'text-amber-400'}`}>
+        {formatPercent(actual, { maximumFractionDigits: 0 })} / {formatPercent(target, { maximumFractionDigits: 0 })}
       </span>
     </div>
   )
