@@ -2,6 +2,15 @@
 
 Portfolio is a self-hosted portfolio tracker for long-term investors.
 
+<a href="docs/screenshots/dashboard.png"><img src="docs/screenshots/dashboard.png" width="720" alt="Dashboard"></a>
+
+<p>
+  <a href="docs/screenshots/portfolio-holdings.png"><img src="docs/screenshots/portfolio-holdings.png" width="175" alt="Portfolio holdings"></a>
+  <a href="docs/screenshots/performance.png"><img src="docs/screenshots/performance.png" width="175" alt="Performance charts"></a>
+  <a href="docs/screenshots/performance-returns.png"><img src="docs/screenshots/performance-returns.png" width="175" alt="Performance returns"></a>
+  <a href="docs/screenshots/transactions.png"><img src="docs/screenshots/transactions.png" width="175" alt="Transactions"></a>
+</p>
+
 The product is built around a few explicit rules:
 
 - transactions are the canonical source of truth
@@ -232,6 +241,17 @@ npm run lint
 npm test
 npm run build
 ```
+
+## Screenshots
+
+The README screenshots are generated with Playwright against a seeded instance:
+
+```bash
+cd apps/web
+PORTFOLIO_E2E_BASE_URL=http://127.0.0.1:4174 npx playwright test e2e/screenshots.spec.ts
+```
+
+Output lands in `docs/screenshots/`. The script seeds a demo portfolio, captures screens in `en-GB` locale, then restores the original data.
 
 ## Docs
 
