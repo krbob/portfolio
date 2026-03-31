@@ -5,6 +5,7 @@ interface StatCardProps {
   change?: 'positive' | 'negative' | 'neutral'
   dot?: 'equity' | 'bond' | 'cash' | string
   hero?: boolean
+  loading?: boolean
 }
 
 const dotColors: Record<string, string> = {
@@ -13,7 +14,7 @@ const dotColors: Record<string, string> = {
   cash: 'bg-zinc-500',
 }
 
-export function StatCard({ label, value, subtitle, change, dot, hero }: StatCardProps) {
+export function StatCard({ label, value, subtitle, change, dot, hero, loading }: StatCardProps) {
   const dotClass = dot ? dotColors[dot] ?? dot : undefined
   const isZero = value === '0' || value === '0,00 zł' || value === '0.00 zł'
 
@@ -24,7 +25,7 @@ export function StatCard({ label, value, subtitle, change, dot, hero }: StatCard
         {label}
       </div>
       <div
-        className={`mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums ${
+        className={`mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums ${loading ? 'animate-pulse ' : ''}${
           hero
             ? `${value.length > 10 ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl'} text-zinc-50`
             : value.length > 10 ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl'

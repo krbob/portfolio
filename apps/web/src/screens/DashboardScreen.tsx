@@ -152,6 +152,7 @@ export function DashboardScreen() {
         dailyChange={dailyChange}
         dailyChangePct={dailyChangePct}
         hasMarketBackedCurrentValuation={hasMarketBackedCurrentValuation}
+        historyLoading={historyQuery.isLoading}
         equityPct={equityPct}
         bondPct={bondPct}
       />

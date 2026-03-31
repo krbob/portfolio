@@ -26,6 +26,7 @@ export function DashboardHeroStats({
   dailyChange,
   dailyChangePct,
   hasMarketBackedCurrentValuation,
+  historyLoading,
   equityPct,
   bondPct,
 }: {
@@ -38,9 +39,12 @@ export function DashboardHeroStats({
   dailyChange: number | null
   dailyChangePct: number | null
   hasMarketBackedCurrentValuation: boolean
+  historyLoading: boolean
   equityPct: number
   bondPct: number
 }) {
+  const dailyChangeLoading = historyLoading && dailyChange == null
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
@@ -51,13 +55,18 @@ export function DashboardHeroStats({
       />
       <StatCard
         label={t('dashboardSections.dailyChange')}
-        value={dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
-        subtitle={dailyChangePct != null
-          ? formatPercent(dailyChangePct, { signed: true })
-          : hasMarketBackedCurrentValuation
-            ? t('dashboardSections.waitingForData')
-            : t('dashboardSections.requiresMarketValuation')}
+        value={dailyChangeLoading
+          ? '—'
+          : dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
+        subtitle={dailyChangeLoading
+          ? t('dashboardSections.waitingForData')
+          : dailyChangePct != null
+            ? formatPercent(dailyChangePct, { signed: true })
+            : hasMarketBackedCurrentValuation
+              ? t('dashboardSections.waitingForData')
+              : t('dashboardSections.requiresMarketValuation')}
         change={dailyChange != null ? (dailyChange > 0 ? 'positive' : dailyChange < 0 ? 'negative' : 'neutral') : undefined}
+        loading={dailyChangeLoading}
       />
       <StatCard
         label={t('dashboardSections.equities')}
