@@ -85,33 +85,6 @@ export function DashboardScreen() {
   const cashBreakdownSubtitle = undefined
   const contributionBreakdownSubtitle = undefined
 
-  const configuredBuckets = useMemo(
-    () => allocationQuery.data?.buckets.filter((bucket) => bucket.targetWeightPct != null) ?? [],
-    [allocationQuery.data?.buckets],
-  )
-  const mostOffTargetBucket = useMemo(() => {
-    return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
-      if (!bucket.driftPctPoints) {
-        return current
-      }
-      if (current == null || Math.abs(Number(bucket.driftPctPoints)) > Math.abs(Number(current.driftPctPoints ?? 0))) {
-        return bucket
-      }
-      return current
-    }, null)
-  }, [configuredBuckets])
-  const rebalanceBucket = useMemo(() => {
-    return configuredBuckets.reduce<typeof configuredBuckets[number] | null>((current, bucket) => {
-      if (bucket.rebalanceAction !== 'BUY' || !bucket.gapValuePln || Number(bucket.gapValuePln) <= 0) {
-        return current
-      }
-      if (current == null || Number(bucket.gapValuePln) > Number(current.gapValuePln ?? 0)) {
-        return bucket
-      }
-      return current
-    }, null)
-  }, [configuredBuckets])
-
   function handleRetry() {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
   }
@@ -206,8 +179,6 @@ export function DashboardScreen() {
           <DashboardTargetDriftCard
             isPolish={isPolish}
             allocation={allocationQuery.data}
-            mostOffTargetBucket={mostOffTargetBucket}
-            rebalanceBucket={rebalanceBucket}
             isLoading={allocationQuery.isLoading}
             isError={allocationQuery.isError}
             onRetry={() => void allocationQuery.refetch()}

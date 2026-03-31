@@ -6,7 +6,7 @@ import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
 import { labelAssetClass } from '../../lib/labels'
-import { t } from '../../lib/messages'
+import { formatMessage, t } from '../../lib/messages'
 import {
   describeAssetSliceValuation,
   describePortfolioValuationBasis,
@@ -187,30 +187,28 @@ export function DashboardHistoryCard({
 export function DashboardTargetDriftCard({
   isPolish,
   allocation,
-  mostOffTargetBucket,
-  rebalanceBucket,
   isLoading,
   isError,
   onRetry,
 }: {
   isPolish: boolean
   allocation: PortfolioAllocationSummary | undefined
-  mostOffTargetBucket: PortfolioAllocationBucket | null
-  rebalanceBucket: PortfolioAllocationBucket | null
   isLoading: boolean
   isError: boolean
   onRetry: () => void
 }) {
+  const buckets = allocation?.buckets.filter((b) => b.targetWeightPct != null) ?? []
+
   return (
     <div className={card}>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-zinc-400">{t('dashboardSections.targetDrift')}</h3>
-          {allocation?.valuationState !== 'MARK_TO_MARKET' ? (
+          <h3 className="text-sm font-medium text-zinc-400">{t('dashboardSections.targetAllocation')}</h3>
+          {allocation?.valuationState && allocation.valuationState !== 'MARK_TO_MARKET' ? (
             <p className="mt-1 text-xs text-zinc-500">
-              {allocation?.valuationState === 'BOOK_ONLY'
+              {allocation.valuationState === 'BOOK_ONLY'
                 ? t('dashboardSections.allocationBookBasis')
-                : allocation?.valuationState === 'STALE'
+                : allocation.valuationState === 'STALE'
                   ? t('dashboardSections.allocationStale')
                   : t('dashboardSections.allocationMixed')}
             </p>
@@ -250,71 +248,99 @@ export function DashboardTargetDriftCard({
         />
       ) : (
         <div className="space-y-4">
-          <div>
-            <p className={`text-2xl font-bold tabular-nums sm:text-3xl ${driftTone(mostOffTargetBucket?.driftPctPoints)}`}>
-              {mostOffTargetBucket
-                ? formatPercent(mostOffTargetBucket.driftPctPoints, {
-                    signed: true,
-                    maximumFractionDigits: 2,
-                    suffix: ' pp',
-                  })
-                : '0.00 pp'}
-            </p>
-            <p className="mt-1 text-sm text-zinc-500">
-              {mostOffTargetBucket
-                ? mostOffTargetBucket.withinTolerance
-                  ? isPolish
-                    ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu, ale nadal mieszczą się w paśmie.`
-                    : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target, but still inside the configured band.`
-                  : isPolish
-                    ? `${labelAssetClass(mostOffTargetBucket.assetClass)} są najdalej od celu.`
-                    : `${labelAssetClass(mostOffTargetBucket.assetClass)} is furthest from target.`
-                : t('dashboardSections.bucketsAligned')}
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              {t('dashboardSections.toleranceBand')} ±{formatPercent(allocation.toleranceBandPctPoints, {
-                maximumFractionDigits: 2,
-                suffix: ' pp',
-              })} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
-            </p>
+          {/* Hero recommendation */}
+          <RecommendationHero allocation={allocation} />
+
+          {/* Per-bucket bars */}
+          <div className="space-y-2.5">
+            {buckets.map((bucket) => (
+              <AllocationBucketBar key={bucket.assetClass} bucket={bucket} />
+            ))}
           </div>
 
-          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-zinc-500">{t('dashboardSections.largestGap')}</dt>
-              <dd className={`mt-1 font-medium ${gapTone(rebalanceBucket?.gapValuePln)}`}>
-                {rebalanceBucket ? formatSignedCurrencyPln(rebalanceBucket.gapValuePln) : formatSignedCurrencyPln(0)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">
-                {allocation.recommendedAction === 'DEPLOY_EXISTING_CASH'
-                  ? t('dashboardSections.availableCash')
-                  : t('dashboardSections.nextContribution')}
-              </dt>
-              <dd className="mt-1 font-medium text-zinc-100">
-                {allocation.recommendedAssetClass && Number(allocation.recommendedContributionPln) > 0
-                  ? allocation.recommendedAction === 'DEPLOY_EXISTING_CASH'
-                    ? isPolish
-                      ? `${formatCurrencyPln(allocation.recommendedContributionPln)} gotówki -> ${labelAssetClass(allocation.recommendedAssetClass)}`
-                      : `${formatCurrencyPln(allocation.recommendedContributionPln)} cash -> ${labelAssetClass(allocation.recommendedAssetClass)}`
-                    : `${formatCurrencyPln(allocation.recommendedContributionPln)} -> ${labelAssetClass(allocation.recommendedAssetClass)}`
-                  : t('dashboardSections.noRebalanceNeeded')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">{t('dashboardSections.fullRebalance')}</dt>
-              <dd className="mt-1 font-medium text-zinc-100">
-                {formatCurrencyPln(allocation.fullRebalanceBuyAmountPln)} / {formatCurrencyPln(allocation.fullRebalanceSellAmountPln)}
-              </dd>
-            </div>
-          </dl>
-
-          <Link to="/settings#targets" className="inline-flex text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-100">
-            {t('dashboardSections.openTargetAllocation')}
-          </Link>
+          {/* Meta + link */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-zinc-500">
+              ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} {t('dashboardSections.toleranceMeta')} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
+            </p>
+            <Link to="/settings#targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
+              {t('dashboardSections.openTargetAllocation')} →
+            </Link>
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function RecommendationHero({ allocation }: { allocation: PortfolioAllocationSummary }) {
+  const amount = formatCurrencyPln(allocation.recommendedContributionPln)
+  const assetClass = allocation.recommendedAssetClass ? labelAssetClass(allocation.recommendedAssetClass) : ''
+  const band = formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })
+  const remainingGap = formatCurrencyPln(allocation.remainingContributionGapPln)
+
+  let hero: string
+  let subtitle: string | null = null
+
+  switch (allocation.recommendedAction) {
+    case 'WITHIN_TOLERANCE':
+      hero = formatMessage(t('dashboardSections.withinToleranceHero'), { band })
+      break
+    case 'DEPLOY_EXISTING_CASH':
+      hero = formatMessage(t('dashboardSections.deployCashHero'), { amount, assetClass })
+      subtitle = t('dashboardSections.deployCashSub')
+      break
+    case 'WAIT_FOR_NEXT_CONTRIBUTION':
+      hero = formatMessage(t('dashboardSections.contributionHero'), { amount, assetClass })
+      subtitle = formatMessage(t('dashboardSections.contributionSub'), { amount: remainingGap })
+      break
+    case 'FULL_REBALANCE':
+      hero = formatMessage(t('dashboardSections.fullRebalanceHero'), { amount: formatCurrencyPln(allocation.fullRebalanceBuyAmountPln) })
+      subtitle = t('dashboardSections.fullRebalanceSub')
+      break
+    default:
+      hero = ''
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-zinc-100">{hero}</p>
+      {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
+    </div>
+  )
+}
+
+const bucketColor: Record<string, string> = {
+  EQUITIES: 'bg-blue-500',
+  BONDS: 'bg-amber-500',
+  CASH: 'bg-zinc-500',
+}
+
+function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) {
+  const actual = Number(bucket.currentWeightPct)
+  const target = Number(bucket.targetWeightPct ?? 0)
+  const scale = Math.max(actual, target, 1) * 1.25
+  const barWidth = (actual / scale) * 100
+  const markerPos = (target / scale) * 100
+  const withinTolerance = bucket.withinTolerance
+  const color = bucketColor[bucket.assetClass] ?? 'bg-zinc-500'
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-16 shrink-0 text-xs text-zinc-400">{labelAssetClass(bucket.assetClass)}</span>
+      <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+        <div
+          className={`h-full rounded-full ${color} transition-all`}
+          style={{ width: `${barWidth}%` }}
+        />
+        <div
+          className="absolute top-0 h-full w-0.5 bg-zinc-300/60"
+          style={{ left: `${markerPos}%` }}
+        />
+      </div>
+      <span className={`w-24 shrink-0 text-right text-xs tabular-nums ${withinTolerance ? 'text-zinc-400' : 'text-amber-400'}`}>
+        {formatPercent(actual)} / {formatPercent(target)}
+      </span>
     </div>
   )
 }
@@ -441,36 +467,6 @@ function AllocationLegend({ label, color, pct }: { label: string; color: string;
       {label} {formatPercent(pct)}
     </span>
   )
-}
-
-function driftTone(value: string | null | undefined) {
-  if (value == null) {
-    return 'text-zinc-100'
-  }
-
-  const numeric = Math.abs(Number(value))
-  if (Number.isNaN(numeric) || numeric === 0) {
-    return 'text-zinc-100'
-  }
-  if (numeric < 2) {
-    return 'text-emerald-400'
-  }
-  if (numeric < 5) {
-    return 'text-amber-400'
-  }
-  return 'text-red-400'
-}
-
-function gapTone(value: string | null | undefined) {
-  if (value == null) {
-    return 'text-zinc-100'
-  }
-
-  const numeric = Number(value)
-  if (Number.isNaN(numeric) || numeric === 0) {
-    return 'text-zinc-100'
-  }
-  return numeric > 0 ? 'text-amber-400' : 'text-sky-400'
 }
 
 function allocationActionVariant(action: string) {

@@ -421,8 +421,8 @@ describe('App', () => {
     expect(await screen.findByText(/daily change/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/requires full market valuation/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/valuation basis/i)).toBeInTheDocument()
-    expect(await screen.findByText(/-0.48 pp/i)).toBeInTheDocument()
-    expect(await screen.findByText(/inside the configured band/i)).toBeInTheDocument()
+    expect(await screen.findByText(/within.*±5\.00 pp.*tolerance/i)).toBeInTheDocument()
+    expect(await screen.findByText(/79.52% \/ 80.00%/)).toBeInTheDocument()
   })
 
   it('shows the login gate when password auth is enabled', async () => {
