@@ -191,12 +191,10 @@ export function ReturnsTab({
       </div>
 
       {selectedPeriod ? (
-        <div key={selectedPeriod.key} className="animate-fade-in">
-          <ReturnsBreakdownCard
-            period={selectedPeriod}
-            returnsDisplayAvailable={returnsDisplayAvailable}
-          />
-        </div>
+        <ReturnsBreakdownCard
+          period={selectedPeriod}
+          returnsDisplayAvailable={returnsDisplayAvailable}
+        />
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
