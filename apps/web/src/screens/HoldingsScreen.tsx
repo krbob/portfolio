@@ -168,7 +168,7 @@ export function HoldingsContent() {
     setSearchQuery('')
   }
 
-  if (holdingsQuery.isLoading) {
+  if (holdingsQuery.isLoading || instrumentsQuery.isLoading) {
     return (
       <LoadingState
         title={t('holdings.loadingTitle')}
@@ -178,12 +178,12 @@ export function HoldingsContent() {
     )
   }
 
-  if (holdingsQuery.isError) {
+  if (holdingsQuery.isError || instrumentsQuery.isError) {
     return (
       <ErrorState
         title={t('holdings.errorTitle')}
         description={t('holdings.errorDescription')}
-        onRetry={() => void holdingsQuery.refetch()}
+        onRetry={() => void Promise.all([holdingsQuery.refetch(), instrumentsQuery.refetch()])}
       />
     )
   }

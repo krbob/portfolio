@@ -56,7 +56,7 @@ export function PerformanceScreen() {
     void Promise.all([historyQuery.refetch(), returnsQuery.refetch(), benchmarkSettingsQuery.refetch()])
   }
 
-  if ((historyQuery.isLoading || returnsQuery.isLoading) && !hasHistory && !hasReturns) {
+  if ((historyQuery.isLoading || returnsQuery.isLoading || holdingsQuery.isLoading) && !hasHistory && !hasReturns) {
     return (
       <>
         <PageHeader title={t('performance.title')} />

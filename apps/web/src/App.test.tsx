@@ -560,6 +560,10 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/instruments')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
       throw new Error(`Unhandled fetch in holdings valuation test: ${url}`)
     })
 
