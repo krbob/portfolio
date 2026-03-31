@@ -51,19 +51,28 @@ export function Layout({ children }: { children: ReactNode }) {
     let attempts = 0
     let timeoutId: number | null = null
 
+    const scrollToElement = (target: HTMLElement) => {
+      if (typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ block: 'start', behavior: 'auto' })
+      } else if (mainRef.current) {
+        const top = target instanceof HTMLElement ? target.offsetTop : 0
+        if (typeof mainRef.current.scrollTo === 'function') {
+          mainRef.current.scrollTo({ top, behavior: 'auto' })
+        } else {
+          mainRef.current.scrollTop = top
+        }
+      }
+    }
+
     const scrollToHashTarget = () => {
       const target = document.getElementById(hash)
       if (target) {
-        if (typeof target.scrollIntoView === 'function') {
-          target.scrollIntoView({ block: 'start', behavior: 'auto' })
-        } else if (mainRef.current) {
-          const top = target instanceof HTMLElement ? target.offsetTop : 0
-          if (typeof mainRef.current.scrollTo === 'function') {
-            mainRef.current.scrollTo({ top, behavior: 'auto' })
-          } else {
-            mainRef.current.scrollTop = top
-          }
-        }
+        scrollToElement(target)
+        // Re-scroll after content settles (async data loading may shift layout)
+        window.setTimeout(() => {
+          const settled = document.getElementById(hash)
+          if (settled) scrollToElement(settled)
+        }, 600)
         previousPathRef.current = location.pathname
         return
       }
