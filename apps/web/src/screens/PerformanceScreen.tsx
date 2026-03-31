@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
-import { EmptyState, ErrorState, LoadingState, StatCard, TabBar } from '../components/ui'
+import { EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, StatCard, TabBar } from '../components/ui'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioDailyHistory, usePortfolioHoldings, usePortfolioReturns } from '../hooks/use-read-model'
 import { usePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
@@ -32,6 +33,7 @@ export function PerformanceScreen() {
   const returnsQuery = usePortfolioReturns()
   const holdingsQuery = usePortfolioHoldings()
   const benchmarkSettingsQuery = usePortfolioBenchmarkSettings()
+  const isRefreshing = useBackgroundRefreshing([historyQuery, returnsQuery, holdingsQuery])
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
@@ -95,8 +97,11 @@ export function PerformanceScreen() {
 
   return (
     <>
-      <PageHeader title={t('performance.title')} />
+      <PageHeader title={t('performance.title')}>
+        <RefreshIndicator active={isRefreshing} />
+      </PageHeader>
 
+      <FadeIn>
       {/* Top stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
@@ -143,7 +148,7 @@ export function PerformanceScreen() {
         idBase="performance-workspace"
       />
 
-      <div className="mt-6">
+      <div key={tab} className="mt-6 animate-fade-in">
         {tab === 'charts' ? (
           <section
             role="tabpanel"
@@ -177,6 +182,7 @@ export function PerformanceScreen() {
           </section>
         )}
       </div>
+      </FadeIn>
     </>
   )
 }

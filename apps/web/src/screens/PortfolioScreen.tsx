@@ -30,7 +30,9 @@ export function PortfolioScreen() {
           { value: 'accounts' as PortfolioTab, label: t('portfolio.accountsTab') },
         ]}
       />
-      {activeTab === 'accounts' ? <AccountsContent /> : <HoldingsContent />}
+      <div key={activeTab} className="animate-fade-in">
+        {activeTab === 'accounts' ? <AccountsContent /> : <HoldingsContent />}
+      </div>
     </>
   )
 }

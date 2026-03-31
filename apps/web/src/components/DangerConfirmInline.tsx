@@ -26,7 +26,7 @@ export function DangerConfirmInline({
   const resolvedPendingLabel = confirmPendingLabel ?? t('common.processing')
 
   return (
-    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-start justify-between gap-4">
+    <div className="animate-fade-in rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-start justify-between gap-4">
       <div>
         <strong className="text-sm font-medium text-zinc-100">{title}</strong>
         <p className="mt-1 text-sm text-zinc-500">{description}</p>

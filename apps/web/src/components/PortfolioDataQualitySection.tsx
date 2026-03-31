@@ -36,7 +36,7 @@ export function PortfolioDataQualitySection() {
       )}
 
       {summary && (
-        <>
+        <div className="animate-fade-in">
           <div className="grid grid-cols-2 gap-4 mb-4 xl:grid-cols-5">
             <MetricCard
               label={t('dataQuality.status')}
@@ -81,7 +81,7 @@ export function PortfolioDataQualitySection() {
               {t('dataQuality.upstreamHint')}
             </p>
           ) : null}
-        </>
+        </div>
       )}
     </Card>
   )

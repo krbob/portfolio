@@ -2,9 +2,10 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PortfolioHolding } from '../api/read-model'
 import { PageHeader } from '../components/layout'
-import { FilterBar, EmptyState, ErrorState, LoadingState, StatePanel, SortableHeader } from '../components/ui'
+import { AnimatePresence, FadeIn, FilterBar, EmptyState, ErrorState, LoadingState, RefreshIndicator, StatePanel, SortableHeader } from '../components/ui'
 import type { SortState, SortDirection } from '../components/ui'
 import { useAppMeta } from '../hooks/use-app-meta'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
@@ -56,6 +57,7 @@ export function HoldingsContent() {
   const navigate = useNavigate()
   const appMetaQuery = useAppMeta()
   const holdingsQuery = usePortfolioHoldings()
+  const isRefreshing = useBackgroundRefreshing([holdingsQuery])
   const instrumentsQuery = useInstruments()
   const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
   const instrumentsById = useMemo(
@@ -198,7 +200,8 @@ export function HoldingsContent() {
 
   return (
     <>
-
+      <RefreshIndicator active={isRefreshing} />
+      <FadeIn>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <HoldingSummaryTile
           label={t('holdings.visibleHoldings')}
@@ -376,6 +379,7 @@ export function HoldingsContent() {
       )}
 
       {/* Selected holding detail */}
+      <AnimatePresence token={selectedHoldingKey}>
       {selectedHolding && (
         <div ref={holdingDetailRef} className={`${card} mt-4`}>
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -496,6 +500,8 @@ export function HoldingsContent() {
           ) : null}
         </div>
       )}
+      </AnimatePresence>
+      </FadeIn>
     </>
   )
 

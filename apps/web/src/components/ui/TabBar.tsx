@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 interface TabBarProps<T extends string> {
   value: T
   onChange: (value: T) => void
@@ -13,8 +15,28 @@ export function TabBar<T extends string>({
   ariaLabel = 'Tab bar',
   idBase,
 }: TabBarProps<T>) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 })
+  const hasInitialized = useRef(false)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const activeButton = container.querySelector<HTMLButtonElement>('[aria-selected="true"]')
+    if (!activeButton) return
+
+    const containerRect = container.getBoundingClientRect()
+    const buttonRect = activeButton.getBoundingClientRect()
+    setIndicator({
+      left: buttonRect.left - containerRect.left,
+      width: buttonRect.width,
+    })
+    hasInitialized.current = true
+  }, [value, tabs])
+
   return (
-    <div className="mb-6 flex gap-0 border-b border-zinc-800" role="tablist" aria-label={ariaLabel}>
+    <div ref={containerRef} className="relative mb-6 flex gap-0 border-b border-zinc-800" role="tablist" aria-label={ariaLabel}>
       {tabs.map((tab) => (
         <button
           key={tab.value}
@@ -27,7 +49,7 @@ export function TabBar<T extends string>({
           onClick={() => onChange(tab.value)}
           className={`relative px-4 py-3 text-sm font-medium transition-colors ${
             value === tab.value
-              ? 'text-zinc-100 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-blue-500'
+              ? 'text-zinc-100'
               : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -39,6 +61,12 @@ export function TabBar<T extends string>({
           )}
         </button>
       ))}
+      <span
+        className={`absolute bottom-0 h-0.5 rounded-full bg-blue-500 ${
+          hasInitialized.current ? 'transition-[left,width] duration-250 ease-out' : ''
+        }`}
+        style={{ left: indicator.left, width: indicator.width }}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createChart, type IChartApi } from 'lightweight-charts'
 import { createPortfolioChartOptions, isInteractiveChartEnvironment } from '../../lib/chart-theme'
 
@@ -12,9 +12,11 @@ interface ChartContainerProps {
 
 export function ChartContainer({ height = 320, title, subtitle, legend, onChart }: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const [chartReady, setChartReady] = useState(false)
 
   useEffect(() => {
     if (!containerRef.current || !isInteractiveChartEnvironment()) return
+    setChartReady(false)
 
     const chart = createChart(
       containerRef.current,
@@ -22,6 +24,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChart 
     )
 
     const cleanup = onChart(chart)
+    requestAnimationFrame(() => setChartReady(true))
 
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -50,7 +53,10 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChart 
           {legend && <div className="flex items-center gap-4">{legend}</div>}
         </div>
       )}
-      <div ref={containerRef} />
+      <div
+        ref={containerRef}
+        className={`transition-opacity duration-300 ${chartReady ? 'opacity-100' : 'opacity-0'}`}
+      />
     </div>
   )
 }

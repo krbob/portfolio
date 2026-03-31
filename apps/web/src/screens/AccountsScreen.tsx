@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PortfolioAccountSummary } from '../api/read-model'
 import { AccountsSection } from '../components/AccountsSection'
 import { PageHeader } from '../components/layout'
-import { Card, EmptyState, ErrorState, LoadingState, SectionHeader, SortableHeader } from '../components/ui'
+import { AnimatePresence, Card, EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, SectionHeader, SortableHeader } from '../components/ui'
 import type { SortState, SortDirection } from '../components/ui'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioAccounts, usePortfolioHoldings } from '../hooks/use-read-model'
 import { formatCurrencyPln, formatPercent } from '../lib/format'
 import { useI18n } from '../lib/i18n'
@@ -51,6 +52,7 @@ export function AccountsContent() {
   const { isPolish } = useI18n()
   const accountsQuery = usePortfolioAccounts()
   const holdingsQuery = usePortfolioHoldings()
+  const isRefreshing = useBackgroundRefreshing([accountsQuery, holdingsQuery])
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
   const [sortState, setSortState] = usePersistentState<AccountsSortState>(ACCOUNTS_PREFERENCE_KEYS.sortState, defaultSort, { validate: isAccountsSortState })
@@ -106,7 +108,8 @@ export function AccountsContent() {
 
   return (
     <>
-
+      <RefreshIndicator active={isRefreshing} />
+      <FadeIn>
       {accounts.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <AccountSummaryTile
@@ -249,17 +252,20 @@ export function AccountsContent() {
             )}
           </Card>
 
-          {selectedAccount && (
-            <AccountDetailsCard
-              account={selectedAccount}
-              holdings={selectedAccountHoldings}
-              isPolish={isPolish}
-            />
-          )}
+          <AnimatePresence token={selectedAccount?.accountId}>
+            {selectedAccount && (
+              <AccountDetailsCard
+                account={selectedAccount}
+                holdings={selectedAccountHoldings}
+                isPolish={isPolish}
+              />
+            )}
+          </AnimatePresence>
         </div>
 
         <AccountsSection />
       </div>
+      </FadeIn>
     </>
   )
 }

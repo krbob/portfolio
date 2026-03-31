@@ -5,11 +5,13 @@ import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
+import { FadeIn, RefreshIndicator } from '../components/ui'
 import {
   DashboardAllocationBar,
   DashboardDataQualityCard,
@@ -29,6 +31,7 @@ export function DashboardScreen() {
   const allocationQuery = usePortfolioAllocation()
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
+  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, allocationQuery])
   const overview = overviewQuery.data
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
@@ -155,6 +158,7 @@ export function DashboardScreen() {
   return (
     <>
       <PageHeader title={t('dashboard.title')}>
+        <RefreshIndicator active={isRefreshing} />
         {latestPoint && (
           <span className="text-xs text-zinc-500">
             {t('dashboard.asOf')} {latestPoint.date} · {labelPortfolioValuationBasis(valuationState, isPolish)}
@@ -164,6 +168,7 @@ export function DashboardScreen() {
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
 
+      <FadeIn>
       <DashboardHeroStats
         isPolish={isPolish}
         overview={overview}
@@ -223,6 +228,7 @@ export function DashboardScreen() {
         contributionBreakdownSubtitle={contributionBreakdownSubtitle}
         cashBreakdownSubtitle={cashBreakdownSubtitle}
       />
+      </FadeIn>
     </>
   )
 }

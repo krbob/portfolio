@@ -70,7 +70,7 @@ export function ImportAuditPanel({
         </p>
       )}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-fade-in">
           {visibleEvents.map((event) => {
             const metadataSummary = buildAuditMetadataSummary(event.metadata, isPolish)
             return (

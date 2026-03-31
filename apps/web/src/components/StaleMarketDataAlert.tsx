@@ -1,4 +1,4 @@
-import { Card } from './ui'
+import { Card, FadeIn } from './ui'
 import type { StaleMarketDataAlert as StaleMarketDataAlertModel } from '../lib/stale-market-data-alert'
 import { formatDateTime } from '../lib/format'
 import { t } from '../lib/messages'
@@ -10,6 +10,7 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
   }
 
   return (
+    <FadeIn>
     <Card className="border-sky-500/30 bg-sky-500/5 p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -48,6 +49,7 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
         />
       </div>
     </Card>
+    </FadeIn>
   )
 }
 

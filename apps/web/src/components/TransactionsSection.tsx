@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { EmptyState, ErrorState, LoadingState, SectionHeader } from './ui'
+import { EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, SectionHeader } from './ui'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { t } from '../lib/messages'
 import {
@@ -21,6 +22,7 @@ export function TransactionsSection() {
   const updateTransactionMutation = useUpdateTransaction()
   const deleteTransactionMutation = useDeleteTransaction()
 
+  const isRefreshing = useBackgroundRefreshing([accountsQuery, instrumentsQuery, transactionsQuery])
   const [filteredJournalRowCount, setFilteredJournalRowCount] = useState<number | null>(null)
 
   const accountOptions = accountsQuery.data ?? []
@@ -94,7 +96,9 @@ export function TransactionsSection() {
         description={t('transactionsOrch.description')}
         className="mb-2"
       />
+      <RefreshIndicator active={isRefreshing} />
 
+      <FadeIn>
       <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
           <span className="text-xs text-zinc-500">{t('transactionsOrch.transactions')}</span>
@@ -116,6 +120,7 @@ export function TransactionsSection() {
         deleteTransactionMutation={deleteTransactionMutation}
         onFilteredRowCountChange={handleFilteredRowCountChange}
       />
+      </FadeIn>
     </section>
   )
 }

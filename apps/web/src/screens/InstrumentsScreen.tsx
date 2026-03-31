@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { InstrumentsSection } from '../components/InstrumentsSection'
 import { PageHeader } from '../components/layout'
-import { Badge, Card, EmptyState, ErrorState, LoadingState, SectionHeader, SortableHeader } from '../components/ui'
+import { AnimatePresence, Badge, Card, EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, SectionHeader, SortableHeader } from '../components/ui'
 import { useAppMeta } from '../hooks/use-app-meta'
+import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioHoldings } from '../hooks/use-read-model'
 import { useInstruments } from '../hooks/use-write-model'
 import { formatCurrencyPln } from '../lib/format'
@@ -67,6 +68,7 @@ export function InstrumentsManagement() {
   const appMetaQuery = useAppMeta()
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
+  const isRefreshing = useBackgroundRefreshing([instrumentsQuery, holdingsQuery])
 
   const catalog = useMemo(() => instrumentsQuery.data ?? [], [instrumentsQuery.data])
   const holdings = useMemo(() => holdingsQuery.data ?? [], [holdingsQuery.data])
@@ -139,6 +141,8 @@ export function InstrumentsManagement() {
 
   return (
     <>
+      <RefreshIndicator active={isRefreshing} />
+      <FadeIn>
       {rows.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <InstrumentSummaryTile
@@ -287,20 +291,23 @@ export function InstrumentsManagement() {
             )}
           </Card>
 
-          {selectedRow && (
-            <div ref={detailRef}>
-              <InstrumentDetailsCard
-                row={selectedRow}
-                holdings={selectedHoldings}
-                isPolish={isPolish}
-                analysisUrl={stockAnalystAnalysisUrl}
-              />
-            </div>
-          )}
+          <AnimatePresence token={selectedRow?.instrument.id}>
+            {selectedRow && (
+              <div ref={detailRef}>
+                <InstrumentDetailsCard
+                  row={selectedRow}
+                  holdings={selectedHoldings}
+                  isPolish={isPolish}
+                  analysisUrl={stockAnalystAnalysisUrl}
+                />
+              </div>
+            )}
+          </AnimatePresence>
         </div>
 
         <InstrumentsSection />
       </div>
+      </FadeIn>
     </>
   )
 }

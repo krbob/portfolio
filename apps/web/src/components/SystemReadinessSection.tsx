@@ -23,7 +23,7 @@ export function SystemReadinessSection() {
       {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
 
       {readiness && (
-        <>
+        <div className="animate-fade-in">
           <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
             <article className="rounded-lg border border-zinc-800/50 p-4">
               <span className="text-xs text-zinc-500">{t('readiness.overallStatus')}</span>
@@ -78,7 +78,7 @@ export function SystemReadinessSection() {
               </article>
             ))}
           </div>
-        </>
+        </div>
       )}
     </Card>
   )

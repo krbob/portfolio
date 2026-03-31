@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { t } from '../../lib/messages'
 
 interface ModalProps {
@@ -21,6 +21,25 @@ const sizeClasses = {
 export function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      // Trigger enter animation on next frame
+      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
+    } else {
+      setVisible(false)
+      // Fallback for environments where transitionend doesn't fire (e.g. jsdom)
+      const timeout = setTimeout(() => setMounted(false), 250)
+      return () => clearTimeout(timeout)
+    }
+  }, [open])
+
+  function handleTransitionEnd() {
+    if (!visible) setMounted(false)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -36,19 +55,28 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
     panelRef.current?.focus()
   }, [open])
 
-  if (!open) return null
+  if (!mounted) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+          visible ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
-        className={`relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden ${sizeClasses[size]} rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl`}
+        className={`relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden ${sizeClasses[size]} rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl transition-[opacity,transform] duration-200 ease-out ${
+          visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
+        onTransitionEnd={handleTransitionEnd}
       >
         <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
           <h3 id={titleId} className="text-lg font-semibold">{title}</h3>

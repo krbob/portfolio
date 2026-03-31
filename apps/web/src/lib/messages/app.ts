@@ -18,6 +18,7 @@ export const appMessages = {
   'common.goBack': { pl: 'Wróć', en: 'Go back' },
   'common.processing': { pl: 'Przetwarzanie...', en: 'Working...' },
   'common.missingData': { pl: 'b/d', en: 'N/A' },
+  'common.refreshing': { pl: 'Odświeżanie\u2026', en: 'Refreshing\u2026' },
   'app.loadingTitle': { pl: 'Przygotowujemy ekran', en: 'Preparing workspace' },
   'app.loadingDescription': {
     pl: 'Wczytujemy widok i związane z nim dane portfela.',

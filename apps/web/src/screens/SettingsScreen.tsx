@@ -14,7 +14,7 @@ import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { TransactionImportSection } from '../components/TransactionImportSection'
-import { Card, SectionHeader } from '../components/ui'
+import { Card, FadeIn, SectionHeader } from '../components/ui'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { t } from '../lib/messages'
 import { InstrumentsManagement } from './InstrumentsScreen'
@@ -166,6 +166,7 @@ export function SettingsScreen() {
           </Card>
         </aside>
 
+        <FadeIn>
         <div className="space-y-12">
           <MobileSection activeSection={activeSection} sectionIds={[]}>
             <section id="setup-guide" className="scroll-mt-24">
@@ -258,6 +259,7 @@ export function SettingsScreen() {
             </SettingsGroup>
           </MobileSection>
         </div>
+        </FadeIn>
       </div>
     </>
   )

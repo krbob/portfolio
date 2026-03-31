@@ -191,10 +191,12 @@ export function ReturnsTab({
       </div>
 
       {selectedPeriod ? (
-        <ReturnsBreakdownCard
-          period={selectedPeriod}
-          returnsDisplayAvailable={returnsDisplayAvailable}
-        />
+        <div key={selectedPeriod.key} className="animate-fade-in">
+          <ReturnsBreakdownCard
+            period={selectedPeriod}
+            returnsDisplayAvailable={returnsDisplayAvailable}
+          />
+        </div>
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
@@ -271,7 +273,7 @@ export function ReturnsTab({
       </div>
 
       {selectedBenchmarkPeriod ? (
-        <div className={card}>
+        <div key={selectedBenchmarkPeriod.key} className={`${card} animate-fade-in`}>
           <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-zinc-200">

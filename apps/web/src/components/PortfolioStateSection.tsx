@@ -259,7 +259,7 @@ export function PortfolioStateSection() {
           </p>
 
           {previewResult && (
-            <div className="mt-4 rounded-lg border border-zinc-800/50 p-4">
+            <div className="mt-4 rounded-lg border border-zinc-800/50 p-4 animate-fade-in">
               <div className="flex items-center justify-between mb-3">
                 <h5 className="text-sm font-semibold text-zinc-100">{t('state.previewSummary')}</h5>
                 <span className={`${badge} ${previewResult.isValid ? badgeVariants.success : badgeVariants.error}`}>
