@@ -183,7 +183,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
           <div
             style={{
               paddingLeft: 'var(--safe-left)',
