@@ -425,6 +425,133 @@ describe('App', () => {
     expect(await screen.findByText(/80% \/ 80%/)).toBeInTheDocument()
   })
 
+  it('computes daily change from history points, not live overview', async () => {
+    // Scenario: user deposited 50k today. Overview shows 150k (live, includes deposit).
+    // History last two points: 98k → 100k. Daily change must be +2k (history diff),
+    // NOT +52k (overview minus yesterday).
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(JSON.stringify({ authEnabled: false, authenticated: true, mode: 'DISABLED' }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(JSON.stringify({
+          name: 'Portfolio', stage: 'dev', version: '0.1.0-dev',
+          auth: { enabled: false, mode: 'DISABLED' },
+          stack: { web: 'React', api: 'Kotlin', database: 'SQLite' },
+          capabilities: [],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(JSON.stringify({ status: 'READY', checkedAt: '2026-03-13T12:00:00Z', checks: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(JSON.stringify({
+          asOf: '2026-03-15',
+          valuationState: 'MARK_TO_MARKET',
+          totalBookValuePln: '150000.00',
+          totalCurrentValuePln: '150000.00',
+          investedBookValuePln: '100000.00',
+          investedCurrentValuePln: '100000.00',
+          cashBalancePln: '50000.00',
+          netContributionsPln: '150000.00',
+          equityBookValuePln: '100000.00',
+          equityCurrentValuePln: '100000.00',
+          bondBookValuePln: '0.00',
+          bondCurrentValuePln: '0.00',
+          cashBookValuePln: '50000.00',
+          cashCurrentValuePln: '50000.00',
+          totalUnrealizedGainPln: '0.00',
+          accountCount: 1, instrumentCount: 1, activeHoldingCount: 1, valuedHoldingCount: 1, unvaluedHoldingCount: 0,
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(JSON.stringify({
+          from: '2026-03-13', until: '2026-03-15',
+          valuationState: 'MARK_TO_MARKET',
+          instrumentHistoryIssueCount: 0, referenceSeriesIssueCount: 0, benchmarkSeriesIssueCount: 0,
+          missingFxTransactions: 0, unsupportedCorrectionTransactions: 0,
+          points: [
+            {
+              date: '2026-03-13',
+              totalBookValuePln: '98000.00', totalCurrentValuePln: '98000.00',
+              netContributionsPln: '100000.00', cashBalancePln: '0.00',
+              equityCurrentValuePln: '98000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
+              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
+              activeHoldingCount: 1, valuedHoldingCount: 1,
+            },
+            {
+              date: '2026-03-14',
+              totalBookValuePln: '100000.00', totalCurrentValuePln: '98000.00',
+              netContributionsPln: '100000.00', cashBalancePln: '0.00',
+              equityCurrentValuePln: '98000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
+              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
+              activeHoldingCount: 1, valuedHoldingCount: 1,
+            },
+            {
+              date: '2026-03-15',
+              totalBookValuePln: '100000.00', totalCurrentValuePln: '100000.00',
+              netContributionsPln: '100000.00', cashBalancePln: '0.00',
+              equityCurrentValuePln: '100000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
+              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
+              activeHoldingCount: 1, valuedHoldingCount: 1,
+            },
+          ],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/allocation')) {
+        return new Response(JSON.stringify({
+          asOf: '2026-03-15', valuationState: 'MARK_TO_MARKET', configured: false,
+          toleranceBandPctPoints: '5.00', rebalancingMode: 'CONTRIBUTIONS_ONLY',
+          targetWeightSumPct: '0.00', totalCurrentValuePln: '100000.00', availableCashPln: '0.00',
+          breachedBucketCount: 0, recommendedAction: 'WITHIN_TOLERANCE',
+          recommendedContributionPln: '0.00', remainingContributionGapPln: '0.00',
+          fullRebalanceBuyAmountPln: '0.00', fullRebalanceSellAmountPln: '0.00',
+          requiresSelling: false, buckets: [],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(JSON.stringify({ asOf: '2026-03-15', periods: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(JSON.stringify({
+          schedulerEnabled: false, intervalMinutes: 720, runOnStart: true, running: false,
+          lastRunAt: null, lastSuccessAt: null, lastFailureAt: null, lastFailureMessage: null,
+          lastTrigger: null, lastDurationMs: null, modelNames: ['DAILY_HISTORY', 'RETURNS'],
+        }), { status: 200 })
+      }
+
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    // Daily change should be +2000 (100k - 98k from history), NOT +52000 (150k overview - 98k)
+    const dailyChangeCard = await screen.findByText(/daily change/i)
+    const cardContainer = dailyChangeCard.closest('[class*="rounded"]')!
+    expect(cardContainer.textContent).toMatch(/2[,.\s\u00a0]?000/)
+    expect(cardContainer.textContent).not.toMatch(/52[,.\s\u00a0]?000/)
+
+    // Portfolio value shows live 150k from overview (includes deposit)
+    expect((await screen.findAllByText(/150[,.\s\u00a0]?000/)).length).toBeGreaterThan(0)
+  })
+
   it('shows the login gate when password auth is enabled', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
