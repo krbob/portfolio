@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { t } from '../../lib/messages'
 
 interface ModalProps {
@@ -57,7 +58,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
 
   if (!mounted) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
@@ -96,6 +97,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
           <div className="flex justify-end gap-3 border-t border-zinc-800 px-6 py-4">{footer}</div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

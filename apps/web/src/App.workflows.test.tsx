@@ -341,7 +341,7 @@ describe('App', () => {
 
     fireEvent.click(await scope.findByRole('button', { name: /new transaction/i }))
 
-    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialog = await screen.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
     const accountSelect = dialogScope.getByLabelText(/^account$/i)
 
@@ -389,7 +389,7 @@ describe('App', () => {
     })
 
     await waitFor(() => {
-      expect(scope.queryByRole('dialog', { name: /new transaction/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: /new transaction/i })).not.toBeInTheDocument()
     })
   })
 
@@ -578,7 +578,7 @@ describe('App', () => {
 
     fireEvent.click(await scope.findByRole('button', { name: /new transaction/i }))
 
-    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialog = await screen.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
 
     fireEvent.change(dialogScope.getByLabelText(/^account$/i), { target: { value: 'acc-1' } })
@@ -789,7 +789,7 @@ describe('App', () => {
 
     expect((await scope.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
 
-    const dialog = await scope.findByRole('dialog', { name: /new transaction/i })
+    const dialog = await screen.findByRole('dialog', { name: /new transaction/i })
     const dialogScope = within(dialog)
 
     expect(dialogScope.getByLabelText(/^account$/i)).toHaveValue('acc-1')

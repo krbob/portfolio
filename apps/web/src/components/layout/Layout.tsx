@@ -192,9 +192,9 @@ export function Layout({ children }: { children: ReactNode }) {
             }}
           >
             <div className="mx-auto max-w-[100rem] p-4 sm:p-5 lg:p-8">{children}</div>
-            <QuickAddTransactionButton />
           </div>
         </main>
+        <QuickAddTransactionButton />
       </div>
 
       {isMobileNavMounted && (
