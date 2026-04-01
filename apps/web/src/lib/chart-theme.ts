@@ -51,9 +51,12 @@ export function createPortfolioChartOptions(width: number, height: number) {
     },
     handleScroll: {
       mouseWheel: false,
+      vertTouchDrag: false,
     },
     handleScale: {
       mouseWheel: false,
+      pinch: false,
+      axisPressedMouseMove: false,
     },
     crosshair: {
       vertLine: { color: chartPalette.crosshair, style: 3 },
