@@ -282,7 +282,6 @@ function RecommendationHero({ allocation }: { allocation: PortfolioAllocationSum
   const amount = formatCurrencyPln(allocation.recommendedContributionPln)
   const assetClass = allocation.recommendedAssetClass ? labelAssetClass(allocation.recommendedAssetClass) : ''
   const band = formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })
-  const remainingGap = formatCurrencyPln(allocation.remainingContributionGapPln)
 
   let hero: string
   let subtitle: string | null = null
@@ -296,8 +295,8 @@ function RecommendationHero({ allocation }: { allocation: PortfolioAllocationSum
       subtitle = t('dashboardSections.deployCashSub')
       break
     case 'WAIT_FOR_NEXT_CONTRIBUTION':
-      hero = formatMessage(t('dashboardSections.contributionHero'), { amount, assetClass })
-      subtitle = formatMessage(t('dashboardSections.contributionSub'), { amount: remainingGap })
+      hero = formatMessage(t('dashboardSections.contributionHero'), { assetClass })
+      subtitle = formatMessage(t('dashboardSections.contributionSub'), { amount: formatCurrencyPln(allocation.fullRebalanceBuyAmountPln) })
       break
     case 'FULL_REBALANCE':
       hero = formatMessage(t('dashboardSections.fullRebalanceHero'), { amount: formatCurrencyPln(allocation.fullRebalanceBuyAmountPln) })
