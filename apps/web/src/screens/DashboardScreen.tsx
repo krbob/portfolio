@@ -37,25 +37,32 @@ export function DashboardScreen() {
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const chartPoints = useMemo(() => filterHistoryPoints(allPoints, range), [allPoints, range])
   const latestPoint = chartPoints.at(-1) ?? allPoints.at(-1)
-  const previousPoint = chartPoints.at(-2) ?? allPoints.at(-2)
+  // Baseline for daily change: last history point before today (server date from overview)
+  const asOfDate = overview?.asOf
+  const previousPoint = useMemo(() => {
+    if (!asOfDate) return null
+    const pts = chartPoints.length > 0 ? chartPoints : allPoints
+    const beforeToday = pts.filter((p) => p.date < asOfDate)
+    return beforeToday.at(-1) ?? null
+  }, [chartPoints, allPoints, asOfDate])
   const valuationState = overview?.valuationState ?? 'MARK_TO_MARKET'
   const historyValuationState = historyQuery.data?.valuationState ?? valuationState
   const usesBookBasisOnly = isBookOnlyValuationState(valuationState)
   const hasMarketBackedCurrentValuation = isMarketValuationState(valuationState)
   const hasMarketBackedHistoryValuation =
     isMarketValuationState(historyValuationState) &&
-    Boolean(latestPoint) &&
     Boolean(previousPoint) &&
-    latestPoint!.activeHoldingCount === latestPoint!.valuedHoldingCount &&
     previousPoint!.activeHoldingCount === previousPoint!.valuedHoldingCount
 
+  // Daily change: live portfolio value (overview) vs yesterday's history snapshot
+  const previousValuePln = previousPoint ? Number(previousPoint.totalCurrentValuePln) : null
   const dailyChange =
-    hasMarketBackedHistoryValuation && latestPoint && previousPoint
-      ? Number(latestPoint.totalCurrentValuePln) - Number(previousPoint.totalCurrentValuePln)
+    hasMarketBackedCurrentValuation && hasMarketBackedHistoryValuation && overview && previousValuePln != null
+      ? Number(overview.totalCurrentValuePln) - previousValuePln
       : null
   const dailyChangePct =
-    dailyChange != null && previousPoint && Number(previousPoint.totalCurrentValuePln) !== 0
-      ? (dailyChange / Number(previousPoint.totalCurrentValuePln)) * 100
+    dailyChange != null && previousValuePln != null && previousValuePln !== 0
+      ? (dailyChange / previousValuePln) * 100
       : null
 
   const displayedTotalValuePln = overview
