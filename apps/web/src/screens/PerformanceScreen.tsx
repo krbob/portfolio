@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, StatCard, TabBar } from '../components/ui'
 import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
-import { usePortfolioDailyHistory, usePortfolioHoldings, usePortfolioReturns } from '../hooks/use-read-model'
+import { usePortfolioDailyHistory, usePortfolioHoldings, usePortfolioOverview, usePortfolioReturns } from '../hooks/use-read-model'
 import { usePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { missingDataLabel } from '../lib/availability'
 import { resolveBenchmarkOrder } from '../lib/benchmarks'
@@ -29,11 +29,12 @@ export function PerformanceScreen() {
   const [period, setPeriod] = useState<Period>('MAX')
   const [unit, setUnit] = useState<Unit>('PLN')
 
+  const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
   const holdingsQuery = usePortfolioHoldings()
   const benchmarkSettingsQuery = usePortfolioBenchmarkSettings()
-  const isRefreshing = useBackgroundRefreshing([historyQuery, returnsQuery, holdingsQuery])
+  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, holdingsQuery])
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
@@ -106,8 +107,8 @@ export function PerformanceScreen() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t('performance.latestValue')}
-          value={latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
-          subtitle={!latest ? t('performance.noDataSubtitle') : undefined}
+          value={overviewQuery.data ? formatCurrencyPln(overviewQuery.data.totalCurrentValuePln) : latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
+          subtitle={!overviewQuery.data && !latest ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label="YTD MWRR"
