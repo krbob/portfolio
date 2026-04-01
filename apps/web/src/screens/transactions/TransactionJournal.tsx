@@ -645,7 +645,6 @@ export function TransactionJournal({
         aria-labelledby="transactions-workspace-tab-journal"
       >
         <TransactionJournalSummary
-          composerOpen={composerOpen}
           hasActiveJournalFilters={hasActiveJournalFilters}
           sortedRowCount={sortedRows.length}
           journalRowCount={journalRows.length}

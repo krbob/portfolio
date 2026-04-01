@@ -2,10 +2,9 @@ import { Card, SectionHeader } from '../../../components/ui'
 import { activeNotApplicableLabel } from '../../../lib/availability'
 import { formatDate } from '../../../lib/format'
 import { formatMessage, t } from '../../../lib/messages'
-import { btnGhost, btnPrimary, btnSecondary } from '../../../lib/styles'
+import { btnGhost, btnPrimary } from '../../../lib/styles'
 
 interface TransactionJournalSummaryProps {
-  composerOpen: boolean
   hasActiveJournalFilters: boolean
   sortedRowCount: number
   journalRowCount: number
@@ -38,7 +37,6 @@ function JournalSummaryTile({
 }
 
 export function TransactionJournalSummary({
-  composerOpen,
   hasActiveJournalFilters,
   sortedRowCount,
   journalRowCount,
@@ -62,8 +60,8 @@ export function TransactionJournalSummary({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={composerOpen ? btnSecondary : btnPrimary} onClick={onToggleComposer}>
-            {composerOpen ? t('journal.closeEditor') : t('journal.newTransaction')}
+          <button type="button" className={btnPrimary} onClick={onToggleComposer}>
+            {t('journal.newTransaction')}
           </button>
           {hasActiveJournalFilters && (
             <button type="button" className={btnGhost} onClick={onResetJournalFilters}>
