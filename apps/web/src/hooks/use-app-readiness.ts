@@ -5,6 +5,6 @@ export function useAppReadiness() {
   return useQuery({
     queryKey: ['app-readiness'],
     queryFn: fetchAppReadiness,
-    staleTime: 15_000,
+    staleTime: 300_000,
   })
 }

@@ -29,13 +29,28 @@ class SystemReadinessService(
     private val edoCalculatorClient: EdoCalculatorClient? = null,
     private val goldApiClient: GoldApiClient? = null
 ) {
+    @Volatile
+    private var cachedReadiness: SystemReadiness? = null
+
+    @Volatile
+    private var cachedAt: Instant? = null
+
     suspend fun current(): SystemReadiness {
+        val cached = cachedReadiness
+        val age = cachedAt
+        if (cached != null && age != null && Instant.now(clock).isBefore(age.plusSeconds(READINESS_CACHE_SECONDS))) {
+            return cached
+        }
+
         val checks = checks()
-        return SystemReadiness(
+        val result = SystemReadiness(
             status = readinessStatus(checks),
             checkedAt = Instant.now(clock),
             checks = checks
         )
+        cachedReadiness = result
+        cachedAt = Instant.now(clock)
+        return result
     }
 
     private suspend fun checks(): List<SystemReadinessCheck> = buildList {
@@ -294,6 +309,7 @@ class SystemReadinessService(
     }
 
     private companion object {
+        const val READINESS_CACHE_SECONDS = 1800L
         const val MARKET_DATA_PROBE_TIMEOUT_MS = 2_500L
         val MARKET_DATA_PROBE_FROM: LocalDate = LocalDate.of(2025, 1, 2)
         val MARKET_DATA_PROBE_TO: LocalDate = LocalDate.of(2025, 1, 10)
