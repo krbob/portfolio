@@ -517,10 +517,16 @@ export function TransactionJournal({
   }
 
   function handleAccountChange(nextAccountId: string) {
-    setForm((current) => ({
-      ...current,
-      accountId: nextAccountId,
-    }))
+    const selectedAccount = accountOptions.find((account) => account.id === nextAccountId)
+    setForm((current) => {
+      const nextCurrency = selectedAccount?.baseCurrency ?? current.currency
+      return {
+        ...current,
+        accountId: nextAccountId,
+        currency: nextCurrency,
+        fxRateToPln: nextCurrency === 'PLN' ? '' : current.fxRateToPln,
+      }
+    })
   }
 
   function handleInstrumentChange(nextInstrumentId: string) {
