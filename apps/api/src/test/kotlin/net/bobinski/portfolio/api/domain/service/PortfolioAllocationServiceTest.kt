@@ -223,6 +223,72 @@ class PortfolioAllocationServiceTest {
         assertEquals(BigDecimal("2000.00"), summary.remainingContributionGapPln)
     }
 
+    @Test
+    fun `summary recommends waiting for contribution when cash is below deploy threshold`() = runBlocking {
+        // Portfolio: 10k total, 4 PLN cash (0.04% < 0.5% threshold).
+        // Even though cash > 0 and buckets are breached, the amount is too
+        // small to be actionable → WAIT_FOR_NEXT_CONTRIBUTION, not DEPLOY_EXISTING_CASH.
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "5996.00", "60"))
+        transactionRepository.save(buyTransaction(BOND_ID, "4000.00", "40", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val summary = allocationService.summary()
+
+        // Cash = 4.00, threshold = 10000 * 0.005 = 50.00 → cash < threshold
+        assertEquals(BigDecimal("4.00"), summary.availableCashPln)
+        assertEquals(PortfolioAllocationAction.WAIT_FOR_NEXT_CONTRIBUTION, summary.recommendedAction)
+    }
+
     private fun account(): Account = Account(
         id = ACCOUNT_ID,
         name = "Primary",

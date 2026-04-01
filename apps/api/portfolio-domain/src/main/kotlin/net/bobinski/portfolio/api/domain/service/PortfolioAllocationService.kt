@@ -46,10 +46,12 @@ class PortfolioAllocationService(
             .maxOrNull()
 
         val contributionTarget = positiveGaps.maxByOrNull { it.outsideToleranceGapValuePln }
+        val deployableThreshold = totalCurrentValue.multiply(DEPLOY_CASH_THRESHOLD_RATIO).money()
+        val cashIsDeployable = availableCash >= deployableThreshold && availableCash.signum() > 0
         val recommendedAction = when {
             targets.isEmpty() -> PortfolioAllocationAction.UNCONFIGURED
             breachedBucketCount == 0 -> PortfolioAllocationAction.WITHIN_TOLERANCE
-            positiveGapSum.signum() > 0 && availableCash.signum() > 0 -> PortfolioAllocationAction.DEPLOY_EXISTING_CASH
+            positiveGapSum.signum() > 0 && cashIsDeployable -> PortfolioAllocationAction.DEPLOY_EXISTING_CASH
             settings.mode == RebalancingMode.ALLOW_TRIMS && negativeGapSum.signum() > 0 -> PortfolioAllocationAction.FULL_REBALANCE
             else -> PortfolioAllocationAction.WAIT_FOR_NEXT_CONTRIBUTION
         }
@@ -158,6 +160,7 @@ class PortfolioAllocationService(
 
     companion object {
         private val HUNDRED = BigDecimal("100")
+        private val DEPLOY_CASH_THRESHOLD_RATIO = BigDecimal("0.005")
     }
 }
 
