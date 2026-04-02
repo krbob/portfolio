@@ -36,26 +36,34 @@ export function DashboardScreen() {
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const chartPoints = useMemo(() => filterHistoryPoints(allPoints, range), [allPoints, range])
-  const latestPoint = chartPoints.at(-1) ?? allPoints.at(-1)
-  const previousPoint = chartPoints.at(-2) ?? allPoints.at(-2)
+  // Baseline for daily change: last history point before today
+  const asOfDate = overview?.asOf
+  const previousDayPoint = useMemo(() => {
+    if (!asOfDate) return null
+    const pts = chartPoints.length > 0 ? chartPoints : allPoints
+    const beforeToday = pts.filter((p) => p.date < asOfDate)
+    return beforeToday.at(-1) ?? null
+  }, [chartPoints, allPoints, asOfDate])
   const valuationState = overview?.valuationState ?? 'MARK_TO_MARKET'
   const historyValuationState = historyQuery.data?.valuationState ?? valuationState
   const usesBookBasisOnly = isBookOnlyValuationState(valuationState)
   const hasMarketBackedCurrentValuation = isMarketValuationState(valuationState)
-  const hasMarketBackedHistoryValuation =
+  const canShowDailyChange =
+    hasMarketBackedCurrentValuation &&
     isMarketValuationState(historyValuationState) &&
-    Boolean(latestPoint) &&
-    Boolean(previousPoint) &&
-    latestPoint!.activeHoldingCount === latestPoint!.valuedHoldingCount &&
-    previousPoint!.activeHoldingCount === previousPoint!.valuedHoldingCount
+    overview != null &&
+    previousDayPoint != null &&
+    previousDayPoint.activeHoldingCount === previousDayPoint.valuedHoldingCount
 
-  const dailyChange =
-    hasMarketBackedHistoryValuation && latestPoint && previousPoint
-      ? Number(latestPoint.totalCurrentValuePln) - Number(previousPoint.totalCurrentValuePln)
-      : null
+  // Daily change = (live value - yesterday's value) - (live contributions - yesterday's contributions)
+  // Subtracting contribution delta removes deposits/withdrawals from the change.
+  const dailyChange = canShowDailyChange
+    ? (Number(overview.totalCurrentValuePln) - Number(previousDayPoint.totalCurrentValuePln))
+      - (Number(overview.netContributionsPln) - Number(previousDayPoint.netContributionsPln))
+    : null
   const dailyChangePct =
-    dailyChange != null && previousPoint && Number(previousPoint.totalCurrentValuePln) !== 0
-      ? (dailyChange / Number(previousPoint.totalCurrentValuePln)) * 100
+    dailyChange != null && previousDayPoint && Number(previousDayPoint.totalCurrentValuePln) !== 0
+      ? (dailyChange / Number(previousDayPoint.totalCurrentValuePln)) * 100
       : null
 
   const displayedTotalValuePln = overview
@@ -132,11 +140,9 @@ export function DashboardScreen() {
     <>
       <PageHeader title={t('dashboard.title')}>
         <RefreshIndicator active={isRefreshing} />
-        {latestPoint && (
-          <span className="text-xs text-zinc-500">
-            {t('dashboard.asOf')} {latestPoint.date} · {labelPortfolioValuationBasis(valuationState, isPolish)}
-          </span>
-        )}
+        <span className="text-xs text-zinc-500">
+          {t('dashboard.asOf')} {overview.asOf} · {labelPortfolioValuationBasis(valuationState, isPolish)}
+        </span>
       </PageHeader>
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
