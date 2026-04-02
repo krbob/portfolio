@@ -52,6 +52,7 @@ export function createPortfolioChartOptions(width: number, height: number) {
     handleScroll: {
       mouseWheel: false,
       vertTouchDrag: false,
+      horzTouchDrag: false,
     },
     handleScale: {
       mouseWheel: false,

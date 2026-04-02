@@ -73,11 +73,11 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
 
         <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-2 lg:min-w-[22rem]">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            <div className="min-w-[5rem]">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 whitespace-nowrap">
                 {hoveredPoint ? t('allocation.selectedDate') : t('allocation.latestDate')}
               </p>
-              <p className="mt-1 text-sm font-semibold text-zinc-100">
+              <p className="mt-1 text-sm font-semibold text-zinc-100 whitespace-nowrap">
                 {activePoint ? formatDate(activePoint.date) : t('common.noData')}
               </p>
             </div>
