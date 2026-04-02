@@ -5,7 +5,7 @@ import { API_UNAUTHORIZED_EVENT } from '../api/http'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession, useLogin } from '../hooks/use-auth-session'
 import { t } from '../lib/messages'
-import { SectionHeader } from './ui'
+import { StatePanel } from './ui'
 import { btnPrimary, input } from '../lib/styles'
 
 interface AuthGateProps {
@@ -37,10 +37,11 @@ export function AuthGate({ children }: AuthGateProps) {
   if (metaQuery.isLoading || authSessionQuery.isLoading) {
     return (
       <AuthLayout>
-        <SectionHeader
+        <StatePanel
           eyebrow={t('auth.connecting')}
           title={t('auth.checkingSession')}
           description={t('auth.checkingSessionDesc')}
+          className="border-0 bg-transparent p-0"
         />
       </AuthLayout>
     )
@@ -49,10 +50,11 @@ export function AuthGate({ children }: AuthGateProps) {
   if (metaQuery.isError || authSessionQuery.isError || !metaQuery.data || !authSessionQuery.data) {
     return (
       <AuthLayout>
-        <SectionHeader
+        <StatePanel
           eyebrow={t('auth.connectionIssue')}
           title={t('auth.notReachable')}
           description={startupErrorMessage}
+          className="border-0 bg-transparent p-0"
         />
       </AuthLayout>
     )
