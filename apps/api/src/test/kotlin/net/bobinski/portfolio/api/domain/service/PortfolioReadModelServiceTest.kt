@@ -437,6 +437,78 @@ class PortfolioReadModelServiceTest {
         assertEquals(listOf("PLN", "USD"), summary.netContributionBalances.map { it.currency })
     }
 
+    @Test
+    fun `overview computes totalPreviousCloseValuePln from equity and EDO holdings`() = runBlocking {
+        // Portfolio: 1 equity ETF (10 shares, current=120, previousClose=118)
+        //            1 EDO bond  (50 units,  current=102.10, previousClose=102.00)
+        //            deposit=8000, buy equity 1005 (1000+5 fee), buy EDO 5000 → cash=1995
+        // Expected: currentValue       = (10 * 120) + (50 * 102.10) + 1995 = 1200 + 5105 + 1995 = 8300
+        // Expected: previousCloseValue = (10 * 118) + (50 * 102.00) + 1995 = 1180 + 5100 + 1995 = 8275
+        // Daily change = 8300 - 8275 = +25
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        val edo = edoInstrument()
+        fixture.instrumentRepository.save(vwce)
+        fixture.instrumentRepository.save(edo)
+        fixture.transactionRepository.save(depositTransaction(grossAmount = "8000.00"))
+        fixture.transactionRepository.save(
+            buyTransaction(instrumentId = vwce.id, quantity = "10", grossAmount = "1000.00", feeAmount = "5.00")
+        )
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = edo.id, quantity = "50", grossAmount = "5000.00", feeAmount = "0.00",
+                tradeDate = LocalDate.parse("2026-03-02")
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-13"),
+                previousClosePln = BigDecimal("118.00")
+            )
+        )
+        fixture.edoLotValuationProvider.values[LocalDate.parse("2026-03-02")] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("102.10"),
+                valuedAt = LocalDate.parse("2026-03-13"),
+                previousClosePln = BigDecimal("102.00")
+            )
+        )
+
+        val overview = fixture.service.overview()
+
+        // currentValue = 10*120 + 50*102.10 + 1995 = 8300.00
+        assertEquals(BigDecimal("8300.00"), overview.totalCurrentValuePln)
+        // previousCloseValue = 10*118 + 50*102.00 + 1995 = 8275.00
+        assertEquals(BigDecimal("8275.00"), overview.totalPreviousCloseValuePln)
+    }
+
+    @Test
+    fun `overview falls back to currentValue when previousClose is missing`() = runBlocking {
+        // Instrument without previousClose should contribute zero to daily change
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(instrumentId = vwce.id, quantity = "10", grossAmount = "1000.00", feeAmount = "5.00")
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-13")
+                // NO previousClosePln
+            )
+        )
+
+        val overview = fixture.service.overview()
+
+        // Fallback: previousClose = current → daily change = 0
+        assertEquals(overview.totalCurrentValuePln, overview.totalPreviousCloseValuePln)
+    }
+
     private fun portfolioFixture(
         clock: Clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC)
     ): PortfolioFixture {
