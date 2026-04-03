@@ -22,11 +22,16 @@ class RemoteEdoLotValuationProvider(
 
         return try {
             val value = edoCalculatorClient.unitValueInPln(terms = lotTerms)
+            val yesterday = LocalDate.now().minusDays(1)
+            val previousCloseValue = if (!yesterday.isBefore(lotTerms.purchaseDate)) {
+                runCatching { edoCalculatorClient.unitValueInPln(terms = lotTerms, asOf = yesterday) }.getOrNull()
+            } else null
             val valuation = InstrumentValuation(
                 pricePerUnitPln = value.totalValue,
                 pricePerUnitNative = value.totalValue,
                 valuedAt = value.asOf,
-                currentRatePercent = value.currentRatePercent
+                currentRatePercent = value.currentRatePercent,
+                previousClosePln = previousCloseValue?.totalValue
             )
             snapshotCacheService.putQuote(identity = edoQuoteIdentity(lotTerms), valuation = valuation)
             InstrumentValuationResult.Success(valuation = valuation)
