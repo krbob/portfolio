@@ -425,10 +425,10 @@ describe('App', () => {
     expect(await screen.findByText(/80% \/ 80%/)).toBeInTheDocument()
   })
 
-  it('computes daily change from history points, not live overview', async () => {
+  it('computes daily change from previous close, unaffected by deposits', async () => {
     // Scenario: user deposited 50k today. Overview shows 150k (live, includes deposit).
-    // History last two points: 98k → 100k. Daily change must be +2k (history diff),
-    // NOT +52k (overview minus yesterday).
+    // previousCloseValuePln = 148k (same holdings at yesterday's close prices).
+    // Daily change = 150k - 148k = +2k (pure price move), NOT +52k.
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
@@ -466,6 +466,7 @@ describe('App', () => {
           cashBookValuePln: '50000.00',
           cashCurrentValuePln: '50000.00',
           totalUnrealizedGainPln: '0.00',
+          totalPreviousCloseValuePln: '148000.00',
           accountCount: 1, instrumentCount: 1, activeHoldingCount: 1, valuedHoldingCount: 1, unvaluedHoldingCount: 0,
         }), { status: 200 })
       }
@@ -476,32 +477,7 @@ describe('App', () => {
           valuationState: 'MARK_TO_MARKET',
           instrumentHistoryIssueCount: 0, referenceSeriesIssueCount: 0, benchmarkSeriesIssueCount: 0,
           missingFxTransactions: 0, unsupportedCorrectionTransactions: 0,
-          points: [
-            {
-              date: '2026-03-13',
-              totalBookValuePln: '98000.00', totalCurrentValuePln: '98000.00',
-              netContributionsPln: '100000.00', cashBalancePln: '0.00',
-              equityCurrentValuePln: '98000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
-              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
-              activeHoldingCount: 1, valuedHoldingCount: 1,
-            },
-            {
-              date: '2026-03-14',
-              totalBookValuePln: '100000.00', totalCurrentValuePln: '98000.00',
-              netContributionsPln: '100000.00', cashBalancePln: '0.00',
-              equityCurrentValuePln: '98000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
-              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
-              activeHoldingCount: 1, valuedHoldingCount: 1,
-            },
-            {
-              date: '2026-03-15',
-              totalBookValuePln: '100000.00', totalCurrentValuePln: '100000.00',
-              netContributionsPln: '100000.00', cashBalancePln: '0.00',
-              equityCurrentValuePln: '100000.00', bondCurrentValuePln: '0.00', cashCurrentValuePln: '0.00',
-              equityAllocationPct: '100.00', bondAllocationPct: '0.00', cashAllocationPct: '0.00',
-              activeHoldingCount: 1, valuedHoldingCount: 1,
-            },
-          ],
+          points: [],
         }), { status: 200 })
       }
 
@@ -542,7 +518,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    // Daily change should be +2000 (100k - 98k from history), NOT +52000 (150k overview - 98k)
+    // Daily change = 150k - 148k = +2000 (previousClose-based), NOT +52k (150k - 98k history)
     const dailyChangeCard = await screen.findByText(/daily change/i)
     const cardContainer = dailyChangeCard.closest('[class*="rounded"]')!
     expect(cardContainer.textContent).toMatch(/2[,.\s\u00a0]?000/)

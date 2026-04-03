@@ -41,7 +41,8 @@ data class PortfolioOverviewResponse(
     val unvaluedHoldingCount: Int,
     val valuationIssueCount: Int,
     val missingFxTransactions: Int,
-    val unsupportedCorrectionTransactions: Int
+    val unsupportedCorrectionTransactions: Int,
+    val totalPreviousCloseValuePln: String? = null
 )
 
 @Serializable
@@ -271,7 +272,8 @@ internal fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = Portfol
     unvaluedHoldingCount = unvaluedHoldingCount,
     valuationIssueCount = valuationIssueCount,
     missingFxTransactions = missingFxTransactions,
-    unsupportedCorrectionTransactions = unsupportedCorrectionTransactions
+    unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
+    totalPreviousCloseValuePln = totalPreviousCloseValuePln?.toPlainString()
 )
 
 internal fun HoldingSnapshot.toResponse(): HoldingResponse = HoldingResponse(

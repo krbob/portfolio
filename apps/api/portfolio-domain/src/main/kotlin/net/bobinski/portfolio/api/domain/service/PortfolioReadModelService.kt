@@ -105,6 +105,9 @@ class PortfolioReadModelService(
         val cashBookValuePln = snapshot.cashBalancePln
         val totalBookValuePln = investedBookValuePln.add(cashBookValuePln, MONEY_CONTEXT)
         val totalCurrentValuePln = investedCurrentValuePln.add(cashBookValuePln, MONEY_CONTEXT)
+        val totalPreviousCloseValuePln = snapshot.holdings
+            .sumOf { it.previousCloseValuePln() }
+            .add(cashBookValuePln, MONEY_CONTEXT)
 
         return PortfolioOverview(
             asOf = LocalDate.now(clock),
@@ -131,7 +134,8 @@ class PortfolioReadModelService(
             unvaluedHoldingCount = snapshot.holdings.count { !it.valuationStatus.isMarketValued() },
             valuationIssueCount = snapshot.holdings.count { it.valuationIssue != null },
             missingFxTransactions = snapshot.missingFxTransactions,
-            unsupportedCorrectionTransactions = snapshot.unsupportedCorrectionTransactions
+            unsupportedCorrectionTransactions = snapshot.unsupportedCorrectionTransactions,
+            totalPreviousCloseValuePln = totalPreviousCloseValuePln.money()
         )
     }
 
@@ -626,7 +630,8 @@ class PortfolioReadModelService(
             valuedAt = valuation.valuedAt,
             valuationStatus = valuationStatus,
             valuationIssue = valuationIssueFor(result),
-            transactionCount = transactionCount
+            transactionCount = transactionCount,
+            previousClosePln = valuation.previousClosePln?.money()
         )
     }
 
@@ -803,9 +808,13 @@ class PortfolioReadModelService(
         val valuationStatus: HoldingValuationStatus,
         val valuationIssue: String?,
         val transactionCount: Int,
-        val edoLots: List<EdoLotSnapshot> = emptyList()
+        val edoLots: List<EdoLotSnapshot> = emptyList(),
+        val previousClosePln: BigDecimal? = null
     ) {
         fun effectiveCurrentValuePln(): BigDecimal = currentValuePln ?: costBasisPln
+        fun previousCloseValuePln(): BigDecimal = previousClosePln?.multiply(quantity)
+            ?.setScale(2, java.math.RoundingMode.HALF_UP)
+            ?: effectiveCurrentValuePln()
     }
 
     private data class PortfolioLedgerSnapshot(
@@ -882,7 +891,8 @@ data class PortfolioOverview(
     val unvaluedHoldingCount: Int,
     val valuationIssueCount: Int,
     val missingFxTransactions: Int,
-    val unsupportedCorrectionTransactions: Int
+    val unsupportedCorrectionTransactions: Int,
+    val totalPreviousCloseValuePln: BigDecimal? = null
 )
 
 data class HoldingSnapshot(

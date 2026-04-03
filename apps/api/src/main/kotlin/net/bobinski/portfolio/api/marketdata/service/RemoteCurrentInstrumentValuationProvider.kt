@@ -80,7 +80,8 @@ class RemoteCurrentInstrumentValuationProvider(
         val valuation = InstrumentValuation(
             pricePerUnitPln = plnQuote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
             pricePerUnitNative = nativeQuote.lastPrice.toBigDecimal().setScale(4, RoundingMode.HALF_UP),
-            valuedAt = plnQuote.date
+            valuedAt = plnQuote.date,
+            previousClosePln = plnQuote.previousClose?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)
         )
         snapshotCacheService.putQuote(identity = stockQuoteIdentity(symbol), valuation = valuation)
         return InstrumentValuationResult.Success(valuation = valuation)

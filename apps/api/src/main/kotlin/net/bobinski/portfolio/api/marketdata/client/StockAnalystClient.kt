@@ -47,7 +47,8 @@ class StockAnalystClient(
             symbol = payload.symbol,
             currency = payload.currency,
             date = LocalDate.parse(payload.date),
-            lastPrice = payload.lastPrice
+            lastPrice = payload.lastPrice,
+            previousClose = payload.previousClose
         )
     }
 
@@ -101,7 +102,8 @@ data class StockAnalystQuote(
     val symbol: String,
     val currency: String?,
     val date: LocalDate,
-    val lastPrice: Double
+    val lastPrice: Double,
+    val previousClose: Double? = null
 )
 
 @Serializable
@@ -109,7 +111,8 @@ private data class StockAnalystQuoteResponse(
     val symbol: String,
     val currency: String? = null,
     val date: String,
-    @SerialName("lastPrice") val lastPrice: Double
+    @SerialName("lastPrice") val lastPrice: Double,
+    val previousClose: Double? = null
 )
 
 @Serializable

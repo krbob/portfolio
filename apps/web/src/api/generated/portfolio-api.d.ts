@@ -988,6 +988,7 @@ export interface components {
             valuationIssueCount: number;
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
+            totalPreviousCloseValuePln?: string | null;
         };
         /** net.bobinski.portfolio.api.route.HoldingEdoLotResponse */
         HoldingEdoLotResponse: {

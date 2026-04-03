@@ -12,7 +12,8 @@ data class InstrumentValuation(
     val pricePerUnitPln: BigDecimal,
     val pricePerUnitNative: BigDecimal? = null,
     val valuedAt: LocalDate,
-    val currentRatePercent: BigDecimal? = null
+    val currentRatePercent: BigDecimal? = null,
+    val previousClosePln: BigDecimal? = null
 )
 
 sealed interface InstrumentValuationResult {
