@@ -1,5 +1,5 @@
-import { useCallback } from 'react'
-import { AreaSeries, LineSeries, type IChartApi } from 'lightweight-charts'
+import { useCallback, useEffect, useRef } from 'react'
+import { AreaSeries, LineSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { formatMessage, t } from '../../lib/messages'
@@ -22,36 +22,80 @@ export function PortfolioValueChart({
   height = 320,
   title = 'Portfolio Value',
 }: PortfolioValueChartProps) {
-  const onChart = useCallback(
-    (chart: IChartApi) => {
-      const valueSeries = chart.addSeries(AreaSeries, {
-        lineColor: chartPalette.portfolio,
-        topColor: chartPalette.portfolioFill,
-        bottomColor: chartPalette.portfolioFade,
-        lineWidth: 2,
-        priceFormat: priceFormatForUnit(unit),
-      })
-      const contributionsSeries = chart.addSeries(LineSeries, {
-        color: chartPalette.contributions,
-        lineWidth: 2,
-        lineStyle: 2,
-        priceFormat: priceFormatForUnit(unit),
-      })
+  const chartRef = useRef<IChartApi | null>(null)
+  const hasMountedRef = useRef(false)
+  const valueSeriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const contributionsSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const stateRef = useRef({
+    points,
+    valueKey,
+    contributionsKey,
+    unit,
+  })
+  stateRef.current = {
+    points,
+    valueKey,
+    contributionsKey,
+    unit,
+  }
 
-      valueSeries.setData(
-        points
-          .filter((p) => p[valueKey] != null)
-          .map((p) => ({ time: p.date, value: Number(p[valueKey]) })),
-      )
-      contributionsSeries.setData(
-        points
-          .filter((p) => p[contributionsKey] != null)
-          .map((p) => ({ time: p.date, value: Number(p[contributionsKey]) })),
-      )
-      chart.timeScale().fitContent()
-    },
-    [points, valueKey, contributionsKey, unit],
-  )
+  const applySeriesOptions = useCallback(() => {
+    const priceFormat = priceFormatForUnit(stateRef.current.unit)
+    valueSeriesRef.current?.applyOptions({ priceFormat })
+    contributionsSeriesRef.current?.applyOptions({ priceFormat })
+  }, [])
+
+  const updateSeriesData = useCallback(() => {
+    const { points: currentPoints, valueKey: currentValueKey, contributionsKey: currentContributionsKey } = stateRef.current
+    valueSeriesRef.current?.setData(
+      currentPoints
+        .filter((point) => point[currentValueKey] != null)
+        .map((point) => ({ time: point.date, value: Number(point[currentValueKey]) })),
+    )
+    contributionsSeriesRef.current?.setData(
+      currentPoints
+        .filter((point) => point[currentContributionsKey] != null)
+        .map((point) => ({ time: point.date, value: Number(point[currentContributionsKey]) })),
+    )
+    chartRef.current?.timeScale().fitContent()
+  }, [])
+
+  const onChartReady = useCallback((chart: IChartApi) => {
+    chartRef.current = chart
+    valueSeriesRef.current = chart.addSeries(AreaSeries, {
+      lineColor: chartPalette.portfolio,
+      topColor: chartPalette.portfolioFill,
+      bottomColor: chartPalette.portfolioFade,
+      lineWidth: 2,
+      priceFormat: priceFormatForUnit(stateRef.current.unit),
+    })
+    contributionsSeriesRef.current = chart.addSeries(LineSeries, {
+      color: chartPalette.contributions,
+      lineWidth: 2,
+      lineStyle: 2,
+      priceFormat: priceFormatForUnit(stateRef.current.unit),
+    })
+
+    updateSeriesData()
+
+    return () => {
+      chartRef.current = null
+      valueSeriesRef.current = null
+      contributionsSeriesRef.current = null
+    }
+  }, [updateSeriesData])
+
+  useEffect(() => {
+    applySeriesOptions()
+  }, [applySeriesOptions, unit])
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    updateSeriesData()
+  }, [contributionsKey, points, updateSeriesData, valueKey])
 
   return (
     <ChartContainer
@@ -64,7 +108,7 @@ export function PortfolioValueChart({
           <ChartLegendItem color={chartPalette.contributions} label={t('portfolioValue.contributions')} dashed />
         </>
       }
-      onChart={onChart}
+      onChartReady={onChartReady}
     />
   )
 }

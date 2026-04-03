@@ -38,7 +38,13 @@ export function BenchmarkChart({
 }: BenchmarkChartProps) {
   const { language } = useI18n()
   const benchmarkSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
+  const hasMountedRef = useRef(false)
+  const portfolioSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const dataRef = useRef({
+    points,
+    activeKey: 'VWRA',
+  })
 
   const availableKeys = useMemo(() => {
     if (points.length === 0) return []
@@ -55,57 +61,61 @@ export function BenchmarkChart({
 
   const [selected, setSelected] = useState<string | null>(null)
   const activeKey = selected != null && availableKeys.includes(selected) ? selected : availableKeys[0] ?? 'VWRA'
+  dataRef.current = {
+    points,
+    activeKey,
+  }
 
   const label = BENCHMARK_LABELS[activeKey]
   const displayLabel = activeKey === 'CUSTOM' && customBenchmarkLabel
     ? customBenchmarkLabel
     : label ? (language === 'pl' ? label.pl : label.en) : activeKey
 
-  // Initial chart setup — only depends on points (not activeKey)
-  const onChart = useCallback(
-    (chart: IChartApi) => {
-      chartRef.current = chart
-
-      chart.addSeries(LineSeries, {
-        color: chartPalette.portfolio,
-        lineWidth: 3,
-        priceFormat: benchmarkPriceFormat,
-      }).setData(
-        points
-          .filter((p) => p.portfolioPerformanceIndex != null)
-          .map((p) => ({ time: p.date, value: Number(p.portfolioPerformanceIndex) })),
-      )
-
-      const benchmarkSeries = chart.addSeries(LineSeries, {
-        color: BENCHMARK_LINE_COLOR,
-        lineWidth: 2,
-        lineStyle: 2,
-        priceFormat: benchmarkPriceFormat,
-      })
-      benchmarkSeriesRef.current = benchmarkSeries
-
-      chart.timeScale().fitContent()
-
-      return () => {
-        chartRef.current = null
-        benchmarkSeriesRef.current = null
-      }
-    },
-    [points],
-  )
-
-  // Update benchmark series data when activeKey changes — no chart remount
-  useEffect(() => {
-    const series = benchmarkSeriesRef.current
-    if (!series) return
-
-    series.setData(
-      points
-        .filter((p) => p.benchmarkIndices?.[activeKey] != null)
-        .map((p) => ({ time: p.date, value: Number(p.benchmarkIndices![activeKey]) })),
+  const updateSeriesData = useCallback(() => {
+    const { points: currentPoints, activeKey: currentActiveKey } = dataRef.current
+    portfolioSeriesRef.current?.setData(
+      currentPoints
+        .filter((point) => point.portfolioPerformanceIndex != null)
+        .map((point) => ({ time: point.date, value: Number(point.portfolioPerformanceIndex) })),
+    )
+    benchmarkSeriesRef.current?.setData(
+      currentPoints
+        .filter((point) => point.benchmarkIndices?.[currentActiveKey] != null)
+        .map((point) => ({ time: point.date, value: Number(point.benchmarkIndices![currentActiveKey]) })),
     )
     chartRef.current?.timeScale().fitContent()
-  }, [activeKey, points])
+  }, [])
+
+  const onChartReady = useCallback((chart: IChartApi) => {
+    chartRef.current = chart
+    portfolioSeriesRef.current = chart.addSeries(LineSeries, {
+      color: chartPalette.portfolio,
+      lineWidth: 3,
+      priceFormat: benchmarkPriceFormat,
+    })
+    benchmarkSeriesRef.current = chart.addSeries(LineSeries, {
+      color: BENCHMARK_LINE_COLOR,
+      lineWidth: 2,
+      lineStyle: 2,
+      priceFormat: benchmarkPriceFormat,
+    })
+
+    updateSeriesData()
+
+    return () => {
+      chartRef.current = null
+      portfolioSeriesRef.current = null
+      benchmarkSeriesRef.current = null
+    }
+  }, [updateSeriesData])
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    updateSeriesData()
+  }, [activeKey, points, updateSeriesData])
 
   return (
     <ChartContainer
@@ -136,7 +146,7 @@ export function BenchmarkChart({
           )}
         </div>
       }
-      onChart={onChart}
+      onChartReady={onChartReady}
     />
   )
 }

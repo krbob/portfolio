@@ -167,6 +167,7 @@ export function DashboardScreen() {
           onRetry={() => void historyQuery.refetch()}
           isLoading={historyQuery.isLoading}
           isError={historyQuery.isError}
+          isRefreshing={historyQuery.isFetching && !historyQuery.isLoading}
         />
 
         <div className="space-y-4">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPeriod } from '../../api/read-model'
 import { AllocationTimeChart, BenchmarkChart, PortfolioValueChart } from '../../components/charts'
-import { ErrorState, StatePanel, SegmentedControl } from '../../components/ui'
+import { ErrorState, InlineRefreshIndicator, StatePanel, SegmentedControl } from '../../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
 import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
@@ -70,6 +70,8 @@ export function ChartsTab({
     )
   }
 
+  const isRefreshing = historyQuery.isFetching && !historyQuery.isLoading
+
   return (
     <div className="space-y-4">
       <div className={card}>
@@ -83,7 +85,8 @@ export function ChartsTab({
               ariaLabel={t('performanceSections.chartPeriodLabel')}
             />
           </div>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 xl:ml-auto">
+            <InlineRefreshIndicator active={isRefreshing} />
             <span className="text-sm font-medium text-zinc-400">{t('performanceSections.unit')}</span>
             <SegmentedControl
               options={[

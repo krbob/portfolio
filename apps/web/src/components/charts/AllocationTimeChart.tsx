@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AreaSeries, type IChartApi, type MouseEventParams, type Time } from 'lightweight-charts'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AreaSeries, type IChartApi, type ISeriesApi, type MouseEventParams, type Time } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { formatDate, formatPercent } from '../../lib/format'
@@ -13,51 +13,75 @@ interface AllocationTimeChartProps {
 
 export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<PortfolioDailyHistoryPoint | null>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const hasMountedRef = useRef(false)
+  const equitySeriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const bondSeriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const cashSeriesRef = useRef<ISeriesApi<'Area'> | null>(null)
   const latestPoint = points.at(-1) ?? null
   const activePoint = hoveredPoint ?? latestPoint
   const pointsByDate = useMemo(
     () => new Map(points.map((point) => [point.date, point])),
     [points],
   )
-  const onChart = useCallback(
-    (chart: IChartApi) => {
-      const equitySeries = chart.addSeries(AreaSeries, {
-        lineColor: chartPalette.equities,
-        topColor: chartPalette.equityFill,
-        bottomColor: chartPalette.equityFade,
-        lineWidth: 2,
-      })
-      const bondSeries = chart.addSeries(AreaSeries, {
-        lineColor: chartPalette.bonds,
-        topColor: chartPalette.bondFill,
-        bottomColor: chartPalette.bondFade,
-        lineWidth: 2,
-      })
-      const cashSeries = chart.addSeries(AreaSeries, {
-        lineColor: chartPalette.cash,
-        topColor: chartPalette.cashFill,
-        bottomColor: chartPalette.cashFade,
-        lineWidth: 2,
-      })
+  const pointsRef = useRef(points)
+  const pointsByDateRef = useRef(pointsByDate)
+  pointsRef.current = points
+  pointsByDateRef.current = pointsByDate
 
-      equitySeries.setData(points.map((p) => ({ time: p.date, value: Number(p.equityAllocationPct) })))
-      bondSeries.setData(points.map((p) => ({ time: p.date, value: Number(p.bondAllocationPct) })))
-      cashSeries.setData(points.map((p) => ({ time: p.date, value: Number(p.cashAllocationPct) })))
-      chart.timeScale().fitContent()
+  const updateSeriesData = useCallback(() => {
+    equitySeriesRef.current?.setData(pointsRef.current.map((point) => ({ time: point.date, value: Number(point.equityAllocationPct) })))
+    bondSeriesRef.current?.setData(pointsRef.current.map((point) => ({ time: point.date, value: Number(point.bondAllocationPct) })))
+    cashSeriesRef.current?.setData(pointsRef.current.map((point) => ({ time: point.date, value: Number(point.cashAllocationPct) })))
+    chartRef.current?.timeScale().fitContent()
+  }, [])
 
-      const handleCrosshairMove = (param: MouseEventParams<Time>) => {
-        const timeKey = normalizeChartTime(param.time)
-        setHoveredPoint(timeKey ? pointsByDate.get(timeKey) ?? null : null)
-      }
+  const handleCrosshairMove = useCallback((param: MouseEventParams<Time>) => {
+    const timeKey = normalizeChartTime(param.time)
+    setHoveredPoint(timeKey ? pointsByDateRef.current.get(timeKey) ?? null : null)
+  }, [])
 
-      chart.subscribeCrosshairMove(handleCrosshairMove)
+  const onChartReady = useCallback((chart: IChartApi) => {
+    chartRef.current = chart
+    equitySeriesRef.current = chart.addSeries(AreaSeries, {
+      lineColor: chartPalette.equities,
+      topColor: chartPalette.equityFill,
+      bottomColor: chartPalette.equityFade,
+      lineWidth: 2,
+    })
+    bondSeriesRef.current = chart.addSeries(AreaSeries, {
+      lineColor: chartPalette.bonds,
+      topColor: chartPalette.bondFill,
+      bottomColor: chartPalette.bondFade,
+      lineWidth: 2,
+    })
+    cashSeriesRef.current = chart.addSeries(AreaSeries, {
+      lineColor: chartPalette.cash,
+      topColor: chartPalette.cashFill,
+      bottomColor: chartPalette.cashFade,
+      lineWidth: 2,
+    })
 
-      return () => {
-        chart.unsubscribeCrosshairMove(handleCrosshairMove)
-      }
-    },
-    [points, pointsByDate],
-  )
+    chart.subscribeCrosshairMove(handleCrosshairMove)
+    updateSeriesData()
+
+    return () => {
+      chart.unsubscribeCrosshairMove(handleCrosshairMove)
+      chartRef.current = null
+      equitySeriesRef.current = null
+      bondSeriesRef.current = null
+      cashSeriesRef.current = null
+    }
+  }, [handleCrosshairMove, updateSeriesData])
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    setHoveredPoint((current) => (current?.date ? pointsByDate.get(current.date) ?? null : null))
+    updateSeriesData()
+  }, [points, pointsByDate, updateSeriesData])
 
   return (
     <div>
@@ -112,7 +136,7 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
             <ChartLegendItem color={chartPalette.cash} label={t('allocation.cash')} />
           </>
         }
-        onChart={onChart}
+        onChartReady={onChartReady}
       />
     </div>
   )

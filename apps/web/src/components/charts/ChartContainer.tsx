@@ -7,29 +7,30 @@ interface ChartContainerProps {
   title?: string
   subtitle?: string
   legend?: ReactNode
-  onChart: (chart: IChartApi) => void | (() => void)
+  onChartReady: (chart: IChartApi) => void | (() => void)
 }
 
-export function ChartContainer({ height = 320, title, subtitle, legend, onChart }: ChartContainerProps) {
+export function ChartContainer({ height = 320, title, subtitle, legend, onChartReady }: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const onChartReadyRef = useRef(onChartReady)
   const [chartReady, setChartReady] = useState(false)
-  const hasRenderedRef = useRef(false)
+
+  useEffect(() => {
+    onChartReadyRef.current = onChartReady
+  }, [onChartReady])
 
   useEffect(() => {
     if (!containerRef.current || !isInteractiveChartEnvironment()) return
-    const isFirstRender = !hasRenderedRef.current
-    if (isFirstRender) setChartReady(false)
 
     const chart = createChart(
       containerRef.current,
       createPortfolioChartOptions(containerRef.current.clientWidth, height),
     )
+    chartRef.current = chart
 
-    const cleanup = onChart(chart)
-    if (isFirstRender) {
-      requestAnimationFrame(() => setChartReady(true))
-      hasRenderedRef.current = true
-    }
+    const cleanup = onChartReadyRef.current(chart)
+    const frameId = requestAnimationFrame(() => setChartReady(true))
 
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -39,11 +40,21 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChart 
     resizeObserver.observe(containerRef.current)
 
     return () => {
+      cancelAnimationFrame(frameId)
       resizeObserver.disconnect()
       cleanup?.()
+      chartRef.current = null
       chart.remove()
     }
-  }, [height, onChart])
+  }, [height])
+
+  useEffect(() => {
+    if (!chartRef.current || !containerRef.current) return
+    chartRef.current.applyOptions({
+      height,
+      width: containerRef.current.clientWidth,
+    })
+  }, [height])
 
   return (
     <div>

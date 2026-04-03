@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
 import { MiniChart } from '../../components/charts'
-import { Badge, ErrorState, StatCard, StatePanel } from '../../components/ui'
+import { Badge, ErrorState, InlineRefreshIndicator, StatCard, StatePanel } from '../../components/ui'
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
@@ -121,6 +121,7 @@ export function DashboardHistoryCard({
   onRetry,
   isLoading,
   isError,
+  isRefreshing,
 }: {
   isPolish: boolean
   historyValuationState: string
@@ -130,6 +131,7 @@ export function DashboardHistoryCard({
   onRetry: () => void
   isLoading: boolean
   isError: boolean
+  isRefreshing: boolean
 }) {
   return (
     <div className={`${card} lg:col-span-2`}>
@@ -146,21 +148,24 @@ export function DashboardHistoryCard({
             </p>
           ) : null}
         </div>
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-0.5">
-          {(['1Y', 'MAX'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                value === range
-                  ? 'bg-zinc-700 text-zinc-100'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-              onClick={() => onRangeChange(value)}
-            >
-              {value}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <InlineRefreshIndicator active={isRefreshing} />
+          <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-0.5">
+            {(['1Y', 'MAX'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  value === range
+                    ? 'bg-zinc-700 text-zinc-100'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+                onClick={() => onRangeChange(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {isLoading && chartPoints.length === 0 ? (
