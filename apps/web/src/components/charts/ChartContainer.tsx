@@ -13,10 +13,12 @@ interface ChartContainerProps {
 export function ChartContainer({ height = 320, title, subtitle, legend, onChart }: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [chartReady, setChartReady] = useState(false)
+  const hasRenderedRef = useRef(false)
 
   useEffect(() => {
     if (!containerRef.current || !isInteractiveChartEnvironment()) return
-    setChartReady(false)
+    const isFirstRender = !hasRenderedRef.current
+    if (isFirstRender) setChartReady(false)
 
     const chart = createChart(
       containerRef.current,
@@ -24,7 +26,10 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChart 
     )
 
     const cleanup = onChart(chart)
-    requestAnimationFrame(() => setChartReady(true))
+    if (isFirstRender) {
+      requestAnimationFrame(() => setChartReady(true))
+      hasRenderedRef.current = true
+    }
 
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
