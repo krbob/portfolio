@@ -46,7 +46,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChartR
       chartRef.current = null
       chart.remove()
     }
-  }, [height])
+  }, [])
 
   useEffect(() => {
     if (!chartRef.current || !containerRef.current) return
