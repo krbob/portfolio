@@ -544,6 +544,16 @@ class PortfolioReadModelService(
             HoldingValuationStatus.VALUED
         }
 
+        val previousCloseValuePln = successfulResults.fold(BigDecimal.ZERO) { total, (lot, result) ->
+            val prevPricePln = result.valuation.previousClosePln ?: result.valuation.pricePerUnitPln
+            total.add(prevPricePln.multiply(lot.quantity, MONEY_CONTEXT), MONEY_CONTEXT)
+        }.money()
+        val previousClosePricePln = if (holding.quantity.signum() == 0) {
+            null
+        } else {
+            previousCloseValuePln.divide(holding.quantity, 8, RoundingMode.HALF_UP).money()
+        }
+
         return ValuedHolding(
             account = holding.account,
             instrument = holding.instrument,
@@ -560,6 +570,7 @@ class PortfolioReadModelService(
                 .mapNotNull(::valuationIssueFor)
                 .firstOrNull(),
             transactionCount = holding.transactionCount,
+            previousClosePln = previousClosePricePln,
             edoLots = successfulResults.map { (lot, result) ->
                 val valuation = result.valuation
                 val lotCurrentValue = valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT).money()
