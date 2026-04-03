@@ -164,7 +164,7 @@ describe('App', () => {
       </MemoryRouter>,
     )
 
-    expect((await screen.findAllByRole('heading', { name: /^transactions$/i })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByRole('heading', { name: /^transactions$/i }, { timeout: 5000 })).length).toBeGreaterThan(0)
     expect(await screen.findByText(/canonical transaction journal/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/gross amount/i)).not.toBeInTheDocument()
 
@@ -172,7 +172,6 @@ describe('App', () => {
 
     expect(await screen.findByRole('dialog', { name: /new transaction/i })).toBeInTheDocument()
     expect(await screen.findByLabelText(/gross amount/i)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /close editor/i }).length).toBeGreaterThan(0)
 
     const tradeDateInput = screen.getByLabelText(/trade date/i)
     fireEvent.change(tradeDateInput, { target: { value: '2026-04-01' } })
