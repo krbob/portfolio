@@ -82,7 +82,7 @@ export function TransactionJournalReview({
           className="mb-4"
         />
 
-        <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="mb-4 flex flex-wrap items-end gap-3 [&>*]:min-w-0">
           <label className="min-w-[200px] flex-1">
             <span className={labelClass}>{t('journal.search')}</span>
             <input
@@ -181,12 +181,12 @@ export function TransactionJournalReview({
           )}
         </div>
 
-        <div className="mb-4 flex items-center justify-between text-sm text-zinc-500">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500">
           <span>
             {formatMessage(t('journal.showingRows'), { paged: pagedRows.length, sorted: sortedRows.length, total: journalRowsCount })}
           </span>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2">
               <span>{t('journal.rows')}</span>
               <select

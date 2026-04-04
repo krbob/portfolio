@@ -12,8 +12,6 @@ interface TransactionJournalSummaryProps {
   pagedRowCount: number
   instrumentsInFilteredJournal: number
   latestTradeDateInFilteredJournal: string | null
-  currentPage: number
-  totalPages: number
   onToggleComposer: () => void
   onResetJournalFilters: () => void
 }
@@ -44,8 +42,6 @@ export function TransactionJournalSummary({
   pagedRowCount,
   instrumentsInFilteredJournal,
   latestTradeDateInFilteredJournal,
-  currentPage,
-  totalPages,
   onToggleComposer,
   onResetJournalFilters,
 }: TransactionJournalSummaryProps) {
@@ -94,7 +90,7 @@ export function TransactionJournalSummary({
               ? formatDate(latestTradeDateInFilteredJournal)
               : activeNotApplicableLabel()
           }
-          hint={formatMessage(t('journal.pageLabel'), { current: currentPage, total: totalPages })}
+          hint={hasActiveJournalFilters ? t('journal.afterFilters') : t('journal.noFilters')}
         />
       </div>
     </Card>

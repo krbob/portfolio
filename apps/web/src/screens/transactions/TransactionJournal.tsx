@@ -652,8 +652,6 @@ export function TransactionJournal({
           pagedRowCount={pagedRows.length}
           instrumentsInFilteredJournal={instrumentsInFilteredJournal}
           latestTradeDateInFilteredJournal={latestTradeDateInFilteredJournal}
-          currentPage={currentPage}
-          totalPages={totalPages}
           onToggleComposer={() => {
             if (composerOpen) {
               closeComposer()
