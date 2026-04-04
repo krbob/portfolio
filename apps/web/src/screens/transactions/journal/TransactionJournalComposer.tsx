@@ -126,7 +126,7 @@ export function TransactionJournalComposer({
           {editingTransactionId ? t('journal.editSaveHint') : t('journal.createHint')}
         </p>
 
-        <form className="grid grid-cols-2 gap-3 lg:grid-cols-4" onSubmit={onSubmit}>
+        <form className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0" onSubmit={onSubmit}>
           <label>
             <span className={labelClass}>{t('journal.account')}</span>
             <select
@@ -155,7 +155,7 @@ export function TransactionJournalComposer({
             </select>
           </label>
 
-          <label>
+          <label className="overflow-hidden">
             <span className={labelClass}>{t('journal.tradeDate')}</span>
             <input
               className={input}
