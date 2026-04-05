@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getActiveUiLanguage } from '../../lib/i18n'
 import { t } from '../../lib/messages'
+import { IconClose, IconMenu } from '../ui/icons'
 import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
@@ -172,9 +173,7 @@ export function Layout({ children }: { children: ReactNode }) {
               aria-expanded={isMobileNavVisible}
               aria-controls="mobile-navigation"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
+              <IconMenu />
             </button>
 
             <div className="min-w-0 flex-1 px-3">
@@ -228,9 +227,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="absolute right-3 top-3 rounded-lg p-1 text-zinc-400 hover:text-zinc-200"
               aria-label={t('layout.closeNavigation')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-              </svg>
+              <IconClose />
             </button>
             <Sidebar onNavigate={closeMobileNav} />
           </aside>

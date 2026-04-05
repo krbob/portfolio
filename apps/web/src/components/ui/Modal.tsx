@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { t } from '../../lib/messages'
+import { IconClose } from './icons'
 
 interface ModalProps {
   open: boolean
@@ -91,9 +92,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
             className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
             aria-label={t('common.close')}
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IconClose />
           </button>
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
