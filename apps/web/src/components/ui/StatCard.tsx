@@ -1,3 +1,5 @@
+import clsx from 'clsx'
+
 interface StatCardProps {
   label: string
   value: string
@@ -17,21 +19,29 @@ const dotColors: Record<string, string> = {
 export function StatCard({ label, value, subtitle, change, dot, hero, loading }: StatCardProps) {
   const dotClass = dot ? dotColors[dot] ?? dot : undefined
   const isZero = value === '0' || value === '0,00 zł' || value === '0.00 zł'
+  const isLong = value.length > 10
 
   return (
     <div className="min-h-[5.5rem] rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:min-h-[6rem] sm:p-5">
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-400 sm:text-sm sm:normal-case sm:tracking-normal">
-        {dotClass && <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />}
+        {dotClass && <span className={clsx('inline-block h-2 w-2 rounded-full', dotClass)} />}
         {label}
       </div>
       <div
-        className={`mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums ${loading ? 'animate-pulse ' : ''}${
+        className={clsx(
+          'mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums',
+          loading && 'animate-pulse',
           hero
-            ? `${value.length > 10 ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl'} text-zinc-50`
-            : value.length > 10 ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl'
-        } ${
-          isZero ? 'text-zinc-600' : change === 'positive' ? 'text-emerald-400' : change === 'negative' ? 'text-red-400' : ''
-        }`}
+            ? [isLong ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl', 'text-zinc-50']
+            : isLong ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl',
+          isZero
+            ? 'text-zinc-600'
+            : change === 'positive'
+              ? 'text-emerald-400'
+              : change === 'negative'
+                ? 'text-red-400'
+                : undefined,
+        )}
       >
         {value}
       </div>

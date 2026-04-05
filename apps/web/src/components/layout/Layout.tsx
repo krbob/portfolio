@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getActiveUiLanguage } from '../../lib/i18n'
@@ -200,18 +201,20 @@ export function Layout({ children }: { children: ReactNode }) {
       {isMobileNavMounted && (
         <>
           <div
-            className={`fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
-              isMobileNavVisible ? 'opacity-100' : 'opacity-0'
-            }`}
+            className={clsx(
+              'fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden',
+              isMobileNavVisible ? 'opacity-100' : 'opacity-0',
+            )}
             onClick={closeMobileNav}
             aria-hidden="true"
           />
 
           <aside
             id="mobile-navigation"
-            className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden ${
-              isMobileNavVisible ? 'translate-x-0' : '-translate-x-full'
-            }`}
+            className={clsx(
+              'fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden',
+              isMobileNavVisible ? 'translate-x-0' : '-translate-x-full',
+            )}
             style={{
               paddingTop: 'var(--safe-top)',
               paddingBottom: 'var(--safe-bottom)',

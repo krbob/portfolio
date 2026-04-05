@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { t } from '../../lib/messages'
@@ -61,17 +62,20 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={clsx(
+          'fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200',
+          visible ? 'opacity-100' : 'opacity-0',
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
       <div
         ref={panelRef}
-        className={`relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden ${sizeClasses[size]} rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl transition-[opacity,transform] duration-200 ease-out ${
-          visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-        }`}
+        className={clsx(
+          'relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl transition-[opacity,transform] duration-200 ease-out',
+          sizeClasses[size],
+          visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

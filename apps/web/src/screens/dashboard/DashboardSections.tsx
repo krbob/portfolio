@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
 import { MiniChart } from '../../components/charts'
@@ -346,7 +347,7 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
           style={{ left: `${markerPos}%` }}
         />
       </div>
-      <span className={`w-20 shrink-0 text-right text-xs tabular-nums ${withinTolerance ? 'text-zinc-400' : 'text-amber-400'}`}>
+      <span className={clsx('w-20 shrink-0 text-right text-xs tabular-nums', withinTolerance ? 'text-zinc-400' : 'text-amber-400')}>
         {formatPercent(actual, { maximumFractionDigits: 0 })} / {formatPercent(target, { maximumFractionDigits: 0 })}
       </span>
     </div>

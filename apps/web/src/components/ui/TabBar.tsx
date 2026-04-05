@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 
 interface TabBarProps<T extends string> {
@@ -47,11 +48,10 @@ export function TabBar<T extends string>({
           aria-controls={idBase ? `${idBase}-panel-${tab.value}` : undefined}
           tabIndex={value === tab.value ? 0 : -1}
           onClick={() => onChange(tab.value)}
-          className={`relative px-4 py-3 text-sm font-medium transition-colors ${
-            value === tab.value
-              ? 'text-zinc-100'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
+          className={clsx(
+            'relative px-4 py-3 text-sm font-medium transition-colors',
+            value === tab.value ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+          )}
         >
           {tab.label}
           {tab.count != null && (
@@ -62,9 +62,10 @@ export function TabBar<T extends string>({
         </button>
       ))}
       <span
-        className={`absolute bottom-0 h-0.5 rounded-full bg-blue-500 ${
-          hasInitialized.current ? 'transition-[left,width] duration-250 ease-out' : ''
-        }`}
+        className={clsx(
+          'absolute bottom-0 h-0.5 rounded-full bg-blue-500',
+          hasInitialized.current && 'transition-[left,width] duration-250 ease-out',
+        )}
         style={{ left: indicator.left, width: indicator.width }}
       />
     </div>

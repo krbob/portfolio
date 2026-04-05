@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import { useAppMeta } from '../../hooks/use-app-meta'
 import { useAppReadiness } from '../../hooks/use-app-readiness'
@@ -38,11 +39,12 @@ function NavSection({
               title={item.label[language]}
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex select-none items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color] [-webkit-tap-highlight-color:transparent] focus:outline-none focus-visible:border-blue-400 focus-visible:bg-zinc-800/80 focus-visible:ring-2 focus-visible:ring-blue-500/20 active:bg-zinc-800 ${
+                clsx(
+                  'flex select-none items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color] [-webkit-tap-highlight-color:transparent] focus:outline-none focus-visible:border-blue-400 focus-visible:bg-zinc-800/80 focus-visible:ring-2 focus-visible:ring-blue-500/20 active:bg-zinc-800',
                   isActive
                     ? 'border-blue-500 bg-zinc-800 text-zinc-100'
-                    : 'border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'
-                }`
+                    : 'border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300',
+                )
               }
             >
               {item.icon}
