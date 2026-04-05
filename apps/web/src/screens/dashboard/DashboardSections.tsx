@@ -1,7 +1,8 @@
 import clsx from 'clsx'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
-import { MiniChart } from '../../components/charts'
+import { MiniChart, type MiniChartHoverInfo } from '../../components/charts'
 import { Badge, ErrorState, InlineRefreshIndicator, StatCard, StatePanel } from '../../components/ui'
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
@@ -138,11 +139,20 @@ export function DashboardHistoryCard({
   isError: boolean
   isRefreshing: boolean
 }) {
+  const [hoverInfo, setHoverInfo] = useState<MiniChartHoverInfo | null>(null)
+
   return (
-    <div className={`${card} lg:col-span-2`}>
+    <div className={clsx(card, 'lg:col-span-2 transition-colors hover:border-zinc-700')}>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, isPolish)}</h3>
+          <div className="flex items-baseline gap-3">
+            <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, isPolish)}</h3>
+            {hoverInfo && (
+              <span className="text-sm font-semibold tabular-nums text-zinc-100">
+                {formatCurrencyPln(hoverInfo.value)} <span className="text-xs font-normal text-zinc-500">{hoverInfo.date}</span>
+              </span>
+            )}
+          </div>
           {historyValuationState !== 'MARK_TO_MARKET' ? (
             <p className="mt-1 text-xs text-zinc-500">
               {historyValuationState === 'BOOK_ONLY'
@@ -160,11 +170,10 @@ export function DashboardHistoryCard({
               <button
                 key={value}
                 type="button"
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  value === range
-                    ? 'bg-zinc-700 text-zinc-100'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
+                className={clsx(
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  value === range ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                )}
                 onClick={() => onRangeChange(value)}
               >
                 {value}
@@ -191,7 +200,7 @@ export function DashboardHistoryCard({
         />
       ) : (
         <Link to="/performance" className="block">
-          <MiniChart points={chartPoints} height={200} />
+          <MiniChart points={chartPoints} height={200} onHover={setHoverInfo} />
         </Link>
       )}
     </div>

@@ -4,6 +4,11 @@ import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
 import { ChartContainer } from './ChartContainer'
 
+export interface MiniChartHoverInfo {
+  value: number
+  date: string
+}
+
 interface MiniChartProps {
   points: PortfolioDailyHistoryPoint[]
   valueKey?: 'totalCurrentValuePln' | 'totalCurrentValueUsd' | 'totalCurrentValueAu'
@@ -11,6 +16,7 @@ interface MiniChartProps {
   fillColor?: string
   fadeColor?: string
   height?: number
+  onHover?: (info: MiniChartHoverInfo | null) => void
 }
 
 export function MiniChart({
@@ -20,10 +26,14 @@ export function MiniChart({
   fillColor = chartPalette.portfolioFill,
   fadeColor = chartPalette.portfolioFade,
   height = 200,
+  onHover,
 }: MiniChartProps) {
   const chartRef = useRef<IChartApi | null>(null)
   const hasMountedRef = useRef(false)
   const seriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const onHoverRef = useRef(onHover)
+  onHoverRef.current = onHover
+
   const stateRef = useRef({
     points,
     valueKey,
@@ -65,7 +75,7 @@ export function MiniChart({
       timeScale: { visible: false },
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },
       crosshair: {
-        vertLine: { visible: false },
+        vertLine: { visible: true, color: chartPalette.crosshair, style: 3, labelVisible: false },
         horzLine: { visible: false },
       },
       handleScroll: false,
@@ -77,7 +87,22 @@ export function MiniChart({
       topColor: stateRef.current.fillColor,
       bottomColor: stateRef.current.fadeColor,
       lineWidth: 2,
-      crosshairMarkerVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
+    })
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!onHoverRef.current) return
+      if (!param.time || !param.seriesData?.size) {
+        onHoverRef.current(null)
+        return
+      }
+      const data = param.seriesData.get(seriesRef.current!)
+      if (data && 'value' in data && typeof data.value === 'number') {
+        onHoverRef.current({ value: data.value, date: String(param.time) })
+      } else {
+        onHoverRef.current(null)
+      }
     })
 
     updateSeriesData()
