@@ -10,6 +10,8 @@ export const input =
   'w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30'
 export const filterInput =
   'rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 focus:border-blue-500 focus:outline-none'
+export const inputError =
+  'w-full min-w-0 rounded-lg border border-red-500/50 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/30'
 export const label = 'block text-xs font-medium text-zinc-500 mb-1.5'
 
 // Buttons

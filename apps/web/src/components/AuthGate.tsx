@@ -5,8 +5,8 @@ import { API_UNAUTHORIZED_EVENT } from '../api/http'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession, useLogin } from '../hooks/use-auth-session'
 import { t } from '../lib/messages'
-import { StatePanel } from './ui'
-import { btnPrimary, input } from '../lib/styles'
+import { FieldError, StatePanel } from './ui'
+import { btnPrimary, input, inputError, label as labelClass } from '../lib/styles'
 
 interface AuthGateProps {
   children: ReactNode
@@ -99,14 +99,21 @@ function LoginCard({ stage }: { stage: string }) {
               loginMutation.mutate({ password })
             }}
           >
-            <input
-              type="password"
-              className={input}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              aria-label={t('auth.password')}
-              placeholder={t('auth.enterPassword')}
+            <label>
+              <span className={labelClass}>{t('auth.password')}</span>
+              <input
+                type="password"
+                className={loginMutation.isError ? inputError : input}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder={t('auth.enterPassword')}
+              />
+            </label>
+            <FieldError
+              message={loginMutation.isError
+                ? (loginMutation.error instanceof Error ? loginMutation.error.message : t('auth.loginFailed'))
+                : null}
             />
 
             <button
@@ -117,12 +124,6 @@ function LoginCard({ stage }: { stage: string }) {
               {loginMutation.isPending ? t('auth.unlocking') : t('auth.unlock')}
             </button>
           </form>
-
-          {loginMutation.isError && (
-            <p className="mt-3 text-sm text-red-400">
-              {loginMutation.error instanceof Error ? loginMutation.error.message : t('auth.loginFailed')}
-            </p>
-          )}
         </div>
         <p className="mt-4 text-center text-xs text-zinc-600">{t('auth.selfHosted')}</p>
       </div>
