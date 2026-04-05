@@ -51,6 +51,7 @@ export function DashboardHeroStats({
       <StatCard
         label={labelPrimaryPortfolioValueMetric(valuationState, isPolish)}
         value={formatCurrencyPln(displayedTotalValuePln)}
+        numericValue={Number(displayedTotalValuePln)}
         subtitle={describePrimaryPortfolioValue(overview, valuationState, isPolish)}
         hero
       />
@@ -59,6 +60,7 @@ export function DashboardHeroStats({
         value={dailyChangeLoading
           ? '—'
           : dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
+        numericValue={dailyChange ?? undefined}
         subtitle={dailyChangeLoading
           ? t('dashboardSections.waitingForData')
           : dailyChangePct != null
@@ -72,12 +74,14 @@ export function DashboardHeroStats({
       <StatCard
         label={t('dashboardSections.equities')}
         value={formatCurrencyPln(displayedEquityValuePln)}
+        numericValue={Number(displayedEquityValuePln)}
         subtitle={describeAssetSliceValuation(equityPct, valuationState, isPolish)}
         dot="equity"
       />
       <StatCard
         label={t('dashboardSections.bonds')}
         value={formatCurrencyPln(displayedBondValuePln)}
+        numericValue={Number(displayedBondValuePln)}
         subtitle={describeAssetSliceValuation(bondPct, valuationState, isPolish)}
         dot="bond"
       />
@@ -403,6 +407,7 @@ export function DashboardQuickStats({
       <StatCard
         label={t('dashboardSections.unrealizedPL')}
         value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
+        numericValue={hasMarketBackedCurrentValuation ? Number(overview.totalUnrealizedGainPln) : undefined}
         subtitle={hasMarketBackedCurrentValuation
           ? undefined
           : t('dashboardSections.requiresMarketValuation')}
@@ -417,11 +422,13 @@ export function DashboardQuickStats({
       <StatCard
         label={t('dashboardSections.netContributions')}
         value={formatCurrencyPln(overview.netContributionsPln)}
+        numericValue={Number(overview.netContributionsPln)}
         subtitle={contributionBreakdownSubtitle}
       />
       <StatCard
         label={t('dashboardSections.cashBalance')}
         value={formatCurrencyPln(overview.cashBalancePln)}
+        numericValue={Number(overview.cashBalancePln)}
         subtitle={cashBreakdownSubtitle}
       />
       <StatCard

@@ -3,6 +3,7 @@ import clsx from 'clsx'
 interface StatCardProps {
   label: string
   value: string
+  numericValue?: number
   subtitle?: string
   change?: 'positive' | 'negative' | 'neutral'
   dot?: 'equity' | 'bond' | 'cash' | string
@@ -16,9 +17,9 @@ const dotColors: Record<string, string> = {
   cash: 'bg-zinc-500',
 }
 
-export function StatCard({ label, value, subtitle, change, dot, hero, loading }: StatCardProps) {
+export function StatCard({ label, value, numericValue, subtitle, change, dot, hero, loading }: StatCardProps) {
   const dotClass = dot ? dotColors[dot] ?? dot : undefined
-  const isZero = value === '0' || value === '0,00 zł' || value === '0.00 zł'
+  const isZero = numericValue != null ? numericValue === 0 : value === '0' || value === '0,00 zł' || value === '0.00 zł'
   const isLong = value.length > 10
 
   return (
