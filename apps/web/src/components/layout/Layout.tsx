@@ -177,7 +177,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </button>
 
             <div className="min-w-0 flex-1 px-3">
-              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Portfolio</p>
+              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">{t('layout.appName')}</p>
               <p className="truncate text-sm font-semibold text-zinc-100">{currentTitle}</p>
             </div>
           </div>

@@ -178,6 +178,7 @@ export const appMessages = {
   },
   'ui.empty': { pl: 'Pusto', en: 'Empty' },
   'ui.clear': { pl: 'Wyczyść', en: 'Clear' },
+  'layout.appName': { pl: 'Portfolio', en: 'Portfolio' },
   'layout.openNavigation': { pl: 'Otwórz nawigację', en: 'Open navigation' },
   'layout.closeNavigation': { pl: 'Zamknij nawigację', en: 'Close navigation' },
   'layout.navigation': { pl: 'Nawigacja', en: 'Navigation' },
