@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { type ReactNode } from 'react'
 import { MobileAppSection } from '../components/MobileAppSection'
 import { MarketDataSnapshotsSection } from '../components/MarketDataSnapshotsSection'
@@ -14,6 +15,7 @@ import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { TransactionImportSection } from '../components/TransactionImportSection'
 import { Card, FadeIn, SectionHeader } from '../components/ui'
+import { useActiveSectionId } from '../hooks/use-active-section'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { t } from '../lib/messages'
 import { InstrumentsManagement } from './InstrumentsScreen'
@@ -33,8 +35,11 @@ const SETTINGS_SECTIONS = [
   { id: 'mobile-app', labelKey: 'settings.navMobileApp' },
 ] as const
 
+const SECTION_IDS = SETTINGS_SECTIONS.map((s) => s.id)
+
 export function SettingsScreen() {
   const staleAlert = useStaleMarketDataAlert()
+  const activeSectionId = useActiveSectionId(SECTION_IDS)
 
   return (
     <>
@@ -46,15 +51,23 @@ export function SettingsScreen() {
         className="sticky top-0 z-20 -mx-1 mb-6 flex gap-1.5 overflow-x-auto bg-zinc-950/90 px-1 py-2 backdrop-blur-sm"
         aria-label={t('settings.navLabel')}
       >
-        {SETTINGS_SECTIONS.map((section) => (
-          <a
-            key={section.id}
-            href={`#${section.id}`}
-            className="whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
-          >
-            {t(section.labelKey)}
-          </a>
-        ))}
+        {SETTINGS_SECTIONS.map((section) => {
+          const isActive = activeSectionId === section.id
+          return (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className={clsx(
+                'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                isActive
+                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200',
+              )}
+            >
+              {t(section.labelKey)}
+            </a>
+          )
+        })}
       </nav>
 
       <FadeIn>
