@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { t } from '../../lib/messages'
 import type { Toast } from '../../hooks/use-toast'
 import { IconClose } from './icons'
 
@@ -33,7 +34,7 @@ export function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismi
             type="button"
             onClick={() => onDismiss(toast.id)}
             className="shrink-0 rounded-lg p-0.5 opacity-60 transition-opacity hover:opacity-100"
-            aria-label="Dismiss"
+            aria-label={t('common.close')}
           >
             <IconClose className="h-4 w-4" />
           </button>

@@ -10,6 +10,8 @@ export function useActiveSectionId(sectionIds: readonly string[]): string | null
   const ratioMap = useRef<Map<string, number>>(new Map())
 
   useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
+
     const elements = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el != null)
