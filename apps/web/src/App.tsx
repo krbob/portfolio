@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { AuthGate } from './components/AuthGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/layout'
+import { ToastProvider } from './components/ui'
 import { t } from './lib/messages'
 
 const DashboardScreen = lazy(async () => {
@@ -35,6 +36,7 @@ export function App() {
   const handleErrorReset = useCallback(() => { navigate('/') }, [navigate])
 
   return (
+    <ToastProvider>
     <AuthGate>
       <Layout>
         <ErrorBoundary onReset={handleErrorReset}>
@@ -58,6 +60,7 @@ export function App() {
         </ErrorBoundary>
       </Layout>
     </AuthGate>
+    </ToastProvider>
   )
 }
 
