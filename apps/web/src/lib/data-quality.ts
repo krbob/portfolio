@@ -71,6 +71,7 @@ export function buildPortfolioDataQualitySummary({
     returns.periods.find((period) => period.key === 'MAX') ??
     returns.periods.find((period) => period.benchmarks.length > 0) ??
     returns.periods.at(0)
+  const benchmarkComparisons = benchmarkPeriod?.benchmarks ?? []
   const totalBenchmarkCount = benchmarkPeriod?.benchmarks.length ?? 0
   const availableBenchmarkCount = benchmarkPeriod?.benchmarks.filter((benchmark) => benchmark.nominalPln != null).length ?? 0
 
@@ -94,6 +95,7 @@ export function buildPortfolioDataQualitySummary({
     buildFxCheck(overview.missingFxTransactions, usdSeriesAvailable, lang),
     buildGoldCheck(goldSeriesAvailable, lang),
     buildBenchmarkCheck({
+      benchmarks: benchmarkComparisons,
       availableBenchmarkCount,
       totalBenchmarkCount,
       lang,
@@ -235,10 +237,12 @@ function buildGoldCheck(goldSeriesAvailable: boolean, lang: UiLanguage): Portfol
 }
 
 function buildBenchmarkCheck({
+  benchmarks,
   availableBenchmarkCount,
   totalBenchmarkCount,
   lang,
 }: {
+  benchmarks: PortfolioReturns['periods'][number]['benchmarks']
   availableBenchmarkCount: number
   totalBenchmarkCount: number
   lang: UiLanguage
@@ -266,6 +270,11 @@ function buildBenchmarkCheck({
     }
   }
 
+  const degraded = benchmarks.filter((benchmark) => benchmark.status !== 'HEALTHY')
+  const degradedSuffix = degraded.length > 0
+    ? ` ${buildBenchmarkHealthDetail(degraded, lang)}`
+    : ''
+
   return {
     key: 'benchmarks',
     label,
@@ -273,8 +282,45 @@ function buildBenchmarkCheck({
     message: formatMessage(tFor('dataQualityLib.benchmarksWarn', lang), {
       availableCount: availableBenchmarkCount,
       totalCount: totalBenchmarkCount,
-    }),
+    }) + degradedSuffix,
   }
+}
+
+function buildBenchmarkHealthDetail(
+  benchmarks: PortfolioReturns['periods'][number]['benchmarks'],
+  lang: UiLanguage,
+): string {
+  const listed = benchmarks
+    .slice(0, 3)
+    .map((benchmark) => `${benchmarkLabel(benchmark, lang)} (${benchmark.status === 'STALE'
+      ? lang === 'pl' ? 'opóźniony' : 'stale'
+      : lang === 'pl' ? 'niedostępny' : 'unavailable'})`)
+    .join(', ')
+  const suffix = benchmarks.length > 3 ? (lang === 'pl' ? ' i kolejne.' : ' and more.') : '.'
+  return lang === 'pl'
+    ? `Problem dotyczy: ${listed}${suffix}`
+    : `Affected: ${listed}${suffix}`
+}
+
+function benchmarkLabel(
+  benchmark: PortfolioReturns['periods'][number]['benchmarks'][number],
+  lang: UiLanguage,
+): string {
+  const labels: Record<string, { pl: string; en: string }> = {
+    VWRA: { pl: 'VWRA', en: 'VWRA' },
+    INFLATION: { pl: 'Inflacja', en: 'Inflation' },
+    TARGET_MIX: { pl: 'Miks docelowy', en: 'Target mix' },
+    V80A: { pl: 'V80A', en: 'V80A' },
+    V60A: { pl: 'V60A', en: 'V60A' },
+    V40A: { pl: 'V40A', en: 'V40A' },
+    V20A: { pl: 'V20A', en: 'V20A' },
+    VAGF: { pl: 'VAGF', en: 'VAGF' },
+  }
+  const localized = labels[benchmark.key]
+  if (localized) {
+    return lang === 'pl' ? localized.pl : localized.en
+  }
+  return benchmark.label
 }
 
 function buildCpiCheck(cpiCoverageThroughMonth: string | null, lang: UiLanguage, now: Date): PortfolioDataQualityCheck {

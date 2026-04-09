@@ -76,7 +76,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       returns: returns({
         benchmarks: [
           benchmark('VWRA', true),
-          benchmark('CUSTOM', true),
+          benchmark('CUSTOM_1', true),
         ],
       }),
       cacheSnapshots: cacheSnapshots(),
@@ -205,7 +205,7 @@ function returns(overrides: { inflationUntil?: string; benchmarks?: PortfolioRet
         inflationMultiplier: '1.02',
         benchmarks: overrides.benchmarks ?? [
           benchmark('VWRA', true),
-          benchmark('CUSTOM', false),
+          benchmark('CUSTOM_1', false),
         ],
       },
     ],
@@ -217,6 +217,8 @@ function benchmark(key: string, available: boolean): PortfolioReturns['periods']
     key,
     label: `${key} benchmark`,
     pinned: key === 'VWRA',
+    status: available ? 'HEALTHY' : 'UNAVAILABLE',
+    issue: available ? null : `${key} benchmark is unavailable.`,
     nominalPln: available
       ? {
           moneyWeightedReturn: '0.04',

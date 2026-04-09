@@ -7,7 +7,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
-import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationSeriesResult
@@ -55,12 +54,6 @@ class PortfolioReturnsService(
         }
         val inception = history.from
         val benchmarkSettings = benchmarkSettingsService.settings()
-        val referenceBenchmarks = loadReferenceBenchmarks(
-            from = history.from,
-            to = history.until,
-            settings = benchmarkSettings
-        )
-
         val periods = coroutineScope {
             ReturnPeriodDefinition.entries
                 .map { definition ->
@@ -75,7 +68,6 @@ class PortfolioReturnsService(
                             transactions = transactions,
                             fxLookups = fxLookups,
                             externalCashFlows = externalCashFlows,
-                            referenceBenchmarks = referenceBenchmarks,
                             benchmarkSettings = benchmarkSettings
                         )
                     }
@@ -97,7 +89,6 @@ class PortfolioReturnsService(
         transactions: List<Transaction>,
         fxLookups: TransactionFxLookups,
         externalCashFlows: List<ExternalCashFlow>,
-        referenceBenchmarks: List<ReferenceBenchmarkSeries>,
         benchmarkSettings: PortfolioBenchmarkSettings
     ): PortfolioReturnPeriod {
         val nominalPln = calculateMetric(
@@ -121,58 +112,33 @@ class PortfolioReturnsService(
             }
         )
 
-        val benchmarkComparisons = buildList {
-            buildBenchmarkComparison(
-                key = BenchmarkKey.VWRA,
-                label = "VWRA benchmark",
-                start = effectiveFrom,
-                end = history.until,
-                portfolioMetric = nominalPln,
-                pinned = benchmarkSettings.isPinned(BenchmarkKey.VWRA),
-                values = history.points.mapNotNull { point ->
-                    point.benchmarkIndices[BenchmarkKey.VWRA.name]?.let { value ->
+        val healthByKey = history.benchmarkStatuses.associateBy(BenchmarkSeriesHealth::key)
+        val benchmarkComparisons = benchmarkSettings.options
+            .asSequence()
+            .filter { option -> benchmarkSettings.isEnabled(option.key) }
+            .mapNotNull { option ->
+                val values = history.points.mapNotNull { point ->
+                    point.benchmarkIndices[option.key.name]?.let { value ->
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
-            )?.let(::add)
-            buildBenchmarkComparison(
-                key = BenchmarkKey.INFLATION,
-                label = "Inflation benchmark",
-                start = effectiveFrom,
-                end = history.until,
-                portfolioMetric = nominalPln,
-                pinned = benchmarkSettings.isPinned(BenchmarkKey.INFLATION),
-                values = history.points.mapNotNull { point ->
-                    point.benchmarkIndices[BenchmarkKey.INFLATION.name]?.let { value ->
-                        ValuationPoint(date = point.date, value = value)
-                    }
+                val health = healthByKey[option.key]
+                if (health == null && values.isEmpty()) {
+                    return@mapNotNull null
                 }
-            )?.let(::add)
-            buildBenchmarkComparison(
-                key = BenchmarkKey.TARGET_MIX,
-                label = "Configured target mix",
-                start = effectiveFrom,
-                end = history.until,
-                portfolioMetric = nominalPln,
-                pinned = benchmarkSettings.isPinned(BenchmarkKey.TARGET_MIX),
-                values = history.points.mapNotNull { point ->
-                    point.benchmarkIndices[BenchmarkKey.TARGET_MIX.name]?.let { value ->
-                        ValuationPoint(date = point.date, value = value)
-                    }
-                }
-            )?.let(::add)
-            referenceBenchmarks.forEach { benchmark ->
                 buildBenchmarkComparison(
-                    key = benchmark.key,
-                    label = benchmark.label,
+                    key = option.key,
+                    label = option.label,
                     start = effectiveFrom,
                     end = history.until,
                     portfolioMetric = nominalPln,
-                    pinned = benchmarkSettings.isPinned(benchmark.key),
-                    values = benchmark.values
-                )?.let(::add)
+                    pinned = benchmarkSettings.isPinned(option.key),
+                    values = values,
+                    status = health?.status ?: BenchmarkSeriesStatus.HEALTHY,
+                    issue = health?.issue
+                )
             }
-        }.filter { benchmarkSettings.isEnabled(it.key) }
+            .toList()
             .sortedWith(compareByDescending<BenchmarkComparison> { it.pinned }.thenBy(BenchmarkComparison::label))
         val realPlnAdjustment = loadRealPlnAdjustment(
             effectiveFrom = effectiveFrom,
@@ -213,9 +179,21 @@ class PortfolioReturnsService(
         end: LocalDate,
         portfolioMetric: ReturnMetric?,
         pinned: Boolean,
-        values: List<ValuationPoint>
-    ): BenchmarkComparison? {
-        val metric = calculateBenchmarkMetric(start = start, end = end, values = values) ?: return null
+        values: List<ValuationPoint>,
+        status: BenchmarkSeriesStatus,
+        issue: String?
+    ): BenchmarkComparison {
+        val metric = calculateBenchmarkMetric(start = start, end = end, values = values)
+        val resolvedStatus = when {
+            metric != null -> status
+            status == BenchmarkSeriesStatus.HEALTHY -> BenchmarkSeriesStatus.UNAVAILABLE
+            else -> status
+        }
+        val resolvedIssue = issue ?: if (metric == null) {
+            "Benchmark series does not cover the selected period."
+        } else {
+            null
+        }
 
         return BenchmarkComparison(
             key = key,
@@ -224,12 +202,14 @@ class PortfolioReturnsService(
             nominalPln = metric,
             excessTimeWeightedReturn = subtractRates(
                 portfolioMetric?.timeWeightedReturn,
-                metric.timeWeightedReturn
+                metric?.timeWeightedReturn
             ),
             excessAnnualizedTimeWeightedReturn = subtractRates(
                 portfolioMetric?.annualizedTimeWeightedReturn,
-                metric.annualizedTimeWeightedReturn
-            )
+                metric?.annualizedTimeWeightedReturn
+            ),
+            status = resolvedStatus,
+            issue = resolvedIssue
         )
     }
 
@@ -276,46 +256,6 @@ class PortfolioReturnsService(
     ): TreeMap<LocalDate, BigDecimal> = when (val result = referenceSeriesProvider.usdPln(from = from, to = to)) {
         is ReferenceSeriesResult.Success -> result.prices.associateTo(TreeMap()) { it.date to it.closePricePln.scaleMoney(8) }
         is ReferenceSeriesResult.Failure -> TreeMap()
-    }
-
-    private suspend fun loadReferenceBenchmarks(
-        from: LocalDate,
-        to: LocalDate,
-        settings: PortfolioBenchmarkSettings
-    ): List<ReferenceBenchmarkSeries> = coroutineScope {
-        settings.activeReferenceBenchmarks().map { definition ->
-            async {
-                definition to referenceSeriesProvider.benchmarkPln(
-                    symbol = definition.symbol,
-                    from = from,
-                    to = to
-                )
-            }
-        }.awaitAll().mapNotNull { (definition, result) ->
-            when (result) {
-                is ReferenceSeriesResult.Success -> {
-                    val values = result.prices
-                        .sortedBy(HistoricalPricePoint::date)
-                        .map { point ->
-                            ValuationPoint(
-                                date = point.date,
-                                value = point.closePricePln.scaleMoney(8)
-                            )
-                        }
-                    if (values.isEmpty()) {
-                        null
-                    } else {
-                        ReferenceBenchmarkSeries(
-                            key = definition.key,
-                            label = definition.label,
-                            values = values
-                        )
-                    }
-                }
-
-                is ReferenceSeriesResult.Failure -> null
-            }
-        }
     }
 
     private suspend fun loadRealPlnAdjustment(
@@ -772,12 +712,6 @@ class PortfolioReturnsService(
         val value: BigDecimal
     )
 
-    private data class ReferenceBenchmarkSeries(
-        val key: BenchmarkKey,
-        val label: String,
-        val values: List<ValuationPoint>
-    )
-
     private data class TimeWeightedMetric(
         val totalReturn: BigDecimal,
         val annualizedReturn: BigDecimal?
@@ -862,7 +796,22 @@ data class BenchmarkComparison(
     val pinned: Boolean,
     val nominalPln: ReturnMetric?,
     val excessTimeWeightedReturn: BigDecimal?,
-    val excessAnnualizedTimeWeightedReturn: BigDecimal?
+    val excessAnnualizedTimeWeightedReturn: BigDecimal?,
+    val status: BenchmarkSeriesStatus = BenchmarkSeriesStatus.HEALTHY,
+    val issue: String? = null
+)
+
+enum class BenchmarkSeriesStatus {
+    HEALTHY,
+    STALE,
+    UNAVAILABLE
+}
+
+data class BenchmarkSeriesHealth(
+    val key: BenchmarkKey,
+    val label: String,
+    val status: BenchmarkSeriesStatus,
+    val issue: String? = null
 )
 
 enum class ReturnPeriodKey {

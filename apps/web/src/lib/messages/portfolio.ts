@@ -264,6 +264,16 @@ export const portfolioMessages = {
   'performanceSections.clipped': { pl: '(ucięte do początku portfela)', en: '(clipped)' },
   'performanceSections.benchmarks': { pl: 'Benchmarki', en: 'Benchmarks' },
   'performanceSections.pinned': { pl: 'Przypięty', en: 'Pinned' },
+  'performanceSections.benchmarkStale': { pl: 'Opóźniony', en: 'Stale' },
+  'performanceSections.benchmarkUnavailable': { pl: 'Niedostępny', en: 'Unavailable' },
+  'performanceSections.benchmarkStatusStale': {
+    pl: 'Benchmark działa na ostatniej dostępnej serii z cache.',
+    en: 'Benchmark is using the latest cached series.',
+  },
+  'performanceSections.benchmarkStatusUnavailable': {
+    pl: 'Benchmark nie ma pokrycia dla tego okresu albo upstream nie zwrócił serii.',
+    en: 'Benchmark has no coverage for this period or the upstream did not return a series.',
+  },
   'performanceSections.benchTwr': { pl: 'TWR benchmarku', en: 'Bench TWR' },
   'performanceSections.valueBridge': { pl: 'Rozbicie zmiany wartości', en: 'Value-change bridge' },
   'performanceSections.valueBridgePeriod': { pl: 'Okres mostu wyniku', en: 'Value bridge period' },

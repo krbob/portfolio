@@ -29,6 +29,7 @@ export function ChartsTab({
   onUnitChange,
   series,
   benchmarkOrder,
+  pinnedBenchmarkKeys,
   customBenchmarkLabels,
 }: {
   historyQuery: ReturnType<typeof usePortfolioDailyHistory>
@@ -39,6 +40,7 @@ export function ChartsTab({
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
   benchmarkOrder: string[]
+  pinnedBenchmarkKeys: string[]
   customBenchmarkLabels?: Record<string, string>
 }) {
   if (historyQuery.isLoading && points.length === 0) {
@@ -118,6 +120,7 @@ export function ChartsTab({
         <BenchmarkChart
           points={points}
           benchmarkOrder={benchmarkOrder}
+          pinnedBenchmarkKeys={pinnedBenchmarkKeys}
           customBenchmarkLabels={customBenchmarkLabels}
         />
       </div>
@@ -383,13 +386,30 @@ function BenchmarkCard({
   returnsDisplayAvailable: boolean
 }) {
   const { isPolish } = useI18n()
+  const statusTone =
+    benchmark.status === 'UNAVAILABLE'
+      ? 'border-red-500/20 bg-red-500/5'
+      : benchmark.status === 'STALE'
+        ? 'border-amber-500/20 bg-amber-500/5'
+        : 'border-zinc-800/50 bg-zinc-800/30'
   return (
-    <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
+    <div className={`rounded-lg border p-3 ${statusTone}`}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <p className="text-xs font-medium text-zinc-500">{translateBenchmarkLabel(benchmark.label)}</p>
         {benchmark.pinned ? (
           <span className="shrink-0 whitespace-nowrap rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-300">
             {t('performanceSections.pinned')}
+          </span>
+        ) : null}
+        {benchmark.status !== 'HEALTHY' ? (
+          <span
+            className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+              benchmark.status === 'STALE'
+                ? 'bg-amber-500/15 text-amber-300'
+                : 'bg-red-500/15 text-red-300'
+            }`}
+          >
+            {benchmarkStatusLabel(benchmark.status)}
           </span>
         ) : null}
       </div>
@@ -399,8 +419,26 @@ function BenchmarkCard({
       <p className="mt-0.5 text-xs text-zinc-600">
         {t('performanceSections.benchTwr')} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
       </p>
+      {benchmark.status !== 'HEALTHY' ? (
+        <p className="mt-1 text-xs text-zinc-500">
+          {benchmark.status === 'STALE'
+            ? t('performanceSections.benchmarkStatusStale')
+            : t('performanceSections.benchmarkStatusUnavailable')}
+        </p>
+      ) : null}
     </div>
   )
+}
+
+function benchmarkStatusLabel(status: BenchmarkComparison['status']) {
+  switch (status) {
+    case 'STALE':
+      return t('performanceSections.benchmarkStale')
+    case 'UNAVAILABLE':
+      return t('performanceSections.benchmarkUnavailable')
+    default:
+      return t('dataQuality.statusPass')
+  }
 }
 
 function ReturnsBreakdownCard({

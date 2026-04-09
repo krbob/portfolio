@@ -1049,6 +1049,13 @@ export interface components {
             valuedHoldingCount: number;
             valuationIssueCount: number;
         };
+        /** net.bobinski.portfolio.api.route.BenchmarkStatusResponse */
+        BenchmarkStatusResponse: {
+            key: string;
+            label: string;
+            status: string;
+            issue?: string | null;
+        };
         /** net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse */
         PortfolioDailyHistoryPointResponse: {
             date: string;
@@ -1083,6 +1090,7 @@ export interface components {
             instrumentHistoryIssueCount: number;
             referenceSeriesIssueCount: number;
             benchmarkSeriesIssueCount: number;
+            benchmarkStatuses?: components["schemas"]["BenchmarkStatusResponse"][];
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
             points: components["schemas"]["PortfolioDailyHistoryPointResponse"][];
@@ -1111,6 +1119,8 @@ export interface components {
             key: string;
             label: string;
             pinned: boolean;
+            status: string;
+            issue?: string | null;
             nominalPln?: components["schemas"]["ReturnMetricResponse"] | null;
             excessTimeWeightedReturn?: string | null;
             excessAnnualizedTimeWeightedReturn?: string | null;

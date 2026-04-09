@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.route
 
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
+import net.bobinski.portfolio.api.domain.service.BenchmarkSeriesHealth
 import net.bobinski.portfolio.api.domain.service.CurrencyAmountSnapshot
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
@@ -122,6 +123,7 @@ data class PortfolioDailyHistoryResponse(
     val instrumentHistoryIssueCount: Int,
     val referenceSeriesIssueCount: Int,
     val benchmarkSeriesIssueCount: Int,
+    val benchmarkStatuses: List<BenchmarkStatusResponse> = emptyList(),
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
     val points: List<PortfolioDailyHistoryPointResponse>
@@ -242,9 +244,19 @@ data class BenchmarkComparisonResponse(
     val key: String,
     val label: String,
     val pinned: Boolean,
+    val status: String,
+    val issue: String?,
     val nominalPln: ReturnMetricResponse?,
     val excessTimeWeightedReturn: String?,
     val excessAnnualizedTimeWeightedReturn: String?
+)
+
+@Serializable
+data class BenchmarkStatusResponse(
+    val key: String,
+    val label: String,
+    val status: String,
+    val issue: String?
 )
 
 internal fun PortfolioOverview.toResponse(): PortfolioOverviewResponse = PortfolioOverviewResponse(
@@ -348,6 +360,7 @@ internal fun PortfolioDailyHistory.toResponse(): PortfolioDailyHistoryResponse =
     instrumentHistoryIssueCount = instrumentHistoryIssueCount,
     referenceSeriesIssueCount = referenceSeriesIssueCount,
     benchmarkSeriesIssueCount = benchmarkSeriesIssueCount,
+    benchmarkStatuses = benchmarkStatuses.map(BenchmarkSeriesHealth::toResponse),
     missingFxTransactions = missingFxTransactions,
     unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
     points = points.map { it.toResponse() }
@@ -460,7 +473,16 @@ internal fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = Ben
     key = key.name,
     label = label,
     pinned = pinned,
+    status = status.name,
+    issue = issue,
     nominalPln = nominalPln?.toResponse(),
     excessTimeWeightedReturn = excessTimeWeightedReturn?.toPlainString(),
     excessAnnualizedTimeWeightedReturn = excessAnnualizedTimeWeightedReturn?.toPlainString()
+)
+
+internal fun BenchmarkSeriesHealth.toResponse(): BenchmarkStatusResponse = BenchmarkStatusResponse(
+    key = key.name,
+    label = label,
+    status = status.name,
+    issue = issue
 )

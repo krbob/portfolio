@@ -104,4 +104,24 @@ describe('BenchmarkChart', () => {
     expect(screen.getByRole('option', { name: 'Europa 600' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: /miks docelowy/i })).not.toBeInTheDocument()
   })
+
+  it('defaults to compare mode when multiple pinned benchmarks are available', () => {
+    setLanguage('pl')
+
+    render(
+      <I18nProvider>
+        <BenchmarkChart
+          points={orderedPoints}
+          benchmarkOrder={['CUSTOM_1', 'VWRA', 'TARGET_MIX']}
+          pinnedBenchmarkKeys={['CUSTOM_1', 'VWRA']}
+          customBenchmarkLabels={{ CUSTOM_1: 'Europa 600' }}
+        />
+      </I18nProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Porównaj' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByLabelText('Wybierz benchmark')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Europa 600' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /vwra/i })).toHaveAttribute('aria-pressed', 'true')
+  })
 })

@@ -283,6 +283,10 @@ class PortfolioHistoryServiceTest {
         assertNotNull(lastPoint.benchmarkIndices["VWRA"])
         assertNotNull(lastPoint.benchmarkIndices["INFLATION"])
         assertNotNull(lastPoint.benchmarkIndices["TARGET_MIX"])
+        val statusesByKey = history.benchmarkStatuses.associate { it.key to it.status }
+        assertEquals(BenchmarkSeriesStatus.HEALTHY, statusesByKey[BenchmarkKey.VWRA])
+        assertEquals(BenchmarkSeriesStatus.HEALTHY, statusesByKey[BenchmarkKey.INFLATION])
+        assertEquals(BenchmarkSeriesStatus.HEALTHY, statusesByKey[BenchmarkKey.TARGET_MIX])
         assertTrue(lastPoint.benchmarkIndices["VWRA"]!!.compareTo(BigDecimal("121")) == 0)
         assertTrue(lastPoint.benchmarkIndices["TARGET_MIX"]!!.compareTo(BigDecimal("118.81")) == 0)
     }

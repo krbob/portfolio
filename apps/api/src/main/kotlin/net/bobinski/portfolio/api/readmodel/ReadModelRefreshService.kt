@@ -20,6 +20,7 @@ import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import net.bobinski.portfolio.api.route.BenchmarkComparisonResponse
+import net.bobinski.portfolio.api.route.BenchmarkStatusResponse
 import net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse
 import net.bobinski.portfolio.api.route.PortfolioDailyHistoryResponse
 import net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse
@@ -193,6 +194,14 @@ private fun PortfolioDailyHistory.toRefreshResponse(): PortfolioDailyHistoryResp
     instrumentHistoryIssueCount = instrumentHistoryIssueCount,
     referenceSeriesIssueCount = referenceSeriesIssueCount,
     benchmarkSeriesIssueCount = benchmarkSeriesIssueCount,
+    benchmarkStatuses = benchmarkStatuses.map { status ->
+        BenchmarkStatusResponse(
+            key = status.key.name,
+            label = status.label,
+            status = status.status.name,
+            issue = status.issue
+        )
+    },
     missingFxTransactions = missingFxTransactions,
     unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
     points = points.map(PortfolioDailyHistoryPoint::toRefreshResponse)
@@ -268,6 +277,8 @@ private fun BenchmarkComparison.toRefreshResponse(): BenchmarkComparisonResponse
     key = key.name,
     label = label,
     pinned = pinned,
+    status = status.name,
+    issue = issue,
     nominalPln = nominalPln?.toRefreshResponse(),
     excessTimeWeightedReturn = excessTimeWeightedReturn?.toPlainString(),
     excessAnnualizedTimeWeightedReturn = excessAnnualizedTimeWeightedReturn?.toPlainString()

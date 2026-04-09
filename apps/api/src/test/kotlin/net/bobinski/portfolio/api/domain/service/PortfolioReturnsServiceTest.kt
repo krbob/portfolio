@@ -146,7 +146,15 @@ class PortfolioReturnsServiceTest {
         val benchmarkKeys = oneYear.benchmarks.map { it.key }.toSet()
 
         assertEquals(
-            setOf(BenchmarkKey.V80A, BenchmarkKey.V60A, BenchmarkKey.V40A, BenchmarkKey.V20A, BenchmarkKey.INFLATION),
+            setOf(
+                BenchmarkKey.VWRA,
+                BenchmarkKey.V80A,
+                BenchmarkKey.V60A,
+                BenchmarkKey.V40A,
+                BenchmarkKey.V20A,
+                BenchmarkKey.VAGF,
+                BenchmarkKey.INFLATION
+            ),
             benchmarkKeys
         )
     }
@@ -212,6 +220,58 @@ class PortfolioReturnsServiceTest {
         assertEquals(listOf(BenchmarkKey.CUSTOM_1, BenchmarkKey.V80A), oneYear.benchmarks.map { it.key })
         assertEquals("Europe 600", oneYear.benchmarks.first().label)
         assertTrue(oneYear.benchmarks.first().pinned)
+    }
+
+    @Test
+    fun `returns keep unavailable configured benchmarks with explicit status`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.CUSTOM_1),
+                pinnedKeys = emptyList(),
+                customBenchmarks = listOf(
+                    SaveCustomBenchmarkCommand(
+                        key = BenchmarkKey.CUSTOM_1,
+                        label = "Europe 600",
+                        symbol = "EXSA.DE"
+                    )
+                )
+            )
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction(tradeDate = "2024-03-01"))
+        fixture.transactionRepository.save(interestTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "100.00"),
+                pricePoint("2026-03-01", "108.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["EXSA.DE"] = ReferenceSeriesResult.Failure("Upstream timeout.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.02")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.02")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+        val customBenchmark = oneYear.benchmarks.first { it.key == BenchmarkKey.CUSTOM_1 }
+
+        assertEquals(BenchmarkSeriesStatus.UNAVAILABLE, customBenchmark.status)
+        assertEquals(null, customBenchmark.nominalPln)
     }
 
     @Test

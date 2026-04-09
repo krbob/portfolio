@@ -66,6 +66,7 @@ class PortfolioHistoryService(
                 instrumentHistoryIssueCount = 0,
                 referenceSeriesIssueCount = 0,
                 benchmarkSeriesIssueCount = 0,
+                benchmarkStatuses = emptyList(),
                 missingFxTransactions = 0,
                 unsupportedCorrectionTransactions = 0,
                 points = emptyList()
@@ -282,6 +283,7 @@ class PortfolioHistoryService(
             instrumentHistoryIssueCount = historyLoads.issueCount,
             referenceSeriesIssueCount = referenceLoads.issueCount,
             benchmarkSeriesIssueCount = benchmarkLoads.issueCount,
+            benchmarkStatuses = benchmarkLoads.statuses,
             missingFxTransactions = missingFxTransactions,
             unsupportedCorrectionTransactions = unsupportedCorrectionTransactions,
             points = enrichedPoints
@@ -458,6 +460,9 @@ class PortfolioHistoryService(
         val targets = targetsDeferred.await()
         val inflation = inflationDeferred.await()
         val settings = settingsDeferred.await()
+        val benchmarkStatuses = mutableListOf<BenchmarkSeriesHealth>()
+        fun labelFor(key: BenchmarkKey): String =
+            settings.options.find { option -> option.key == key }?.label ?: key.name
         val equityLookup = when (equity) {
             is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
                 from = from,
@@ -467,6 +472,14 @@ class PortfolioHistoryService(
 
             is ReferenceSeriesResult.Failure -> TreeMap()
         }
+        val equityHealth = referenceBenchmarkHealth(
+            key = BenchmarkKey.VWRA,
+            label = labelFor(BenchmarkKey.VWRA),
+            result = equity,
+            lookup = equityLookup,
+            unavailableIssue = "VWRA benchmark series is unavailable.",
+            staleIssue = "VWRA benchmark series was served from cache."
+        )
         val bondLookup = when (bond) {
             is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
                 from = from,
@@ -476,59 +489,74 @@ class PortfolioHistoryService(
 
             is ReferenceSeriesResult.Failure -> TreeMap()
         }
+        val bondHealth = referenceBenchmarkHealth(
+            key = BenchmarkKey.VAGF,
+            label = labelFor(BenchmarkKey.VAGF),
+            result = bond,
+            lookup = bondLookup,
+            unavailableIssue = "Bond benchmark series is unavailable.",
+            staleIssue = "Bond benchmark series was served from cache."
+        )
         val targetMixLookup = buildTargetMixIndexLookup(
             from = from,
             until = until,
             targets = targets,
             equityBenchmark = equityLookup,
-            bondBenchmark = bondLookup
+            bondBenchmark = bondLookup,
+            equityStatus = equityHealth.status,
+            bondStatus = bondHealth.status
         )
 
         val indices = mutableMapOf<String, TreeMap<LocalDate, BigDecimal>>()
         if (settings.isEnabled(BenchmarkKey.VWRA)) {
             indices[BenchmarkKey.VWRA.name] = equityLookup
+            benchmarkStatuses += equityHealth
         }
         if (settings.isEnabled(BenchmarkKey.INFLATION)) {
             indices[BenchmarkKey.INFLATION.name] = inflation.lookup
+            inflation.health?.let(benchmarkStatuses::add)
         }
         if (settings.isEnabled(BenchmarkKey.TARGET_MIX)) {
             indices[BenchmarkKey.TARGET_MIX.name] = targetMixLookup.lookup
+            targetMixLookup.health?.let(benchmarkStatuses::add)
         }
 
         val additionalBenchmarks = settings.activeReferenceBenchmarks()
         val additionalResults = additionalBenchmarks.map { ref ->
             async {
-                ref.key.name to referenceSeriesProvider.benchmarkPln(symbol = ref.symbol, from = from, to = until)
+                ref to if (ref.key == BenchmarkKey.VAGF) {
+                    bond
+                } else {
+                    referenceSeriesProvider.benchmarkPln(symbol = ref.symbol, from = from, to = until)
+                }
             }
         }.awaitAll()
 
-        var additionalIssueCount = 0
-        additionalResults.forEach { (keyName, result) ->
-            when (result) {
-                is ReferenceSeriesResult.Success -> {
-                    indices[keyName] = buildNormalizedIndexLookup(
-                        from = from,
-                        until = until,
-                        prices = result.prices.toLookup()
-                    )
-                    if (result.fromCache) {
-                        additionalIssueCount += 1
-                    }
-                }
-                is ReferenceSeriesResult.Failure -> {
-                    additionalIssueCount += 1
-                }
+        additionalResults.forEach { (definition, result) ->
+            val normalizedLookup = when (result) {
+                is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
+                    from = from,
+                    until = until,
+                    prices = result.prices.toLookup()
+                )
+
+                is ReferenceSeriesResult.Failure -> TreeMap()
             }
+            indices[definition.key.name] = normalizedLookup
+            benchmarkStatuses += referenceBenchmarkHealth(
+                key = definition.key,
+                label = definition.label,
+                result = result,
+                lookup = normalizedLookup,
+                unavailableIssue = "${definition.label} is unavailable.",
+                staleIssue = "${definition.label} was served from cache."
+            )
         }
 
         BenchmarkLoads(
             indices = indices,
-            issueCount = listOf(
-                if (equity is ReferenceSeriesResult.Failure || (equity is ReferenceSeriesResult.Success && equity.fromCache)) 1 else 0,
-                inflation.issueCount,
-                targetMixLookup.issueCount,
-                additionalIssueCount
-            ).sum()
+            issueCount = benchmarkStatuses.count { status -> status.status != BenchmarkSeriesStatus.HEALTHY },
+            statuses = benchmarkStatuses
         )
     }
 
@@ -541,18 +569,31 @@ class PortfolioHistoryService(
         if (!firstMonth.isBefore(requestedUntil)) {
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
-                issueCount = 0
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.INFLATION,
+                    label = "Inflation benchmark",
+                    status = BenchmarkSeriesStatus.HEALTHY
+                )
             )
         }
         val series = loadMonthlyInflationSeriesWithFallback(firstMonth, requestedUntil)
             ?: return InflationBenchmarkLoad(
                 lookup = TreeMap(),
-                issueCount = 1
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.INFLATION,
+                    label = "Inflation benchmark",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Inflation benchmark series is unavailable."
+                )
             )
         if (series.points.isEmpty()) {
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
-                issueCount = 0
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.INFLATION,
+                    label = "Inflation benchmark",
+                    status = BenchmarkSeriesStatus.HEALTHY
+                )
             )
         }
         val monthlyMultipliers = linkedMapOf<YearMonth, BigDecimal>()
@@ -567,7 +608,12 @@ class PortfolioHistoryService(
                 monthlyMultipliers = monthlyMultipliers,
                 availableUntil = series.until
             ),
-            issueCount = if (series.fromCache) 1 else 0
+            health = BenchmarkSeriesHealth(
+                key = BenchmarkKey.INFLATION,
+                label = "Inflation benchmark",
+                status = if (series.fromCache) BenchmarkSeriesStatus.STALE else BenchmarkSeriesStatus.HEALTHY,
+                issue = if (series.fromCache) "Inflation benchmark series was served from cache." else null
+            )
         )
     }
 
@@ -700,10 +746,12 @@ class PortfolioHistoryService(
         until: LocalDate,
         targets: List<net.bobinski.portfolio.api.domain.model.PortfolioTarget>,
         equityBenchmark: TreeMap<LocalDate, BigDecimal>,
-        bondBenchmark: TreeMap<LocalDate, BigDecimal>
+        bondBenchmark: TreeMap<LocalDate, BigDecimal>,
+        equityStatus: BenchmarkSeriesStatus,
+        bondStatus: BenchmarkSeriesStatus
     ): TargetMixBenchmarkLoad {
         if (targets.isEmpty()) {
-            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 0)
+            return TargetMixBenchmarkLoad(lookup = TreeMap(), health = null)
         }
 
         val weightsByAssetClass = targets.associate { target -> target.assetClass to target.targetWeight.toDouble() }
@@ -713,17 +761,41 @@ class PortfolioHistoryService(
 
         val effectiveFromCandidates = mutableListOf(from)
         if (equityWeight > 0.0) {
-            val firstEquityDate = equityBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            val firstEquityDate = equityBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
+                lookup = TreeMap(),
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.TARGET_MIX,
+                    label = "Configured target mix",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Target-mix benchmark is missing equity benchmark coverage."
+                )
+            )
             effectiveFromCandidates += firstEquityDate
         }
         if (bondWeight > 0.0) {
-            val firstBondDate = bondBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            val firstBondDate = bondBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
+                lookup = TreeMap(),
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.TARGET_MIX,
+                    label = "Configured target mix",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Target-mix benchmark is missing bond benchmark coverage."
+                )
+            )
             effectiveFromCandidates += firstBondDate
         }
 
         val effectiveFrom = effectiveFromCandidates.maxOrNull() ?: from
         if (effectiveFrom.isAfter(until)) {
-            return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            return TargetMixBenchmarkLoad(
+                lookup = TreeMap(),
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.TARGET_MIX,
+                    label = "Configured target mix",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Target-mix benchmark does not cover the selected period."
+                )
+            )
         }
 
         val lookup = TreeMap<LocalDate, BigDecimal>()
@@ -738,13 +810,29 @@ class PortfolioHistoryService(
                 previousDate = previousDate,
                 currentDate = date,
                 weight = equityWeight
-            ) ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            ) ?: return TargetMixBenchmarkLoad(
+                lookup = TreeMap(),
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.TARGET_MIX,
+                    label = "Configured target mix",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Target-mix benchmark is missing equity data inside the selected period."
+                )
+            )
             val bondFactor = dailyIndexFactor(
                 lookup = bondBenchmark,
                 previousDate = previousDate,
                 currentDate = date,
                 weight = bondWeight
-            ) ?: return TargetMixBenchmarkLoad(lookup = TreeMap(), issueCount = 1)
+            ) ?: return TargetMixBenchmarkLoad(
+                lookup = TreeMap(),
+                health = BenchmarkSeriesHealth(
+                    key = BenchmarkKey.TARGET_MIX,
+                    label = "Configured target mix",
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = "Target-mix benchmark is missing bond data inside the selected period."
+                )
+            )
 
             val mixFactor = 1.0 +
                 equityWeight * (equityFactor - 1.0) +
@@ -757,7 +845,57 @@ class PortfolioHistoryService(
             date = date.plusDays(1)
         }
 
-        return TargetMixBenchmarkLoad(lookup = lookup, issueCount = 0)
+        val status = when {
+            equityStatus == BenchmarkSeriesStatus.STALE || bondStatus == BenchmarkSeriesStatus.STALE ->
+                BenchmarkSeriesStatus.STALE
+            else -> BenchmarkSeriesStatus.HEALTHY
+        }
+        return TargetMixBenchmarkLoad(
+            lookup = lookup,
+            health = BenchmarkSeriesHealth(
+                key = BenchmarkKey.TARGET_MIX,
+                label = "Configured target mix",
+                status = status,
+                issue = when (status) {
+                    BenchmarkSeriesStatus.STALE -> "Target-mix benchmark depends on cached component series."
+                    else -> null
+                }
+            )
+        )
+    }
+
+    private fun referenceBenchmarkHealth(
+        key: BenchmarkKey,
+        label: String,
+        result: ReferenceSeriesResult,
+        lookup: TreeMap<LocalDate, BigDecimal>,
+        unavailableIssue: String,
+        staleIssue: String
+    ): BenchmarkSeriesHealth = when (result) {
+        is ReferenceSeriesResult.Success -> {
+            if (lookup.isEmpty()) {
+                BenchmarkSeriesHealth(
+                    key = key,
+                    label = label,
+                    status = BenchmarkSeriesStatus.UNAVAILABLE,
+                    issue = unavailableIssue
+                )
+            } else {
+                BenchmarkSeriesHealth(
+                    key = key,
+                    label = label,
+                    status = if (result.fromCache) BenchmarkSeriesStatus.STALE else BenchmarkSeriesStatus.HEALTHY,
+                    issue = if (result.fromCache) staleIssue else null
+                )
+            }
+        }
+
+        is ReferenceSeriesResult.Failure -> BenchmarkSeriesHealth(
+            key = key,
+            label = label,
+            status = BenchmarkSeriesStatus.UNAVAILABLE,
+            issue = result.reason.ifBlank { unavailableIssue }
+        )
     }
 
     private fun dailyIndexFactor(
@@ -991,17 +1129,18 @@ class PortfolioHistoryService(
 
     private data class BenchmarkLoads(
         val indices: Map<String, TreeMap<LocalDate, BigDecimal>>,
-        val issueCount: Int
+        val issueCount: Int,
+        val statuses: List<BenchmarkSeriesHealth>
     )
 
     private data class InflationBenchmarkLoad(
         val lookup: TreeMap<LocalDate, BigDecimal>,
-        val issueCount: Int
+        val health: BenchmarkSeriesHealth?
     )
 
     private data class TargetMixBenchmarkLoad(
         val lookup: TreeMap<LocalDate, BigDecimal>,
-        val issueCount: Int
+        val health: BenchmarkSeriesHealth?
     )
 
     private companion object {
@@ -1017,6 +1156,7 @@ data class PortfolioDailyHistory(
     val instrumentHistoryIssueCount: Int,
     val referenceSeriesIssueCount: Int,
     val benchmarkSeriesIssueCount: Int,
+    val benchmarkStatuses: List<BenchmarkSeriesHealth> = emptyList(),
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
     val points: List<PortfolioDailyHistoryPoint>
