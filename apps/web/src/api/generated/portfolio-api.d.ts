@@ -300,6 +300,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/allocation/contribution-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calculate contribution plan
+         * @description Returns a suggested split for a new PLN contribution and the projected post-contribution allocation drift.
+         */
+        get: operations["getPortfolioContributionPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/allocation": {
         parameters: {
             query?: never;
@@ -1185,6 +1205,22 @@ export interface components {
             requiresSelling: boolean;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
         };
+        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanBucketResponse */
+        PortfolioContributionPlanBucketResponse: {
+            assetClass: string;
+            plannedContributionPln: string;
+            projectedValuePln: string;
+            projectedWeightPct: string;
+            projectedDriftPctPoints?: string | null;
+            projectedGapValuePln?: string | null;
+            projectedStatus: string;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanResponse */
+        PortfolioContributionPlanResponse: {
+            amountPln: string;
+            projected: components["schemas"]["PortfolioAllocationResponse"];
+            buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
+        };
         /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
@@ -2032,6 +2068,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioReturnsResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioContributionPlan: {
+        parameters: {
+            query?: {
+                amountPln?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioContributionPlanResponse"];
                 };
             };
         };

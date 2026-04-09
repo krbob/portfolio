@@ -7,6 +7,8 @@ import net.bobinski.portfolio.api.domain.service.CurrencyAmountSnapshot
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
+import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlan
+import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
@@ -183,6 +185,13 @@ data class PortfolioAllocationResponse(
 )
 
 @Serializable
+data class PortfolioContributionPlanResponse(
+    val amountPln: String,
+    val projected: PortfolioAllocationResponse,
+    val buckets: List<PortfolioContributionPlanBucketResponse>
+)
+
+@Serializable
 data class PortfolioAllocationBucketResponse(
     val assetClass: String,
     val currentValuePln: String,
@@ -197,6 +206,17 @@ data class PortfolioAllocationBucketResponse(
     val suggestedContributionPln: String,
     val rebalanceAction: String,
     val status: String
+)
+
+@Serializable
+data class PortfolioContributionPlanBucketResponse(
+    val assetClass: String,
+    val plannedContributionPln: String,
+    val projectedValuePln: String,
+    val projectedWeightPct: String,
+    val projectedDriftPctPoints: String?,
+    val projectedGapValuePln: String?,
+    val projectedStatus: String
 )
 
 @Serializable
@@ -416,6 +436,12 @@ internal fun PortfolioAllocationSummary.toResponse(): PortfolioAllocationRespons
     buckets = buckets.map { it.toResponse() }
 )
 
+internal fun PortfolioContributionPlan.toResponse(): PortfolioContributionPlanResponse = PortfolioContributionPlanResponse(
+    amountPln = amountPln.toPlainString(),
+    projected = projected.toResponse(),
+    buckets = buckets.map { it.toResponse() }
+)
+
 internal fun PortfolioAllocationBucket.toResponse(): PortfolioAllocationBucketResponse = PortfolioAllocationBucketResponse(
     assetClass = assetClass.name,
     currentValuePln = currentValuePln.toPlainString(),
@@ -430,6 +456,16 @@ internal fun PortfolioAllocationBucket.toResponse(): PortfolioAllocationBucketRe
     suggestedContributionPln = suggestedContributionPln.toPlainString(),
     rebalanceAction = rebalanceAction.name,
     status = status.name
+)
+
+internal fun PortfolioContributionPlanBucket.toResponse(): PortfolioContributionPlanBucketResponse = PortfolioContributionPlanBucketResponse(
+    assetClass = assetClass.name,
+    plannedContributionPln = plannedContributionPln.toPlainString(),
+    projectedValuePln = projectedValuePln.toPlainString(),
+    projectedWeightPct = projectedWeightPct.toPlainString(),
+    projectedDriftPctPoints = projectedDriftPctPoints?.toPlainString(),
+    projectedGapValuePln = projectedGapValuePln?.toPlainString(),
+    projectedStatus = projectedStatus.name
 )
 
 internal fun PortfolioReturnPeriod.toResponse(): PortfolioReturnPeriodResponse = PortfolioReturnPeriodResponse(

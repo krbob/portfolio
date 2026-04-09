@@ -3,6 +3,8 @@ package net.bobinski.portfolio.api.route
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import java.math.RoundingMode
+import kotlin.text.toBigDecimalOrNull
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
@@ -79,6 +81,21 @@ internal fun Route.registerPortfolioAnalyticsRoutes(
         operationId = "getPortfolioReturns",
         summary = "Get portfolio returns",
         description = "Returns aggregated portfolio return metrics and benchmark comparisons.",
+        tag = "Portfolio"
+    )
+
+    get("/allocation/contribution-plan") {
+        val amountParam = call.request.queryParameters["amountPln"]
+            ?: throw IllegalArgumentException("Query parameter amountPln is required.")
+        val amountPln = amountParam
+            .toBigDecimalOrNull()
+            ?.setScale(2, RoundingMode.HALF_UP)
+            ?: throw IllegalArgumentException("Query parameter amountPln must be a valid PLN amount.")
+        call.respond(portfolioAllocationService.contributionPlan(amountPln).toResponse())
+    }.documented(
+        operationId = "getPortfolioContributionPlan",
+        summary = "Calculate contribution plan",
+        description = "Returns a suggested split for a new PLN contribution and the projected post-contribution allocation drift.",
         tag = "Portfolio"
     )
 

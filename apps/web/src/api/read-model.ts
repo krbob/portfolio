@@ -31,6 +31,9 @@ export type PortfolioReturns =
 export type PortfolioAllocationSummary =
   paths['/v1/portfolio/allocation']['get']['responses'][200]['content']['application/json']
 
+export type PortfolioContributionPlan =
+  paths['/v1/portfolio/allocation/contribution-plan']['get']['responses'][200]['content']['application/json']
+
 export type PortfolioAuditEvent =
   paths['/v1/portfolio/audit/events']['get']['responses'][200]['content']['application/json'][number]
 
@@ -74,6 +77,12 @@ export function fetchPortfolioReturns() {
 
 export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
+}
+
+export function fetchPortfolioContributionPlan(amountPln: string) {
+  const params = new URLSearchParams()
+  params.set('amountPln', amountPln)
+  return requestJson<PortfolioContributionPlan>(`/api/v1/portfolio/allocation/contribution-plan?${params.toString()}`)
 }
 
 export function fetchPortfolioAuditEvents({

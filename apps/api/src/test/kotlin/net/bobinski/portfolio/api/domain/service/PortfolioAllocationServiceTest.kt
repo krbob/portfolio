@@ -30,6 +30,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import kotlinx.serialization.json.Json
 
@@ -287,6 +288,126 @@ class PortfolioAllocationServiceTest {
         // Cash = 4.00, threshold = 10000 * 0.005 = 50.00 → cash < threshold
         assertEquals(BigDecimal("4.00"), summary.availableCashPln)
         assertEquals(PortfolioAllocationAction.WAIT_FOR_NEXT_CONTRIBUTION, summary.recommendedAction)
+    }
+
+    @Test
+    fun `contribution plan closes current underweight before spreading excess by target mix`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "6000.00", "60"))
+        transactionRepository.save(buyTransaction(BOND_ID, "2000.00", "20", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val plan = allocationService.contributionPlan(BigDecimal("4000.00"))
+        val equities = plan.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val bonds = plan.buckets.first { it.assetClass == AssetClass.BONDS }
+        val cash = plan.buckets.first { it.assetClass == AssetClass.CASH }
+
+        assertEquals(BigDecimal("4000.00"), plan.amountPln)
+        assertEquals(BigDecimal("3600.00"), equities.plannedContributionPln)
+        assertEquals(BigDecimal("400.00"), bonds.plannedContributionPln)
+        assertEquals(BigDecimal("0.00"), cash.plannedContributionPln)
+        assertEquals(BigDecimal("9600.00"), equities.projectedValuePln)
+        assertEquals(BigDecimal("68.57"), equities.projectedWeightPct)
+        assertEquals(BigDecimal("-11.43"), equities.projectedDriftPctPoints)
+        assertEquals(AllocationBucketStatus.UNDERWEIGHT, equities.projectedStatus)
+        assertEquals(BigDecimal("2000.00"), plan.projected.availableCashPln)
+        assertEquals(PortfolioAllocationAction.DEPLOY_EXISTING_CASH, plan.projected.recommendedAction)
+    }
+
+    @Test
+    fun `contribution plan requires configured targets`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        transactionRepository.save(depositTransaction("1000.00"))
+
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                allocationService.contributionPlan(BigDecimal("1000.00"))
+            }
+        }
+
+        assertEquals("Configure target allocation before calculating a contribution plan.", error.message)
     }
 
     private fun account(): Account = Account(

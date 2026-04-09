@@ -4,6 +4,7 @@ import {
   fetchPortfolioAccounts,
   fetchPortfolioAllocation,
   fetchPortfolioAuditEvents,
+  fetchPortfolioContributionPlan,
   fetchPortfolioDailyHistory,
   fetchPortfolioHoldings,
   fetchPortfolioOverview,
@@ -50,6 +51,14 @@ export function usePortfolioAllocation() {
   return useQuery({
     queryKey: ['portfolio-allocation'],
     queryFn: fetchPortfolioAllocation,
+  })
+}
+
+export function usePortfolioContributionPlan(amountPln: string | null, revision = 0) {
+  return useQuery({
+    queryKey: ['portfolio-allocation-contribution-plan', amountPln ?? '', revision],
+    queryFn: () => fetchPortfolioContributionPlan(amountPln ?? ''),
+    enabled: amountPln != null,
   })
 }
 
