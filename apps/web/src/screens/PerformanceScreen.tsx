@@ -42,7 +42,13 @@ export function PerformanceScreen() {
   const latest = filteredPoints.at(-1) ?? allPoints.at(-1)
   const returnsDisplayAvailable = isMarketValuationState(historyQuery.data?.valuationState)
   const benchmarkOrder = useMemo(() => resolveBenchmarkOrder(benchmarkSettingsQuery.data), [benchmarkSettingsQuery.data])
-  const customBenchmarkLabel = benchmarkSettingsQuery.data?.customLabel ?? undefined
+  const customBenchmarkLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        (benchmarkSettingsQuery.data?.customBenchmarks ?? []).map((benchmark) => [benchmark.key, benchmark.label]),
+      ),
+    [benchmarkSettingsQuery.data?.customBenchmarks],
+  )
 
   const series = seriesForUnit(unit)
 
@@ -165,7 +171,7 @@ export function PerformanceScreen() {
               onUnitChange={setUnit}
               series={series}
               benchmarkOrder={benchmarkOrder}
-              customBenchmarkLabel={customBenchmarkLabel}
+              customBenchmarkLabels={customBenchmarkLabels}
             />
           </section>
         ) : (

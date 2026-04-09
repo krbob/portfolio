@@ -1192,6 +1192,12 @@ export interface components {
         ReplacePortfolioTargetsRequest: {
             items: components["schemas"]["PortfolioTargetRequestItem"][];
         };
+        /** net.bobinski.portfolio.api.route.CustomBenchmarkResponse */
+        CustomBenchmarkResponse: {
+            key: string;
+            label: string;
+            symbol: string;
+        };
         /** net.bobinski.portfolio.api.route.BenchmarkOptionResponse */
         BenchmarkOptionResponse: {
             key: string;
@@ -1206,16 +1212,20 @@ export interface components {
         PortfolioBenchmarkSettingsResponse: {
             enabledKeys: string[];
             pinnedKeys: string[];
-            customLabel?: string | null;
-            customSymbol?: string | null;
+            customBenchmarks: components["schemas"]["CustomBenchmarkResponse"][];
             options: components["schemas"]["BenchmarkOptionResponse"][];
+        };
+        /** net.bobinski.portfolio.api.route.SaveCustomBenchmarkRequest */
+        SaveCustomBenchmarkRequest: {
+            key: string;
+            label: string;
+            symbol: string;
         };
         /** net.bobinski.portfolio.api.route.SavePortfolioBenchmarkSettingsRequest */
         SavePortfolioBenchmarkSettingsRequest: {
             enabledKeys: string[];
             pinnedKeys: string[];
-            customLabel?: string | null;
-            customSymbol?: string | null;
+            customBenchmarks?: components["schemas"]["SaveCustomBenchmarkRequest"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioRebalancingSettingsResponse */
         PortfolioRebalancingSettingsResponse: {

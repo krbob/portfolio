@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { usePortfolioBenchmarkSettings, useSavePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
 import { translateBenchmarkLabel } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { badge, badgeVariants, btnPrimary, input, label as labelClass } from '../lib/styles'
 import { Card, SectionHeader } from './ui'
+
+const CUSTOM_BENCHMARK_KEYS = ['CUSTOM_1', 'CUSTOM_2', 'CUSTOM_3'] as const
+
+type CustomBenchmarkKey = typeof CUSTOM_BENCHMARK_KEYS[number]
 
 type BenchmarkKey =
   | 'VWRA'
@@ -14,7 +18,22 @@ type BenchmarkKey =
   | 'V60A'
   | 'V40A'
   | 'V20A'
-  | 'CUSTOM'
+  | 'VAGF'
+  | CustomBenchmarkKey
+
+type CustomBenchmarkFormRow = {
+  key: CustomBenchmarkKey
+  label: string
+  symbol: string
+}
+
+function buildEmptyCustomBenchmarks(): CustomBenchmarkFormRow[] {
+  return CUSTOM_BENCHMARK_KEYS.map((key) => ({
+    key,
+    label: '',
+    symbol: '',
+  }))
+}
 
 export function PortfolioBenchmarkSettingsSection() {
   const { isPolish } = useI18n()
@@ -23,8 +42,7 @@ export function PortfolioBenchmarkSettingsSection() {
 
   const [enabledKeys, setEnabledKeys] = useState<BenchmarkKey[]>([])
   const [pinnedKeys, setPinnedKeys] = useState<BenchmarkKey[]>([])
-  const [customLabel, setCustomLabel] = useState('')
-  const [customSymbol, setCustomSymbol] = useState('')
+  const [customBenchmarks, setCustomBenchmarks] = useState<CustomBenchmarkFormRow[]>(() => buildEmptyCustomBenchmarks())
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -32,10 +50,19 @@ export function PortfolioBenchmarkSettingsSection() {
     if (!settingsQuery.data) {
       return
     }
+    const customByKey = new Map(
+      (settingsQuery.data.customBenchmarks ?? []).map((benchmark) => [benchmark.key, benchmark]),
+    )
+
     setEnabledKeys(settingsQuery.data.enabledKeys as BenchmarkKey[])
     setPinnedKeys(settingsQuery.data.pinnedKeys as BenchmarkKey[])
-    setCustomLabel(settingsQuery.data.customLabel ?? '')
-    setCustomSymbol(settingsQuery.data.customSymbol ?? '')
+    setCustomBenchmarks(
+      CUSTOM_BENCHMARK_KEYS.map((key) => ({
+        key,
+        label: customByKey.get(key)?.label ?? '',
+        symbol: customByKey.get(key)?.symbol ?? '',
+      })),
+    )
   }, [settingsQuery.data])
 
   const options = useMemo(() => settingsQuery.data?.options ?? [], [settingsQuery.data?.options])
@@ -43,7 +70,6 @@ export function PortfolioBenchmarkSettingsSection() {
     return {
       system: options.filter((option) => option.kind === 'SYSTEM'),
       multiAsset: options.filter((option) => option.kind === 'MULTI_ASSET'),
-      custom: options.filter((option) => option.kind === 'CUSTOM'),
     }
   }, [options])
 
@@ -67,6 +93,22 @@ export function PortfolioBenchmarkSettingsSection() {
     )
   }
 
+  function updateCustomBenchmark(key: CustomBenchmarkKey, field: 'label' | 'symbol', value: string) {
+    setFeedback(null)
+    setActionError(null)
+    setCustomBenchmarks((current) =>
+      current.map((benchmark) => {
+        if (benchmark.key !== key) {
+          return benchmark
+        }
+        return {
+          ...benchmark,
+          [field]: field === 'symbol' ? value.toUpperCase() : value,
+        }
+      }),
+    )
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFeedback(null)
@@ -76,8 +118,13 @@ export function PortfolioBenchmarkSettingsSection() {
       const result = await saveMutation.mutateAsync({
         enabledKeys,
         pinnedKeys,
-        customLabel: customLabel.trim() || null,
-        customSymbol: customSymbol.trim() || null,
+        customBenchmarks: customBenchmarks
+          .map((benchmark) => ({
+            key: benchmark.key,
+            label: benchmark.label.trim(),
+            symbol: benchmark.symbol.trim().toUpperCase(),
+          }))
+          .filter((benchmark) => benchmark.label.length > 0 || benchmark.symbol.length > 0),
       })
       setFeedback(
         isPolish
@@ -133,54 +180,75 @@ export function PortfolioBenchmarkSettingsSection() {
             onTogglePinned={togglePinned}
           />
 
-          <div className="rounded-lg border border-zinc-800/50 p-4">
-            <div className="mb-4">
+          <div className="space-y-4 rounded-lg border border-zinc-800/50 p-4">
+            <div>
               <h4 className="text-sm font-semibold text-zinc-100">{t('benchmarks.customTitle')}</h4>
               <p className="mt-1 text-sm text-zinc-500">
                 {t('benchmarks.customDescription')}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
-              <label>
-                <span className={labelClass}>{t('benchmarks.label')}</span>
-                <input
-                  className={input}
-                  value={customLabel}
-                  onChange={(event) => setCustomLabel(event.target.value)}
-                  placeholder={t('benchmarks.labelPlaceholder')}
-                />
-              </label>
-              <label>
-                <span className={labelClass}>{t('benchmarks.symbol')}</span>
-                <input
-                  className={input}
-                  value={customSymbol}
-                  onChange={(event) => setCustomSymbol(event.target.value.toUpperCase())}
-                  placeholder="EXUS.DE"
-                />
-              </label>
-              <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                  checked={enabledKeys.includes('CUSTOM')}
-                  onChange={() => toggleEnabled('CUSTOM')}
-                />
-                {t('benchmarks.enabled')}
-              </label>
-              {enabledKeys.includes('CUSTOM') && (
-                <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                    checked={pinnedKeys.includes('CUSTOM')}
-                    onChange={() => togglePinned('CUSTOM')}
-                  />
-                  {t('benchmarks.pinned')}
-                </label>
-              )}
-            </div>
+            {customBenchmarks.map((benchmark, index) => {
+              const enabled = enabledKeys.includes(benchmark.key)
+              const pinned = pinnedKeys.includes(benchmark.key)
+
+              return (
+                <div key={benchmark.key} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <h5 className="text-sm font-medium text-zinc-100">
+                        {formatMessage(t('benchmarks.customSlotTitle'), { index: index + 1 })}
+                      </h5>
+                      <p className="mt-1 text-xs text-zinc-500">{benchmark.key}</p>
+                    </div>
+                    <span className={`${badge} ${enabled ? badgeVariants.info : badgeVariants.default}`}>
+                      {enabled ? t('benchmarks.enabled') : t('benchmarks.off')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
+                    <label>
+                      <span className={labelClass}>{t('benchmarks.label')}</span>
+                      <input
+                        className={input}
+                        value={benchmark.label}
+                        onChange={(event) => updateCustomBenchmark(benchmark.key, 'label', event.target.value)}
+                        placeholder={t('benchmarks.labelPlaceholder')}
+                      />
+                    </label>
+                    <label>
+                      <span className={labelClass}>{t('benchmarks.symbol')}</span>
+                      <input
+                        className={input}
+                        value={benchmark.symbol}
+                        onChange={(event) => updateCustomBenchmark(benchmark.key, 'symbol', event.target.value)}
+                        placeholder="EXUS.DE"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
+                        checked={enabled}
+                        onChange={() => toggleEnabled(benchmark.key)}
+                      />
+                      {t('benchmarks.enabled')}
+                    </label>
+                    {enabled && (
+                      <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
+                          checked={pinned}
+                          onChange={() => togglePinned(benchmark.key)}
+                        />
+                        {t('benchmarks.pinned')}
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -274,4 +342,3 @@ function BenchmarkGroup({
     </div>
   )
 }
-

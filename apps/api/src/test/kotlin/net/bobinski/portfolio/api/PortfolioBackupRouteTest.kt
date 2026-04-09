@@ -189,10 +189,15 @@ class PortfolioBackupRouteTest {
             setBody(
                 """
                 {
-                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM"],
-                  "pinnedKeys": ["VWRA", "CUSTOM"],
-                  "customLabel": "Europe 600",
-                  "customSymbol": "EXSA.DE"
+                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM_1"],
+                  "pinnedKeys": ["VWRA", "CUSTOM_1"],
+                  "customBenchmarks": [
+                    {
+                      "key": "CUSTOM_1",
+                      "label": "Europe 600",
+                      "symbol": "EXSA.DE"
+                    }
+                  ]
                 }
                 """.trimIndent()
             )

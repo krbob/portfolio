@@ -29,7 +29,7 @@ export function ChartsTab({
   onUnitChange,
   series,
   benchmarkOrder,
-  customBenchmarkLabel,
+  customBenchmarkLabels,
 }: {
   historyQuery: ReturnType<typeof usePortfolioDailyHistory>
   points: PortfolioDailyHistoryPoint[]
@@ -39,7 +39,7 @@ export function ChartsTab({
   onUnitChange: (u: Unit) => void
   series: ReturnType<typeof seriesForUnit>
   benchmarkOrder: string[]
-  customBenchmarkLabel?: string
+  customBenchmarkLabels?: Record<string, string>
 }) {
   if (historyQuery.isLoading && points.length === 0) {
     return (
@@ -118,7 +118,7 @@ export function ChartsTab({
         <BenchmarkChart
           points={points}
           benchmarkOrder={benchmarkOrder}
-          customBenchmarkLabel={customBenchmarkLabel}
+          customBenchmarkLabels={customBenchmarkLabels}
         />
       </div>
     </div>

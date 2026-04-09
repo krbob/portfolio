@@ -879,7 +879,10 @@ enum class BenchmarkKey {
     V60A,
     V40A,
     V20A,
-    CUSTOM,
+    VAGF,
+    CUSTOM_1,
+    CUSTOM_2,
+    CUSTOM_3,
     INFLATION,
     TARGET_MIX
 }

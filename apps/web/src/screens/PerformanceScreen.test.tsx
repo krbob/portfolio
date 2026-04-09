@@ -60,7 +60,7 @@ describe('PerformanceScreen', () => {
                 cashAllocationPct: '14.29',
                 portfolioPerformanceIndex: '1.05',
                 benchmarkIndices: {
-                  CUSTOM: '1.04',
+                  CUSTOM_1: '1.04',
                   VWRA: '1.03',
                   TARGET_MIX: '1.02',
                 },
@@ -86,10 +86,15 @@ describe('PerformanceScreen', () => {
       if (url.includes('/api/v1/portfolio/benchmark-settings')) {
         return new Response(
           JSON.stringify({
-            enabledKeys: ['CUSTOM', 'VWRA'],
-            pinnedKeys: ['CUSTOM'],
-            customLabel: 'Europa 600',
-            customSymbol: 'EXSA.DE',
+            enabledKeys: ['CUSTOM_1', 'VWRA'],
+            pinnedKeys: ['CUSTOM_1'],
+            customBenchmarks: [
+              {
+                key: 'CUSTOM_1',
+                label: 'Europa 600',
+                symbol: 'EXSA.DE',
+              },
+            ],
             options: [
               {
                 key: 'VWRA',
@@ -110,10 +115,10 @@ describe('PerformanceScreen', () => {
                 defaultPinned: false,
               },
               {
-                key: 'CUSTOM',
-                label: 'Custom benchmark',
+                key: 'CUSTOM_1',
+                label: 'Europa 600',
                 symbol: 'EXSA.DE',
-                kind: 'ETF',
+                kind: 'CUSTOM',
                 configurable: true,
                 defaultEnabled: false,
                 defaultPinned: false,
@@ -148,7 +153,7 @@ describe('PerformanceScreen', () => {
     const select = (await screen.findByLabelText('Wybierz benchmark')) as HTMLSelectElement
 
     await waitFor(() => {
-      expect(select.value).toBe('CUSTOM')
+      expect(select.value).toBe('CUSTOM_1')
     })
 
     expect(screen.getByRole('option', { name: 'Europa 600' })).toBeInTheDocument()

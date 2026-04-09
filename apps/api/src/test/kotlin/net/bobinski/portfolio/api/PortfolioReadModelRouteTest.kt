@@ -381,10 +381,15 @@ class PortfolioReadModelRouteTest {
             setBody(
                 """
                 {
-                  "enabledKeys": ["VWRA", "CUSTOM"],
-                  "pinnedKeys": ["CUSTOM"],
-                  "customLabel": "Europe 600",
-                  "customSymbol": "EXSA.DE"
+                  "enabledKeys": ["VWRA", "CUSTOM_1"],
+                  "pinnedKeys": ["CUSTOM_1"],
+                  "customBenchmarks": [
+                    {
+                      "key": "CUSTOM_1",
+                      "label": "Europe 600",
+                      "symbol": "EXSA.DE"
+                    }
+                  ]
                 }
                 """.trimIndent()
             )
@@ -395,9 +400,10 @@ class PortfolioReadModelRouteTest {
         assertEquals(HttpStatusCode.OK, saveResponse.status)
         assertEquals(HttpStatusCode.OK, listResponse.status)
         assertTrue(body.contains("\"enabledKeys\": ["))
-        assertTrue(body.contains("\"CUSTOM\""))
-        assertTrue(body.contains("\"customLabel\": \"Europe 600\""))
-        assertTrue(body.contains("\"customSymbol\": \"EXSA.DE\""))
+        assertTrue(body.contains("\"CUSTOM_1\""))
+        assertTrue(body.contains("\"customBenchmarks\": ["))
+        assertTrue(body.contains("\"label\": \"Europe 600\""))
+        assertTrue(body.contains("\"symbol\": \"EXSA.DE\""))
     }
 
     @Test

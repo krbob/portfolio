@@ -156,10 +156,15 @@ class PortfolioReturnsServiceTest {
         val fixture = returnsFixture()
         fixture.benchmarkSettingsService.update(
             SavePortfolioBenchmarkSettingsCommand(
-                enabledKeys = listOf(BenchmarkKey.V80A, BenchmarkKey.CUSTOM),
-                pinnedKeys = listOf(BenchmarkKey.CUSTOM),
-                customLabel = "Europe 600",
-                customSymbol = "EXSA.DE"
+                enabledKeys = listOf(BenchmarkKey.V80A, BenchmarkKey.CUSTOM_1),
+                pinnedKeys = listOf(BenchmarkKey.CUSTOM_1),
+                customBenchmarks = listOf(
+                    SaveCustomBenchmarkCommand(
+                        key = BenchmarkKey.CUSTOM_1,
+                        label = "Europe 600",
+                        symbol = "EXSA.DE"
+                    )
+                )
             )
         )
         fixture.accountRepository.save(account())
@@ -204,7 +209,7 @@ class PortfolioReturnsServiceTest {
         val returns = fixture.service.returns()
         val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
 
-        assertEquals(listOf(BenchmarkKey.CUSTOM, BenchmarkKey.V80A), oneYear.benchmarks.map { it.key })
+        assertEquals(listOf(BenchmarkKey.CUSTOM_1, BenchmarkKey.V80A), oneYear.benchmarks.map { it.key })
         assertEquals("Europe 600", oneYear.benchmarks.first().label)
         assertTrue(oneYear.benchmarks.first().pinned)
     }

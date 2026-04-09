@@ -109,9 +109,15 @@ data class PortfolioTargetRequestItem(
 data class PortfolioBenchmarkSettingsResponse(
     val enabledKeys: List<String>,
     val pinnedKeys: List<String>,
-    val customLabel: String?,
-    val customSymbol: String?,
+    val customBenchmarks: List<CustomBenchmarkResponse>,
     val options: List<BenchmarkOptionResponse>
+)
+
+@Serializable
+data class CustomBenchmarkResponse(
+    val key: String,
+    val label: String,
+    val symbol: String
 )
 
 @Serializable
@@ -129,8 +135,14 @@ data class BenchmarkOptionResponse(
 data class SavePortfolioBenchmarkSettingsRequest(
     val enabledKeys: List<String>,
     val pinnedKeys: List<String>,
-    val customLabel: String? = null,
-    val customSymbol: String? = null
+    val customBenchmarks: List<SaveCustomBenchmarkRequest> = emptyList()
+)
+
+@Serializable
+data class SaveCustomBenchmarkRequest(
+    val key: String,
+    val label: String,
+    val symbol: String
 )
 
 @Serializable
@@ -167,8 +179,13 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettings
     PortfolioBenchmarkSettingsResponse(
         enabledKeys = enabledKeys.map(BenchmarkKey::name),
         pinnedKeys = pinnedKeys.map(BenchmarkKey::name),
-        customLabel = customLabel,
-        customSymbol = customSymbol,
+        customBenchmarks = customBenchmarks.map { benchmark ->
+            CustomBenchmarkResponse(
+                key = benchmark.key.name,
+                label = benchmark.label,
+                symbol = benchmark.symbol
+            )
+        },
         options = options.map { option ->
             BenchmarkOptionResponse(
                 key = option.key.name,
@@ -198,8 +215,13 @@ private fun SavePortfolioBenchmarkSettingsRequest.toDomain(): SavePortfolioBench
     SavePortfolioBenchmarkSettingsCommand(
         enabledKeys = enabledKeys.map(::parseBenchmarkKey),
         pinnedKeys = pinnedKeys.map(::parseBenchmarkKey),
-        customLabel = customLabel,
-        customSymbol = customSymbol
+        customBenchmarks = customBenchmarks.map { benchmark ->
+            net.bobinski.portfolio.api.domain.service.SaveCustomBenchmarkCommand(
+                key = parseBenchmarkKey(benchmark.key),
+                label = benchmark.label,
+                symbol = benchmark.symbol
+            )
+        }
     )
 
 private fun parseBenchmarkKey(value: String): BenchmarkKey = try {

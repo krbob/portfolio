@@ -16,7 +16,7 @@ const BENCHMARK_LABELS: Record<string, { pl: string; en: string }> = {
   V60A: { pl: 'V60A (60/40)', en: 'V60A (60/40)' },
   V40A: { pl: 'V40A (40/60)', en: 'V40A (40/60)' },
   V20A: { pl: 'V20A (20/80)', en: 'V20A (20/80)' },
-  CUSTOM: { pl: 'Własny benchmark', en: 'Custom benchmark' },
+  VAGF: { pl: 'VAGF (obligacje globalne)', en: 'VAGF (global bonds)' },
 }
 
 const BENCHMARK_LINE_COLOR = '#a1a1aa' // zinc-400 — stable color for all benchmarks
@@ -24,7 +24,7 @@ const BENCHMARK_LINE_COLOR = '#a1a1aa' // zinc-400 — stable color for all benc
 interface BenchmarkChartProps {
   points: PortfolioDailyHistoryPoint[]
   height?: number
-  customBenchmarkLabel?: string
+  customBenchmarkLabels?: Record<string, string>
   benchmarkOrder?: string[]
 }
 
@@ -33,7 +33,7 @@ const benchmarkPriceFormat = { type: 'price' as const, minMove: 0.01, precision:
 export function BenchmarkChart({
   points,
   height = 300,
-  customBenchmarkLabel,
+  customBenchmarkLabels,
   benchmarkOrder,
 }: BenchmarkChartProps) {
   const { language } = useI18n()
@@ -66,10 +66,7 @@ export function BenchmarkChart({
     activeKey,
   }
 
-  const label = BENCHMARK_LABELS[activeKey]
-  const displayLabel = activeKey === 'CUSTOM' && customBenchmarkLabel
-    ? customBenchmarkLabel
-    : label ? (language === 'pl' ? label.pl : label.en) : activeKey
+  const displayLabel = labelForBenchmarkKey(activeKey, language, customBenchmarkLabels)
 
   const updateSeriesData = useCallback(() => {
     const { points: currentPoints, activeKey: currentActiveKey } = dataRef.current
@@ -134,12 +131,8 @@ export function BenchmarkChart({
               aria-label={t('benchmark.selectLabel')}
             >
               {availableKeys.map((key) => {
-                const l = BENCHMARK_LABELS[key]
-                const optionLabel = key === 'CUSTOM' && customBenchmarkLabel
-                  ? customBenchmarkLabel
-                  : l ? (language === 'pl' ? l.pl : l.en) : key
                 return (
-                  <option key={key} value={key}>{optionLabel}</option>
+                  <option key={key} value={key}>{labelForBenchmarkKey(key, language, customBenchmarkLabels)}</option>
                 )
               })}
             </select>
@@ -149,4 +142,27 @@ export function BenchmarkChart({
       onChartReady={onChartReady}
     />
   )
+}
+
+function labelForBenchmarkKey(
+  key: string,
+  language: 'pl' | 'en',
+  customBenchmarkLabels?: Record<string, string>,
+): string {
+  const customLabel = customBenchmarkLabels?.[key]
+  if (customLabel) {
+    return customLabel
+  }
+
+  const label = BENCHMARK_LABELS[key]
+  if (label) {
+    return language === 'pl' ? label.pl : label.en
+  }
+
+  if (key.startsWith('CUSTOM_')) {
+    const index = Number(key.split('_')[1])
+    return language === 'pl' ? `Własny benchmark ${index}` : `Custom benchmark ${index}`
+  }
+
+  return key
 }

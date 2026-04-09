@@ -173,7 +173,8 @@ class PortfolioStateRouteTest {
         assertTrue(importResponse.bodyAsText().contains("\"importProfileCount\": 1"))
         assertTrue(importResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
         assertTrue(transactionsResponse.bodyAsText().contains("\"type\": \"BUY\""))
-        assertTrue(benchmarkSettingsResponse.bodyAsText().contains("\"customSymbol\": \"EXSA.DE\""))
+        assertTrue(benchmarkSettingsResponse.bodyAsText().contains("\"customBenchmarks\""))
+        assertTrue(benchmarkSettingsResponse.bodyAsText().contains("\"symbol\": \"EXSA.DE\""))
         assertTrue(rebalancingSettingsResponse.bodyAsText().contains("\"mode\": \"ALLOW_TRIMS\""))
         assertTrue(importProfilesResponse.bodyAsText().contains("\"name\": \"Interactive Brokers CSV\""))
     }
@@ -758,10 +759,15 @@ class PortfolioStateRouteTest {
             setBody(
                 """
                 {
-                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM"],
-                  "pinnedKeys": ["VWRA", "CUSTOM"],
-                  "customLabel": "Europe 600",
-                  "customSymbol": "EXSA.DE"
+                  "enabledKeys": ["VWRA", "TARGET_MIX", "CUSTOM_1"],
+                  "pinnedKeys": ["VWRA", "CUSTOM_1"],
+                  "customBenchmarks": [
+                    {
+                      "key": "CUSTOM_1",
+                      "label": "Europe 600",
+                      "symbol": "EXSA.DE"
+                    }
+                  ]
                 }
                 """.trimIndent()
             )

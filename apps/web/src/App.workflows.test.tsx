@@ -1674,8 +1674,7 @@ describe('App', () => {
               enabledKeys: [],
               pinnedKeys: [],
               options: [],
-              customLabel: null,
-              customSymbol: null,
+              customBenchmarks: [],
             }),
             { status: 200 },
           )

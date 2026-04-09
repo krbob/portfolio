@@ -46,7 +46,7 @@ const samplePoints: PortfolioDailyHistoryPoint[] = [
 const orderedPoints: PortfolioDailyHistoryPoint[] = [
   {
     ...samplePoints[0],
-    benchmarkIndices: { VWRA: '100.00', CUSTOM: '99.50', TARGET_MIX: '100.20' },
+    benchmarkIndices: { VWRA: '100.00', CUSTOM_1: '99.50', TARGET_MIX: '100.20' },
   },
 ]
 
@@ -93,14 +93,14 @@ describe('BenchmarkChart', () => {
       <I18nProvider>
         <BenchmarkChart
           points={orderedPoints}
-          benchmarkOrder={['CUSTOM', 'VWRA']}
-          customBenchmarkLabel="Europa 600"
+          benchmarkOrder={['CUSTOM_1', 'VWRA']}
+          customBenchmarkLabels={{ CUSTOM_1: 'Europa 600' }}
         />
       </I18nProvider>,
     )
 
     const select = screen.getByLabelText('Wybierz benchmark') as HTMLSelectElement
-    expect(select.value).toBe('CUSTOM')
+    expect(select.value).toBe('CUSTOM_1')
     expect(screen.getByRole('option', { name: 'Europa 600' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: /miks docelowy/i })).not.toBeInTheDocument()
   })

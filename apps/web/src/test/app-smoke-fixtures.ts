@@ -252,7 +252,7 @@ export function createAppFetchMock() {
             bondAllocationPct: '29.70',
             cashAllocationPct: '24.75',
             portfolioPerformanceIndex: '100.00',
-            benchmarkIndices: { VWRA: '100.00', CUSTOM: '99.80', TARGET_MIX: '100.10' },
+            benchmarkIndices: { VWRA: '100.00', CUSTOM_1: '99.80', TARGET_MIX: '100.10' },
             activeHoldingCount: 2,
             valuedHoldingCount: 2,
           },
@@ -275,7 +275,7 @@ export function createAppFetchMock() {
             bondAllocationPct: '29.86',
             cashAllocationPct: '22.75',
             portfolioPerformanceIndex: '104.95',
-            benchmarkIndices: { VWRA: '103.20', CUSTOM: '102.60', TARGET_MIX: '103.00' },
+            benchmarkIndices: { VWRA: '103.20', CUSTOM_1: '102.60', TARGET_MIX: '103.00' },
             activeHoldingCount: 2,
             valuedHoldingCount: 2,
           },
@@ -307,8 +307,8 @@ export function createAppFetchMock() {
                 relativeRealPln: '2.20',
               },
               {
-                key: 'CUSTOM',
-                label: 'Custom benchmark',
+                key: 'CUSTOM_1',
+                label: 'Europa 600',
                 nominalPln: { moneyWeightedReturn: '2.60', timeWeightedReturn: '2.60', annualizedReturn: '2.60' },
                 realPln: { moneyWeightedReturn: '0.60', timeWeightedReturn: '0.60', annualizedReturn: '0.60' },
                 relativeNominalPln: '2.90',
@@ -497,10 +497,15 @@ export function createAppFetchMock() {
 
     if (url.includes('/api/v1/portfolio/benchmark-settings')) {
       return jsonResponse({
-        enabledKeys: ['CUSTOM', 'VWRA'],
-        pinnedKeys: ['CUSTOM'],
-        customLabel: 'Europa 600',
-        customSymbol: 'EXSA.DE',
+        enabledKeys: ['CUSTOM_1', 'VWRA'],
+        pinnedKeys: ['CUSTOM_1'],
+        customBenchmarks: [
+          {
+            key: 'CUSTOM_1',
+            label: 'Europa 600',
+            symbol: 'EXSA.DE',
+          },
+        ],
         options: [
           {
             key: 'VWRA',
@@ -521,10 +526,10 @@ export function createAppFetchMock() {
             defaultPinned: false,
           },
           {
-            key: 'CUSTOM',
-            label: 'Custom benchmark',
+            key: 'CUSTOM_1',
+            label: 'Europa 600',
             symbol: 'EXSA.DE',
-            kind: 'ETF',
+            kind: 'CUSTOM',
             configurable: true,
             defaultEnabled: false,
             defaultPinned: false,
