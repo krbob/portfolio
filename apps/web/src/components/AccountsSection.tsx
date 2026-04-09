@@ -33,7 +33,7 @@ export function AccountsSection() {
         description={t('accounts.description')}
       />
 
-      <form className="grid grid-cols-2 gap-3" onSubmit={handleSubmit}>
+      <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
         <div>
           <span className={labelClass}>{t('accounts.name')}</span>
           <input

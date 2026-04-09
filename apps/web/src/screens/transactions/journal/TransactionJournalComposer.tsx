@@ -126,7 +126,7 @@ export function TransactionJournalComposer({
           {editingTransactionId ? t('journal.editSaveHint') : t('journal.createHint')}
         </p>
 
-        <form className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0" onSubmit={onSubmit}>
+        <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>*]:min-w-0" onSubmit={onSubmit}>
           <label>
             <span className={labelClass}>{t('journal.account')}</span>
             <select
