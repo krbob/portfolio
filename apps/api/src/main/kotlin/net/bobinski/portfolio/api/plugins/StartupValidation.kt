@@ -5,6 +5,7 @@ import java.nio.file.Path
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
@@ -13,6 +14,7 @@ import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 internal fun validateStartupConfiguration(
     persistenceConfig: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
+    marketDataRecheckConfig: MarketDataRecheckConfig,
     backupConfig: BackupConfig,
     readModelRefreshConfig: ReadModelRefreshConfig,
     authConfig: AuthConfig
@@ -59,6 +61,27 @@ internal fun validateStartupConfiguration(
         }
         require(marketDataConfig.bondBenchmarkSymbol.isNotBlank()) {
             "Market data requires a non-blank bond benchmark symbol."
+        }
+    }
+
+    if (marketDataRecheckConfig.enabled) {
+        require(marketDataConfig.enabled) {
+            "Market data recheck requires market data integration to be enabled."
+        }
+        require(marketDataRecheckConfig.intervalMinutes > 0) {
+            "Market data recheck requires a positive interval."
+        }
+        require(marketDataRecheckConfig.baseRetryMinutes > 0) {
+            "Market data recheck requires a positive base retry interval."
+        }
+        require(marketDataRecheckConfig.maxRetryMinutes >= marketDataRecheckConfig.baseRetryMinutes) {
+            "Market data recheck max retry must be greater than or equal to base retry."
+        }
+        require(marketDataRecheckConfig.seriesLookbackDays > 0) {
+            "Market data recheck requires a positive series lookback."
+        }
+        require(marketDataRecheckConfig.inflationLookbackMonths > 0) {
+            "Market data recheck requires a positive inflation lookback."
         }
     }
 

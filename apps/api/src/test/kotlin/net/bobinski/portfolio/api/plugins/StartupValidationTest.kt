@@ -4,6 +4,7 @@ import java.nio.file.Files
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
@@ -22,6 +23,7 @@ class StartupValidationTest {
                     databasePath = ""
                 ),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -35,6 +37,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validSqlitePersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -48,6 +51,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validSqlitePersistenceConfig().copy(journalMode = JournalMode.MEMORY),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -58,6 +62,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validSqlitePersistenceConfig().copy(synchronousMode = SynchronousMode.OFF),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -71,6 +76,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig().copy(stockAnalystApiUrl = "stock.local"),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -84,6 +90,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig().copy(bondBenchmarkSymbol = ""),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -97,6 +104,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = ""),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -110,6 +118,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -127,6 +136,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig().copy(databasePath = databasePath.toString()),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = backupPath.toString()),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -146,6 +156,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig().copy(databasePath = databasePath.toString()),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig().copy(enabled = true, directory = databasePath.toString()),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
@@ -159,8 +170,37 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig().copy(enabled = true, intervalMinutes = 0),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation rejects invalid market data recheck base retry`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig().copy(enabled = true, baseRetryMinutes = 0),
+                backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
+                authConfig = validAuthConfig()
+            )
+        }
+    }
+
+    @Test
+    fun `startup validation rejects market data recheck when market data is disabled`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            validateStartupConfiguration(
+                persistenceConfig = validPersistenceConfig(),
+                marketDataConfig = validMarketDataConfig().copy(enabled = false),
+                marketDataRecheckConfig = validMarketDataRecheckConfig().copy(enabled = true),
+                backupConfig = validBackupConfig(),
+                readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig()
             )
         }
@@ -172,6 +212,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig().copy(
@@ -190,6 +231,7 @@ class StartupValidationTest {
             validateStartupConfiguration(
                 persistenceConfig = validPersistenceConfig(),
                 marketDataConfig = validMarketDataConfig(),
+                marketDataRecheckConfig = validMarketDataRecheckConfig(),
                 backupConfig = validBackupConfig(),
                 readModelRefreshConfig = validReadModelRefreshConfig(),
                 authConfig = validAuthConfig().copy(
@@ -228,6 +270,16 @@ class StartupValidationTest {
         enabled = false,
         intervalMinutes = 720,
         runOnStart = true
+    )
+
+    private fun validMarketDataRecheckConfig() = MarketDataRecheckConfig(
+        enabled = false,
+        intervalMinutes = 15,
+        runOnStart = true,
+        baseRetryMinutes = 30,
+        maxRetryMinutes = 120,
+        seriesLookbackDays = 14,
+        inflationLookbackMonths = 6
     )
 
     private fun validAuthConfig() = AuthConfig(

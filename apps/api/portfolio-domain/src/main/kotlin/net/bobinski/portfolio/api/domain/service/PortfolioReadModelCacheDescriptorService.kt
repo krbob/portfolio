@@ -4,6 +4,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.security.MessageDigest
+import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
@@ -13,6 +14,7 @@ import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotMetadata
 import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotPreferences
 
 class PortfolioReadModelCacheDescriptorService(
@@ -22,6 +24,7 @@ class PortfolioReadModelCacheDescriptorService(
     private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val marketDataCacheFingerprint: String,
+    private val json: Json,
     private val clock: Clock
 ) {
     companion object {
@@ -51,10 +54,7 @@ class PortfolioReadModelCacheDescriptorService(
         val instruments = instrumentRepository.list()
         val targets = portfolioTargetRepository.list()
         val transactions = transactionRepository.list()
-        val marketDataSnapshotUpdatedAt = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
-            .asSequence()
-            .map { preference -> preference.updatedAt }
-            .maxOrNull()
+        val marketDataSnapshotUpdatedAt = marketDataSnapshotCanonicalUpdatedAt()
         val today = LocalDate.now(clock)
 
         return ReadModelCacheDescriptor(
@@ -76,6 +76,35 @@ class PortfolioReadModelCacheDescriptorService(
 
     private fun cacheDescriptorVersion(baseVersion: Int): Int =
         (baseVersion * FINGERPRINT_MODULUS) + marketDataFingerprint()
+
+    private suspend fun marketDataSnapshotCanonicalUpdatedAt(): Instant? {
+        val payloads = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+        if (payloads.isEmpty()) {
+            return null
+        }
+
+        val metadataBySuffix = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+            .associateBy(
+                keySelector = { preference ->
+                    preference.key.removePrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+                },
+                valueTransform = { preference ->
+                    runCatching {
+                        json.decodeFromString(MarketDataSnapshotMetadata.serializer(), preference.valueJson)
+                    }.getOrNull()
+                }
+            )
+
+        return payloads.asSequence()
+            .mapNotNull { preference ->
+                val suffix = preference.key.removePrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+                metadataBySuffix[suffix]
+                    ?.canonicalUpdatedAt
+                    ?.let(Instant::parse)
+                    ?: preference.updatedAt
+            }
+            .maxOrNull()
+    }
 
     private fun marketDataFingerprint(): Int {
         val digest = MessageDigest.getInstance("SHA-256")

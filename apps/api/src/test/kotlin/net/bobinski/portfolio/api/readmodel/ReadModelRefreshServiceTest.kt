@@ -76,6 +76,7 @@ class ReadModelRefreshServiceTest {
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             marketDataCacheFingerprint = "qa-test",
+            json = json,
             clock = clock
         )
         val historyService = PortfolioHistoryService(

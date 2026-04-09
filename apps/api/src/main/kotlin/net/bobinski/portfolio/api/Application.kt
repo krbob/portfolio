@@ -6,6 +6,7 @@ import net.bobinski.portfolio.api.plugins.configureBackupLifecycle
 import net.bobinski.portfolio.api.plugins.configureAuthentication
 import net.bobinski.portfolio.api.plugins.configureApiResponseCaching
 import net.bobinski.portfolio.api.plugins.configureDependencyInjection
+import net.bobinski.portfolio.api.plugins.configureMarketDataRecheckLifecycle
 import net.bobinski.portfolio.api.plugins.configureMonitoring
 import net.bobinski.portfolio.api.plugins.configurePersistenceLifecycle
 import net.bobinski.portfolio.api.plugins.configureReadModelRefreshLifecycle
@@ -29,6 +30,7 @@ internal fun Application.runtimeModule(
         configurePersistenceLifecycle()
     }
     configureBackupLifecycle()
+    configureMarketDataRecheckLifecycle()
     configureReadModelRefreshLifecycle()
     configureAuthentication()
     configureMonitoring()

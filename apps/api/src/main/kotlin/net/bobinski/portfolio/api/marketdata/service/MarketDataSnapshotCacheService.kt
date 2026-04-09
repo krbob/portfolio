@@ -39,7 +39,7 @@ class MarketDataSnapshotCacheService(
 
         val metadata = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
             .mapNotNull { preference ->
-                appPreferenceService.decodeOrNull(preference, StoredSnapshotMetadata.serializer())
+                appPreferenceService.decodeOrNull(preference, MarketDataSnapshotMetadata.serializer())
             }
             .associateBy { stored ->
                 SnapshotIdentity(
@@ -378,9 +378,9 @@ class MarketDataSnapshotCacheService(
     private suspend fun getStoredMetadata(
         snapshotType: SnapshotPreferenceType,
         identity: String
-    ): StoredSnapshotMetadata? = appPreferenceService.getOrNull(
+    ): MarketDataSnapshotMetadata? = appPreferenceService.getOrNull(
         key = metadataPreferenceKey(snapshotType.preferenceType, identity),
-        serializer = StoredSnapshotMetadata.serializer()
+        serializer = MarketDataSnapshotMetadata.serializer()
     )
 
     private suspend fun updateSuccessMetadata(
@@ -399,7 +399,7 @@ class MarketDataSnapshotCacheService(
             previous?.canonicalUpdatedAt != null -> Instant.parse(previous.canonicalUpdatedAt)
             else -> now
         }
-        val metadata = StoredSnapshotMetadata(
+        val metadata = MarketDataSnapshotMetadata(
             snapshotType = snapshotType.name,
             identity = identity,
             status = MarketDataSnapshotStatus.FRESH.name,
@@ -416,7 +416,7 @@ class MarketDataSnapshotCacheService(
         )
         appPreferenceService.put(
             key = metadataPreferenceKey(snapshotType.preferenceType, identity),
-            serializer = StoredSnapshotMetadata.serializer(),
+            serializer = MarketDataSnapshotMetadata.serializer(),
             value = metadata
         )
     }
@@ -432,7 +432,7 @@ class MarketDataSnapshotCacheService(
     ) {
         val now = Instant.now(clock)
         val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
-        val metadata = StoredSnapshotMetadata(
+        val metadata = MarketDataSnapshotMetadata(
             snapshotType = snapshotType.name,
             identity = identity,
             status = MarketDataSnapshotStatus.FAILED.name,
@@ -449,7 +449,7 @@ class MarketDataSnapshotCacheService(
         )
         appPreferenceService.put(
             key = metadataPreferenceKey(snapshotType.preferenceType, identity),
-            serializer = StoredSnapshotMetadata.serializer(),
+            serializer = MarketDataSnapshotMetadata.serializer(),
             value = metadata
         )
     }
@@ -584,23 +584,6 @@ private fun sourceToMonth(from: String, untilExclusive: String): String =
             start.toString()
         }
     }.getOrDefault(untilExclusive)
-
-@Serializable
-internal data class StoredSnapshotMetadata(
-    val snapshotType: String,
-    val identity: String,
-    val status: String,
-    val lastCheckedAt: String,
-    val lastSuccessfulCheckAt: String? = null,
-    val canonicalUpdatedAt: String? = null,
-    val sourceFrom: String? = null,
-    val sourceTo: String? = null,
-    val sourceAsOf: String? = null,
-    val pointCount: Int? = null,
-    val failureCount: Int = 0,
-    val lastFailureAt: String? = null,
-    val lastFailureReason: String? = null
-)
 
 @Serializable
 internal data class StoredQuoteSnapshot(

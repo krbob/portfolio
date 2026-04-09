@@ -35,12 +35,14 @@ import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.HistoricalInstrumentValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
 import net.bobinski.portfolio.api.marketdata.service.MarketDataFailureAuditService
+import net.bobinski.portfolio.api.marketdata.service.MarketDataRecheckService
 import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteEdoLotValuationProvider
@@ -82,6 +84,7 @@ import kotlinx.serialization.json.Json
 fun appModule(
     config: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
+    marketDataRecheckConfig: MarketDataRecheckConfig,
     backupConfig: BackupConfig,
     readModelRefreshConfig: ReadModelRefreshConfig,
     authConfig: AuthConfig,
@@ -90,6 +93,7 @@ fun appModule(
     single<Clock> { Clock.systemUTC() }
     single { config }
     single { marketDataConfig }
+    single { marketDataRecheckConfig }
     single { backupConfig }
     single { readModelRefreshConfig }
     single { authConfig }
@@ -276,6 +280,7 @@ fun appModule(
                 marketDataConfig.equityBenchmarkSymbol,
                 marketDataConfig.bondBenchmarkSymbol
             ).joinToString(separator = "|"),
+            json = get(),
             clock = get()
         )
     }
@@ -343,6 +348,20 @@ fun appModule(
             portfolioHistoryService = get(),
             portfolioReturnsService = get(),
             auditLogService = get(),
+            clock = get()
+        )
+    }
+    single {
+        MarketDataRecheckService(
+            config = get(),
+            snapshotCacheService = get(),
+            instrumentService = get(),
+            currentInstrumentValuationProvider = get(),
+            historicalInstrumentValuationProvider = get(),
+            edoLotValuationProvider = get(),
+            referenceSeriesProvider = get(),
+            fxRateHistoryProvider = get(),
+            inflationAdjustmentProvider = get(),
             clock = get()
         )
     }

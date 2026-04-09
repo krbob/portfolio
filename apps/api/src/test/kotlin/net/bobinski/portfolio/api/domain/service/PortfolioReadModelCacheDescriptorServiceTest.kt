@@ -2,15 +2,19 @@ package net.bobinski.portfolio.api.domain.service
 
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
+import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
+import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -90,6 +94,66 @@ class PortfolioReadModelCacheDescriptorServiceTest {
         assertEquals(ReadModelCacheInvalidationReason.MODEL_VERSION_CHANGED, snapshot.invalidationReason)
     }
 
+    @Test
+    fun `descriptor tracks canonical market data updates instead of last check timestamp`() = runBlocking {
+        val repository = InMemoryAppPreferenceRepository()
+        val json = AppJsonFactory.create()
+
+        fun descriptor(clock: Clock) = PortfolioReadModelCacheDescriptorService(
+            accountRepository = InMemoryAccountRepository(),
+            appPreferenceRepository = repository,
+            instrumentRepository = InMemoryInstrumentRepository(),
+            portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
+            transactionRepository = InMemoryTransactionRepository(),
+            marketDataCacheFingerprint = "enabled=true",
+            json = json,
+            clock = clock
+        )
+
+        fun snapshotCache(clock: Clock) = MarketDataSnapshotCacheService(
+            appPreferenceService = AppPreferenceService(
+                repository = repository,
+                json = json,
+                clock = clock
+            ),
+            clock = clock
+        )
+
+        val prices = listOf(
+            HistoricalPricePoint(
+                date = LocalDate.parse("2026-03-01"),
+                closePricePln = BigDecimal("101.10")
+            ),
+            HistoricalPricePoint(
+                date = LocalDate.parse("2026-03-03"),
+                closePricePln = BigDecimal("102.45")
+            )
+        )
+
+        val initialClock = Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), ZoneOffset.UTC)
+        snapshotCache(initialClock).putSeries(identity = "VWRA.L", prices = prices)
+        val initialDescriptor = descriptor(initialClock).dailyHistoryDescriptor()
+
+        val recheckClock = Clock.fixed(Instant.parse("2026-03-27T12:30:00Z"), ZoneOffset.UTC)
+        snapshotCache(recheckClock).putSeries(identity = "VWRA.L", prices = prices)
+        val afterRecheckDescriptor = descriptor(recheckClock).dailyHistoryDescriptor()
+
+        assertEquals(initialDescriptor.sourceUpdatedAt, afterRecheckDescriptor.sourceUpdatedAt)
+
+        val changedClock = Clock.fixed(Instant.parse("2026-03-27T13:00:00Z"), ZoneOffset.UTC)
+        snapshotCache(changedClock).putSeries(
+            identity = "VWRA.L",
+            prices = prices + HistoricalPricePoint(
+                date = LocalDate.parse("2026-03-04"),
+                closePricePln = BigDecimal("103.55")
+            )
+        )
+        val changedDescriptor = descriptor(changedClock).dailyHistoryDescriptor()
+
+        assertNotEquals(initialDescriptor.sourceUpdatedAt, changedDescriptor.sourceUpdatedAt)
+        assertEquals(Instant.parse("2026-03-27T13:00:00Z"), changedDescriptor.sourceUpdatedAt)
+    }
+
     private fun descriptorService(marketDataCacheFingerprint: String): PortfolioReadModelCacheDescriptorService =
         PortfolioReadModelCacheDescriptorService(
             accountRepository = InMemoryAccountRepository(),
@@ -98,6 +162,7 @@ class PortfolioReadModelCacheDescriptorServiceTest {
             portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
             transactionRepository = InMemoryTransactionRepository(),
             marketDataCacheFingerprint = marketDataCacheFingerprint,
+            json = AppJsonFactory.create(),
             clock = fixedClock()
         )
 
