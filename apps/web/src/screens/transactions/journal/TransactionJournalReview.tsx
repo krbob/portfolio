@@ -73,7 +73,7 @@ export function TransactionJournalReview({
     journalFilters.sort !== 'tradeDate-desc'
 
   return (
-    <>
+    <div className="mt-4 space-y-4">
       <section className={card}>
         <SectionHeader
           eyebrow={t('journal.reviewEyebrow')}
@@ -82,8 +82,8 @@ export function TransactionJournalReview({
           className="mb-4"
         />
 
-        <div className="mb-4 flex flex-wrap items-end gap-3 [&>*]:min-w-0">
-          <label className="min-w-[200px] flex-1">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end [&>*]:min-w-0 [&_input]:w-full [&_select]:w-full">
+          <label className="sm:min-w-[200px] sm:flex-1">
             <span className={labelClass}>{t('journal.search')}</span>
             <input
               className={filterInput}
@@ -334,6 +334,6 @@ export function TransactionJournalReview({
 
         {deleteErrorMessage && <p className="text-sm text-red-400">{deleteErrorMessage}</p>}
       </div>
-    </>
+    </div>
   )
 }
