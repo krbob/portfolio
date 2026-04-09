@@ -15,7 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false)
   const isMobileNavMountedRef = useRef(false)
   const openAnimationFrameRef = useRef<number | null>(null)
-  const previousPathRef = useRef(location.pathname)
+  const previousRouteRef = useRef(`${location.pathname}${location.search}`)
   const currentTitle = resolveRouteTitle(location.pathname, getActiveUiLanguage())
 
   function openMobileNav() {
@@ -36,17 +36,18 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [location.pathname])
 
   useEffect(() => {
+    const currentRoute = `${location.pathname}${location.search}`
     const hash = location.hash.startsWith('#') ? decodeURIComponent(location.hash.slice(1)) : ''
 
     if (hash === '') {
-      if (previousPathRef.current !== location.pathname) {
+      if (previousRouteRef.current !== currentRoute) {
         if (typeof mainRef.current?.scrollTo === 'function') {
           mainRef.current.scrollTo({ top: 0, behavior: 'auto' })
         } else if (mainRef.current) {
           mainRef.current.scrollTop = 0
         }
       }
-      previousPathRef.current = location.pathname
+      previousRouteRef.current = currentRoute
       return undefined
     }
 
@@ -75,12 +76,12 @@ export function Layout({ children }: { children: ReactNode }) {
           const settled = document.getElementById(hash)
           if (settled) scrollToElement(settled)
         }, 600)
-        previousPathRef.current = location.pathname
+        previousRouteRef.current = currentRoute
         return
       }
 
       if (attempts >= 40) {
-        previousPathRef.current = location.pathname
+        previousRouteRef.current = currentRoute
         return
       }
 
@@ -95,7 +96,7 @@ export function Layout({ children }: { children: ReactNode }) {
         window.clearTimeout(timeoutId)
       }
     }
-  }, [location.pathname, location.hash])
+  }, [location.pathname, location.search, location.hash])
 
   useEffect(() => {
     isMobileNavMountedRef.current = isMobileNavMounted
