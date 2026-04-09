@@ -46,6 +46,11 @@ class PortfolioHistoryService(
     private val clock: Clock,
     private val marketDataStaleAfterDays: Long = 3
 ) {
+    private val freshnessPolicy = MarketDataFreshnessPolicy(
+        clock = clock,
+        staleAfterTradingDays = marketDataStaleAfterDays
+    )
+
     suspend fun dailyHistory(): PortfolioDailyHistory {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
@@ -291,6 +296,7 @@ class PortfolioHistoryService(
     ): HistoricalLoads = coroutineScope {
         val usedInstrumentIds = transactions.mapNotNull(Transaction::instrumentId).toSet()
         val usedInstruments = instruments.filter { it.id in usedInstrumentIds }
+        val usedInstrumentsById = usedInstruments.associateBy(Instrument::id)
         val nonEdoInstruments = usedInstruments.filter { it.kind != InstrumentKind.BOND_EDO }
         val edoInstruments = usedInstruments.filter { it.kind == InstrumentKind.BOND_EDO }
         val edoLotsByInstrument = transactions
@@ -361,7 +367,15 @@ class PortfolioHistoryService(
                     return@forEach
                 }
                 val lookup = instrumentLookups[instrumentId] ?: return@forEach
-                if (result.fromCache || lookup.lastEntry()?.key?.let { isStale(it, until) } == true) {
+                val symbolHint = usedInstrumentsById[instrumentId]?.symbol
+                if (result.fromCache || lookup.lastEntry()?.key?.let {
+                        freshnessPolicy.isDailySeriesStale(
+                            valuedAt = it,
+                            asOf = until,
+                            symbolHint = symbolHint
+                        )
+                    } == true
+                ) {
                     add(instrumentId)
                 }
             }
@@ -373,7 +387,13 @@ class PortfolioHistoryService(
                 if (lotDates.any { purchaseDate ->
                         val result = edoLotResults[EdoLotKey(instrument.id, purchaseDate)] as? HistoricalInstrumentValuationResult.Success
                         result?.fromCache == true ||
-                            edoLotLookups[EdoLotKey(instrument.id, purchaseDate)]?.lastEntry()?.key?.let { isStale(it, until) } == true
+                            edoLotLookups[EdoLotKey(instrument.id, purchaseDate)]?.lastEntry()?.key?.let {
+                                freshnessPolicy.isDailySeriesStale(
+                                    valuedAt = it,
+                                    asOf = until,
+                                    symbolHint = instrument.symbol
+                                )
+                            } == true
                     }
                 ) {
                     add(instrument.id)
@@ -790,9 +810,6 @@ class PortfolioHistoryService(
 
     private fun TreeMap<LocalDate, BigDecimal>.lookupOn(date: LocalDate): BigDecimal? =
         floorEntry(date)?.value
-
-    private fun isStale(valuedAt: LocalDate, asOf: LocalDate): Boolean =
-        valuedAt.isBefore(asOf.minusDays(marketDataStaleAfterDays))
 
     private fun MutableHolding.isValuedOn(date: LocalDate, historyLoads: HistoricalLoads): Boolean =
         if (instrument.kind == InstrumentKind.BOND_EDO) {

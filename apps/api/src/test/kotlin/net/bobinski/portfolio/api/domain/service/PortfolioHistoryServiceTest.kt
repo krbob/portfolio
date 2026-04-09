@@ -138,6 +138,32 @@ class PortfolioHistoryServiceTest {
     }
 
     @Test
+    fun `daily history tolerates long holiday weekends for london-listed series`() = runBlocking {
+        val fixture = historyFixture(clock = Clock.fixed(Instant.parse("2026-04-07T20:00:00Z"), ZoneOffset.UTC))
+        val account = account()
+        val instrument = etfInstrument().copy(symbol = "VWRA.L")
+        fixture.accountRepository.save(account)
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(buyTransaction(instrument.id))
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-04-02", "110.00")
+            )
+        )
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(ValuationState.MARK_TO_MARKET, history.valuationState)
+        assertEquals(0, history.instrumentHistoryIssueCount)
+        assertEquals(1, history.points.last().valuedHoldingCount)
+        assertEquals(BigDecimal("2095.00"), history.points.last().totalCurrentValuePln)
+    }
+
+    @Test
     fun `daily history counts cached histories and reference series as degraded`() = runBlocking {
         val fixture = historyFixture()
         val account = account()

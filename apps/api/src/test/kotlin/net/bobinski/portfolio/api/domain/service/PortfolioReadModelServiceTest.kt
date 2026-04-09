@@ -192,6 +192,36 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `overview tolerates long holiday weekends for london-listed quotes`() = runBlocking {
+        val fixture = portfolioFixture(clock = Clock.fixed(Instant.parse("2026-04-07T20:00:00Z"), ZoneOffset.UTC))
+        fixture.accountRepository.save(account())
+        val vwra = etfInstrument(name = "VWRA", symbol = "VWRA.L")
+        fixture.instrumentRepository.save(vwra)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = vwra.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.valuationProvider.values[vwra.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-04-02")
+            )
+        )
+
+        val overview = fixture.service.overview()
+        val holding = fixture.service.holdings().single()
+
+        assertEquals(ValuationState.MARK_TO_MARKET, overview.valuationState)
+        assertEquals(HoldingValuationStatus.VALUED, holding.valuationStatus)
+        assertEquals(null, holding.valuationIssue)
+    }
+
+    @Test
     fun `overview marks cached market valuations as stale with cache-specific issue`() = runBlocking {
         val fixture = portfolioFixture()
         fixture.accountRepository.save(account())
