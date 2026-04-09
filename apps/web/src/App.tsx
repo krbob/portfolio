@@ -26,9 +26,19 @@ const TransactionsScreen = lazy(async () => {
   return { default: module.TransactionsScreen }
 })
 
-const SettingsScreen = lazy(async () => {
-  const module = await import('./screens/SettingsScreen')
-  return { default: module.SettingsScreen }
+const StrategyScreen = lazy(async () => {
+  const module = await import('./screens/StrategyScreen')
+  return { default: module.StrategyScreen }
+})
+
+const DataScreen = lazy(async () => {
+  const module = await import('./screens/DataScreen')
+  return { default: module.DataScreen }
+})
+
+const SystemScreen = lazy(async () => {
+  const module = await import('./screens/SystemScreen')
+  return { default: module.SystemScreen }
 })
 
 export function App() {
@@ -46,14 +56,16 @@ export function App() {
               <Route path="/portfolio" element={<PortfolioScreen />} />
               <Route path="/holdings" element={<Navigate to="/portfolio" replace />} />
               <Route path="/accounts" element={<Navigate to="/portfolio?tab=accounts" replace />} />
-              <Route path="/instruments" element={<Navigate to="/settings#instruments" replace />} />
+              <Route path="/instruments" element={<Navigate to="/strategy" replace />} />
               <Route path="/performance" element={<PerformanceScreen />} />
               <Route path="/returns" element={<Navigate to="/performance" replace />} />
               <Route path="/charts" element={<Navigate to="/performance" replace />} />
               <Route path="/transactions" element={<TransactionsScreen />} />
-              <Route path="/settings" element={<SettingsScreen />} />
-              <Route path="/data" element={<Navigate to="/settings" replace />} />
-              <Route path="/backups" element={<Navigate to="/settings#backups" replace />} />
+              <Route path="/strategy" element={<StrategyScreen />} />
+              <Route path="/data" element={<DataScreen />} />
+              <Route path="/system" element={<SystemScreen />} />
+              <Route path="/settings" element={<Navigate to="/strategy" replace />} />
+              <Route path="/backups" element={<Navigate to="/data?tab=backups" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

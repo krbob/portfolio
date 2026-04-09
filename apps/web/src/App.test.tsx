@@ -379,6 +379,17 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/api/v1/portfolio/benchmark-settings')) {
+        return new Response(
+          JSON.stringify({
+            enabledKeys: ['VWRA'],
+            pinnedKeys: [],
+            customBenchmarks: [],
+          }),
+          { status: 200 },
+        )
+      }
+
       if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
@@ -405,13 +416,15 @@ describe('App', () => {
     // Sidebar navigation links
     expect(await screen.findByRole('link', { name: /^dashboard$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^portfolio$/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^strategy$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^data$/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^system$/i })).toBeInTheDocument()
 
     // Sidebar runtime status
     expect(await screen.findByText(/runtime health/i)).toBeInTheDocument()
     expect(await screen.findByText(/healthy/i)).toBeInTheDocument()
     expect(await screen.findByText(/0 blockers · 1 notices/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/settings#health')
+    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/system')
 
     // Dashboard page header
     expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()

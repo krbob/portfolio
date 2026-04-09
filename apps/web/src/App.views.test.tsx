@@ -380,14 +380,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/settings#instruments']}>
+      <MemoryRouter initialEntries={['/strategy']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /portfolio strategy|strategia portfela/i })).toBeInTheDocument()
     expect(await screen.findByText(/instrument overview/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/vwra/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/edo0336/i)).length).toBeGreaterThan(0)
@@ -511,14 +511,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/settings#instruments']}>
+      <MemoryRouter initialEntries={['/strategy']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /portfolio strategy|strategia portfela/i })).toBeInTheDocument()
     expect(await screen.findByText(/no market valuation for active holdings/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/^n\/a$/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/book basis/i)).length).toBeGreaterThan(0)
@@ -716,14 +716,14 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/settings#instruments']}>
+      <MemoryRouter initialEntries={['/strategy']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('heading', { name: /^settings$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /portfolio strategy|strategia portfela/i })).toBeInTheDocument()
     const accountName = (await screen.findAllByText(/^Primary$/i))[0]!
     const holdingCard = accountName.closest('div')?.parentElement
     expect(holdingCard).not.toBeNull()
@@ -877,7 +877,7 @@ describe('App', () => {
     })
 
     const view = render(
-      <MemoryRouter initialEntries={['/settings#instruments']}>
+      <MemoryRouter initialEntries={['/strategy']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -911,7 +911,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/settings#instruments']}>
+      <MemoryRouter initialEntries={['/strategy']}>
         <QueryClientProvider client={persistedQueryClient}>
           <App />
         </QueryClientProvider>

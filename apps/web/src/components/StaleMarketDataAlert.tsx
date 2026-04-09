@@ -22,13 +22,13 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <a href="/settings#data-quality" className={btnGhost}>
+          <a href="/system" className={btnGhost}>
             {t('staleAlert.openDataQuality')}
           </a>
-          <a href="/settings#market-data" className={btnGhost}>
+          <a href="/system?tab=market-data" className={btnGhost}>
             {t('staleAlert.openMarketData')}
           </a>
-          <a href="/settings#health" className={btnGhost}>
+          <a href="/system" className={btnGhost}>
             {t('staleAlert.openHealth')}
           </a>
         </div>

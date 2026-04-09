@@ -10,7 +10,7 @@ const ROUTE_CASES = [
   { route: '/', heading: 'Pulpit' },
   { route: '/portfolio', heading: 'Portfel' },
   { route: '/portfolio?tab=accounts', heading: 'Portfel' },
-  { route: '/instruments', heading: 'Ustawienia' },
+  { route: '/instruments', heading: 'Strategia portfela' },
   { route: '/transactions', heading: 'Transakcje' },
   { route: '/performance', heading: 'Wyniki' },
 ] as const

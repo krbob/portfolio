@@ -24,7 +24,7 @@ test('main seeded flow renders across core routes @smoke', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2, name: 'Wyniki', exact: true })).toBeVisible()
   await expect(page.locator('main').getByText('Benchmarki').first()).toBeVisible()
 
-  await page.getByRole('link', { name: 'Ustawienia' }).click()
-  await expect(page).toHaveURL(/\/settings$/)
-  await expect(page.getByRole('heading', { level: 2, name: 'Ustawienia', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Strategia' }).click()
+  await expect(page).toHaveURL(/\/strategy$/)
+  await expect(page.getByRole('heading', { level: 2, name: 'Strategia portfela', exact: true })).toBeVisible()
 })

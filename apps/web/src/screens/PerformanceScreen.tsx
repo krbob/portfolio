@@ -159,7 +159,7 @@ export function PerformanceScreen() {
         idBase="performance-workspace"
       />
 
-      <div key={tab} className="mt-6 animate-fade-in">
+      <div key={tab} className="animate-fade-in">
         {tab === 'charts' ? (
           <section
             role="tabpanel"

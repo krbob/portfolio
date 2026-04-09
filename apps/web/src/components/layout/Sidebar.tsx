@@ -109,7 +109,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
               : formatMessage(t('layout.healthSummary'), { blockers: blockingChecks, notices: advisoryChecks })}
         </p>
         <NavLink
-          to="/settings#health"
+          to="/system"
           onClick={onNavigate}
           className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
         >

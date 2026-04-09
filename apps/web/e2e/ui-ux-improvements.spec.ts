@@ -14,21 +14,21 @@ test.describe('UI/UX improvements', () => {
     await expect(chartLink).toBeVisible()
   })
 
-  test('settings sticky nav highlights active section on scroll', async ({ page }) => {
-    await page.goto('/settings')
-    await expect(page.getByRole('heading', { level: 2, name: 'Ustawienia', exact: true })).toBeVisible()
+  test('strategy screen shows tab navigation', async ({ page }) => {
+    await page.goto('/strategy')
+    await expect(page.getByRole('heading', { level: 2, name: 'Strategia portfela', exact: true })).toBeVisible()
 
-    // Sticky nav should be visible
-    const nav = page.locator('nav[aria-label]').last()
-    await expect(nav).toBeVisible()
+    // Tab bar should have 3 tabs
+    const instrumentsTab = page.getByRole('tab', { name: 'Instrumenty' })
+    const targetsTab = page.getByRole('tab', { name: 'Cele alokacji' })
+    const benchmarksTab = page.getByRole('tab', { name: 'Benchmarki' })
+    await expect(instrumentsTab).toBeVisible()
+    await expect(targetsTab).toBeVisible()
+    await expect(benchmarksTab).toBeVisible()
 
-    // Navigate to a section via anchor
-    await page.goto('/settings#backups')
-    await page.waitForTimeout(800)
-
-    // The active chip should have the blue highlight style
-    const activeChip = nav.locator('a.text-blue-400').first()
-    await expect(activeChip).toBeVisible({ timeout: 5000 })
+    // Switch to targets tab
+    await targetsTab.click()
+    await expect(page).toHaveURL(/\/strategy\?tab=targets$/)
   })
 
   test('portfolio screen with tab navigation works', async ({ page }) => {

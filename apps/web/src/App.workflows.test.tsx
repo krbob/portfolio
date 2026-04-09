@@ -1555,343 +1555,111 @@ describe('App', () => {
     })
   })
 
-  it('scrolls to hash targets inside settings', async () => {
-    const scrollIntoViewMock = vi.fn()
-    const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView')
-    Object.defineProperty(Element.prototype, 'scrollIntoView', {
-      configurable: true,
-      value: scrollIntoViewMock,
+  it('renders targets tab via /strategy?tab=targets', async () => {
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/auth/session')) {
+        return new Response(
+          JSON.stringify({ authEnabled: false, authenticated: true, mode: 'DISABLED' }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/meta')) {
+        return new Response(
+          JSON.stringify({
+            name: 'Portfolio', stage: 'dev', version: '0.1.0-dev',
+            auth: { enabled: false, mode: 'DISABLED' },
+            stack: { web: 'React', api: 'Kotlin', database: 'SQLite' },
+            capabilities: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/readiness')) {
+        return new Response(
+          JSON.stringify({ status: 'READY', checkedAt: '2026-03-13T12:00:00Z', checks: [] }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/targets')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
+        return new Response(
+          JSON.stringify({ toleranceBandPctPoints: '5.00', mode: 'CONTRIBUTIONS_ONLY' }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/allocation')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-13', valuationState: 'MARK_TO_MARKET', configured: false,
+            toleranceBandPctPoints: '5.00', rebalancingMode: 'CONTRIBUTIONS_ONLY',
+            targetWeightSumPct: '0.00', totalCurrentValuePln: '2000.00', availableCashPln: '0.00',
+            breachedBucketCount: 0, recommendedAction: 'WITHIN_TOLERANCE',
+            recommendedContributionPln: '0.00', remainingContributionGapPln: '0.00',
+            fullRebalanceBuyAmountPln: '0.00', fullRebalanceSellAmountPln: '0.00',
+            requiresSelling: false, buckets: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/audit/events')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/benchmark-settings')) {
+        return new Response(JSON.stringify({ enabledKeys: [], pinnedKeys: [], customBenchmarks: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/data-quality')) {
+        return new Response(JSON.stringify({ status: 'PASS', checks: [], warningCount: 0 }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/read-model-refresh')) {
+        return new Response(JSON.stringify({
+          schedulerEnabled: false, intervalMinutes: 720, runOnStart: true, running: false,
+          lastRunAt: null, lastSuccessAt: null, lastFailureAt: null, lastFailureMessage: null,
+          lastTrigger: null, lastDurationMs: null, modelNames: [],
+        }), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/portfolio/overview')) {
+        return new Response(JSON.stringify(null), { status: 200 })
+      }
+
+      if (url.includes('/api/v1/market-data/snapshots')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+
+      return new Response(JSON.stringify([]), { status: 200 })
     })
-    try {
-      globalThis.fetch = vi.fn(async (input) => {
-        const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
-        if (url.includes('/api/v1/auth/session')) {
-          return new Response(
-            JSON.stringify({
-              authEnabled: false,
-              authenticated: true,
-              mode: 'DISABLED',
-            }),
-            { status: 200 },
-          )
-        }
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
 
-        if (url.includes('/api/v1/meta')) {
-          return new Response(
-            JSON.stringify({
-              name: 'Portfolio',
-              stage: 'dev',
-              version: '0.1.0-dev',
-              auth: {
-                enabled: false,
-                mode: 'DISABLED',
-              },
-              stack: {
-                web: 'React 19 + TypeScript + Vite',
-                api: 'Kotlin 2.3 + Ktor 3',
-                database: 'SQLite',
-              },
-              capabilities: ['Transaction-based portfolio accounting'],
-            }),
-            { status: 200 },
-          )
-        }
+    render(
+      <MemoryRouter initialEntries={['/strategy?tab=targets']}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
 
-        if (url.includes('/api/v1/readiness')) {
-          return new Response(
-            JSON.stringify({
-              status: 'READY',
-              checkedAt: '2026-03-13T12:00:00Z',
-              checks: [],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/allocation')) {
-          return new Response(
-            JSON.stringify({
-              asOf: '2026-03-13',
-              valuationState: 'MARK_TO_MARKET',
-              configured: true,
-              toleranceBandPctPoints: '5.00',
-              rebalancingMode: 'CONTRIBUTIONS_ONLY',
-              targetWeightSumPct: '100.00',
-              totalCurrentValuePln: '2000.00',
-              availableCashPln: '400.00',
-              breachedBucketCount: 1,
-              largestBandBreachPctPoints: '2.50',
-              recommendedAction: 'DEPLOY_EXISTING_CASH',
-              recommendedAssetClass: 'BONDS',
-              recommendedContributionPln: '400.00',
-              remainingContributionGapPln: '100.00',
-              fullRebalanceBuyAmountPln: '500.00',
-              fullRebalanceSellAmountPln: '500.00',
-              requiresSelling: true,
-              buckets: [],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/rebalancing-settings')) {
-          return new Response(
-            JSON.stringify({
-              toleranceBandPctPoints: '5.00',
-              mode: 'CONTRIBUTIONS_ONLY',
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/read-model-refresh')) {
-          return new Response(
-            JSON.stringify({
-              schedulerEnabled: false,
-              intervalMinutes: 720,
-              runOnStart: true,
-              running: false,
-              lastRunAt: '2026-03-13T12:00:00Z',
-              lastSuccessAt: '2026-03-13T12:00:00Z',
-              lastFailureAt: null,
-              lastFailureMessage: null,
-              lastTrigger: 'MANUAL',
-              lastDurationMs: 420,
-              modelNames: ['DAILY_HISTORY', 'RETURNS'],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/targets')) {
-          return new Response(JSON.stringify([]), { status: 200 })
-        }
-
-        if (url.includes('/api/v1/portfolio/benchmark-settings')) {
-          return new Response(
-            JSON.stringify({
-              enabledKeys: [],
-              pinnedKeys: [],
-              options: [],
-              customBenchmarks: [],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/overview')) {
-          return new Response(
-            JSON.stringify({
-              asOf: '2026-03-13',
-              valuationState: 'MARK_TO_MARKET',
-              totalBookValuePln: '2000.00',
-              totalCurrentValuePln: '2100.00',
-              investedBookValuePln: '1600.00',
-              investedCurrentValuePln: '1700.00',
-              cashBalancePln: '400.00',
-              netContributionsPln: '2000.00',
-              equityBookValuePln: '1600.00',
-              equityCurrentValuePln: '1700.00',
-              bondBookValuePln: '0.00',
-              bondCurrentValuePln: '0.00',
-              cashBookValuePln: '400.00',
-              cashCurrentValuePln: '400.00',
-              totalUnrealizedGainPln: '100.00',
-              accountCount: 1,
-              instrumentCount: 1,
-              activeHoldingCount: 1,
-              valuedHoldingCount: 1,
-              unvaluedHoldingCount: 0,
-              valuationIssueCount: 0,
-              missingFxTransactions: 0,
-              unsupportedCorrectionTransactions: 0,
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/history/daily')) {
-          return new Response(
-            JSON.stringify({
-              from: '2026-01-01',
-              until: '2026-03-13',
-              valuationState: 'MARK_TO_MARKET',
-              instrumentHistoryIssueCount: 0,
-              referenceSeriesIssueCount: 0,
-              benchmarkSeriesIssueCount: 0,
-              missingFxTransactions: 0,
-              unsupportedCorrectionTransactions: 0,
-              points: [
-                {
-                  date: '2026-03-13',
-                  totalBookValuePln: '2000.00',
-                  totalCurrentValuePln: '2100.00',
-                  netContributionsPln: '2000.00',
-                  cashBalancePln: '400.00',
-                  totalCurrentValueUsd: '500.00',
-                  netContributionsUsd: '480.00',
-                  cashBalanceUsd: '95.00',
-                  totalCurrentValueAu: '1.10',
-                  netContributionsAu: '1.00',
-                  cashBalanceAu: '0.20',
-                  equityCurrentValuePln: '1700.00',
-                  bondCurrentValuePln: '0.00',
-                  cashCurrentValuePln: '400.00',
-                  equityAllocationPct: '80.95',
-                  bondAllocationPct: '0.00',
-                  cashAllocationPct: '19.05',
-                  portfolioPerformanceIndex: '1.05',
-                  benchmarkIndices: { VWRA: '1.03', INFLATION: '1.01', TARGET_MIX: '1.02' },
-                  activeHoldingCount: 1,
-                  valuedHoldingCount: 1,
-                },
-              ],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/returns')) {
-          return new Response(
-            JSON.stringify({
-              asOf: '2026-03-13',
-              periods: [
-                {
-                  key: 'MAX',
-                  label: 'MAX',
-                  requestedFrom: '2026-01-01',
-                  from: '2026-01-01',
-                  until: '2026-03-13',
-                  clippedToInception: false,
-                  dayCount: 72,
-                  nominalPln: {
-                    moneyWeightedReturn: '0.05',
-                    annualizedMoneyWeightedReturn: '0.05',
-                    timeWeightedReturn: '0.05',
-                    annualizedTimeWeightedReturn: '0.05',
-                  },
-                  nominalUsd: null,
-                  realPln: {
-                    moneyWeightedReturn: '0.03',
-                    annualizedMoneyWeightedReturn: '0.03',
-                    timeWeightedReturn: '0.03',
-                    annualizedTimeWeightedReturn: '0.03',
-                  },
-                  inflationFrom: '2026-01',
-                  inflationUntil: '2026-03',
-                  inflationMultiplier: '1.02',
-                  benchmarks: [
-                    {
-                      key: 'VWRA',
-                      label: 'VWRA benchmark',
-                      pinned: true,
-                      nominalPln: {
-                        moneyWeightedReturn: '0.04',
-                        annualizedMoneyWeightedReturn: '0.04',
-                        timeWeightedReturn: '0.04',
-                        annualizedTimeWeightedReturn: '0.04',
-                      },
-                      excessTimeWeightedReturn: '0.01',
-                      excessAnnualizedTimeWeightedReturn: '0.01',
-                    },
-                  ],
-                },
-              ],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/accounts') || url.includes('/api/v1/instruments') || url.includes('/api/v1/transactions')) {
-          return new Response(JSON.stringify([]), { status: 200 })
-        }
-
-        if (url.includes('/api/v1/portfolio/state/export')) {
-          return new Response(
-            JSON.stringify({
-              schemaVersion: 4,
-              exportedAt: '2026-03-13T12:00:00Z',
-              accounts: [],
-              instruments: [],
-              targets: [],
-              transactions: [],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/backups')) {
-          return new Response(
-            JSON.stringify({
-              schedulerEnabled: false,
-              directory: '/srv/portfolio/backups',
-              intervalMinutes: 1440,
-              retentionCount: 30,
-              running: false,
-              lastRunAt: null,
-              lastSuccessAt: null,
-              lastFailureAt: null,
-              lastFailureMessage: null,
-              backups: [],
-            }),
-            { status: 200 },
-          )
-        }
-
-        if (url.includes('/api/v1/portfolio/audit/events')) {
-          return new Response(JSON.stringify([]), { status: 200 })
-        }
-
-        if (url.includes('/api/v1/portfolio/read-model-cache')) {
-          return new Response(JSON.stringify([]), { status: 200 })
-        }
-
-        return new Response(JSON.stringify({ message: 'Not found' }), { status: 404 })
-      })
-
-      const queryClient = new QueryClient({
-        defaultOptions: {
-          queries: {
-            retry: false,
-          },
-        },
-      })
-
-      render(
-        <MemoryRouter initialEntries={[{ pathname: '/settings', hash: '#targets' }]}>
-          <QueryClientProvider client={queryClient}>
-            <App />
-          </QueryClientProvider>
-        </MemoryRouter>,
-      )
-
-      const targetsSection = await waitFor(() => {
-        const section = document.getElementById('targets')
-        expect(section).not.toBeNull()
-        return section
-      })
-      if (!targetsSection) {
-        throw new Error('Targets section did not render')
-      }
-
-      expect(await screen.findByRole('heading', { name: /next steps|następne kroki/i })).toBeInTheDocument()
-      expect(await within(targetsSection).findByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).toBeInTheDocument()
-      expect(await within(targetsSection).findByText(/edited mix|edytowany podział/i)).toBeInTheDocument()
-      expect(
-        await within(targetsSection).findByText(/no targets are saved yet|brak zapisanej alokacji docelowej/i),
-      ).toBeInTheDocument()
-
-      await waitFor(() => {
-        expect(scrollIntoViewMock).toHaveBeenCalled()
-      })
-    } finally {
-      if (originalScrollIntoView) {
-        Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoView)
-      } else {
-        Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
-      }
-    }
+    expect(await screen.findByRole('heading', { name: /portfolio strategy|strategia portfela/i })).toBeInTheDocument()
+    expect((await screen.findAllByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/edited mix|edytowany podział/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/no targets are saved yet|brak zapisanej alokacji docelowej/i),
+    ).toBeInTheDocument()
   })
 
   it('sorts accounts by column header on the accounts screen', async () => {

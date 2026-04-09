@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { IconDashboard, IconPerformance, IconPortfolio, IconSettings, IconTransactions } from '../ui/icons'
+import { IconDashboard, IconData, IconPerformance, IconPortfolio, IconSettings, IconStrategy, IconTransactions } from '../ui/icons'
 
 export interface NavItem {
   to: string
@@ -38,11 +38,22 @@ export const investingNav: NavItem[] = [
   },
 ]
 
-export const operationsNav: NavItem[] = [
+export const managementNav: NavItem[] = [
   {
-    to: '/settings',
-    label: { en: 'Settings', pl: 'Ustawienia' },
-    aliases: ['/data', '/backups', '/instruments'],
+    to: '/strategy',
+    label: { en: 'Strategy', pl: 'Strategia' },
+    aliases: ['/instruments'],
+    icon: <IconStrategy />,
+  },
+  {
+    to: '/data',
+    label: { en: 'Data', pl: 'Dane' },
+    aliases: ['/backups'],
+    icon: <IconData />,
+  },
+  {
+    to: '/system',
+    label: { en: 'System', pl: 'System' },
     icon: <IconSettings />,
   },
 ]
@@ -57,15 +68,15 @@ export const navSections = [
   },
   {
     label: {
-      en: 'Operations',
-      pl: 'Operacje',
+      en: 'Management',
+      pl: 'Zarządzanie',
     },
-    items: operationsNav,
+    items: managementNav,
   },
 ]
 
 export function resolveRouteTitle(pathname: string, language: 'en' | 'pl') {
-  const item = [...investingNav, ...operationsNav].find((entry) => matchesRoute(pathname, entry))
+  const item = [...investingNav, ...managementNav].find((entry) => matchesRoute(pathname, entry))
   return item?.label[language] ?? 'Portfolio'
 }
 

@@ -287,7 +287,7 @@ export function DashboardTargetDriftCard({
             <p className="text-xs text-zinc-500">
               ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} {t('dashboardSections.toleranceMeta')} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
             </p>
-            <Link to="/settings#targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
+            <Link to="/strategy?tab=targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
               {t('dashboardSections.openTargetAllocation')} →
             </Link>
           </div>
@@ -389,7 +389,7 @@ export function DashboardDataQualityCard({
           </p>
         ))}
       </div>
-      <Link to="/settings#data-quality" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
+      <Link to="/system" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
         {t('dashboardSections.openDataQuality')}
       </Link>
     </div>

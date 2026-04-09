@@ -103,8 +103,8 @@ export function PortfolioSetupGuideSection() {
           : `${count} ${count === 1 ? 'target supports' : 'targets support'} drift diagnostics.`,
       emptyDescription: t('setup.targetsEmpty'),
       action: {
-        kind: 'hash',
-        to: '#targets',
+        kind: 'route',
+        to: '/strategy?tab=targets',
         label: t('setup.openTargets'),
       },
     }),
@@ -113,19 +113,19 @@ export function PortfolioSetupGuideSection() {
       title: t('setup.benchmarks'),
       description: benchmarkSettingsQuery.isLoading
         ? t('setup.checkingBenchmarks')
-        : (benchmarkSettingsQuery.data?.enabledKeys.length ?? 0) > 0
+        : (benchmarkSettingsQuery.data?.enabledKeys?.length ?? 0) > 0
           ? isPolish
             ? `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarków jest aktywnych w zakładce Wyniki.`
             : `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarks are active in Performance.`
           : t('setup.benchmarksEmpty'),
       status: benchmarkSettingsQuery.isLoading
         ? 'info'
-        : (benchmarkSettingsQuery.data?.enabledKeys.length ?? 0) > 0
+        : (benchmarkSettingsQuery.data?.enabledKeys?.length ?? 0) > 0
           ? 'done'
           : 'action',
       action: {
-        kind: 'hash',
-        to: '#benchmarks',
+        kind: 'route',
+        to: '/strategy?tab=benchmarks',
         label: t('setup.openBenchmarks'),
       },
     },
@@ -135,6 +135,10 @@ export function PortfolioSetupGuideSection() {
 
   const doneCount = items.filter((item) => item.status === 'done').length
   const attentionCount = items.filter((item) => item.status === 'action' || item.status === 'warning').length
+
+  if (attentionCount === 0) {
+    return null
+  }
 
   return (
     <Card as="section">
@@ -224,8 +228,8 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
       description: t('setup.checkingReadiness'),
       status: 'info',
       action: {
-        kind: 'hash',
-        to: '#health',
+        kind: 'route',
+        to: '/system',
         label: t('setup.openHealth'),
       },
     }
@@ -238,8 +242,8 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
       description: t('setup.readinessWarning'),
       status: 'warning',
       action: {
-        kind: 'hash',
-        to: '#health',
+        kind: 'route',
+        to: '/system',
         label: t('setup.openHealth'),
       },
     }
@@ -251,8 +255,8 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
     description: t('setup.readinessOk'),
     status: 'done',
     action: {
-      kind: 'hash',
-      to: '#health',
+      kind: 'route',
+      to: '/system',
       label: t('setup.openHealth'),
     },
   }
@@ -266,8 +270,8 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
       description: t('setup.checkingDataQuality'),
       status: 'info',
       action: {
-        kind: 'hash',
-        to: '#data-quality',
+        kind: 'route',
+        to: '/system',
         label: t('setup.openDataQuality'),
       },
     }
@@ -282,8 +286,8 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
         : `There are data signals that need attention${warningCount ? ` (${warningCount})` : ''}. Review valuations, benchmarks and refresh coverage.`,
       status: 'warning',
       action: {
-        kind: 'hash',
-        to: '#data-quality',
+        kind: 'route',
+        to: '/system',
         label: t('setup.openDataQuality'),
       },
     }
@@ -295,8 +299,8 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
     description: t('setup.dataQualityOk'),
     status: 'done',
     action: {
-      kind: 'hash',
-      to: '#data-quality',
+      kind: 'route',
+      to: '/system',
       label: t('setup.openDataQuality'),
     },
   }
