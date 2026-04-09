@@ -28,6 +28,109 @@ import org.junit.jupiter.api.Test
 class RemoteReferenceSeriesProviderTest {
 
     @Test
+    fun `gold series uses cached snapshot before rechecking gold api again`() = runBlocking {
+        val server = FakeReferenceSeriesServer()
+        server.start()
+
+        try {
+            val auditEventRepository = InMemoryAuditEventRepository()
+            val appPreferenceService = AppPreferenceService(
+                repository = InMemoryAppPreferenceRepository(),
+                json = AppJsonFactory.create(),
+                clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
+            )
+            val snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+
+            val warmProvider = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystApiUrl = server.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = server.baseUrl,
+                    goldApiKey = "gold-key",
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = auditEventRepository,
+                        clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
+                    )
+                ),
+                snapshotCacheService = snapshotCacheService,
+                clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
+            )
+
+            val warmResult = warmProvider.goldPln(
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+
+            assertTrue(warmResult is ReferenceSeriesResult.Success)
+            assertEquals(1, server.goldSpotHistoryRequestCount)
+            assertEquals(1, server.goldBenchmarkHistoryRequestCount)
+
+            val cachedProvider = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystApiUrl = server.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = server.baseUrl,
+                    goldApiKey = "gold-key",
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = auditEventRepository,
+                        clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
+                    )
+                ),
+                snapshotCacheService = snapshotCacheService,
+                clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
+            )
+
+            val cachedResult = cachedProvider.goldPln(
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+
+            assertTrue(cachedResult is ReferenceSeriesResult.Success)
+            cachedResult as ReferenceSeriesResult.Success
+            assertTrue(cachedResult.fromCache)
+            assertEquals(1, server.goldSpotHistoryRequestCount)
+            assertEquals(1, server.goldBenchmarkHistoryRequestCount)
+            assertEquals(1, auditEventRepository.list().size)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
     fun `gold series falls back to configured benchmark when spot history is unavailable`() = runBlocking {
         val server = FakeReferenceSeriesServer()
         server.start()
@@ -263,8 +366,14 @@ class RemoteReferenceSeriesProviderTest {
 private class FakeReferenceSeriesServer(
     private val failUsdHistory: Boolean = false
 ) : AutoCloseable {
+    @Volatile
+    var goldSpotHistoryRequestCount: Int = 0
+
+    @Volatile
+    var goldBenchmarkHistoryRequestCount: Int = 0
+
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-        createContext("/history", HistoryHandler(failUsdHistory))
+        createContext("/history", HistoryHandler(owner = this@FakeReferenceSeriesServer, failUsdHistory = failUsdHistory))
         executor = null
     }
 
@@ -280,12 +389,14 @@ private class FakeReferenceSeriesServer(
     }
 
     private class HistoryHandler(
+        private val owner: FakeReferenceSeriesServer,
         private val failUsdHistory: Boolean
     ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
             val path = exchange.requestURI.path
             when {
                 path == "/history" -> {
+                    owner.goldSpotHistoryRequestCount += 1
                     respond(exchange, """{"error":"Rate limit exceeded. Maximum 10 requests per hour."}""", status = 429)
                     return
                 }
@@ -296,7 +407,10 @@ private class FakeReferenceSeriesServer(
                 }
 
                 path.contains("/history/GC%3DF") || path.contains("/history/GC=F") ->
-                    respond(exchange, """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}""")
+                    run {
+                        owner.goldBenchmarkHistoryRequestCount += 1
+                        respond(exchange, """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}""")
+                    }
 
                 path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
                     respond(exchange, """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}""")

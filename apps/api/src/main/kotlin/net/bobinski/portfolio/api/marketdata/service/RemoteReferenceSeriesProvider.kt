@@ -7,6 +7,8 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import org.slf4j.LoggerFactory
 import java.time.LocalDate
+import java.time.Clock
+import java.time.Instant
 import java.math.RoundingMode
 import java.util.TreeMap
 
@@ -15,7 +17,8 @@ class RemoteReferenceSeriesProvider(
     private val stockAnalystClient: StockAnalystClient,
     private val goldApiClient: GoldApiClient,
     private val marketDataFailureAuditService: MarketDataFailureAuditService,
-    private val snapshotCacheService: MarketDataSnapshotCacheService
+    private val snapshotCacheService: MarketDataSnapshotCacheService,
+    private val clock: Clock = Clock.systemUTC()
 ) : ReferenceSeriesProvider {
     override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         loadSeries(
@@ -28,7 +31,10 @@ class RemoteReferenceSeriesProvider(
 
     override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult =
         if (!config.goldApiKey.isNullOrBlank()) {
-            loadGoldSpotSeriesInPlnWithFallback(from = from, to = to)
+            cachedGoldSeries(from = from, to = to)
+                ?.takeIf { (_, summary) -> shouldServeCachedGoldSeries(summary = summary, requestedTo = to) }
+                ?.first
+                ?: loadGoldSpotSeriesInPlnWithFallback(from = from, to = to)
         } else {
             benchmarkPln(
                 symbol = config.goldBenchmarkSymbol,
@@ -150,6 +156,7 @@ class RemoteReferenceSeriesProvider(
             ReferenceSeriesResult.Success(prices = prices)
         }
     } catch (exception: MarketDataClientException) {
+        snapshotCacheService.recordSeriesFailure(identity = REFERENCE_GOLD_PLN, reason = exception.message)
         logger.warn("Gold spot series failed in {}..{}: {}", from, to, exception.message)
         marketDataFailureAuditService.recordFailure(
             upstream = "gold-api",
@@ -163,6 +170,7 @@ class RemoteReferenceSeriesProvider(
         cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: Exception) {
+        snapshotCacheService.recordSeriesFailure(identity = REFERENCE_GOLD_PLN, reason = exception.message)
         logger.warn("Unexpected gold spot series error in {}..{}", from, to, exception)
         marketDataFailureAuditService.recordFailure(
             upstream = "gold-api",
@@ -210,6 +218,8 @@ class RemoteReferenceSeriesProvider(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RemoteReferenceSeriesProvider::class.java)
+        private const val REFERENCE_GOLD_PLN = "reference:gold-pln"
+        private const val GOLD_SPOT_REMOTE_RECHECK_SECONDS = 60L * 60L
     }
 
     private suspend fun cachedSeries(
@@ -223,4 +233,29 @@ class RemoteReferenceSeriesProvider(
 
     private fun benchmarkIdentity(symbol: String, currency: String?): String =
         "reference:$symbol:${currency ?: "BASE"}"
+
+    private suspend fun cachedGoldSeries(
+        from: LocalDate,
+        to: LocalDate
+    ): Pair<ReferenceSeriesResult.Success, MarketDataSnapshotSummary>? {
+        val cached = cachedSeries(identity = REFERENCE_GOLD_PLN, from = from, to = to) ?: return null
+        val summary = snapshotCacheService.getSeriesSnapshotSummary(identity = REFERENCE_GOLD_PLN) ?: return null
+        return cached to summary
+    }
+
+    private fun shouldServeCachedGoldSeries(
+        summary: MarketDataSnapshotSummary,
+        requestedTo: LocalDate
+    ): Boolean {
+        val recheckAfter = Instant.now(clock).minusSeconds(GOLD_SPOT_REMOTE_RECHECK_SECONDS)
+        if (summary.lastCheckedAt.isAfter(recheckAfter)) {
+            return true
+        }
+
+        val sourceAsOf = summary.sourceAsOf?.let { value ->
+            runCatching { LocalDate.parse(value) }.getOrNull()
+        } ?: return false
+
+        return !sourceAsOf.isBefore(requestedTo)
+    }
 }

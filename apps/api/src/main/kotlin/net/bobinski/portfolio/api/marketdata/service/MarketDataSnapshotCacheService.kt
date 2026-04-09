@@ -14,6 +14,37 @@ class MarketDataSnapshotCacheService(
     private val appPreferenceService: AppPreferenceService,
     private val clock: Clock = Clock.systemUTC()
 ) {
+    suspend fun getSeriesSnapshotSummary(identity: String): MarketDataSnapshotSummary? {
+        val stored = getStoredSeries(identity)
+        val metadata = getStoredMetadata(snapshotType = SnapshotPreferenceType.SERIES, identity = identity)
+        if (stored == null && metadata == null) {
+            return null
+        }
+
+        val sourceFrom = metadata?.sourceFrom ?: stored?.points?.minByOrNull(StoredPricePoint::date)?.date
+        val sourceTo = metadata?.sourceTo ?: stored?.points?.maxByOrNull(StoredPricePoint::date)?.date
+        val sourceAsOf = metadata?.sourceAsOf ?: stored?.points?.maxByOrNull(StoredPricePoint::date)?.date
+        val pointCount = metadata?.pointCount ?: stored?.points?.size
+        val lastCheckedAt = metadata?.lastCheckedAt?.let(Instant::parse) ?: Instant.EPOCH
+
+        return MarketDataSnapshotSummary(
+            snapshotType = SnapshotPreferenceType.SERIES.summaryType,
+            identity = identity,
+            cachedAt = lastCheckedAt,
+            sourceFrom = sourceFrom,
+            sourceTo = sourceTo,
+            sourceAsOf = sourceAsOf,
+            pointCount = pointCount,
+            status = metadata?.status?.let(MarketDataSnapshotStatus::valueOf) ?: MarketDataSnapshotStatus.FRESH,
+            lastCheckedAt = lastCheckedAt,
+            lastSuccessfulCheckAt = metadata?.lastSuccessfulCheckAt?.let(Instant::parse),
+            canonicalUpdatedAt = metadata?.canonicalUpdatedAt?.let(Instant::parse),
+            failureCount = metadata?.failureCount ?: 0,
+            lastFailureAt = metadata?.lastFailureAt?.let(Instant::parse),
+            lastFailureReason = metadata?.lastFailureReason
+        )
+    }
+
     suspend fun listSnapshots(): List<MarketDataSnapshotSummary> {
         val payloads = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
             .mapNotNull { preference ->
