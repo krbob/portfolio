@@ -7,7 +7,10 @@ import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 class PortfolioBenchmarkSettingsService(
     private val appPreferenceService: AppPreferenceService,
     private val auditLogService: AuditLogService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val valuationProbeService: ValuationProbeService = object : ValuationProbeService {
+        override suspend fun verifyStockAnalystSymbol(symbol: String) = Unit
+    }
 ) {
     suspend fun settings(): PortfolioBenchmarkSettings {
         val stored = appPreferenceService.get(
@@ -44,6 +47,12 @@ class PortfolioBenchmarkSettingsService(
         }
         val configuredCustomBenchmarks = customBenchmarks.filter { it.label.isNotBlank() && it.symbol.isNotBlank() }
         val configuredCustomKeys = configuredCustomBenchmarks.map(CustomBenchmarkDefinition::key).toSet()
+        configuredCustomBenchmarks
+            .map(CustomBenchmarkDefinition::symbol)
+            .distinct()
+            .forEach { symbol ->
+                valuationProbeService.verifyStockAnalystSymbol(symbol)
+            }
         require(command.enabledKeys.all { it in supportedKeys }) {
             "Benchmark settings contain unsupported keys."
         }

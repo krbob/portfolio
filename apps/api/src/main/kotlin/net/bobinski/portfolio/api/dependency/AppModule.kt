@@ -239,7 +239,8 @@ fun appModule(
         PortfolioBenchmarkSettingsService(
             appPreferenceService = get(),
             auditLogService = get(),
-            clock = get()
+            clock = get(),
+            valuationProbeService = get()
         )
     }
     single {
