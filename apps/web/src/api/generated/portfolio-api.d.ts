@@ -1252,6 +1252,13 @@ export interface components {
             sourceTo?: string | null;
             sourceAsOf?: string | null;
             pointCount?: number | null;
+            status: string;
+            lastCheckedAt: string;
+            lastSuccessfulCheckAt?: string | null;
+            canonicalUpdatedAt?: string | null;
+            failureCount: number;
+            lastFailureAt?: string | null;
+            lastFailureReason?: string | null;
         };
         /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
         ReadModelRefreshStatusResponse: {
