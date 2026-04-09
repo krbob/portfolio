@@ -71,6 +71,7 @@ class RemoteReferenceSeriesProvider(
         snapshotCacheService.putSeries(identity = identity, prices = prices)
         ReferenceSeriesResult.Success(prices = prices)
     } catch (exception: MarketDataClientException) {
+        snapshotCacheService.recordSeriesFailure(identity = identity, reason = exception.message)
         logger.warn(
             "Reference series failed for symbol {} (currency={}) in {}..{}: {}",
             symbol,
@@ -91,6 +92,7 @@ class RemoteReferenceSeriesProvider(
         cachedSeries(identity = identity, from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
     } catch (exception: Exception) {
+        snapshotCacheService.recordSeriesFailure(identity = identity, reason = exception.message)
         logger.warn(
             "Unexpected reference series error for symbol {} (currency={}) in {}..{}",
             symbol,

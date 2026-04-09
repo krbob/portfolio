@@ -25,9 +25,11 @@ class RemoteInflationAdjustmentProvider(
             snapshotCacheService.putCumulativeInflation(success)
             success
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
             snapshotCacheService.getCumulativeInflation(from)?.let { return it }
             InflationAdjustmentResult.Failure(exception.message ?: "Inflation request failed.")
         } catch (exception: Exception) {
+            snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
             snapshotCacheService.getCumulativeInflation(from)?.let { return it }
             InflationAdjustmentResult.Failure(exception.message ?: "Unexpected inflation request error.")
         }
@@ -53,9 +55,11 @@ class RemoteInflationAdjustmentProvider(
             snapshotCacheService.putMonthlyInflation(success.points)
             success
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.recordMonthlyInflationFailure(reason = exception.message)
             snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }
             InflationSeriesResult.Failure(exception.message ?: "Monthly inflation request failed.")
         } catch (exception: Exception) {
+            snapshotCacheService.recordMonthlyInflationFailure(reason = exception.message)
             snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }
             InflationSeriesResult.Failure(exception.message ?: "Unexpected monthly inflation request error.")
         }

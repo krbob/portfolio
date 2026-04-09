@@ -36,6 +36,10 @@ class RemoteEdoLotValuationProvider(
             snapshotCacheService.putQuote(identity = edoQuoteIdentity(lotTerms), valuation = valuation)
             InstrumentValuationResult.Success(valuation = valuation)
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.recordQuoteFailure(
+                identity = edoQuoteIdentity(lotTerms),
+                reason = exception.message
+            )
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
                 operation = "value",
@@ -49,6 +53,10 @@ class RemoteEdoLotValuationProvider(
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            snapshotCacheService.recordQuoteFailure(
+                identity = edoQuoteIdentity(lotTerms),
+                reason = exception.message
+            )
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
                 operation = "value",
@@ -86,6 +94,10 @@ class RemoteEdoLotValuationProvider(
             snapshotCacheService.putSeries(identity = edoHistoryIdentity(lotTerms), prices = history)
             HistoricalInstrumentValuationResult.Success(prices = history)
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.recordSeriesFailure(
+                identity = edoHistoryIdentity(lotTerms),
+                reason = exception.message
+            )
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
                 operation = "history",
@@ -101,6 +113,10 @@ class RemoteEdoLotValuationProvider(
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            snapshotCacheService.recordSeriesFailure(
+                identity = edoHistoryIdentity(lotTerms),
+                reason = exception.message
+            )
             marketDataFailureAuditService.recordFailure(
                 upstream = "edo-calculator",
                 operation = "history",

@@ -40,6 +40,12 @@ class RemoteHistoricalInstrumentValuationProvider(
                 )
             }
         } catch (exception: MarketDataClientException) {
+            instrument.symbol?.let { symbol ->
+                snapshotCacheService.recordSeriesFailure(
+                    identity = stockHistoryIdentity(symbol),
+                    reason = exception.message
+                )
+            }
             logger.warn(
                 "Historical valuation failed for instrument {} ({}, source={}, symbol={}) in {}..{}: {}",
                 instrument.name,
@@ -68,6 +74,12 @@ class RemoteHistoricalInstrumentValuationProvider(
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            instrument.symbol?.let { symbol ->
+                snapshotCacheService.recordSeriesFailure(
+                    identity = stockHistoryIdentity(symbol),
+                    reason = exception.message
+                )
+            }
             logger.warn(
                 "Unexpected historical valuation error for instrument {} ({}, source={}, symbol={}) in {}..{}",
                 instrument.name,

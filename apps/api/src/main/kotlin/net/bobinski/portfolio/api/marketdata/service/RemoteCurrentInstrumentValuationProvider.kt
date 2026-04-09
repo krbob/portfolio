@@ -34,6 +34,12 @@ class RemoteCurrentInstrumentValuationProvider(
                 )
             }
         } catch (exception: MarketDataClientException) {
+            instrument.symbol?.let { symbol ->
+                snapshotCacheService.recordQuoteFailure(
+                    identity = stockQuoteIdentity(symbol),
+                    reason = exception.message
+                )
+            }
             marketDataFailureAuditService.recordFailure(
                 upstream = "stock-analyst",
                 operation = "quote",
@@ -50,6 +56,12 @@ class RemoteCurrentInstrumentValuationProvider(
                 reason = exception.message ?: "Market data request failed."
             )
         } catch (exception: Exception) {
+            instrument.symbol?.let { symbol ->
+                snapshotCacheService.recordQuoteFailure(
+                    identity = stockQuoteIdentity(symbol),
+                    reason = exception.message
+                )
+            }
             marketDataFailureAuditService.recordFailure(
                 upstream = "stock-analyst",
                 operation = "quote",

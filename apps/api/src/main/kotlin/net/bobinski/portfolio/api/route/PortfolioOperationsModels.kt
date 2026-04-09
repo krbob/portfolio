@@ -243,7 +243,14 @@ data class MarketDataSnapshotResponse(
     val sourceFrom: String? = null,
     val sourceTo: String? = null,
     val sourceAsOf: String? = null,
-    val pointCount: Int? = null
+    val pointCount: Int? = null,
+    val status: String,
+    val lastCheckedAt: String,
+    val lastSuccessfulCheckAt: String? = null,
+    val canonicalUpdatedAt: String? = null,
+    val failureCount: Int,
+    val lastFailureAt: String? = null,
+    val lastFailureReason: String? = null
 )
 
 @Serializable
@@ -338,7 +345,14 @@ internal fun MarketDataSnapshotSummary.toResponse(): MarketDataSnapshotResponse 
     sourceFrom = sourceFrom,
     sourceTo = sourceTo,
     sourceAsOf = sourceAsOf,
-    pointCount = pointCount
+    pointCount = pointCount,
+    status = status.name,
+    lastCheckedAt = lastCheckedAt.toString(),
+    lastSuccessfulCheckAt = lastSuccessfulCheckAt?.toString(),
+    canonicalUpdatedAt = canonicalUpdatedAt?.toString(),
+    failureCount = failureCount,
+    lastFailureAt = lastFailureAt?.toString(),
+    lastFailureReason = lastFailureReason
 )
 
 internal fun ReadModelRefreshStatus.toResponse(): ReadModelRefreshStatusResponse = ReadModelRefreshStatusResponse(

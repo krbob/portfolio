@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.marketdata.service
 
 import java.math.BigDecimal
 import java.security.MessageDigest
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -10,56 +11,121 @@ import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 
 class MarketDataSnapshotCacheService(
-    private val appPreferenceService: AppPreferenceService
+    private val appPreferenceService: AppPreferenceService,
+    private val clock: Clock = Clock.systemUTC()
 ) {
-    suspend fun listSnapshots(): List<MarketDataSnapshotSummary> =
-        appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+    suspend fun listSnapshots(): List<MarketDataSnapshotSummary> {
+        val payloads = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
             .mapNotNull { preference ->
                 val key = preference.key.removePrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
                 val type = key.substringBefore('.', missingDelimiterValue = "")
                 when (type) {
-                    "quote" -> appPreferenceService.decodeOrNull(preference, StoredQuoteSnapshot.serializer())
-                        ?.toSummary(preference.updatedAt)
-                    "series" -> appPreferenceService.decodeOrNull(preference, StoredSeriesSnapshot.serializer())
-                        ?.toSummary(preference.updatedAt)
-                    "inflation-monthly" -> appPreferenceService.decodeOrNull(preference, StoredMonthlyInflationSnapshot.serializer())
-                        ?.toSummary(preference.updatedAt)
-                    "inflation-window" -> appPreferenceService.decodeOrNull(preference, StoredInflationWindow.serializer())
-                        ?.toSummary(preference.updatedAt)
+                    SnapshotPreferenceType.QUOTE.preferenceType ->
+                        appPreferenceService.decodeOrNull(preference, StoredQuoteSnapshot.serializer())
+                            ?.toPayloadSummary(preference.updatedAt)
+                    SnapshotPreferenceType.SERIES.preferenceType ->
+                        appPreferenceService.decodeOrNull(preference, StoredSeriesSnapshot.serializer())
+                            ?.toPayloadSummary(preference.updatedAt)
+                    SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType ->
+                        appPreferenceService.decodeOrNull(preference, StoredMonthlyInflationSnapshot.serializer())
+                            ?.toPayloadSummary(preference.updatedAt)
+                    SnapshotPreferenceType.INFLATION_WINDOW.preferenceType ->
+                        appPreferenceService.decodeOrNull(preference, StoredInflationWindow.serializer())
+                            ?.toPayloadSummary(preference.updatedAt)
                     else -> null
                 }
             }
+            .associateBy(PayloadSnapshotSummary::key)
+
+        val metadata = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+            .mapNotNull { preference ->
+                appPreferenceService.decodeOrNull(preference, StoredSnapshotMetadata.serializer())
+            }
+            .associateBy { stored ->
+                SnapshotIdentity(
+                    snapshotType = SnapshotPreferenceType.valueOf(stored.snapshotType),
+                    identity = stored.identity
+                )
+            }
+
+        return (payloads.keys + metadata.keys)
+            .map { key ->
+                val payload = payloads[key]
+                val meta = metadata[key]
+                val lastCheckedAt = meta?.lastCheckedAt?.let(Instant::parse) ?: payload?.storedAt ?: Instant.EPOCH
+                MarketDataSnapshotSummary(
+                    snapshotType = key.snapshotType.summaryType,
+                    identity = meta?.identity ?: payload?.identity ?: "",
+                    cachedAt = lastCheckedAt,
+                    sourceFrom = meta?.sourceFrom ?: payload?.sourceFrom,
+                    sourceTo = meta?.sourceTo ?: payload?.sourceTo,
+                    sourceAsOf = meta?.sourceAsOf ?: payload?.sourceAsOf,
+                    pointCount = meta?.pointCount ?: payload?.pointCount,
+                    status = meta?.status?.let(MarketDataSnapshotStatus::valueOf) ?: MarketDataSnapshotStatus.FRESH,
+                    lastCheckedAt = lastCheckedAt,
+                    lastSuccessfulCheckAt = meta?.lastSuccessfulCheckAt?.let(Instant::parse) ?: payload?.storedAt,
+                    canonicalUpdatedAt = meta?.canonicalUpdatedAt?.let(Instant::parse) ?: payload?.storedAt,
+                    failureCount = meta?.failureCount ?: 0,
+                    lastFailureAt = meta?.lastFailureAt?.let(Instant::parse),
+                    lastFailureReason = meta?.lastFailureReason
+                )
+            }
             .sortedWith(
-                compareByDescending<MarketDataSnapshotSummary> { it.cachedAt }
+                compareByDescending<MarketDataSnapshotSummary> { it.lastCheckedAt }
                     .thenBy(MarketDataSnapshotSummary::snapshotType)
                     .thenBy(MarketDataSnapshotSummary::identity)
             )
+    }
 
     suspend fun putQuote(identity: String, valuation: InstrumentValuation) {
+        val stored = StoredQuoteSnapshot(
+            identity = identity,
+            valuedAt = valuation.valuedAt.toString(),
+            pricePerUnitPln = valuation.pricePerUnitPln.toPlainString(),
+            pricePerUnitNative = valuation.pricePerUnitNative?.toPlainString(),
+            currentRatePercent = valuation.currentRatePercent?.toPlainString(),
+            previousClosePln = valuation.previousClosePln?.toPlainString()
+        )
+        val existing = getStoredQuote(identity)
+
         appPreferenceService.put(
-            key = preferenceKey("quote", identity),
+            key = preferenceKey(SnapshotPreferenceType.QUOTE.preferenceType, identity),
             serializer = StoredQuoteSnapshot.serializer(),
-            value = StoredQuoteSnapshot(
-                identity = identity,
-                valuedAt = valuation.valuedAt.toString(),
-                pricePerUnitPln = valuation.pricePerUnitPln.toPlainString(),
-                pricePerUnitNative = valuation.pricePerUnitNative?.toPlainString(),
-                currentRatePercent = valuation.currentRatePercent?.toPlainString()
-            )
+            value = stored
+        )
+        updateSuccessMetadata(
+            snapshotType = SnapshotPreferenceType.QUOTE,
+            identity = identity,
+            canonicalChanged = existing != stored,
+            sourceFrom = stored.valuedAt,
+            sourceTo = stored.valuedAt,
+            sourceAsOf = stored.valuedAt,
+            pointCount = 1
+        )
+    }
+
+    suspend fun recordQuoteFailure(identity: String, reason: String?) {
+        val stored = getStoredQuote(identity)
+        updateFailureMetadata(
+            snapshotType = SnapshotPreferenceType.QUOTE,
+            identity = identity,
+            sourceFrom = stored?.valuedAt,
+            sourceTo = stored?.valuedAt,
+            sourceAsOf = stored?.valuedAt,
+            pointCount = stored?.let { 1 },
+            reason = reason
         )
     }
 
     suspend fun getQuote(identity: String): InstrumentValuation? {
-        val stored = appPreferenceService.getOrNull(
-            key = preferenceKey("quote", identity),
-            serializer = StoredQuoteSnapshot.serializer()
-        ) ?: return null
+        val stored = getStoredQuote(identity) ?: return null
 
         return InstrumentValuation(
             pricePerUnitPln = stored.pricePerUnitPln.toBigDecimal(),
             pricePerUnitNative = stored.pricePerUnitNative?.toBigDecimal(),
             valuedAt = LocalDate.parse(stored.valuedAt),
-            currentRatePercent = stored.currentRatePercent?.toBigDecimal()
+            currentRatePercent = stored.currentRatePercent?.toBigDecimal(),
+            previousClosePln = stored.previousClosePln?.toBigDecimal()
         )
     }
 
@@ -77,14 +143,38 @@ class MarketDataSnapshotCacheService(
                 )
             }
         )
+        val stored = StoredSeriesSnapshot(
+            identity = identity,
+            points = mergedPoints
+        )
+        val existing = getStoredSeries(identity)
 
         appPreferenceService.put(
-            key = preferenceKey("series", identity),
+            key = preferenceKey(SnapshotPreferenceType.SERIES.preferenceType, identity),
             serializer = StoredSeriesSnapshot.serializer(),
-            value = StoredSeriesSnapshot(
-                identity = identity,
-                points = mergedPoints
-            )
+            value = stored
+        )
+        updateSuccessMetadata(
+            snapshotType = SnapshotPreferenceType.SERIES,
+            identity = identity,
+            canonicalChanged = existing != stored,
+            sourceFrom = mergedPoints.minByOrNull(StoredPricePoint::date)?.date,
+            sourceTo = mergedPoints.maxByOrNull(StoredPricePoint::date)?.date,
+            sourceAsOf = mergedPoints.maxByOrNull(StoredPricePoint::date)?.date,
+            pointCount = mergedPoints.size
+        )
+    }
+
+    suspend fun recordSeriesFailure(identity: String, reason: String?) {
+        val stored = getStoredSeries(identity)
+        updateFailureMetadata(
+            snapshotType = SnapshotPreferenceType.SERIES,
+            identity = identity,
+            sourceFrom = stored?.points?.minByOrNull(StoredPricePoint::date)?.date,
+            sourceTo = stored?.points?.maxByOrNull(StoredPricePoint::date)?.date,
+            sourceAsOf = stored?.points?.maxByOrNull(StoredPricePoint::date)?.date,
+            pointCount = stored?.points?.size,
+            reason = reason
         )
     }
 
@@ -121,14 +211,39 @@ class MarketDataSnapshotCacheService(
                 )
             }
         )
+        val stored = StoredMonthlyInflationSnapshot(
+            identity = identity,
+            points = mergedPoints
+        )
+        val existing = getStoredMonthlyInflation(identity)
 
         appPreferenceService.put(
-            key = preferenceKey("inflation-monthly", identity),
+            key = preferenceKey(SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType, identity),
             serializer = StoredMonthlyInflationSnapshot.serializer(),
-            value = StoredMonthlyInflationSnapshot(
-                identity = identity,
-                points = mergedPoints
-            )
+            value = stored
+        )
+        updateSuccessMetadata(
+            snapshotType = SnapshotPreferenceType.INFLATION_MONTHLY,
+            identity = identity,
+            canonicalChanged = existing != stored,
+            sourceFrom = mergedPoints.minByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            sourceTo = mergedPoints.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            sourceAsOf = mergedPoints.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            pointCount = mergedPoints.size
+        )
+    }
+
+    suspend fun recordMonthlyInflationFailure(reason: String?) {
+        val identity = "inflation.monthly"
+        val stored = getStoredMonthlyInflation(identity)
+        updateFailureMetadata(
+            snapshotType = SnapshotPreferenceType.INFLATION_MONTHLY,
+            identity = identity,
+            sourceFrom = stored?.points?.minByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            sourceTo = stored?.points?.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            sourceAsOf = stored?.points?.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
+            pointCount = stored?.points?.size,
+            reason = reason
         )
     }
 
@@ -174,22 +289,46 @@ class MarketDataSnapshotCacheService(
     }
 
     suspend fun putCumulativeInflation(result: InflationAdjustmentResult.Success) {
+        val identity = result.from.toString()
+        val stored = StoredInflationWindow(
+            from = result.from.toString(),
+            until = result.until.toString(),
+            multiplier = result.multiplier.toPlainString()
+        )
+        val existing = getStoredInflationWindow(identity)
+
         appPreferenceService.put(
-            key = preferenceKey("inflation-window", result.from.toString()),
+            key = preferenceKey(SnapshotPreferenceType.INFLATION_WINDOW.preferenceType, identity),
             serializer = StoredInflationWindow.serializer(),
-            value = StoredInflationWindow(
-                from = result.from.toString(),
-                until = result.until.toString(),
-                multiplier = result.multiplier.toPlainString()
-            )
+            value = stored
+        )
+        updateSuccessMetadata(
+            snapshotType = SnapshotPreferenceType.INFLATION_WINDOW,
+            identity = identity,
+            canonicalChanged = existing != stored,
+            sourceFrom = stored.from,
+            sourceTo = sourceToMonth(from = stored.from, untilExclusive = stored.until),
+            sourceAsOf = stored.until,
+            pointCount = null
+        )
+    }
+
+    suspend fun recordCumulativeInflationFailure(from: YearMonth, reason: String?) {
+        val identity = from.toString()
+        val stored = getStoredInflationWindow(identity)
+        updateFailureMetadata(
+            snapshotType = SnapshotPreferenceType.INFLATION_WINDOW,
+            identity = identity,
+            sourceFrom = stored?.from,
+            sourceTo = stored?.let { sourceToMonth(from = it.from, untilExclusive = it.until) },
+            sourceAsOf = stored?.until,
+            pointCount = null,
+            reason = reason
         )
     }
 
     suspend fun getCumulativeInflation(from: YearMonth): InflationAdjustmentResult.Success? {
-        val direct = appPreferenceService.getOrNull(
-            key = preferenceKey("inflation-window", from.toString()),
-            serializer = StoredInflationWindow.serializer()
-        )
+        val direct = getStoredInflationWindow(from.toString())
         if (direct != null) {
             return InflationAdjustmentResult.Success(
                 from = YearMonth.parse(direct.from),
@@ -212,17 +351,108 @@ class MarketDataSnapshotCacheService(
         )
     }
 
+    private suspend fun getStoredQuote(identity: String): StoredQuoteSnapshot? =
+        appPreferenceService.getOrNull(
+            key = preferenceKey(SnapshotPreferenceType.QUOTE.preferenceType, identity),
+            serializer = StoredQuoteSnapshot.serializer()
+        )
+
     private suspend fun getStoredSeries(identity: String): StoredSeriesSnapshot? =
         appPreferenceService.getOrNull(
-            key = preferenceKey("series", identity),
+            key = preferenceKey(SnapshotPreferenceType.SERIES.preferenceType, identity),
             serializer = StoredSeriesSnapshot.serializer()
         )
 
     private suspend fun getStoredMonthlyInflation(identity: String): StoredMonthlyInflationSnapshot? =
         appPreferenceService.getOrNull(
-            key = preferenceKey("inflation-monthly", identity),
+            key = preferenceKey(SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType, identity),
             serializer = StoredMonthlyInflationSnapshot.serializer()
         )
+
+    private suspend fun getStoredInflationWindow(identity: String): StoredInflationWindow? =
+        appPreferenceService.getOrNull(
+            key = preferenceKey(SnapshotPreferenceType.INFLATION_WINDOW.preferenceType, identity),
+            serializer = StoredInflationWindow.serializer()
+        )
+
+    private suspend fun getStoredMetadata(
+        snapshotType: SnapshotPreferenceType,
+        identity: String
+    ): StoredSnapshotMetadata? = appPreferenceService.getOrNull(
+        key = metadataPreferenceKey(snapshotType.preferenceType, identity),
+        serializer = StoredSnapshotMetadata.serializer()
+    )
+
+    private suspend fun updateSuccessMetadata(
+        snapshotType: SnapshotPreferenceType,
+        identity: String,
+        canonicalChanged: Boolean,
+        sourceFrom: String?,
+        sourceTo: String?,
+        sourceAsOf: String?,
+        pointCount: Int?
+    ) {
+        val now = Instant.now(clock)
+        val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
+        val canonicalUpdatedAt = when {
+            canonicalChanged -> now
+            previous?.canonicalUpdatedAt != null -> Instant.parse(previous.canonicalUpdatedAt)
+            else -> now
+        }
+        val metadata = StoredSnapshotMetadata(
+            snapshotType = snapshotType.name,
+            identity = identity,
+            status = MarketDataSnapshotStatus.FRESH.name,
+            lastCheckedAt = now.toString(),
+            lastSuccessfulCheckAt = now.toString(),
+            canonicalUpdatedAt = canonicalUpdatedAt.toString(),
+            sourceFrom = sourceFrom,
+            sourceTo = sourceTo,
+            sourceAsOf = sourceAsOf,
+            pointCount = pointCount,
+            failureCount = 0,
+            lastFailureAt = null,
+            lastFailureReason = null
+        )
+        appPreferenceService.put(
+            key = metadataPreferenceKey(snapshotType.preferenceType, identity),
+            serializer = StoredSnapshotMetadata.serializer(),
+            value = metadata
+        )
+    }
+
+    private suspend fun updateFailureMetadata(
+        snapshotType: SnapshotPreferenceType,
+        identity: String,
+        sourceFrom: String?,
+        sourceTo: String?,
+        sourceAsOf: String?,
+        pointCount: Int?,
+        reason: String?
+    ) {
+        val now = Instant.now(clock)
+        val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
+        val metadata = StoredSnapshotMetadata(
+            snapshotType = snapshotType.name,
+            identity = identity,
+            status = MarketDataSnapshotStatus.FAILED.name,
+            lastCheckedAt = now.toString(),
+            lastSuccessfulCheckAt = previous?.lastSuccessfulCheckAt,
+            canonicalUpdatedAt = previous?.canonicalUpdatedAt,
+            sourceFrom = sourceFrom ?: previous?.sourceFrom,
+            sourceTo = sourceTo ?: previous?.sourceTo,
+            sourceAsOf = sourceAsOf ?: previous?.sourceAsOf,
+            pointCount = pointCount ?: previous?.pointCount,
+            failureCount = (previous?.failureCount ?: 0) + 1,
+            lastFailureAt = now.toString(),
+            lastFailureReason = reason?.takeIf { it.isNotBlank() } ?: previous?.lastFailureReason
+        )
+        appPreferenceService.put(
+            key = metadataPreferenceKey(snapshotType.preferenceType, identity),
+            serializer = StoredSnapshotMetadata.serializer(),
+            value = metadata
+        )
+    }
 
     private fun mergeSeriesPoints(
         existing: List<StoredPricePoint>,
@@ -245,6 +475,9 @@ class MarketDataSnapshotCacheService(
     private fun preferenceKey(type: String, identity: String): String =
         "${MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX}$type.${identity.sha256Hex()}"
 
+    private fun metadataPreferenceKey(type: String, identity: String): String =
+        "${MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX}$type.${identity.sha256Hex()}"
+
     private fun String.sha256Hex(): String =
         MessageDigest.getInstance("SHA-256")
             .digest(toByteArray(Charsets.UTF_8))
@@ -258,47 +491,83 @@ data class MarketDataSnapshotSummary(
     val sourceFrom: String?,
     val sourceTo: String?,
     val sourceAsOf: String?,
+    val pointCount: Int?,
+    val status: MarketDataSnapshotStatus,
+    val lastCheckedAt: Instant,
+    val lastSuccessfulCheckAt: Instant?,
+    val canonicalUpdatedAt: Instant?,
+    val failureCount: Int,
+    val lastFailureAt: Instant?,
+    val lastFailureReason: String?
+)
+
+enum class MarketDataSnapshotStatus {
+    FRESH,
+    DELAYED,
+    STALE,
+    FAILED
+}
+
+private data class SnapshotIdentity(
+    val snapshotType: SnapshotPreferenceType,
+    val identity: String
+)
+
+private enum class SnapshotPreferenceType(val preferenceType: String, val summaryType: String) {
+    QUOTE("quote", "QUOTE"),
+    SERIES("series", "PRICE_SERIES"),
+    INFLATION_MONTHLY("inflation-monthly", "INFLATION_MONTHLY"),
+    INFLATION_WINDOW("inflation-window", "INFLATION_WINDOW")
+}
+
+private data class PayloadSnapshotSummary(
+    val key: SnapshotIdentity,
+    val identity: String,
+    val storedAt: Instant,
+    val sourceFrom: String?,
+    val sourceTo: String?,
+    val sourceAsOf: String?,
     val pointCount: Int?
 )
 
-private fun StoredQuoteSnapshot.toSummary(cachedAt: Instant): MarketDataSnapshotSummary =
-    MarketDataSnapshotSummary(
-        snapshotType = "QUOTE",
+private fun StoredQuoteSnapshot.toPayloadSummary(storedAt: Instant): PayloadSnapshotSummary =
+    PayloadSnapshotSummary(
+        key = SnapshotIdentity(SnapshotPreferenceType.QUOTE, identity),
         identity = identity,
-        cachedAt = cachedAt,
+        storedAt = storedAt,
         sourceFrom = valuedAt,
         sourceTo = valuedAt,
         sourceAsOf = valuedAt,
         pointCount = 1
     )
 
-private fun StoredSeriesSnapshot.toSummary(cachedAt: Instant): MarketDataSnapshotSummary =
-    MarketDataSnapshotSummary(
-        snapshotType = "PRICE_SERIES",
+private fun StoredSeriesSnapshot.toPayloadSummary(storedAt: Instant): PayloadSnapshotSummary =
+    PayloadSnapshotSummary(
+        key = SnapshotIdentity(SnapshotPreferenceType.SERIES, identity),
         identity = identity,
-        cachedAt = cachedAt,
+        storedAt = storedAt,
         sourceFrom = points.minByOrNull(StoredPricePoint::date)?.date,
         sourceTo = points.maxByOrNull(StoredPricePoint::date)?.date,
         sourceAsOf = points.maxByOrNull(StoredPricePoint::date)?.date,
         pointCount = points.size
     )
 
-private fun StoredMonthlyInflationSnapshot.toSummary(cachedAt: Instant): MarketDataSnapshotSummary =
-    MarketDataSnapshotSummary(
-        snapshotType = "INFLATION_MONTHLY",
+private fun StoredMonthlyInflationSnapshot.toPayloadSummary(storedAt: Instant): PayloadSnapshotSummary =
+    PayloadSnapshotSummary(
+        key = SnapshotIdentity(SnapshotPreferenceType.INFLATION_MONTHLY, identity),
         identity = identity,
-        cachedAt = cachedAt,
+        storedAt = storedAt,
         sourceFrom = points.minByOrNull(StoredMonthlyInflationPoint::month)?.month,
         sourceTo = points.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
         sourceAsOf = points.maxByOrNull(StoredMonthlyInflationPoint::month)?.month,
         pointCount = points.size
     )
 
-private fun StoredInflationWindow.toSummary(cachedAt: Instant): MarketDataSnapshotSummary =
-    MarketDataSnapshotSummary(
-        snapshotType = "INFLATION_WINDOW",
+private fun StoredInflationWindow.toPayloadSummary(storedAt: Instant): PayloadSnapshotSummary =
+    PayloadSnapshotSummary(
+        key = SnapshotIdentity(SnapshotPreferenceType.INFLATION_WINDOW, from),
         identity = from,
-        cachedAt = cachedAt,
+        storedAt = storedAt,
         sourceFrom = from,
         sourceTo = sourceToMonth(from = from, untilExclusive = until),
         sourceAsOf = until,
@@ -317,12 +586,30 @@ private fun sourceToMonth(from: String, untilExclusive: String): String =
     }.getOrDefault(untilExclusive)
 
 @Serializable
+internal data class StoredSnapshotMetadata(
+    val snapshotType: String,
+    val identity: String,
+    val status: String,
+    val lastCheckedAt: String,
+    val lastSuccessfulCheckAt: String? = null,
+    val canonicalUpdatedAt: String? = null,
+    val sourceFrom: String? = null,
+    val sourceTo: String? = null,
+    val sourceAsOf: String? = null,
+    val pointCount: Int? = null,
+    val failureCount: Int = 0,
+    val lastFailureAt: String? = null,
+    val lastFailureReason: String? = null
+)
+
+@Serializable
 internal data class StoredQuoteSnapshot(
     val identity: String,
     val valuedAt: String,
     val pricePerUnitPln: String,
     val pricePerUnitNative: String? = null,
-    val currentRatePercent: String? = null
+    val currentRatePercent: String? = null,
+    val previousClosePln: String? = null
 )
 
 @Serializable

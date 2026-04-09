@@ -29,6 +29,7 @@ class RemoteFxRateHistoryProvider(
             snapshotCacheService.putSeries(identity = fxHistoryIdentity(currency), prices = prices)
             FxRateHistoryResult.Success(prices = prices)
         } catch (exception: MarketDataClientException) {
+            snapshotCacheService.recordSeriesFailure(identity = fxHistoryIdentity(currency), reason = exception.message)
             logger.warn(
                 "FX rate history request failed for {} in {}..{}: {}",
                 currency, from, to, exception.message
@@ -36,6 +37,7 @@ class RemoteFxRateHistoryProvider(
             cachedFxResult(currency, from, to)
                 ?: FxRateHistoryResult.Failure(exception.message ?: "FX history request failed.")
         } catch (exception: Exception) {
+            snapshotCacheService.recordSeriesFailure(identity = fxHistoryIdentity(currency), reason = exception.message)
             logger.warn(
                 "Unexpected FX rate history error for {} in {}..{}",
                 currency, from, to, exception
