@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { createStorageMock } from './test/app-smoke-fixtures'
 
 describe('App', () => {
-  beforeEach(() => {
+  afterEach(() => {
     cleanup()
+  })
+
+  beforeEach(() => {
     const storage = createStorageMock()
     Object.defineProperty(window, 'localStorage', {
       value: storage,
