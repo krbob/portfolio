@@ -14,6 +14,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChartR
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const onChartReadyRef = useRef(onChartReady)
+  const initialHeightRef = useRef(height)
   const [chartReady, setChartReady] = useState(false)
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChartR
 
     const chart = createChart(
       containerRef.current,
-      createPortfolioChartOptions(containerRef.current.clientWidth, height),
+      createPortfolioChartOptions(containerRef.current.clientWidth, initialHeightRef.current),
     )
     chartRef.current = chart
 
