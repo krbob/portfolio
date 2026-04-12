@@ -65,7 +65,7 @@ Those snapshots are not treated as fresh truth. They exist so the product can de
 - `STALE` when fallback data is usable but old
 - partial or missing coverage statuses when full valuation is impossible
 
-This is why readiness, data-quality panels, and market-data snapshot views are part of the settings surface.
+This is why readiness, data-quality panels, and market-data snapshot views are part of the operational UI surface under `System` and the dashboard.
 
 ## Runtime modes
 

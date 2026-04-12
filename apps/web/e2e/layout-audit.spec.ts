@@ -63,7 +63,7 @@ test.describe('Desktop layout audit', () => {
   })
 
   test('Portfolio > Accounts', async ({ page }) => {
-    await page.goto('/portfolio?tab=accounts')
+    await page.goto('/portfolio/accounts')
     await waitForContent(page)
     await snap(page, 'desktop-03-accounts')
   })
@@ -95,13 +95,13 @@ test.describe('Desktop layout audit', () => {
   })
 
   test('Strategy > Targets', async ({ page }) => {
-    await page.goto('/strategy?tab=targets')
+    await page.goto('/strategy/targets')
     await waitForContent(page)
     await snap(page, 'desktop-08-strategy-targets')
   })
 
   test('Strategy > Benchmarks', async ({ page }) => {
-    await page.goto('/strategy?tab=benchmarks')
+    await page.goto('/strategy/benchmarks')
     await waitForContent(page)
     await snap(page, 'desktop-09-strategy-benchmarks')
   })
@@ -113,13 +113,13 @@ test.describe('Desktop layout audit', () => {
   })
 
   test('Data > Transfer', async ({ page }) => {
-    await page.goto('/data?tab=transfer')
+    await page.goto('/data/transfer')
     await waitForContent(page)
     await snap(page, 'desktop-11-data-transfer')
   })
 
   test('Data > Backups', async ({ page }) => {
-    await page.goto('/data?tab=backups')
+    await page.goto('/data/backups')
     await waitForContent(page)
     await snap(page, 'desktop-12-data-backups')
   })
@@ -131,19 +131,19 @@ test.describe('Desktop layout audit', () => {
   })
 
   test('System > Market Data', async ({ page }) => {
-    await page.goto('/system?tab=market-data')
+    await page.goto('/system/market-data')
     await waitForContent(page)
     await snap(page, 'desktop-14-system-market-data')
   })
 
   test('System > Audit', async ({ page }) => {
-    await page.goto('/system?tab=audit')
+    await page.goto('/system/audit')
     await waitForContent(page)
     await snap(page, 'desktop-15-system-audit')
   })
 
   test('System > App', async ({ page }) => {
-    await page.goto('/system?tab=app')
+    await page.goto('/system/app')
     await waitForContent(page)
     await snap(page, 'desktop-16-system-app')
   })
@@ -167,7 +167,7 @@ test.describe('Mobile layout audit', () => {
   })
 
   test('Portfolio > Accounts', async ({ page }) => {
-    await page.goto('/portfolio?tab=accounts')
+    await page.goto('/portfolio/accounts')
     await waitForContent(page)
     await snap(page, 'mobile-03-accounts')
   })
@@ -211,7 +211,7 @@ test.describe('Mobile layout audit', () => {
   })
 
   test('Strategy > Targets', async ({ page }) => {
-    await page.goto('/strategy?tab=targets')
+    await page.goto('/strategy/targets')
     await waitForContent(page)
     await snap(page, 'mobile-09-strategy-targets')
   })
@@ -223,7 +223,7 @@ test.describe('Mobile layout audit', () => {
   })
 
   test('Data > Backups', async ({ page }) => {
-    await page.goto('/data?tab=backups')
+    await page.goto('/data/backups')
     await waitForContent(page)
     await snap(page, 'mobile-11-data-backups')
   })
@@ -235,7 +235,7 @@ test.describe('Mobile layout audit', () => {
   })
 
   test('System > App', async ({ page }) => {
-    await page.goto('/system?tab=app')
+    await page.goto('/system/app')
     await waitForContent(page)
     await snap(page, 'mobile-13-system-app')
   })

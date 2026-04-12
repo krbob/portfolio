@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/layout'
 import { PortfolioBenchmarkSettingsSection } from '../components/PortfolioBenchmarkSettingsSection'
 import { PortfolioTargetsSection } from '../components/PortfolioTargetsSection'
@@ -6,27 +6,35 @@ import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { TabBar } from '../components/ui'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 import { InstrumentsManagement } from './InstrumentsScreen'
 
 type StrategyTab = 'instruments' | 'targets' | 'benchmarks'
 
-const VALID_TABS: StrategyTab[] = ['instruments', 'targets', 'benchmarks']
-
-function resolveTab(raw: string | null): StrategyTab {
-  return VALID_TABS.includes(raw as StrategyTab) ? (raw as StrategyTab) : 'instruments'
+function resolveTab(pathname: string): StrategyTab {
+  switch (pathname) {
+    case appRoutes.strategy.targets:
+      return 'targets'
+    case appRoutes.strategy.benchmarks:
+      return 'benchmarks'
+    default:
+      return 'instruments'
+  }
 }
 
 export function StrategyScreen() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = resolveTab(searchParams.get('tab'))
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = resolveTab(location.pathname)
   const staleAlert = useStaleMarketDataAlert()
 
   function handleTabChange(tab: StrategyTab) {
-    if (tab === 'instruments') {
-      setSearchParams({}, { replace: true })
-    } else {
-      setSearchParams({ tab }, { replace: true })
-    }
+    const targetRoute = {
+      instruments: appRoutes.strategy.instruments,
+      targets: appRoutes.strategy.targets,
+      benchmarks: appRoutes.strategy.benchmarks,
+    }[tab]
+    navigate(targetRoute, { replace: true })
   }
 
   return (

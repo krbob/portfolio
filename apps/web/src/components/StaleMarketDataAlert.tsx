@@ -3,6 +3,7 @@ import { Card, FadeIn } from './ui'
 import type { StaleMarketDataAlert as StaleMarketDataAlertModel } from '../lib/stale-market-data-alert'
 import { formatDateTime } from '../lib/format'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 import { badge, badgeVariants, btnGhost } from '../lib/styles'
 
 export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertModel | null }) {
@@ -23,13 +24,13 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to="/system" className={btnGhost}>
+            <Link to={appRoutes.system.diagnostics} className={btnGhost}>
               {t('staleAlert.openDataQuality')}
             </Link>
-            <Link to="/system?tab=market-data" className={btnGhost}>
+            <Link to={appRoutes.system.marketData} className={btnGhost}>
               {t('staleAlert.openMarketData')}
             </Link>
-            <Link to="/system" className={btnGhost}>
+            <Link to={appRoutes.system.diagnostics} className={btnGhost}>
               {t('staleAlert.openHealth')}
             </Link>
           </div>

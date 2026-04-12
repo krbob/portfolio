@@ -1555,7 +1555,7 @@ describe('App', () => {
     })
   })
 
-  it('renders targets tab via /strategy?tab=targets', async () => {
+  it('renders targets tab via /strategy/targets', async () => {
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
 
@@ -1647,7 +1647,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/strategy?tab=targets']}>
+      <MemoryRouter initialEntries={['/strategy/targets']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -1778,7 +1778,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
+      <MemoryRouter initialEntries={['/portfolio/accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>

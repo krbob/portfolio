@@ -10,6 +10,7 @@ import {
 } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 import { badge, badgeVariants } from '../lib/styles'
 import { Card, SectionHeader } from './ui'
 
@@ -53,7 +54,7 @@ export function PortfolioSetupGuideSection() {
       emptyDescription: t('setup.accountsEmpty'),
       action: {
         kind: 'route',
-        to: '/accounts',
+        to: appRoutes.portfolio.accounts,
         label: t('setup.openAccounts'),
       },
     }),
@@ -70,7 +71,7 @@ export function PortfolioSetupGuideSection() {
       emptyDescription: t('setup.instrumentsEmpty'),
       action: {
         kind: 'route',
-        to: '/instruments',
+        to: appRoutes.strategy.instruments,
         label: t('setup.openInstruments'),
       },
     }),
@@ -104,7 +105,7 @@ export function PortfolioSetupGuideSection() {
       emptyDescription: t('setup.targetsEmpty'),
       action: {
         kind: 'route',
-        to: '/strategy?tab=targets',
+        to: appRoutes.strategy.targets,
         label: t('setup.openTargets'),
       },
     }),
@@ -125,7 +126,7 @@ export function PortfolioSetupGuideSection() {
           : 'action',
       action: {
         kind: 'route',
-        to: '/strategy?tab=benchmarks',
+        to: appRoutes.strategy.benchmarks,
         label: t('setup.openBenchmarks'),
       },
     },

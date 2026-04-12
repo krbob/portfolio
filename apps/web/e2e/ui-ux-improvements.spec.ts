@@ -28,7 +28,7 @@ test.describe('UI/UX improvements', () => {
 
     // Switch to targets tab
     await targetsTab.click()
-    await expect(page).toHaveURL(/\/strategy\?tab=targets$/)
+    await expect(page).toHaveURL(/\/strategy\/targets$/)
   })
 
   test('portfolio screen with tab navigation works', async ({ page }) => {
@@ -43,7 +43,7 @@ test.describe('UI/UX improvements', () => {
 
     // Switch to accounts tab
     await accountsTab.click()
-    await expect(page).toHaveURL(/\/portfolio\?tab=accounts$/)
+    await expect(page).toHaveURL(/\/portfolio\/accounts$/)
   })
 
   test('performance screen renders stat cards and tabs', async ({ page }) => {

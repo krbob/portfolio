@@ -10,11 +10,11 @@ Keep this file short. Active priorities only.
 - keep mobile usage practical for a self-hosted single-user setup
 - improve user-facing explanations where the product already has strong logic
 
-### 2. What-if planning
+### 2. What-if planner v2
 
-- simulate future contributions and target changes without mutating canonical history
-- compare hypothetical allocation and rebalance outcomes against the current portfolio
-- keep simulations clearly separated from real transactions
+- extend the shipped contribution planner from asset-class splits to account and instrument-level decisions
+- compare candidate contribution plans against current drift without mutating canonical history
+- keep simulations clearly separated from real transactions and real audit history
 
 ### 3. Operational confidence
 

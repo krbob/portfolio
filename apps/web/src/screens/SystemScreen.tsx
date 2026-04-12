@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/layout'
 import { MarketDataSnapshotsSection } from '../components/MarketDataSnapshotsSection'
 import { MobileAppSection } from '../components/MobileAppSection'
@@ -8,25 +8,27 @@ import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
 import { Card, SectionHeader, TabBar } from '../components/ui'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 
 type SystemTab = 'diagnostics' | 'market-data' | 'audit' | 'app'
 
-const VALID_TABS: SystemTab[] = ['diagnostics', 'market-data', 'audit', 'app']
-
-function resolveTab(raw: string | null): SystemTab {
-  return VALID_TABS.includes(raw as SystemTab) ? (raw as SystemTab) : 'diagnostics'
+function resolveTab(pathname: string): SystemTab {
+  return whenPathname(pathname)
 }
 
 export function SystemScreen() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = resolveTab(searchParams.get('tab'))
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = resolveTab(location.pathname)
 
   function handleTabChange(tab: SystemTab) {
-    if (tab === 'diagnostics') {
-      setSearchParams({}, { replace: true })
-    } else {
-      setSearchParams({ tab }, { replace: true })
-    }
+    const targetRoute = {
+      diagnostics: appRoutes.system.diagnostics,
+      'market-data': appRoutes.system.marketData,
+      audit: appRoutes.system.audit,
+      app: appRoutes.system.app,
+    }[tab]
+    navigate(targetRoute, { replace: true })
   }
 
   return (
@@ -50,6 +52,19 @@ export function SystemScreen() {
       </div>
     </>
   )
+}
+
+function whenPathname(pathname: string): SystemTab {
+  switch (pathname) {
+    case appRoutes.system.marketData:
+      return 'market-data'
+    case appRoutes.system.audit:
+      return 'audit'
+    case appRoutes.system.app:
+      return 'app'
+    default:
+      return 'diagnostics'
+  }
 }
 
 function DiagnosticsContent() {

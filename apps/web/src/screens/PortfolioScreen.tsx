@@ -1,22 +1,20 @@
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/layout'
 import { TabBar } from '../components/ui'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 import { HoldingsContent } from './HoldingsScreen'
 import { AccountsContent } from './AccountsScreen'
 
 type PortfolioTab = 'holdings' | 'accounts'
 
 export function PortfolioScreen() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab: PortfolioTab = searchParams.get('tab') === 'accounts' ? 'accounts' : 'holdings'
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab: PortfolioTab = location.pathname === appRoutes.portfolio.accounts ? 'accounts' : 'holdings'
 
   function handleTabChange(tab: PortfolioTab) {
-    if (tab === 'accounts') {
-      setSearchParams({ tab: 'accounts' }, { replace: true })
-    } else {
-      setSearchParams({}, { replace: true })
-    }
+    navigate(tab === 'accounts' ? appRoutes.portfolio.accounts : appRoutes.portfolio.holdings, { replace: true })
   }
 
   return (

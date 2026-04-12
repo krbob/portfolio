@@ -5,6 +5,7 @@ import { useAppReadiness } from '../../hooks/use-app-readiness'
 import { useAuthSession, useLogout } from '../../hooks/use-auth-session'
 import { StatusDot } from '../ui/StatusDot'
 import { btnGhost } from '../../lib/styles'
+import { appRoutes } from '../../lib/routes'
 import { navSections, type NavItem } from './navigation'
 import { useI18n } from '../../lib/i18n'
 import { formatMessage, t } from '../../lib/messages'
@@ -109,7 +110,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
               : formatMessage(t('layout.healthSummary'), { blockers: blockingChecks, notices: advisoryChecks })}
         </p>
         <NavLink
-          to="/system"
+          to={appRoutes.system.diagnostics}
           onClick={onNavigate}
           className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
         >

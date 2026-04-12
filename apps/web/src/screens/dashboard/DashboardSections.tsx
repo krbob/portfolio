@@ -17,6 +17,7 @@ import {
   labelPortfolioValuationBasis,
   labelPrimaryPortfolioValueMetric,
 } from '../../lib/portfolio-presentation'
+import { appRoutes } from '../../lib/routes'
 import { btnSecondary, card } from '../../lib/styles'
 
 export function DashboardHeroStats({
@@ -297,7 +298,7 @@ export function DashboardTargetDriftCard({
               >
                 {t('dashboardSections.planContribution')}
               </button>
-              <Link to="/strategy?tab=targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
+              <Link to={appRoutes.strategy.targets} className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
                 {t('dashboardSections.openTargetAllocation')} →
               </Link>
             </div>
@@ -409,7 +410,7 @@ export function DashboardDataQualityCard({
           </p>
         ))}
       </div>
-      <Link to="/system" className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
+      <Link to={appRoutes.system.diagnostics} className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
         {t('dashboardSections.openDataQuality')}
       </Link>
     </div>

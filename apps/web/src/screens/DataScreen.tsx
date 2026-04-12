@@ -1,29 +1,37 @@
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/layout'
 import { PortfolioBackupsSection } from '../components/PortfolioBackupsSection'
 import { PortfolioStateSection } from '../components/PortfolioStateSection'
 import { TransactionImportSection } from '../components/TransactionImportSection'
 import { TabBar } from '../components/ui'
 import { t } from '../lib/messages'
+import { appRoutes } from '../lib/routes'
 
 type DataTab = 'import' | 'transfer' | 'backups'
 
-const VALID_TABS: DataTab[] = ['import', 'transfer', 'backups']
-
-function resolveTab(raw: string | null): DataTab {
-  return VALID_TABS.includes(raw as DataTab) ? (raw as DataTab) : 'import'
+function resolveTab(pathname: string): DataTab {
+  switch (pathname) {
+    case appRoutes.data.transfer:
+      return 'transfer'
+    case appRoutes.data.backups:
+      return 'backups'
+    default:
+      return 'import'
+  }
 }
 
 export function DataScreen() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = resolveTab(searchParams.get('tab'))
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = resolveTab(location.pathname)
 
   function handleTabChange(tab: DataTab) {
-    if (tab === 'import') {
-      setSearchParams({}, { replace: true })
-    } else {
-      setSearchParams({ tab }, { replace: true })
-    }
+    const targetRoute = {
+      import: appRoutes.data.import,
+      transfer: appRoutes.data.transfer,
+      backups: appRoutes.data.backups,
+    }[tab]
+    navigate(targetRoute, { replace: true })
   }
 
   return (

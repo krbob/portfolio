@@ -424,7 +424,7 @@ describe('App', () => {
     expect(await screen.findByText(/runtime health/i)).toBeInTheDocument()
     expect(await screen.findByText(/healthy/i)).toBeInTheDocument()
     expect(await screen.findByText(/0 blockers · 1 notices/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/system')
+    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/system/diagnostics')
 
     // Dashboard page header
     expect(await screen.findByRole('heading', { name: /^dashboard$/i })).toBeInTheDocument()

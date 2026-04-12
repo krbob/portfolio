@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/layout'
 import { ToastProvider } from './components/ui'
 import { t } from './lib/messages'
+import { appRoutes } from './lib/routes'
 
 const DashboardScreen = lazy(async () => {
   const module = await import('./screens/DashboardScreen')
@@ -52,20 +53,25 @@ export function App() {
         <ErrorBoundary onReset={handleErrorReset}>
           <Suspense fallback={<RouteLoadingState />}>
             <Routes>
-              <Route path="/" element={<DashboardScreen />} />
-              <Route path="/portfolio" element={<PortfolioScreen />} />
-              <Route path="/holdings" element={<Navigate to="/portfolio" replace />} />
-              <Route path="/accounts" element={<Navigate to="/portfolio?tab=accounts" replace />} />
-              <Route path="/instruments" element={<Navigate to="/strategy" replace />} />
-              <Route path="/performance" element={<PerformanceScreen />} />
-              <Route path="/returns" element={<Navigate to="/performance" replace />} />
-              <Route path="/charts" element={<Navigate to="/performance" replace />} />
-              <Route path="/transactions" element={<TransactionsScreen />} />
-              <Route path="/strategy" element={<StrategyScreen />} />
-              <Route path="/data" element={<DataScreen />} />
-              <Route path="/system" element={<SystemScreen />} />
-              <Route path="/settings" element={<Navigate to="/strategy" replace />} />
-              <Route path="/backups" element={<Navigate to="/data?tab=backups" replace />} />
+              <Route path={appRoutes.dashboard} element={<DashboardScreen />} />
+              <Route path={appRoutes.portfolio.base} element={<Navigate to={appRoutes.portfolio.holdings} replace />} />
+              <Route path={appRoutes.portfolio.holdings} element={<PortfolioScreen />} />
+              <Route path={appRoutes.portfolio.accounts} element={<PortfolioScreen />} />
+              <Route path={appRoutes.performance} element={<PerformanceScreen />} />
+              <Route path={appRoutes.transactions} element={<TransactionsScreen />} />
+              <Route path={appRoutes.strategy.base} element={<Navigate to={appRoutes.strategy.instruments} replace />} />
+              <Route path={appRoutes.strategy.instruments} element={<StrategyScreen />} />
+              <Route path={appRoutes.strategy.targets} element={<StrategyScreen />} />
+              <Route path={appRoutes.strategy.benchmarks} element={<StrategyScreen />} />
+              <Route path={appRoutes.data.base} element={<Navigate to={appRoutes.data.import} replace />} />
+              <Route path={appRoutes.data.import} element={<DataScreen />} />
+              <Route path={appRoutes.data.transfer} element={<DataScreen />} />
+              <Route path={appRoutes.data.backups} element={<DataScreen />} />
+              <Route path={appRoutes.system.base} element={<Navigate to={appRoutes.system.diagnostics} replace />} />
+              <Route path={appRoutes.system.diagnostics} element={<SystemScreen />} />
+              <Route path={appRoutes.system.marketData} element={<SystemScreen />} />
+              <Route path={appRoutes.system.audit} element={<SystemScreen />} />
+              <Route path={appRoutes.system.app} element={<SystemScreen />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

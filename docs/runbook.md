@@ -29,12 +29,12 @@ curl -sSf http://127.0.0.1:4174/api/v1/meta
 Then confirm in the UI:
 
 - login still works if auth is enabled
-- `Portfolio` screen shows both Holdings and Accounts tabs
-- `Settings -> Health` is readable
-- `Settings -> Instruments` shows the instrument catalog
-- `Settings -> Import / export` preview still opens
-- `Settings -> CSV Import` shows import profiles
-- `Settings -> Targets` still shows current target history
+- `Portfolio -> Holdings` and `Portfolio -> Accounts` both render
+- `Strategy -> Instruments` shows the instrument catalog
+- `Strategy -> Targets` still shows current target history
+- `Data -> Import` preview still opens
+- `Data -> Backups` is readable
+- `System -> Diagnostics` and `System -> Market data` are readable
 
 ## Import and restore workflow
 
@@ -88,9 +88,9 @@ Operational interpretation:
 
 When investigating market-data issues:
 
-1. check `Settings -> Health`
-2. check `Settings -> Data quality`
-3. check `Settings -> Market data`
+1. check `System -> Diagnostics`
+2. check `System -> Market data`
+3. check `Dashboard -> Data quality`
 4. inspect recent audit events for upstream failures
 
 ## Auth guardrails

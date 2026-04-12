@@ -9,8 +9,8 @@ import { createAppFetchMock, createStorageMock, createTestQueryClient } from './
 const ROUTE_CASES = [
   { route: '/', heading: 'Pulpit' },
   { route: '/portfolio', heading: 'Portfel' },
-  { route: '/portfolio?tab=accounts', heading: 'Portfel' },
-  { route: '/instruments', heading: 'Strategia portfela' },
+  { route: '/portfolio/accounts', heading: 'Portfel' },
+  { route: '/strategy/instruments', heading: 'Strategia portfela' },
   { route: '/transactions', heading: 'Transakcje' },
   { route: '/performance', heading: 'Wyniki' },
 ] as const

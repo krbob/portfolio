@@ -9,7 +9,6 @@ export interface NavItem {
   }
   icon: ReactNode
   end?: boolean
-  aliases?: string[]
 }
 
 export const investingNav: NavItem[] = [
@@ -22,13 +21,11 @@ export const investingNav: NavItem[] = [
   {
     to: '/portfolio',
     label: { en: 'Portfolio', pl: 'Portfel' },
-    aliases: ['/holdings', '/accounts'],
     icon: <IconPortfolio />,
   },
   {
     to: '/performance',
     label: { en: 'Performance', pl: 'Wyniki' },
-    aliases: ['/returns', '/charts'],
     icon: <IconPerformance />,
   },
   {
@@ -42,13 +39,11 @@ export const managementNav: NavItem[] = [
   {
     to: '/strategy',
     label: { en: 'Strategy', pl: 'Strategia' },
-    aliases: ['/instruments'],
     icon: <IconStrategy />,
   },
   {
     to: '/data',
     label: { en: 'Data', pl: 'Dane' },
-    aliases: ['/backups'],
     icon: <IconData />,
   },
   {
@@ -84,8 +79,5 @@ function matchesRoute(pathname: string, item: NavItem) {
   if (item.end && pathname === item.to) {
     return true
   }
-  if (!item.end && pathname.startsWith(item.to)) {
-    return true
-  }
-  return item.aliases?.some((alias) => pathname.startsWith(alias)) ?? false
+  return !item.end && pathname.startsWith(item.to)
 }

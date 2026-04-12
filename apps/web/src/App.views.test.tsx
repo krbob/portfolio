@@ -168,7 +168,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
+      <MemoryRouter initialEntries={['/portfolio/accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
@@ -618,7 +618,7 @@ describe('App', () => {
     })
 
     render(
-      <MemoryRouter initialEntries={['/portfolio?tab=accounts']}>
+      <MemoryRouter initialEntries={['/portfolio/accounts']}>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>

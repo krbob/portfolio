@@ -12,6 +12,7 @@ import {
   useUpdateTransaction,
 } from '../hooks/use-write-model'
 import { TransactionJournal } from '../screens/transactions/TransactionJournal'
+import { appRoutes } from '../lib/routes'
 
 export function TransactionsSection() {
   const accountsQuery = useAccounts()
@@ -83,7 +84,7 @@ export function TransactionsSection() {
       <EmptyState
         title={t('transactionsOrch.noAccountsTitle')}
         description={t('transactionsOrch.noAccountsDescription')}
-        action={{ label: t('transactionsOrch.goToAccounts'), to: '/accounts' }}
+        action={{ label: t('transactionsOrch.goToAccounts'), to: appRoutes.portfolio.accounts }}
       />
     )
   }

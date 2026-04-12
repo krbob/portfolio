@@ -11,6 +11,7 @@ import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory 
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
+import { appRoutes } from '../lib/routes'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
 import { FadeIn, RefreshIndicator } from '../components/ui'
 import {
@@ -118,7 +119,7 @@ export function DashboardScreen() {
         <EmptyState
           title={t('dashboard.welcomeTitle')}
           description={t('dashboard.welcomeDescription')}
-          action={{ label: t('dashboard.welcomeAction'), to: '/portfolio?tab=accounts' }}
+          action={{ label: t('dashboard.welcomeAction'), to: appRoutes.portfolio.accounts }}
         />
       </>
     )

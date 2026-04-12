@@ -6,12 +6,12 @@ test('main seeded flow renders across core routes @smoke', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Portfel' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Portfel' }).click()
-  await expect(page).toHaveURL(/\/portfolio$/)
+  await expect(page).toHaveURL(/\/portfolio\/holdings$/)
   await expect(page.getByRole('heading', { level: 2, name: 'Portfel', exact: true })).toBeVisible()
   await expect(page.locator('main').getByText('EDO1235').first()).toBeVisible()
 
   await page.getByRole('tab', { name: 'Konta' }).click()
-  await expect(page).toHaveURL(/\/portfolio\?tab=accounts$/)
+  await expect(page).toHaveURL(/\/portfolio\/accounts$/)
   await expect(page.locator('main').getByText('Treasury Bonds Register').first()).toBeVisible()
 
   await page.getByRole('link', { name: 'Transakcje' }).click()
@@ -25,6 +25,6 @@ test('main seeded flow renders across core routes @smoke', async ({ page }) => {
   await expect(page.locator('main').getByText('Benchmarki').first()).toBeVisible()
 
   await page.getByRole('link', { name: 'Strategia' }).click()
-  await expect(page).toHaveURL(/\/strategy$/)
+  await expect(page).toHaveURL(/\/strategy\/instruments$/)
   await expect(page.getByRole('heading', { level: 2, name: 'Strategia portfela', exact: true })).toBeVisible()
 })

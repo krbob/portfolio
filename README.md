@@ -23,6 +23,7 @@ The product is built around a few explicit rules:
 
 - accounts, instruments, transactions, targets, and reusable CSV import profiles
 - holdings, allocation drift, and contribution-first rebalance guidance
+- dashboard contribution planner for splitting a new deposit against current drift
 - daily history and performance in `PLN`, `USD`, and gold
 - `MWRR`, `TWR`, real return, and benchmark-relative comparison
 - benchmark configuration, including target-mix and custom references
