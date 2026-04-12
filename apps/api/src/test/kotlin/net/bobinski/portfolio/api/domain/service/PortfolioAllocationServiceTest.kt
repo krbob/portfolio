@@ -429,6 +429,156 @@ class PortfolioAllocationServiceTest {
     }
 
     @Test
+    fun `contribution plan exposes minimal contribution to get back within tolerance and scenario comparison`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "6000.00", "60"))
+        transactionRepository.save(buyTransaction(BOND_ID, "2000.00", "20", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val plan = allocationService.contributionPlan(BigDecimal("4000.00"))
+        val minimalContribution = requireNotNull(plan.minimalContributionToTolerancePln)
+        val requestedScenario = plan.scenarios.first { it.amountPln == BigDecimal("4000.00") }
+        val minimalScenario = plan.scenarios.first { it.amountPln == minimalContribution }
+        val minimalEquities = minimalScenario.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val minimalBonds = minimalScenario.buckets.first { it.assetClass == AssetClass.BONDS }
+
+        assertEquals(BigDecimal("29960.05"), minimalContribution)
+        assertEquals(false, requestedScenario.withinTolerance)
+        assertEquals(BigDecimal("533.33"), requestedScenario.buckets.first { it.assetClass == AssetClass.BONDS }.plannedContributionPln)
+        assertEquals(true, minimalScenario.withinTolerance)
+        assertEquals(0, minimalScenario.breachedBucketCount)
+        assertEquals(BigDecimal("0.00"), minimalScenario.remainingContributionGapPln)
+        assertEquals(minimalContribution, minimalEquities.plannedContributionPln.add(minimalBonds.plannedContributionPln))
+        assertEquals(true, minimalEquities.plannedContributionPln > minimalBonds.plannedContributionPln)
+        assertEquals(BigDecimal("80.00"), plan.targetMix.equitiesTargetWeightPct)
+        assertEquals(BigDecimal("20.00"), plan.targetMix.bondsTargetWeightPct)
+        assertEquals(false, plan.targetMix.overridden)
+    }
+
+    @Test
+    fun `contribution plan can simulate an alternative equities target without changing settings`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "7500.00", "75"))
+        transactionRepository.save(buyTransaction(BOND_ID, "2500.00", "25", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val plan = allocationService.contributionPlan(
+            amountPln = BigDecimal("10000.00"),
+            equitiesTargetWeightPct = BigDecimal("75.00")
+        )
+        val equities = plan.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val bonds = plan.buckets.first { it.assetClass == AssetClass.BONDS }
+
+        assertEquals(true, plan.targetMix.overridden)
+        assertEquals(BigDecimal("75.00"), plan.targetMix.equitiesTargetWeightPct)
+        assertEquals(BigDecimal("25.00"), plan.targetMix.bondsTargetWeightPct)
+        assertEquals(BigDecimal("7500.00"), equities.plannedContributionPln)
+        assertEquals(BigDecimal("2500.00"), bonds.plannedContributionPln)
+
+        val persistedSummary = allocationService.summary()
+        assertEquals(BigDecimal("80.00"), persistedSummary.buckets.first { it.assetClass == AssetClass.EQUITIES }.targetWeightPct)
+        assertEquals(BigDecimal("20.00"), persistedSummary.buckets.first { it.assetClass == AssetClass.BONDS }.targetWeightPct)
+    }
+
+    @Test
     fun `contribution plan requires configured targets`() = runBlocking {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()

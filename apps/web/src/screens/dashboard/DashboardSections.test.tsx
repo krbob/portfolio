@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import type { PortfolioAllocationSummary } from '../../api/read-model'
+import type { PortfolioAllocationSummary, PortfolioContributionPlan } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
 import { usePortfolioContributionPlan } from '../../hooks/use-read-model'
 import { DashboardTargetDriftCard } from './DashboardSections'
@@ -26,11 +26,21 @@ function setLanguage(language: 'pl' | 'en') {
   })
 }
 
-function contributionPlanQueryStub(amountPln: string | null) {
+function contributionPlanQueryStub(
+  amountPln: string | null,
+  { equitiesTargetWeightPct }: { equitiesTargetWeightPct?: string | null } = {},
+) {
+  const simulated = equitiesTargetWeightPct != null
   return {
     data: amountPln
-      ? {
+      ? ({
           amountPln: '120000.00',
+          targetMix: {
+            equitiesTargetWeightPct: simulated ? equitiesTargetWeightPct : '80.00',
+            bondsTargetWeightPct: simulated ? '25.00' : '20.00',
+            cashTargetWeightPct: '0.00',
+            overridden: simulated,
+          },
           projected: {
             asOf: '2026-03-13',
             valuationState: 'MARK_TO_MARKET',
@@ -51,22 +61,71 @@ function contributionPlanQueryStub(amountPln: string | null) {
             requiresSelling: false,
             buckets: [],
           },
+          minimalContributionToTolerancePln: simulated ? '60000.00' : '7800.00',
+          scenarios: [
+            {
+              amountPln: '60000.00',
+              withinTolerance: true,
+              breachedBucketCount: 0,
+              remainingContributionGapPln: '0.00',
+              projectedAction: 'WITHIN_TOLERANCE',
+              buckets: [
+                {
+                  assetClass: 'EQUITIES',
+                  plannedContributionPln: simulated ? '45000.00' : '46800.00',
+                  projectedWeightPct: simulated ? '75.00' : '80.00',
+                  projectedDriftPctPoints: '0.00',
+                  projectedStatus: 'ON_TARGET',
+                },
+                {
+                  assetClass: 'BONDS',
+                  plannedContributionPln: simulated ? '15000.00' : '13200.00',
+                  projectedWeightPct: simulated ? '25.00' : '20.00',
+                  projectedDriftPctPoints: '0.00',
+                  projectedStatus: 'ON_TARGET',
+                },
+              ],
+            },
+            {
+              amountPln: '120000.00',
+              withinTolerance: true,
+              breachedBucketCount: 0,
+              remainingContributionGapPln: '0.00',
+              projectedAction: 'WITHIN_TOLERANCE',
+              buckets: [
+                {
+                  assetClass: 'EQUITIES',
+                  plannedContributionPln: simulated ? '90000.00' : '92246.02',
+                  projectedWeightPct: simulated ? '75.00' : '80.17',
+                  projectedDriftPctPoints: simulated ? '0.00' : '0.17',
+                  projectedStatus: 'ON_TARGET',
+                },
+                {
+                  assetClass: 'BONDS',
+                  plannedContributionPln: simulated ? '30000.00' : '27753.98',
+                  projectedWeightPct: simulated ? '25.00' : '19.83',
+                  projectedDriftPctPoints: simulated ? '0.00' : '-0.17',
+                  projectedStatus: 'ON_TARGET',
+                },
+              ],
+            },
+          ],
           buckets: [
             {
               assetClass: 'EQUITIES',
-              plannedContributionPln: '92246.02',
+              plannedContributionPln: simulated ? '90000.00' : '92246.02',
               projectedValuePln: '438642.44',
-              projectedWeightPct: '80.17',
-              projectedDriftPctPoints: '0.17',
+              projectedWeightPct: simulated ? '75.00' : '80.17',
+              projectedDriftPctPoints: simulated ? '0.00' : '0.17',
               projectedGapValuePln: '-934.01',
               projectedStatus: 'ON_TARGET',
             },
             {
               assetClass: 'BONDS',
-              plannedContributionPln: '27753.98',
+              plannedContributionPln: simulated ? '30000.00' : '27753.98',
               projectedValuePln: '108488.62',
-              projectedWeightPct: '19.83',
-              projectedDriftPctPoints: '-0.17',
+              projectedWeightPct: simulated ? '25.00' : '19.83',
+              projectedDriftPctPoints: simulated ? '0.00' : '-0.17',
               projectedGapValuePln: '938.49',
               projectedStatus: 'ON_TARGET',
             },
@@ -80,7 +139,7 @@ function contributionPlanQueryStub(amountPln: string | null) {
               projectedStatus: 'UNCONFIGURED',
             },
           ],
-        }
+        } satisfies PortfolioContributionPlan)
       : undefined,
     isLoading: false,
     isFetching: false,
@@ -158,10 +217,10 @@ const allocation = {
 } satisfies PortfolioAllocationSummary
 
 describe('DashboardTargetDriftCard', () => {
-  it('opens the contribution planner modal and localizes unconfigured status', async () => {
+  it('opens the contribution planner modal, shows scenarios and simulates another target mix', async () => {
     setLanguage('en')
-    vi.mocked(usePortfolioContributionPlan).mockImplementation((amountPln) => (
-      contributionPlanQueryStub(amountPln)
+    vi.mocked(usePortfolioContributionPlan).mockImplementation((amountPln, _revision, options) => (
+      contributionPlanQueryStub(amountPln, options)
     ) as unknown as ReturnType<typeof usePortfolioContributionPlan>)
 
     render(
@@ -187,7 +246,17 @@ describe('DashboardTargetDriftCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Calculate contribution plan' }))
 
     expect((await screen.findAllByText('Post-contribution value')).length).toBeGreaterThan(0)
+    expect(screen.getByText('Minimum to return within band')).toBeInTheDocument()
+    expect(screen.getByText('Scenario comparison')).toBeInTheDocument()
     expect(screen.queryByText('UNCONFIGURED')).not.toBeInTheDocument()
-    expect(screen.getByText('Not configured')).toBeInTheDocument()
+    expect(screen.queryByText('Cash')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Equities %'), {
+      target: { value: '75' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate another target' }))
+
+    expect(await screen.findByText('Simulated target')).toBeInTheDocument()
+    expect(screen.getByText('75% / 25%')).toBeInTheDocument()
   })
 })

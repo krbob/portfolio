@@ -309,7 +309,7 @@ export interface paths {
         };
         /**
          * Calculate contribution plan
-         * @description Returns a suggested split for a new PLN contribution and the projected post-contribution allocation drift.
+         * @description Returns a suggested split for a new PLN contribution, the minimum amount needed to return within tolerance and optional what-if target mix simulations.
          */
         get: operations["getPortfolioContributionPlan"];
         put?: never;
@@ -1168,6 +1168,13 @@ export interface components {
             asOf: string;
             periods: components["schemas"]["PortfolioReturnPeriodResponse"][];
         };
+        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanTargetMixResponse */
+        PortfolioContributionPlanTargetMixResponse: {
+            equitiesTargetWeightPct?: string | null;
+            bondsTargetWeightPct?: string | null;
+            cashTargetWeightPct?: string | null;
+            overridden: boolean;
+        };
         /** net.bobinski.portfolio.api.route.PortfolioAllocationBucketResponse */
         PortfolioAllocationBucketResponse: {
             assetClass: string;
@@ -1205,6 +1212,23 @@ export interface components {
             requiresSelling: boolean;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
         };
+        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanScenarioBucketResponse */
+        PortfolioContributionPlanScenarioBucketResponse: {
+            assetClass: string;
+            plannedContributionPln: string;
+            projectedWeightPct: string;
+            projectedDriftPctPoints?: string | null;
+            projectedStatus: string;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanScenarioResponse */
+        PortfolioContributionPlanScenarioResponse: {
+            amountPln: string;
+            withinTolerance: boolean;
+            breachedBucketCount: number;
+            remainingContributionGapPln: string;
+            projectedAction: string;
+            buckets: components["schemas"]["PortfolioContributionPlanScenarioBucketResponse"][];
+        };
         /** net.bobinski.portfolio.api.route.PortfolioContributionPlanBucketResponse */
         PortfolioContributionPlanBucketResponse: {
             assetClass: string;
@@ -1218,7 +1242,10 @@ export interface components {
         /** net.bobinski.portfolio.api.route.PortfolioContributionPlanResponse */
         PortfolioContributionPlanResponse: {
             amountPln: string;
+            targetMix: components["schemas"]["PortfolioContributionPlanTargetMixResponse"];
             projected: components["schemas"]["PortfolioAllocationResponse"];
+            minimalContributionToTolerancePln?: string | null;
+            scenarios?: components["schemas"]["PortfolioContributionPlanScenarioResponse"][];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
         /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
@@ -2076,6 +2103,7 @@ export interface operations {
         parameters: {
             query?: {
                 amountPln?: string;
+                equitiesTargetWeightPct?: string;
             };
             header?: never;
             path?: never;

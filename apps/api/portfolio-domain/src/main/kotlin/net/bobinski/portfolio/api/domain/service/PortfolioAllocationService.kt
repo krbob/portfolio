@@ -28,41 +28,72 @@ class PortfolioAllocationService(
         )
     }
 
-    suspend fun contributionPlan(amountPln: BigDecimal): PortfolioContributionPlan {
+    suspend fun contributionPlan(
+        amountPln: BigDecimal,
+        equitiesTargetWeightPct: BigDecimal? = null
+    ): PortfolioContributionPlan {
         val normalizedAmount = amountPln.money()
         require(normalizedAmount > BigDecimal.ZERO) { "Contribution amount must be greater than zero." }
 
         val context = loadContext()
         require(context.targets.isNotEmpty()) { "Configure target allocation before calculating a contribution plan." }
-
-        val contributionByAssetClass = buildContributionPlan(
-            currentValues = context.currentValues,
-            targetsByAssetClass = context.targetsByAssetClass,
-            totalCurrentValue = context.totalCurrentValue,
-            contributionAmountPln = normalizedAmount
+        val effectiveTargets = effectiveTargets(
+            context = context,
+            equitiesTargetWeightPct = equitiesTargetWeightPct
         )
-        val projectedValues = ASSET_CLASSES.associateWith { assetClass ->
-            context.currentValues.getValue(assetClass)
-                .add(contributionByAssetClass[assetClass] ?: BigDecimal.ZERO)
-                .money()
-        }
-        val projectedSummary = buildSummary(
+        val currentSummary = buildSummary(
             inputs = SummaryInputs(
                 asOf = context.overview.asOf,
                 valuationState = context.overview.valuationState,
-                currentValues = projectedValues,
-                totalCurrentValue = context.totalCurrentValue.add(normalizedAmount).money(),
-                targets = context.targets,
-                targetsByAssetClass = context.targetsByAssetClass,
+                currentValues = context.currentValues,
+                totalCurrentValue = context.totalCurrentValue,
+                targets = effectiveTargets.targets,
+                targetsByAssetClass = effectiveTargets.targetsByAssetClass,
                 toleranceBandPctPoints = context.settings.toleranceBandPctPoints,
                 rebalancingMode = context.settings.mode,
-                availableCash = projectedValues.getValue(AssetClass.CASH)
+                availableCash = context.currentValues.getValue(AssetClass.CASH)
             )
         )
 
+        val contributionByAssetClass = buildContributionPlan(
+            currentValues = context.currentValues,
+            targetsByAssetClass = effectiveTargets.targetsByAssetClass,
+            totalCurrentValue = context.totalCurrentValue,
+            contributionAmountPln = normalizedAmount
+        )
+        val projectedSummary = projectedSummary(
+            context = context,
+            effectiveTargets = effectiveTargets,
+            contributionAmountPln = normalizedAmount,
+            contributionByAssetClass = contributionByAssetClass
+        )
+        val minimalContributionToTolerancePln = minimalContributionToTolerance(
+            context = context,
+            effectiveTargets = effectiveTargets,
+            currentSummary = currentSummary
+        )
+        val scenarios = scenarioAmounts(
+            requestedAmountPln = normalizedAmount,
+            minimalContributionToTolerancePln = minimalContributionToTolerancePln
+        ).map { scenarioAmount ->
+            contributionScenario(
+                context = context,
+                effectiveTargets = effectiveTargets,
+                contributionAmountPln = scenarioAmount
+            )
+        }
+
         return PortfolioContributionPlan(
             amountPln = normalizedAmount,
+            targetMix = PortfolioContributionPlanTargetMix(
+                equitiesTargetWeightPct = effectiveTargets.targetsByAssetClass[AssetClass.EQUITIES]?.targetWeight?.multiply(HUNDRED)?.scalePercent(),
+                bondsTargetWeightPct = effectiveTargets.targetsByAssetClass[AssetClass.BONDS]?.targetWeight?.multiply(HUNDRED)?.scalePercent(),
+                cashTargetWeightPct = effectiveTargets.targetsByAssetClass[AssetClass.CASH]?.targetWeight?.multiply(HUNDRED)?.scalePercent(),
+                overridden = equitiesTargetWeightPct != null
+            ),
             projected = projectedSummary,
+            minimalContributionToTolerancePln = minimalContributionToTolerancePln,
+            scenarios = scenarios,
             buckets = projectedSummary.buckets.map { bucket ->
                 PortfolioContributionPlanBucket(
                     assetClass = bucket.assetClass,
@@ -74,6 +105,45 @@ class PortfolioAllocationService(
                     projectedStatus = bucket.status
                 )
             }
+        )
+    }
+
+    private fun effectiveTargets(
+        context: AllocationContext,
+        equitiesTargetWeightPct: BigDecimal?
+    ): EffectiveTargets {
+        if (equitiesTargetWeightPct == null) {
+            return EffectiveTargets(
+                targets = context.targets,
+                targetsByAssetClass = context.targetsByAssetClass
+            )
+        }
+
+        val equitiesTarget = context.targetsByAssetClass[AssetClass.EQUITIES]
+            ?: throw IllegalArgumentException("Equity target must be configured before simulating an alternative target mix.")
+        val bondsTarget = context.targetsByAssetClass[AssetClass.BONDS]
+            ?: throw IllegalArgumentException("Bond target must be configured before simulating an alternative target mix.")
+        val cashTargetWeight = context.targetsByAssetClass[AssetClass.CASH]?.targetWeight ?: BigDecimal.ZERO
+        val normalizedEquitiesWeight = equitiesTargetWeightPct
+            .divide(HUNDRED, 8, RoundingMode.HALF_UP)
+        val investableWeight = BigDecimal.ONE.subtract(cashTargetWeight)
+
+        require(normalizedEquitiesWeight >= BigDecimal.ZERO && normalizedEquitiesWeight <= investableWeight) {
+            "Equity target override must fit within the configured investable target mix."
+        }
+
+        val normalizedBondsWeight = investableWeight.subtract(normalizedEquitiesWeight)
+        val overriddenTargets = context.targets.map { target ->
+            when (target.assetClass) {
+                AssetClass.EQUITIES -> equitiesTarget.copy(targetWeight = normalizedEquitiesWeight)
+                AssetClass.BONDS -> bondsTarget.copy(targetWeight = normalizedBondsWeight)
+                else -> target
+            }
+        }
+
+        return EffectiveTargets(
+            targets = overriddenTargets,
+            targetsByAssetClass = overriddenTargets.associateBy(PortfolioTarget::assetClass)
         )
     }
 
@@ -249,6 +319,168 @@ class PortfolioAllocationService(
         }
     }
 
+    private fun projectedSummary(
+        context: AllocationContext,
+        effectiveTargets: EffectiveTargets,
+        contributionAmountPln: BigDecimal,
+        contributionByAssetClass: Map<AssetClass, BigDecimal>
+    ): PortfolioAllocationSummary {
+        val projectedValues = ASSET_CLASSES.associateWith { assetClass ->
+            context.currentValues.getValue(assetClass)
+                .add(contributionByAssetClass[assetClass] ?: BigDecimal.ZERO)
+                .money()
+        }
+
+        return buildSummary(
+            inputs = SummaryInputs(
+                asOf = context.overview.asOf,
+                valuationState = context.overview.valuationState,
+                currentValues = projectedValues,
+                totalCurrentValue = context.totalCurrentValue.add(contributionAmountPln).money(),
+                targets = effectiveTargets.targets,
+                targetsByAssetClass = effectiveTargets.targetsByAssetClass,
+                toleranceBandPctPoints = context.settings.toleranceBandPctPoints,
+                rebalancingMode = context.settings.mode,
+                availableCash = projectedValues.getValue(AssetClass.CASH)
+            )
+        )
+    }
+
+    private fun contributionScenario(
+        context: AllocationContext,
+        effectiveTargets: EffectiveTargets,
+        contributionAmountPln: BigDecimal
+    ): PortfolioContributionPlanScenario {
+        val contributionByAssetClass = buildContributionPlan(
+            currentValues = context.currentValues,
+            targetsByAssetClass = effectiveTargets.targetsByAssetClass,
+            totalCurrentValue = context.totalCurrentValue,
+            contributionAmountPln = contributionAmountPln
+        )
+        val projected = projectedSummary(
+            context = context,
+            effectiveTargets = effectiveTargets,
+            contributionAmountPln = contributionAmountPln,
+            contributionByAssetClass = contributionByAssetClass
+        )
+
+        return PortfolioContributionPlanScenario(
+            amountPln = contributionAmountPln,
+            withinTolerance = projected.breachedBucketCount == 0,
+            breachedBucketCount = projected.breachedBucketCount,
+            remainingContributionGapPln = projected.remainingContributionGapPln,
+            projectedAction = projected.recommendedAction,
+            buckets = ASSET_CLASSES.map { assetClass ->
+                PortfolioContributionPlanScenarioBucket(
+                    assetClass = assetClass,
+                    plannedContributionPln = contributionByAssetClass[assetClass] ?: BigDecimal.ZERO.money(),
+                    projectedWeightPct = projected.buckets.first { it.assetClass == assetClass }.currentWeightPct,
+                    projectedDriftPctPoints = projected.buckets.first { it.assetClass == assetClass }.driftPctPoints,
+                    projectedStatus = projected.buckets.first { it.assetClass == assetClass }.status
+                )
+            }
+        )
+    }
+
+    private fun minimalContributionToTolerance(
+        context: AllocationContext,
+        effectiveTargets: EffectiveTargets,
+        currentSummary: PortfolioAllocationSummary
+    ): BigDecimal? {
+        if (currentSummary.breachedBucketCount == 0) {
+            return BigDecimal.ZERO.money()
+        }
+
+        val initialHighCents = maxOf(
+            currentSummary.fullRebalanceBuyAmountPln.toCents(),
+            currentSummary.remainingContributionGapPln.toCents(),
+            10_000L
+        )
+        var highCents = initialHighCents
+        var highAmount = highCents.toMoney()
+
+        repeat(24) {
+            if (wouldBeWithinTolerance(context, effectiveTargets, highAmount)) {
+                return@repeat
+            }
+            highCents *= 2
+            highAmount = highCents.toMoney()
+        }
+
+        if (!wouldBeWithinTolerance(context, effectiveTargets, highAmount)) {
+            return null
+        }
+
+        var lowCents = 0L
+        while (lowCents + 1 < highCents) {
+            val middleCents = (lowCents + highCents) / 2
+            val middleAmount = middleCents.toMoney()
+            if (wouldBeWithinTolerance(context, effectiveTargets, middleAmount)) {
+                highCents = middleCents
+            } else {
+                lowCents = middleCents
+            }
+        }
+
+        return highCents.toMoney()
+    }
+
+    private fun wouldBeWithinTolerance(
+        context: AllocationContext,
+        effectiveTargets: EffectiveTargets,
+        contributionAmountPln: BigDecimal
+    ): Boolean {
+        val contributionByAssetClass = buildContributionPlan(
+            currentValues = context.currentValues,
+            targetsByAssetClass = effectiveTargets.targetsByAssetClass,
+            totalCurrentValue = context.totalCurrentValue,
+            contributionAmountPln = contributionAmountPln
+        )
+        return projectedSummary(
+            context = context,
+            effectiveTargets = effectiveTargets,
+            contributionAmountPln = contributionAmountPln,
+            contributionByAssetClass = contributionByAssetClass
+        ).breachedBucketCount == 0
+    }
+
+    private fun scenarioAmounts(
+        requestedAmountPln: BigDecimal,
+        minimalContributionToTolerancePln: BigDecimal?
+    ): List<BigDecimal> {
+        val step = scenarioStep(requestedAmountPln)
+        val candidates = linkedSetOf<BigDecimal>()
+        val minimal = minimalContributionToTolerancePln?.takeIf { it > BigDecimal.ZERO }
+
+        if (minimal != null && requestedAmountPln < minimal) {
+            candidates += requestedAmountPln
+            candidates += midpoint(requestedAmountPln, minimal).roundUpTo(step)
+            candidates += minimal
+            candidates += minimal.multiply(BigDecimal("1.25")).roundUpTo(step)
+        } else {
+            candidates += requestedAmountPln.divide(BigDecimal("2"), 2, RoundingMode.HALF_UP).roundUpTo(step)
+            minimal?.let { candidates += it }
+            candidates += requestedAmountPln
+            candidates += requestedAmountPln.multiply(BigDecimal("1.50")).roundUpTo(step)
+        }
+
+        return candidates
+            .filter { it > BigDecimal.ZERO }
+            .map { it.money() }
+            .distinct()
+            .sorted()
+    }
+
+    private fun scenarioStep(requestedAmountPln: BigDecimal): BigDecimal = when {
+        requestedAmountPln < BigDecimal("5000.00") -> BigDecimal("250.00")
+        requestedAmountPln < BigDecimal("20000.00") -> BigDecimal("500.00")
+        requestedAmountPln < BigDecimal("50000.00") -> BigDecimal("1000.00")
+        else -> BigDecimal("2500.00")
+    }
+
+    private fun midpoint(first: BigDecimal, second: BigDecimal): BigDecimal =
+        first.add(second).divide(BigDecimal("2"), 2, RoundingMode.HALF_UP)
+
     private fun <K> distributeAmount(amountPln: BigDecimal, weights: Map<K, BigDecimal>): Map<K, BigDecimal> {
         val normalizedAmount = amountPln.money()
         if (normalizedAmount <= BigDecimal.ZERO) {
@@ -307,6 +539,10 @@ class PortfolioAllocationService(
 
     private fun BigDecimal.scalePercent(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
     private fun BigDecimal.money(): BigDecimal = setScale(2, RoundingMode.HALF_UP)
+    private fun BigDecimal.toCents(): Long = movePointRight(2).setScale(0, RoundingMode.UNNECESSARY).toLong()
+    private fun Long.toMoney(): BigDecimal = BigDecimal(this).movePointLeft(2).money()
+    private fun BigDecimal.roundUpTo(step: BigDecimal): BigDecimal =
+        divide(step, 0, RoundingMode.CEILING).multiply(step).money()
 
     companion object {
         private val HUNDRED = BigDecimal("100")
@@ -323,6 +559,11 @@ private data class AllocationContext(
     val settings: PortfolioRebalancingSettings,
     val currentValues: Map<AssetClass, BigDecimal>,
     val totalCurrentValue: BigDecimal
+)
+
+private data class EffectiveTargets(
+    val targets: List<PortfolioTarget>,
+    val targetsByAssetClass: Map<AssetClass, PortfolioTarget>
 )
 
 private data class DistributedAmount<K>(
@@ -408,8 +649,35 @@ data class PortfolioAllocationSummary(
 
 data class PortfolioContributionPlan(
     val amountPln: BigDecimal,
+    val targetMix: PortfolioContributionPlanTargetMix,
     val projected: PortfolioAllocationSummary,
+    val minimalContributionToTolerancePln: BigDecimal?,
+    val scenarios: List<PortfolioContributionPlanScenario>,
     val buckets: List<PortfolioContributionPlanBucket>
+)
+
+data class PortfolioContributionPlanTargetMix(
+    val equitiesTargetWeightPct: BigDecimal?,
+    val bondsTargetWeightPct: BigDecimal?,
+    val cashTargetWeightPct: BigDecimal?,
+    val overridden: Boolean
+)
+
+data class PortfolioContributionPlanScenario(
+    val amountPln: BigDecimal,
+    val withinTolerance: Boolean,
+    val breachedBucketCount: Int,
+    val remainingContributionGapPln: BigDecimal,
+    val projectedAction: PortfolioAllocationAction,
+    val buckets: List<PortfolioContributionPlanScenarioBucket>
+)
+
+data class PortfolioContributionPlanScenarioBucket(
+    val assetClass: AssetClass,
+    val plannedContributionPln: BigDecimal,
+    val projectedWeightPct: BigDecimal,
+    val projectedDriftPctPoints: BigDecimal?,
+    val projectedStatus: AllocationBucketStatus
 )
 
 data class PortfolioContributionPlanBucket(

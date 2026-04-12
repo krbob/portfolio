@@ -443,10 +443,93 @@ class PortfolioReadModelRouteTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"amountPln\": \"4000.00\""))
+        assertTrue(body.contains("\"equitiesTargetWeightPct\": \"80.00\""))
+        assertTrue(body.contains("\"bondsTargetWeightPct\": \"20.00\""))
+        assertTrue(body.contains("\"minimalContributionToTolerancePln\": "))
+        assertTrue(body.contains("\"scenarios\": ["))
         assertTrue(body.contains("\"plannedContributionPln\": \"3466.67\""))
         assertTrue(body.contains("\"plannedContributionPln\": \"533.33\""))
         assertTrue(body.contains("\"projectedWeightPct\": \"67.62\""))
         assertTrue(body.contains("\"projectedStatus\": \"UNDERWEIGHT\""))
+    }
+
+    @Test
+    fun `allocation contribution plan accepts an alternative equities target mix`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val equityInstrumentId = createInstrument()
+        val bondInstrumentId = createBondInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "10000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$equityInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "75",
+              "unitPrice": "100.00",
+              "grossAmount": "7500.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$bondInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-03",
+              "settlementDate": "2026-03-03",
+              "quantity": "25",
+              "unitPrice": "100.00",
+              "grossAmount": "2500.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val saveTargetsResponse = client.post("/v1/portfolio/targets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "items": [
+                    { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                    { "assetClass": "BONDS", "targetWeight": "0.20" },
+                    { "assetClass": "CASH", "targetWeight": "0.00" }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, saveTargetsResponse.status)
+
+        val response = client.get("/v1/portfolio/allocation/contribution-plan?amountPln=10000.00&equitiesTargetWeightPct=75.00")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"overridden\": true"))
+        assertTrue(body.contains("\"equitiesTargetWeightPct\": \"75.00\""))
+        assertTrue(body.contains("\"bondsTargetWeightPct\": \"25.00\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"7500.00\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"2500.00\""))
     }
 
     @Test

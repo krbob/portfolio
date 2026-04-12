@@ -79,9 +79,15 @@ export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
 }
 
-export function fetchPortfolioContributionPlan(amountPln: string) {
+export function fetchPortfolioContributionPlan(
+  amountPln: string,
+  { equitiesTargetWeightPct }: { equitiesTargetWeightPct?: string | null } = {},
+) {
   const params = new URLSearchParams()
   params.set('amountPln', amountPln)
+  if (equitiesTargetWeightPct) {
+    params.set('equitiesTargetWeightPct', equitiesTargetWeightPct)
+  }
   return requestJson<PortfolioContributionPlan>(`/api/v1/portfolio/allocation/contribution-plan?${params.toString()}`)
 }
 

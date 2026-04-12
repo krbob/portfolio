@@ -9,6 +9,9 @@ import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlan
 import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanBucket
+import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanScenario
+import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanScenarioBucket
+import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanTargetMix
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
@@ -187,8 +190,38 @@ data class PortfolioAllocationResponse(
 @Serializable
 data class PortfolioContributionPlanResponse(
     val amountPln: String,
+    val targetMix: PortfolioContributionPlanTargetMixResponse,
     val projected: PortfolioAllocationResponse,
+    val minimalContributionToTolerancePln: String? = null,
+    val scenarios: List<PortfolioContributionPlanScenarioResponse> = emptyList(),
     val buckets: List<PortfolioContributionPlanBucketResponse>
+)
+
+@Serializable
+data class PortfolioContributionPlanTargetMixResponse(
+    val equitiesTargetWeightPct: String?,
+    val bondsTargetWeightPct: String?,
+    val cashTargetWeightPct: String?,
+    val overridden: Boolean
+)
+
+@Serializable
+data class PortfolioContributionPlanScenarioResponse(
+    val amountPln: String,
+    val withinTolerance: Boolean,
+    val breachedBucketCount: Int,
+    val remainingContributionGapPln: String,
+    val projectedAction: String,
+    val buckets: List<PortfolioContributionPlanScenarioBucketResponse>
+)
+
+@Serializable
+data class PortfolioContributionPlanScenarioBucketResponse(
+    val assetClass: String,
+    val plannedContributionPln: String,
+    val projectedWeightPct: String,
+    val projectedDriftPctPoints: String?,
+    val projectedStatus: String
 )
 
 @Serializable
@@ -438,8 +471,35 @@ internal fun PortfolioAllocationSummary.toResponse(): PortfolioAllocationRespons
 
 internal fun PortfolioContributionPlan.toResponse(): PortfolioContributionPlanResponse = PortfolioContributionPlanResponse(
     amountPln = amountPln.toPlainString(),
+    targetMix = targetMix.toResponse(),
     projected = projected.toResponse(),
+    minimalContributionToTolerancePln = minimalContributionToTolerancePln?.toPlainString(),
+    scenarios = scenarios.map { it.toResponse() },
     buckets = buckets.map { it.toResponse() }
+)
+
+internal fun PortfolioContributionPlanTargetMix.toResponse(): PortfolioContributionPlanTargetMixResponse = PortfolioContributionPlanTargetMixResponse(
+    equitiesTargetWeightPct = equitiesTargetWeightPct?.toPlainString(),
+    bondsTargetWeightPct = bondsTargetWeightPct?.toPlainString(),
+    cashTargetWeightPct = cashTargetWeightPct?.toPlainString(),
+    overridden = overridden
+)
+
+internal fun PortfolioContributionPlanScenario.toResponse(): PortfolioContributionPlanScenarioResponse = PortfolioContributionPlanScenarioResponse(
+    amountPln = amountPln.toPlainString(),
+    withinTolerance = withinTolerance,
+    breachedBucketCount = breachedBucketCount,
+    remainingContributionGapPln = remainingContributionGapPln.toPlainString(),
+    projectedAction = projectedAction.name,
+    buckets = buckets.map { it.toResponse() }
+)
+
+internal fun PortfolioContributionPlanScenarioBucket.toResponse(): PortfolioContributionPlanScenarioBucketResponse = PortfolioContributionPlanScenarioBucketResponse(
+    assetClass = assetClass.name,
+    plannedContributionPln = plannedContributionPln.toPlainString(),
+    projectedWeightPct = projectedWeightPct.toPlainString(),
+    projectedDriftPctPoints = projectedDriftPctPoints?.toPlainString(),
+    projectedStatus = projectedStatus.name
 )
 
 internal fun PortfolioAllocationBucket.toResponse(): PortfolioAllocationBucketResponse = PortfolioAllocationBucketResponse(

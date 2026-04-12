@@ -54,10 +54,14 @@ export function usePortfolioAllocation() {
   })
 }
 
-export function usePortfolioContributionPlan(amountPln: string | null, revision = 0) {
+export function usePortfolioContributionPlan(
+  amountPln: string | null,
+  revision = 0,
+  { equitiesTargetWeightPct }: { equitiesTargetWeightPct?: string | null } = {},
+) {
   return useQuery({
-    queryKey: ['portfolio-allocation-contribution-plan', amountPln ?? '', revision],
-    queryFn: () => fetchPortfolioContributionPlan(amountPln ?? ''),
+    queryKey: ['portfolio-allocation-contribution-plan', amountPln ?? '', revision, equitiesTargetWeightPct ?? 'BASE'],
+    queryFn: () => fetchPortfolioContributionPlan(amountPln ?? '', { equitiesTargetWeightPct }),
     enabled: amountPln != null,
   })
 }
