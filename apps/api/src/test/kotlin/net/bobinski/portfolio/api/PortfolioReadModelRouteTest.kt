@@ -443,9 +443,9 @@ class PortfolioReadModelRouteTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(body.contains("\"amountPln\": \"4000.00\""))
-        assertTrue(body.contains("\"plannedContributionPln\": \"3600.00\""))
-        assertTrue(body.contains("\"plannedContributionPln\": \"400.00\""))
-        assertTrue(body.contains("\"projectedWeightPct\": \"68.57\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"3466.67\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"533.33\""))
+        assertTrue(body.contains("\"projectedWeightPct\": \"67.62\""))
         assertTrue(body.contains("\"projectedStatus\": \"UNDERWEIGHT\""))
     }
 

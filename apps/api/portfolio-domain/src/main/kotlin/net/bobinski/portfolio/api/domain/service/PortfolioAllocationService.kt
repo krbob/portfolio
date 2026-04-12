@@ -227,36 +227,24 @@ class PortfolioAllocationService(
         totalCurrentValue: BigDecimal,
         contributionAmountPln: BigDecimal
     ): Map<AssetClass, BigDecimal> {
-        val currentUnderweightGaps = linkedMapOf<AssetClass, BigDecimal>()
+        val projectedTotalValue = totalCurrentValue
+            .add(contributionAmountPln)
+            .money()
+        val projectedUnderweightGaps = linkedMapOf<AssetClass, BigDecimal>()
         ASSET_CLASSES.forEach { assetClass ->
             val targetWeight = targetsByAssetClass[assetClass]?.targetWeight ?: return@forEach
-            val gap = totalCurrentValue
+            val gap = projectedTotalValue
                 .multiply(targetWeight)
                 .subtract(currentValues.getValue(assetClass))
                 .money()
             if (gap > BigDecimal.ZERO) {
-                currentUnderweightGaps[assetClass] = gap
+                projectedUnderweightGaps[assetClass] = gap
             }
         }
-        val gapCoverageAmount = contributionAmountPln
-            .min(currentUnderweightGaps.values.fold(BigDecimal.ZERO) { total, gap -> total.add(gap) })
-            .money()
-        val gapCoverage = distributeAmount(gapCoverageAmount, currentUnderweightGaps)
-        val remainingContribution = contributionAmountPln
-            .subtract(gapCoverage.values.fold(BigDecimal.ZERO) { total, value -> total.add(value) })
-            .money()
-        val targetWeights = linkedMapOf<AssetClass, BigDecimal>()
-        ASSET_CLASSES.forEach { assetClass ->
-            val targetWeight = targetsByAssetClass[assetClass]?.targetWeight ?: return@forEach
-            if (targetWeight > BigDecimal.ZERO) {
-                targetWeights[assetClass] = targetWeight
-            }
-        }
-        val targetMixAllocation = distributeAmount(remainingContribution, targetWeights)
+        val projectedGapAllocation = distributeAmount(contributionAmountPln, projectedUnderweightGaps)
 
         return ASSET_CLASSES.associateWith { assetClass ->
-            gapCoverage.getOrDefault(assetClass, BigDecimal.ZERO)
-                .add(targetMixAllocation.getOrDefault(assetClass, BigDecimal.ZERO))
+            projectedGapAllocation.getOrDefault(assetClass, BigDecimal.ZERO)
                 .money()
         }
     }

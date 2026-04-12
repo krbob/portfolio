@@ -352,15 +352,80 @@ class PortfolioAllocationServiceTest {
         val cash = plan.buckets.first { it.assetClass == AssetClass.CASH }
 
         assertEquals(BigDecimal("4000.00"), plan.amountPln)
-        assertEquals(BigDecimal("3600.00"), equities.plannedContributionPln)
-        assertEquals(BigDecimal("400.00"), bonds.plannedContributionPln)
+        assertEquals(BigDecimal("3466.67"), equities.plannedContributionPln)
+        assertEquals(BigDecimal("533.33"), bonds.plannedContributionPln)
         assertEquals(BigDecimal("0.00"), cash.plannedContributionPln)
-        assertEquals(BigDecimal("9600.00"), equities.projectedValuePln)
-        assertEquals(BigDecimal("68.57"), equities.projectedWeightPct)
-        assertEquals(BigDecimal("-11.43"), equities.projectedDriftPctPoints)
+        assertEquals(BigDecimal("9466.67"), equities.projectedValuePln)
+        assertEquals(BigDecimal("67.62"), equities.projectedWeightPct)
+        assertEquals(BigDecimal("-12.38"), equities.projectedDriftPctPoints)
         assertEquals(AllocationBucketStatus.UNDERWEIGHT, equities.projectedStatus)
         assertEquals(BigDecimal("2000.00"), plan.projected.availableCashPln)
         assertEquals(PortfolioAllocationAction.DEPLOY_EXISTING_CASH, plan.projected.recommendedAction)
+    }
+
+    @Test
+    fun `contribution plan does not fund buckets that remain overweight after the contribution`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("428406.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "347635.00", "3476.35"))
+        transactionRepository.save(buyTransaction(BOND_ID, "80771.00", "807.71", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20"))
+                )
+            )
+        )
+
+        val plan = allocationService.contributionPlan(BigDecimal("6000.00"))
+        val equities = plan.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val bonds = plan.buckets.first { it.assetClass == AssetClass.BONDS }
+
+        assertEquals(BigDecimal("0.00"), equities.plannedContributionPln)
+        assertEquals(BigDecimal("6000.00"), bonds.plannedContributionPln)
+        assertEquals(BigDecimal("80.03"), equities.projectedWeightPct)
+        assertEquals(BigDecimal("19.97"), bonds.projectedWeightPct)
     }
 
     @Test
