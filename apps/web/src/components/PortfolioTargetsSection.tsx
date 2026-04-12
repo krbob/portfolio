@@ -700,6 +700,8 @@ function labelTargetStatus(status: string) {
       return t('targets.statusOverweight')
     case 'ON_TARGET':
       return t('targets.statusOnTarget')
+    case 'UNCONFIGURED':
+      return t('targets.statusUnconfigured')
     default:
       return status
   }
