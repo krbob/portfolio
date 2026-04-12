@@ -29,6 +29,8 @@ class PortfolioReturnsService(
     private val benchmarkSettingsService: PortfolioBenchmarkSettingsService,
     private val clock: Clock
 ) {
+    private val inflationSupport = PortfolioInflationSupport(inflationAdjustmentProvider)
+
     suspend fun returns(): PortfolioReturns {
         val history = portfolioHistoryService.dailyHistory()
         val today = LocalDate.now(clock)
@@ -264,9 +266,9 @@ class PortfolioReturnsService(
         values: List<ValuationPoint>,
         cashFlows: List<MoneyWeightedCashFlow>
     ): RealPlnAdjustment? {
-        val realFromMonth = alignedRealStartMonth(effectiveFrom)
-        val requestedUntilExclusive = latestCompletePortfolioMonthExclusive(end)
-        val inflationSeries = loadMonthlyInflationSeriesWithFallback(realFromMonth, requestedUntilExclusive) ?: return null
+        val realFromMonth = inflationSupport.alignedRealStartMonth(effectiveFrom)
+        val requestedUntilExclusive = inflationSupport.latestCompletePortfolioMonthExclusive(end)
+        val inflationSeries = inflationSupport.loadMonthlySeriesWithFallback(realFromMonth, requestedUntilExclusive) ?: return null
         val realUntilExclusive = inflationSeries.until
         if (!realFromMonth.isBefore(realUntilExclusive)) {
             return null
@@ -304,20 +306,6 @@ class PortfolioReturnsService(
             ) ?: return null,
             inflationWindow = inflationWindow
         )
-    }
-
-    private suspend fun loadMonthlyInflationSeriesWithFallback(
-        from: YearMonth,
-        requestedUntil: YearMonth
-    ): InflationSeriesResult.Success? {
-        var candidateUntil = requestedUntil
-        while (candidateUntil > from) {
-            when (val result = inflationAdjustmentProvider.monthlySeries(from, candidateUntil)) {
-                is InflationSeriesResult.Success -> return result
-                is InflationSeriesResult.Failure -> candidateUntil = candidateUntil.minusMonths(1)
-            }
-        }
-        return null
     }
 
     private fun calculateMetric(
@@ -674,16 +662,6 @@ class PortfolioReturnsService(
 
     private fun BigDecimal.scaleMoney(scale: Int): BigDecimal =
         setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
-
-    private fun alignedRealStartMonth(date: LocalDate): YearMonth =
-        YearMonth.from(date)
-
-    private fun latestCompletePortfolioMonthExclusive(date: LocalDate): YearMonth =
-        if (date.dayOfMonth == date.lengthOfMonth()) {
-            YearMonth.from(date).plusMonths(1)
-        } else {
-            YearMonth.from(date)
-        }
 
     private fun Double.toRate(): BigDecimal =
         BigDecimal.valueOf(this).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()

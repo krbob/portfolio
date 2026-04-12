@@ -50,6 +50,7 @@ class PortfolioHistoryService(
         clock = clock,
         staleAfterTradingDays = marketDataStaleAfterDays
     )
+    private val inflationSupport = PortfolioInflationSupport(inflationAdjustmentProvider)
 
     suspend fun dailyHistory(): PortfolioDailyHistory {
         val accounts = accountRepository.list()
@@ -565,7 +566,7 @@ class PortfolioHistoryService(
         until: LocalDate
     ): InflationBenchmarkLoad {
         val firstMonth = YearMonth.from(from)
-        val requestedUntil = latestCompletePortfolioMonthExclusive(until)
+        val requestedUntil = inflationSupport.latestCompletePortfolioMonthExclusive(until)
         if (!firstMonth.isBefore(requestedUntil)) {
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
@@ -576,7 +577,7 @@ class PortfolioHistoryService(
                 )
             )
         }
-        val series = loadMonthlyInflationSeriesWithFallback(firstMonth, requestedUntil)
+        val series = inflationSupport.loadMonthlySeriesWithFallback(firstMonth, requestedUntil)
             ?: return InflationBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
@@ -615,20 +616,6 @@ class PortfolioHistoryService(
                 issue = if (series.fromCache) "Inflation benchmark series was served from cache." else null
             )
         )
-    }
-
-    private suspend fun loadMonthlyInflationSeriesWithFallback(
-        from: YearMonth,
-        requestedUntil: YearMonth
-    ): InflationSeriesResult.Success? {
-        var candidateUntil = requestedUntil
-        while (candidateUntil > from) {
-            when (val result = inflationAdjustmentProvider.monthlySeries(from, candidateUntil)) {
-                is InflationSeriesResult.Success -> return result
-                is InflationSeriesResult.Failure -> candidateUntil = candidateUntil.minusMonths(1)
-            }
-        }
-        return null
     }
 
     private fun attachBenchmarkIndices(
@@ -929,13 +916,6 @@ class PortfolioHistoryService(
         }
         return lookup
     }
-
-    private fun latestCompletePortfolioMonthExclusive(date: LocalDate): YearMonth =
-        if (date.dayOfMonth == date.lengthOfMonth()) {
-            YearMonth.from(date).plusMonths(1)
-        } else {
-            YearMonth.from(date)
-        }
 
     private fun List<HistoricalPricePoint>.toLookup(): TreeMap<LocalDate, BigDecimal> =
         associateTo(TreeMap()) { it.date to it.closePricePln.money() }

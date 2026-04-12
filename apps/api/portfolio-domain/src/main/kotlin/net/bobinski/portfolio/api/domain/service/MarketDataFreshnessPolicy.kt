@@ -8,7 +8,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-internal class MarketDataFreshnessPolicy(
+class MarketDataFreshnessPolicy(
     private val clock: Clock,
     private val staleAfterTradingDays: Long
 ) {

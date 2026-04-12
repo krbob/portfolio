@@ -39,6 +39,7 @@ class PortfolioReadModelService(
         clock = clock,
         staleAfterTradingDays = marketDataStaleAfterDays
     )
+    private val holdingValuationFreshnessSupport = HoldingValuationFreshnessSupport(freshnessPolicy)
 
     suspend fun accounts(): List<PortfolioAccountSummary> {
         val snapshot = buildValuedSnapshot()
@@ -544,7 +545,7 @@ class PortfolioReadModelService(
             ?.nativePrice()
         val valuedAt = successfulResults.maxOfOrNull { (_, result) -> result.valuation.valuedAt }
         val valuationStatus = if (successfulResults.any { (_, result) ->
-                isStale(result, holding.instrument.symbol)
+                holdingValuationFreshnessSupport.isStale(result, holding.instrument.symbol)
             }
         ) {
             HoldingValuationStatus.STALE
@@ -575,14 +576,14 @@ class PortfolioReadModelService(
             valuationStatus = valuationStatus,
             valuationIssue = successfulResults
                 .map { (_, result) -> result }
-                .mapNotNull { result -> valuationIssueFor(result, holding.instrument.symbol) }
+                .mapNotNull { result -> holdingValuationFreshnessSupport.issueFor(result, holding.instrument.symbol) }
                 .firstOrNull(),
             transactionCount = holding.transactionCount,
             previousClosePln = previousClosePricePln,
             edoLots = successfulResults.map { (lot, result) ->
                 val valuation = result.valuation
                 val lotCurrentValue = valuation.pricePerUnitPln.multiply(lot.quantity, MONEY_CONTEXT).money()
-                val lotStatus = valuationStatusFor(result, holding.instrument.symbol)
+                val lotStatus = holdingValuationFreshnessSupport.statusFor(result, holding.instrument.symbol)
                 EdoLotSnapshot(
                     purchaseDate = lot.purchaseDate,
                     quantity = lot.quantity.quantity(),
@@ -593,7 +594,7 @@ class PortfolioReadModelService(
                     unrealizedGainPln = lotCurrentValue.subtract(lot.costBasisPln, MONEY_CONTEXT).money(),
                     valuedAt = valuation.valuedAt,
                     valuationStatus = lotStatus,
-                    valuationIssue = valuationIssueFor(result, holding.instrument.symbol),
+                    valuationIssue = holdingValuationFreshnessSupport.issueFor(result, holding.instrument.symbol),
                     currentRatePercent = valuation.currentRatePercent
                 )
             }
@@ -636,7 +637,7 @@ class PortfolioReadModelService(
     private fun MutableHolding.toValuedHolding(result: InstrumentValuationResult.Success): ValuedHolding {
         val valuation = result.valuation
         val currentValuePln = valuation.pricePerUnitPln.multiply(quantity, MONEY_CONTEXT).money()
-        val valuationStatus = valuationStatusFor(result, instrument.symbol)
+        val valuationStatus = holdingValuationFreshnessSupport.statusFor(result, instrument.symbol)
         return ValuedHolding(
             account = account,
             instrument = instrument,
@@ -648,7 +649,7 @@ class PortfolioReadModelService(
             unrealizedGainPln = currentValuePln.subtract(costBasisPln, MONEY_CONTEXT).money(),
             valuedAt = valuation.valuedAt,
             valuationStatus = valuationStatus,
-            valuationIssue = valuationIssueFor(result, instrument.symbol),
+            valuationIssue = holdingValuationFreshnessSupport.issueFor(result, instrument.symbol),
             transactionCount = transactionCount,
             previousClosePln = valuation.previousClosePln?.money()
         )
@@ -766,32 +767,6 @@ class PortfolioReadModelService(
 
         HoldingValuationStatus.UNAVAILABLE,
         HoldingValuationStatus.UNSUPPORTED -> false
-    }
-
-    private fun valuationStatusFor(
-        valuation: InstrumentValuationResult.Success,
-        symbolHint: String?
-    ): HoldingValuationStatus =
-        if (isStale(valuation, symbolHint)) HoldingValuationStatus.STALE else HoldingValuationStatus.VALUED
-
-    private fun isStale(
-        valuation: InstrumentValuationResult.Success,
-        symbolHint: String?
-    ): Boolean = valuation.fromCache || freshnessPolicy.isQuoteStale(
-        valuedAt = valuation.valuation.valuedAt,
-        symbolHint = symbolHint
-    )
-
-    private fun valuationIssueFor(
-        valuation: InstrumentValuationResult.Success,
-        symbolHint: String?
-    ): String? = when {
-        valuation.fromCache -> "Using cached market valuation from ${valuation.valuation.valuedAt}."
-        freshnessPolicy.isQuoteStale(
-            valuedAt = valuation.valuation.valuedAt,
-            symbolHint = symbolHint
-        ) -> "Last market valuation is from ${valuation.valuation.valuedAt}."
-        else -> null
     }
 
     private fun InstrumentValuationFailureType.toHoldingValuationStatus(): HoldingValuationStatus = when (this) {
