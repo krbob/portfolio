@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { usePortfolioAllocation, usePortfolioAuditEvents, usePortfolioContributionPlan } from '../hooks/use-read-model'
+import { usePortfolioAllocation, usePortfolioAuditEvents } from '../hooks/use-read-model'
 import {
   usePortfolioRebalancingSettings,
   usePortfolioTargets,
@@ -55,11 +55,6 @@ export function PortfolioTargetsSection() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null)
   const [settingsActionError, setSettingsActionError] = useState<string | null>(null)
-  const [contributionAmountInput, setContributionAmountInput] = useState('')
-  const [submittedContributionAmount, setSubmittedContributionAmount] = useState<string | null>(null)
-  const [contributionPlanRevision, setContributionPlanRevision] = useState(0)
-  const [contributionPlannerActionError, setContributionPlannerActionError] = useState<string | null>(null)
-  const contributionPlanQuery = usePortfolioContributionPlan(submittedContributionAmount, contributionPlanRevision)
 
   useEffect(() => {
     if (targetsQuery.data == null) {
@@ -169,27 +164,6 @@ export function PortfolioTargetsSection() {
           : t('targets.savingRebalancingFailed'),
       )
     }
-  }
-
-  function handleContributionPlanSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setContributionPlannerActionError(null)
-
-    if (!allocation?.configured) {
-      setContributionPlannerActionError(t('targets.noConfigDescription'))
-      return
-    }
-
-    const sanitizedAmount = sanitizeMoneyInput(contributionAmountInput)
-    const numericAmount = Number(sanitizedAmount)
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setContributionPlannerActionError(t('targets.contributionAmountInvalid'))
-      return
-    }
-
-    setContributionAmountInput(sanitizedAmount)
-    setSubmittedContributionAmount(numericAmount.toFixed(2))
-    setContributionPlanRevision((current) => current + 1)
   }
 
   const allocation = allocationQuery.data
@@ -457,120 +431,6 @@ export function PortfolioTargetsSection() {
                 </article>
               </div>
 
-              <section className="rounded-lg border border-zinc-800/50 p-4">
-                <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <h4 className="text-sm font-semibold text-zinc-100">{t('targets.contributionPlannerTitle')}</h4>
-                    <p className="mt-1 text-sm text-zinc-500">{t('targets.contributionPlannerDescription')}</p>
-                    <p className="mt-2 text-xs text-zinc-500">{t('targets.contributionPlannerAssumption')}</p>
-                  </div>
-                </div>
-
-                <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleContributionPlanSubmit}>
-                  <label className="sm:min-w-[220px]">
-                    <span className={labelClass}>{t('targets.contributionAmount')}</span>
-                    <div className="relative">
-                      <input
-                        className={`${input} pr-14`}
-                        inputMode="decimal"
-                        value={contributionAmountInput}
-                        onChange={(event) => setContributionAmountInput(sanitizeMoneyInput(event.target.value))}
-                      />
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
-                        {t('targets.contributionCurrency')}
-                      </span>
-                    </div>
-                  </label>
-                  <button
-                    type="submit"
-                    className={btnPrimary}
-                    disabled={contributionPlanQuery.isFetching}
-                  >
-                    {contributionPlanQuery.isFetching ? t('targets.calculatingContributionPlan') : t('targets.calculateContributionPlan')}
-                  </button>
-                </form>
-
-                {contributionPlannerActionError ? <p className="mt-3 text-sm text-red-400">{contributionPlannerActionError}</p> : null}
-                {contributionPlanQuery.isError ? <p className="mt-3 text-sm text-red-400">{contributionPlanQuery.error.message}</p> : null}
-
-                {contributionPlanQuery.isLoading ? (
-                  <p className="mt-4 text-sm text-zinc-500">{t('targets.calculatingContributionPlan')}</p>
-                ) : contributionPlanQuery.data ? (
-                  <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      <article className="rounded-lg border border-zinc-800/50 p-4">
-                        <span className="text-xs text-zinc-500">{t('targets.contributionAmount')}</span>
-                        <strong className="mt-1 block text-sm text-zinc-100">{formatCurrencyPln(contributionPlanQuery.data.amountPln)}</strong>
-                      </article>
-                      <article className="rounded-lg border border-zinc-800/50 p-4">
-                        <span className="text-xs text-zinc-500">{t('targets.projectedAction')}</span>
-                        <strong className="mt-1 block text-sm text-zinc-100">
-                          {labelAllocationAction(contributionPlanQuery.data.projected.recommendedAction)}
-                        </strong>
-                      </article>
-                      <article className="rounded-lg border border-zinc-800/50 p-4">
-                        <span className="text-xs text-zinc-500">{t('targets.projectedOutsideBand')}</span>
-                        <strong className="mt-1 block text-sm text-zinc-100">
-                          {contributionPlanQuery.data.projected.breachedBucketCount}
-                        </strong>
-                      </article>
-                      <article className="rounded-lg border border-zinc-800/50 p-4">
-                        <span className="text-xs text-zinc-500">{t('targets.projectedRemainingGap')}</span>
-                        <strong className="mt-1 block text-sm text-zinc-100">
-                          {formatCurrencyPln(contributionPlanQuery.data.projected.remainingContributionGapPln)}
-                        </strong>
-                      </article>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                      {contributionPlanQuery.data.buckets.map((bucket) => (
-                        <article key={bucket.assetClass} className="rounded-lg border border-zinc-800/50 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h4 className="text-sm font-semibold text-zinc-100">{labelAssetClass(bucket.assetClass)}</h4>
-                              <p className="mt-1 text-sm text-zinc-500">
-                                {t('targets.plannedContribution')} {formatCurrencyPln(bucket.plannedContributionPln)}
-                              </p>
-                            </div>
-                            <span className={`${badge} ${statusVariant(bucket.projectedStatus)}`}>{labelTargetStatus(bucket.projectedStatus)}</span>
-                          </div>
-
-                          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-2">
-                            <div>
-                              <dt className="text-zinc-500">{t('targets.projectedWeight')}</dt>
-                              <dd className="text-zinc-100">{formatPercent(bucket.projectedWeightPct, { maximumFractionDigits: 2 })}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-zinc-500">{t('targets.projectedValue')}</dt>
-                              <dd className="text-zinc-100">{formatCurrencyPln(bucket.projectedValuePln)}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-zinc-500">{t('targets.projectedDrift')}</dt>
-                              <dd className={driftColor(bucket.projectedDriftPctPoints)}>
-                                {formatPercent(bucket.projectedDriftPctPoints, { signed: true, maximumFractionDigits: 2, suffix: ' pp' })}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-zinc-500">{t('targets.projectedGap')}</dt>
-                              <dd className={gapColor(bucket.projectedGapValuePln)}>
-                                {formatSignedCurrencyPln(bucket.projectedGapValuePln)}
-                              </dd>
-                            </div>
-                          </dl>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <StatePanel
-                    eyebrow={t('targets.contributionPlannerTitle')}
-                    title={t('targets.contributionPlannerEmptyTitle')}
-                    description={t('targets.contributionPlannerEmptyDescription')}
-                    className="mt-4 border-0 bg-transparent px-0 py-6"
-                  />
-                )}
-              </section>
-
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 {allocation.buckets.map((bucket) => (
                   <article key={bucket.assetClass} className="rounded-lg border border-zinc-800/50 p-4">
@@ -631,10 +491,6 @@ export function PortfolioTargetsSection() {
 }
 
 function sanitizePercentInput(value: string) {
-  return value.replace(',', '.').replace(/[^0-9.]/g, '')
-}
-
-function sanitizeMoneyInput(value: string) {
   return value.replace(',', '.').replace(/[^0-9.]/g, '')
 }
 

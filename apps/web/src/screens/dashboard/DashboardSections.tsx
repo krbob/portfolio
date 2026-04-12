@@ -2,8 +2,9 @@ import clsx from 'clsx'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PortfolioAllocationBucket, PortfolioAllocationSummary, PortfolioDailyHistoryPoint, PortfolioHolding, PortfolioOverview } from '../../api/read-model'
+import { ContributionPlannerPanel } from '../../components/ContributionPlannerPanel'
 import { MiniChart, type MiniChartHoverInfo } from '../../components/charts'
-import { Badge, ErrorState, InlineRefreshIndicator, StatCard, StatePanel } from '../../components/ui'
+import { Badge, ErrorState, InlineRefreshIndicator, Modal, StatCard, StatePanel } from '../../components/ui'
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
@@ -16,7 +17,7 @@ import {
   labelPortfolioValuationBasis,
   labelPrimaryPortfolioValueMetric,
 } from '../../lib/portfolio-presentation'
-import { card } from '../../lib/styles'
+import { btnSecondary, card } from '../../lib/styles'
 
 export function DashboardHeroStats({
   isPolish,
@@ -221,6 +222,7 @@ export function DashboardTargetDriftCard({
   onRetry: () => void
 }) {
   const buckets = allocation?.buckets.filter((b) => b.targetWeightPct != null) ?? []
+  const [isContributionPlannerOpen, setIsContributionPlannerOpen] = useState(false)
 
   return (
     <div className={card}>
@@ -283,14 +285,32 @@ export function DashboardTargetDriftCard({
           </div>
 
           {/* Meta + link */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-zinc-500">
               ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} {t('dashboardSections.toleranceMeta')} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
             </p>
-            <Link to="/strategy?tab=targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
-              {t('dashboardSections.openTargetAllocation')} →
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={`${btnSecondary} px-3 py-1.5 text-xs`}
+                onClick={() => setIsContributionPlannerOpen(true)}
+              >
+                {t('dashboardSections.planContribution')}
+              </button>
+              <Link to="/strategy?tab=targets" className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100">
+                {t('dashboardSections.openTargetAllocation')} →
+              </Link>
+            </div>
           </div>
+
+          <Modal
+            open={isContributionPlannerOpen}
+            onClose={() => setIsContributionPlannerOpen(false)}
+            title={t('targets.contributionPlannerTitle')}
+            size="2xl"
+          >
+            <ContributionPlannerPanel allocation={allocation} autoFocus />
+          </Modal>
         </div>
       )}
     </div>

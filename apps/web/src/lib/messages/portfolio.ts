@@ -215,6 +215,7 @@ export const portfolioMessages = {
   'dashboardSections.noTargetDescription': { pl: 'Ustaw wagi docelowe, aby odblokować diagnostykę odchyleń, sugestie rebalansowania i benchmark alokacji docelowej.', en: 'Set target weights to unlock drift diagnostics, rebalance suggestions and the target-mix benchmark.' },
   'dashboardSections.toleranceMeta': { pl: 'tolerancja', en: 'tolerance' },
   'dashboardSections.outsideBand': { pl: 'poza zakresem', en: 'outside band' },
+  'dashboardSections.planContribution': { pl: 'Zaplanuj wpłatę', en: 'Plan contribution' },
   'dashboardSections.openTargetAllocation': { pl: 'Otwórz alokację docelową', en: 'Open target allocation' },
   'dashboardSections.deployCashHero': { pl: 'Przesuń {amount} z gotówki \u2192 {assetClass}.', en: 'Deploy {amount} from cash \u2192 {assetClass}.' },
   'dashboardSections.deployCashSub': { pl: 'Zamyka największą lukę bez sprzedaży.', en: 'Closes the largest gap without selling.' },
