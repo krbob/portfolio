@@ -138,7 +138,7 @@ export function DashboardScreen() {
 
       <DashboardSetupBanner />
 
-      <FadeIn className="mt-6">
+      <FadeIn className="mt-4">
       <DashboardHeroStats
         isPolish={isPolish}
         overview={overview}
