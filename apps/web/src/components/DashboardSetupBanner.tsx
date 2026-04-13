@@ -12,7 +12,7 @@ export function DashboardSetupBanner() {
   }
 
   return (
-    <section className={`${card} mb-6 border-blue-500/30 bg-blue-500/5`}>
+    <section className={`${card} border-blue-500/30 bg-blue-500/5`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-blue-300">
