@@ -123,12 +123,13 @@ function labelCheckStatus(status: string) {
 }
 
 function labelDetailKey(key: string) {
-  const keyMap: Record<string, 'readiness.detailUpstream' | 'readiness.detailOperation' | 'readiness.detailSymbol' | 'readiness.detailStatusCode' | 'readiness.detailResponseBody'> = {
+  const keyMap: Record<string, 'readiness.detailUpstream' | 'readiness.detailOperation' | 'readiness.detailSymbol' | 'readiness.detailStatusCode' | 'readiness.detailResponseBody' | 'readiness.detailTimeoutMs'> = {
     upstream: 'readiness.detailUpstream',
     operation: 'readiness.detailOperation',
     symbol: 'readiness.detailSymbol',
     statusCode: 'readiness.detailStatusCode',
     responseBodyPreview: 'readiness.detailResponseBody',
+    timeoutMs: 'readiness.detailTimeoutMs',
   }
 
   const messageKey = keyMap[key]
@@ -223,6 +224,13 @@ function formatProbeMessage(
     return `Usługa ${serviceName} nie jest podłączona w tym trybie aplikacji.`
   }
 
+  if (isTimeoutWarning(check)) {
+    const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
+    const symbol = check.details?.symbol ? ` dla ${check.details.symbol}` : ''
+    const timeoutMs = check.details?.timeoutMs ? ` po ${check.details.timeoutMs} ms` : ''
+    return `Próba połączenia z usługą ${serviceName}${operation}${symbol} przekroczyła limit czasu${timeoutMs}.`
+  }
+
   const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
   const statusCode = check.details?.statusCode ? ` Kod HTTP: ${check.details.statusCode}.` : ''
   return `Usługa ${serviceName} zwróciła błąd${operation}.${statusCode}`.replace('..', '.')
@@ -241,9 +249,19 @@ function formatGoldMessage(check: { status: string; details?: Record<string, str
       : 'Klucz do wyceny złota nie jest skonfigurowany.'
   }
 
+  if (isTimeoutWarning(check)) {
+    const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
+    const timeoutMs = check.details?.timeoutMs ? ` po ${check.details.timeoutMs} ms` : ''
+    return `Próba pobrania danych o złocie${operation} przekroczyła limit czasu${timeoutMs}.`
+  }
+
   const operation = check.details?.operation ? ` podczas operacji ${labelProbeOperation(check.details.operation)}` : ''
   const statusCode = check.details?.statusCode ? ` Kod HTTP: ${check.details.statusCode}.` : ''
   return `Źródło wyceny złota zwróciło błąd${operation}.${statusCode}`.replace('..', '.')
+}
+
+function isTimeoutWarning(check: { details?: Record<string, string>; message: string }) {
+  return Boolean(check.details?.timeoutMs) || check.message.toLowerCase().includes('timed out')
 }
 
 function labelProbeOperation(operation: string) {

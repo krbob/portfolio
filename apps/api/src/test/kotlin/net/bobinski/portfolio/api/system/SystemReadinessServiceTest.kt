@@ -78,6 +78,36 @@ class SystemReadinessServiceTest {
         }
     }
 
+    @Test
+    fun `readiness includes timeout details for timed out probes`() = runBlocking {
+        val server = FakeMarketDataServer(stockAnalystDelayMs = 3_000)
+        server.start()
+
+        try {
+            val service = SystemReadinessService(
+                persistenceConfig = persistenceConfig(),
+                backupConfig = backupConfig(),
+                marketDataConfig = marketDataConfig(baseUrl = server.baseUrl),
+                authConfig = authConfig(),
+                clock = fixedClock(),
+                stockAnalystClient = stockAnalystClient(server.baseUrl),
+                edoCalculatorClient = edoCalculatorClient(server.baseUrl),
+                goldApiClient = goldApiClient(server.baseUrl)
+            )
+
+            val stockAnalystCheck = service.current().check("stock-analyst")
+
+            assertEquals(ReadinessCheckStatus.WARN, stockAnalystCheck.status)
+            assertTrue(stockAnalystCheck.message.contains("timed out after 2500 ms"))
+            assertEquals("stock-analyst", stockAnalystCheck.details["upstream"])
+            assertEquals("history", stockAnalystCheck.details["operation"])
+            assertEquals("PLN=X", stockAnalystCheck.details["symbol"])
+            assertEquals("2500", stockAnalystCheck.details["timeoutMs"])
+        } finally {
+            server.close()
+        }
+    }
+
     private fun persistenceConfig() = PersistenceConfig(
         databasePath = "./data/test.db",
         journalMode = JournalMode.WAL,
@@ -137,9 +167,11 @@ class SystemReadinessServiceTest {
         checks.first { check -> check.key == key }
 }
 
-private class FakeMarketDataServer : AutoCloseable {
+private class FakeMarketDataServer(
+    private val stockAnalystDelayMs: Long = 0
+) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress(0), 0).apply {
-        createContext("/history", HistoryHandler)
+        createContext("/history", HistoryHandler(stockAnalystDelayMs))
         createContext("/inflation/monthly", InflationHandler)
         executor = null
     }
@@ -155,9 +187,14 @@ private class FakeMarketDataServer : AutoCloseable {
         server.stop(0)
     }
 
-    private object HistoryHandler : HttpHandler {
+    private class HistoryHandler(
+        private val stockAnalystDelayMs: Long
+    ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
             val path = exchange.requestURI.path
+            if (stockAnalystDelayMs > 0 && (path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X"))) {
+                Thread.sleep(stockAnalystDelayMs)
+            }
             val body = when {
                 path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
                     """{"prices":[{"date":"2025-01-02","close":4.0123},{"date":"2025-01-03","close":4.0088}]}"""

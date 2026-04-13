@@ -130,7 +130,7 @@ export function PortfolioSetupGuideSection() {
         label: t('setup.openBenchmarks'),
       },
     },
-    buildReadinessItem(readinessQuery.data?.status, readinessQuery.isLoading, readinessQuery.isError),
+    buildReadinessItem(readinessQuery.data, readinessQuery.isLoading, readinessQuery.isError),
     buildDataQualityItem(dataQuality.summary?.warningCount, dataQuality.isLoading, Boolean(dataQuality.error), isPolish),
   ]
 
@@ -221,7 +221,11 @@ function buildSetupItem({
   }
 }
 
-function buildReadinessItem(status: string | undefined, isLoading: boolean, isError: boolean): GuideItem {
+function buildReadinessItem(
+  readiness: { status: string; checks?: Array<{ status: string }> } | undefined,
+  isLoading: boolean,
+  isError: boolean,
+): GuideItem {
   if (isLoading) {
     return {
       key: 'readiness',
@@ -236,12 +240,42 @@ function buildReadinessItem(status: string | undefined, isLoading: boolean, isEr
     }
   }
 
-  if (isError || !status || status !== 'READY') {
+  if (isError || !readiness?.status) {
     return {
       key: 'readiness',
       title: t('setup.readiness'),
       description: t('setup.readinessWarning'),
       status: 'warning',
+      action: {
+        kind: 'route',
+        to: '/system',
+        label: t('setup.openHealth'),
+      },
+    }
+  }
+
+  const hasBlockingIssue = readiness.status === 'NOT_READY' || readiness.checks?.some((check) => check.status === 'FAIL')
+  if (hasBlockingIssue) {
+    return {
+      key: 'readiness',
+      title: t('setup.readiness'),
+      description: t('setup.readinessWarning'),
+      status: 'warning',
+      action: {
+        kind: 'route',
+        to: '/system',
+        label: t('setup.openHealth'),
+      },
+    }
+  }
+
+  const hasAdvisoryNotice = readiness.status === 'DEGRADED' || readiness.checks?.some((check) => check.status === 'WARN')
+  if (hasAdvisoryNotice) {
+    return {
+      key: 'readiness',
+      title: t('setup.readiness'),
+      description: t('setup.readinessAdvisory'),
+      status: 'info',
       action: {
         kind: 'route',
         to: '/system',

@@ -39,7 +39,7 @@ describe('SystemReadinessSection', () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as ReturnType<typeof useAppReadiness>)
+    } as unknown as ReturnType<typeof useAppReadiness>)
 
     render(<SystemReadinessSection />)
 
@@ -52,5 +52,37 @@ describe('SystemReadinessSection', () => {
     expect(screen.getByText('Upstream details')).toBeInTheDocument()
     expect(screen.getByText('HTTP status')).toBeInTheDocument()
     expect(screen.getByText('403')).toBeInTheDocument()
+  })
+
+  it('renders timeout details for advisory probes', () => {
+    vi.mocked(useAppReadiness).mockReturnValue({
+      data: {
+        status: 'DEGRADED',
+        checkedAt: '2026-03-13T12:00:00Z',
+        checks: [
+          {
+            key: 'stock-analyst',
+            label: 'Stock Analyst',
+            status: 'WARN',
+            message: 'Stock Analyst probe timed out after 2500 ms.',
+            details: {
+              upstream: 'stock-analyst',
+              operation: 'history',
+              symbol: 'PLN=X',
+              timeoutMs: '2500',
+            },
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAppReadiness>)
+
+    render(<SystemReadinessSection />)
+
+    expect(screen.getByText(/stock analyst probe timed out after 2500 ms\./i)).toBeInTheDocument()
+    expect(screen.getByText('Timeout')).toBeInTheDocument()
+    expect(screen.getByText('2500')).toBeInTheDocument()
   })
 })

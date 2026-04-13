@@ -8,6 +8,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.sql.DataSource
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
@@ -192,7 +193,12 @@ class SystemReadinessService(
         key = "stock-analyst",
         label = "Stock Analyst",
         clientBound = stockAnalystClient != null,
-        unavailableMessage = "Stock Analyst client is not bound in this application mode."
+        unavailableMessage = "Stock Analyst client is not bound in this application mode.",
+        probeDetails = mapOf(
+            "upstream" to "stock-analyst",
+            "operation" to "history",
+            "symbol" to marketDataConfig.usdPlnSymbol
+        )
     ) {
         val history = stockAnalystClient!!.history(
             symbol = marketDataConfig.usdPlnSymbol,
@@ -209,7 +215,11 @@ class SystemReadinessService(
         key = "edo-calculator",
         label = "EDO Calculator",
         clientBound = edoCalculatorClient != null,
-        unavailableMessage = "EDO Calculator client is not bound in this application mode."
+        unavailableMessage = "EDO Calculator client is not bound in this application mode.",
+        probeDetails = mapOf(
+            "upstream" to "edo-calculator",
+            "operation" to "monthly-inflation"
+        )
     ) {
         val inflation = edoCalculatorClient!!.monthlyInflation(
             from = CPI_PROBE_FROM,
@@ -235,7 +245,12 @@ class SystemReadinessService(
             key = "gold-market-data",
             label = "Gold data",
             clientBound = goldApiClient != null,
-            unavailableMessage = "Gold API client is not bound in this application mode."
+            unavailableMessage = "Gold API client is not bound in this application mode.",
+            probeDetails = mapOf(
+                "upstream" to "gold-api",
+                "operation" to "gold-history",
+                "symbol" to "XAU"
+            )
         ) {
             val history = goldApiClient!!.historyUsd(
                 apiKey = marketDataConfig.goldApiKey,
@@ -254,6 +269,7 @@ class SystemReadinessService(
         label: String,
         clientBound: Boolean,
         unavailableMessage: String,
+        probeDetails: Map<String, String> = emptyMap(),
         probe: suspend () -> String
     ): SystemReadinessCheck {
         return if (!clientBound) {
@@ -273,12 +289,22 @@ class SystemReadinessService(
                     message = message
                 )
             }.getOrElse { exception ->
-                val details = (exception as? MarketDataClientException)?.toReadinessDetails() ?: emptyMap()
+                val details = when (exception) {
+                    is MarketDataClientException -> probeDetails + exception.toReadinessDetails()
+                    is TimeoutCancellationException -> probeDetails + mapOf(
+                        "timeoutMs" to MARKET_DATA_PROBE_TIMEOUT_MS.toString()
+                    )
+                    else -> probeDetails
+                }
+                val message = when (exception) {
+                    is TimeoutCancellationException -> "$label probe timed out after ${MARKET_DATA_PROBE_TIMEOUT_MS} ms."
+                    else -> exception.message ?: "$label probe failed."
+                }
                 SystemReadinessCheck(
                     key = key,
                     label = label,
                     status = ReadinessCheckStatus.WARN,
-                    message = exception.message ?: "$label probe failed.",
+                    message = message,
                     details = details
                 )
             }
