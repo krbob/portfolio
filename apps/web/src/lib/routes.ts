@@ -1,5 +1,6 @@
 export const appRoutes = {
   dashboard: '/',
+  setup: '/setup',
   portfolio: {
     base: '/portfolio',
     holdings: '/portfolio/holdings',

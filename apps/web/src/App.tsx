@@ -12,6 +12,11 @@ const DashboardScreen = lazy(async () => {
   return { default: module.DashboardScreen }
 })
 
+const SetupGuideScreen = lazy(async () => {
+  const module = await import('./screens/SetupGuideScreen')
+  return { default: module.SetupGuideScreen }
+})
+
 const PortfolioScreen = lazy(async () => {
   const module = await import('./screens/PortfolioScreen')
   return { default: module.PortfolioScreen }
@@ -54,6 +59,7 @@ export function App() {
           <Suspense fallback={<RouteLoadingState />}>
             <Routes>
               <Route path={appRoutes.dashboard} element={<DashboardScreen />} />
+              <Route path={appRoutes.setup} element={<SetupGuideScreen />} />
               <Route path={appRoutes.portfolio.base} element={<Navigate to={appRoutes.portfolio.holdings} replace />} />
               <Route path={appRoutes.portfolio.holdings} element={<PortfolioScreen />} />
               <Route path={appRoutes.portfolio.accounts} element={<PortfolioScreen />} />

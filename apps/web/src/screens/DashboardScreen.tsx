@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
-import { PortfolioSetupGuideSection } from '../components/PortfolioSetupGuideSection'
+import { DashboardSetupBanner } from '../components/DashboardSetupBanner'
 import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
@@ -136,7 +136,7 @@ export function DashboardScreen() {
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
 
-      <PortfolioSetupGuideSection />
+      <DashboardSetupBanner />
 
       <FadeIn>
       <DashboardHeroStats

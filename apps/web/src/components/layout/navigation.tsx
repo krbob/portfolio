@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { IconDashboard, IconData, IconPerformance, IconPortfolio, IconSettings, IconStrategy, IconTransactions } from '../ui/icons'
+import { appRoutes } from '../../lib/routes'
 
 export interface NavItem {
   to: string
@@ -71,6 +72,10 @@ export const navSections = [
 ]
 
 export function resolveRouteTitle(pathname: string, language: 'en' | 'pl') {
+  if (pathname.startsWith(appRoutes.setup)) {
+    return language === 'pl' ? 'Start i diagnostyka' : 'Setup and diagnostics'
+  }
+
   const item = [...investingNav, ...managementNav].find((entry) => matchesRoute(pathname, entry))
   return item?.label[language] ?? 'Portfolio'
 }
