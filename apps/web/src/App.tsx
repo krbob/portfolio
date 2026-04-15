@@ -4,6 +4,7 @@ import { AuthGate } from './components/AuthGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/layout'
 import { ToastProvider } from './components/ui'
+import { useAppResumeRefresh } from './hooks/use-app-resume-refresh'
 import { t } from './lib/messages'
 import { appRoutes } from './lib/routes'
 
@@ -50,6 +51,7 @@ const SystemScreen = lazy(async () => {
 export function App() {
   const navigate = useNavigate()
   const handleErrorReset = useCallback(() => { navigate('/') }, [navigate])
+  useAppResumeRefresh()
 
   return (
     <ToastProvider>

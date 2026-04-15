@@ -35,6 +35,7 @@ The product is built around a few explicit rules:
 - target-history visibility through audit events
 - optional single-user password auth
 - installable PWA shell for phone and tablet use
+- active mobile views refresh on app resume after a longer pause
 
 ## Repository layout
 
