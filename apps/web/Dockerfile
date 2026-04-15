@@ -9,7 +9,7 @@ COPY . .
 
 RUN npm run build
 
-FROM nginx:1.29-alpine
+FROM nginx:1.30-alpine
 
 ENV PORTFOLIO_API_UPSTREAM=http://portfolio-api:18082
 ENV DOLLAR=$
