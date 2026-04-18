@@ -25,11 +25,20 @@
 
   html {
     color-scheme: dark;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     min-height: 100vh;
+    min-height: 100dvh;
     background: #09090b;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
   }
 
   button,
