@@ -173,7 +173,7 @@ export function DashboardHistoryCard({
                 key={value}
                 type="button"
                 className={clsx(
-                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  'rounded-md px-3 py-1.5 sm:px-2.5 sm:py-1 text-xs font-medium transition-colors',
                   value === range ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
                 )}
                 onClick={() => onRangeChange(value)}

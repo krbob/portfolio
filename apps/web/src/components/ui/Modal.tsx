@@ -89,7 +89,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+            className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
             aria-label={t('common.close')}
           >
             <IconClose />

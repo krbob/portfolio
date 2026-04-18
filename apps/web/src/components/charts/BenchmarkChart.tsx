@@ -237,7 +237,7 @@ export function BenchmarkChart({
                       <button
                         key={key}
                         type="button"
-                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                        className={`rounded-full border px-3 py-1.5 sm:py-1 text-xs transition-colors ${
                           isSelected
                             ? 'border-blue-500/40 bg-blue-500/15 text-blue-100'
                             : 'border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:text-zinc-200'

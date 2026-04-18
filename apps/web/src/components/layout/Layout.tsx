@@ -225,7 +225,7 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <button
               onClick={closeMobileNav}
-              className="absolute right-3 top-3 rounded-lg p-1 text-zinc-400 hover:text-zinc-200"
+              className="absolute right-3 top-3 rounded-lg p-2 text-zinc-400 hover:text-zinc-200"
               aria-label={t('layout.closeNavigation')}
             >
               <IconClose />

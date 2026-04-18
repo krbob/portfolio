@@ -33,7 +33,7 @@ export function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismi
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="shrink-0 rounded-lg p-0.5 opacity-60 transition-opacity hover:opacity-100"
+            className="shrink-0 rounded-lg p-2 opacity-60 transition-opacity hover:opacity-100"
             aria-label={t('common.close')}
           >
             <IconClose className="h-4 w-4" />

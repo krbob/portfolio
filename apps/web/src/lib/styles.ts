@@ -9,7 +9,7 @@ export const cardHeader = 'border-b border-zinc-800 px-5 py-4'
 export const input =
   'w-full min-w-0 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30'
 export const filterInput =
-  'rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 focus:border-blue-500 focus:outline-none'
+  'rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-2 sm:py-1.5 text-sm text-zinc-100 focus:border-blue-500 focus:outline-none'
 export const inputError =
   'w-full min-w-0 rounded-lg border border-red-500/50 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/30'
 export const label = 'block text-xs font-medium text-zinc-500 mb-1.5'
@@ -20,9 +20,9 @@ export const btnPrimary =
 export const btnSecondary =
   'rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-600 disabled:opacity-50 transition-colors'
 export const btnGhost =
-  'rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+  'rounded-lg px-3 py-2 sm:py-1.5 text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
 export const btnDanger =
-  'rounded-lg bg-red-500/15 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+  'rounded-lg bg-red-500/15 px-3 py-2 sm:py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
 
 // Table
 export const th = 'px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500'
