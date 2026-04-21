@@ -22,90 +22,29 @@ class PortfolioBenchmarkSettingsService(
     }
 
     suspend fun update(command: SavePortfolioBenchmarkSettingsCommand): PortfolioBenchmarkSettings {
-        val enabledKeys = command.enabledKeys
-            .map(::normalizeKey)
-            .distinct()
-        val pinnedKeys = command.pinnedKeys
-            .map(::normalizeKey)
-            .distinct()
-        val customBenchmarks = command.customBenchmarks
-            .map { benchmark ->
-                CustomBenchmarkDefinition(
-                    key = normalizeKey(benchmark.key),
-                    label = benchmark.label.trim(),
-                    symbol = benchmark.symbol.trim().uppercase()
-                )
-            }
+        val normalized = normalize(command)
+        validateCustomBenchmarks(normalized.customBenchmarks)
 
-        require(customBenchmarks.map(CustomBenchmarkDefinition::key).distinct().size == customBenchmarks.size) {
-            "Custom benchmark keys must be unique."
-        }
-        require(customBenchmarks.none { it.key.isBlank() }) {
-            "Custom benchmark keys must not be blank."
-        }
-        require(customBenchmarks.none { it.key in BUILT_IN_KEYS }) {
-            "Custom benchmark keys must not reuse built-in benchmark keys."
-        }
-        require(customBenchmarks.all { CUSTOM_KEY_PATTERN.matches(it.key) }) {
-            "Custom benchmark keys must use only letters, digits, underscores or hyphens."
-        }
-        customBenchmarks.forEach { benchmark ->
-            require((benchmark.label.isBlank() && benchmark.symbol.isBlank()) || (benchmark.label.isNotBlank() && benchmark.symbol.isNotBlank())) {
-                "Custom benchmark label and symbol must either both be set or both be empty."
-            }
-        }
+        val configuredCustomBenchmarks = normalized.customBenchmarks
+            .filter { it.label.isNotBlank() && it.symbol.isNotBlank() }
+        verifyCustomSymbols(configuredCustomBenchmarks)
+        validateSelections(
+            enabledKeys = normalized.enabledKeys,
+            pinnedKeys = normalized.pinnedKeys,
+            configuredCustomBenchmarks = configuredCustomBenchmarks
+        )
 
-        val configuredCustomBenchmarks = customBenchmarks.filter { it.label.isNotBlank() && it.symbol.isNotBlank() }
-        val configuredCustomKeys = configuredCustomBenchmarks.map(CustomBenchmarkDefinition::key).toSet()
-        configuredCustomBenchmarks
-            .map(CustomBenchmarkDefinition::symbol)
-            .distinct()
-            .forEach { symbol ->
-                valuationProbeService.verifyStockAnalystSymbol(symbol)
-            }
-
-        val supportedKeys = BUILT_IN_KEYS + configuredCustomKeys
-        require(enabledKeys.all { it in supportedKeys }) {
-            "Benchmark settings contain unsupported keys."
-        }
-        require(pinnedKeys.all { it in enabledKeys }) {
-            "Pinned benchmarks must be enabled."
-        }
-        require(enabledKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
-            "Enabled custom benchmarks must provide both a label and a symbol."
-        }
-        require(pinnedKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
-            "Pinned custom benchmarks must provide both a label and a symbol."
-        }
-
-        val stored = StoredBenchmarkSettings(
-            enabledKeys = enabledKeys,
-            pinnedKeys = pinnedKeys,
-            customBenchmarks = configuredCustomBenchmarks.map { benchmark ->
-                StoredCustomBenchmark(
-                    key = benchmark.key,
-                    label = benchmark.label,
-                    symbol = benchmark.symbol
-                )
-            }
+        val stored = storedSettings(
+            enabledKeys = normalized.enabledKeys,
+            pinnedKeys = normalized.pinnedKeys,
+            customBenchmarks = configuredCustomBenchmarks
         )
         appPreferenceService.put(
             key = PREFERENCE_KEY,
             serializer = StoredBenchmarkSettings.serializer(),
             value = stored
         )
-        auditLogService.record(
-            category = AuditEventCategory.SYSTEM,
-            action = "BENCHMARK_SETTINGS_UPDATED",
-            entityType = "BENCHMARK_SETTINGS",
-            message = "Updated benchmark configuration.",
-            metadata = mapOf(
-                "enabledKeys" to stored.enabledKeys.joinToString(","),
-                "pinnedKeys" to stored.pinnedKeys.joinToString(","),
-                "customSymbols" to stored.customBenchmarks.joinToString(",") { it.symbol },
-                "updatedAt" to java.time.Instant.now(clock).toString()
-            )
-        )
+        recordUpdate(stored)
         return normalize(stored)
     }
 
@@ -160,6 +99,103 @@ class PortfolioBenchmarkSettingsService(
     }
 
     private fun normalizeKey(key: String): String = key.trim().uppercase()
+
+    private fun normalize(command: SavePortfolioBenchmarkSettingsCommand): NormalizedBenchmarkSettingsCommand = NormalizedBenchmarkSettingsCommand(
+        enabledKeys = command.enabledKeys
+            .map(::normalizeKey)
+            .distinct(),
+        pinnedKeys = command.pinnedKeys
+            .map(::normalizeKey)
+            .distinct(),
+        customBenchmarks = command.customBenchmarks.map { benchmark ->
+            CustomBenchmarkDefinition(
+                key = normalizeKey(benchmark.key),
+                label = benchmark.label.trim(),
+                symbol = benchmark.symbol.trim().uppercase()
+            )
+        }
+    )
+
+    private fun validateCustomBenchmarks(customBenchmarks: List<CustomBenchmarkDefinition>) {
+        require(customBenchmarks.map(CustomBenchmarkDefinition::key).distinct().size == customBenchmarks.size) {
+            "Custom benchmark keys must be unique."
+        }
+        require(customBenchmarks.none { it.key.isBlank() }) {
+            "Custom benchmark keys must not be blank."
+        }
+        require(customBenchmarks.none { it.key in BUILT_IN_KEYS }) {
+            "Custom benchmark keys must not reuse built-in benchmark keys."
+        }
+        require(customBenchmarks.all { CUSTOM_KEY_PATTERN.matches(it.key) }) {
+            "Custom benchmark keys must use only letters, digits, underscores or hyphens."
+        }
+        customBenchmarks.forEach { benchmark ->
+            require((benchmark.label.isBlank() && benchmark.symbol.isBlank()) || (benchmark.label.isNotBlank() && benchmark.symbol.isNotBlank())) {
+                "Custom benchmark label and symbol must either both be set or both be empty."
+            }
+        }
+    }
+
+    private suspend fun verifyCustomSymbols(customBenchmarks: List<CustomBenchmarkDefinition>) {
+        customBenchmarks
+            .map(CustomBenchmarkDefinition::symbol)
+            .distinct()
+            .forEach { symbol ->
+                valuationProbeService.verifyStockAnalystSymbol(symbol)
+            }
+    }
+
+    private fun validateSelections(
+        enabledKeys: List<String>,
+        pinnedKeys: List<String>,
+        configuredCustomBenchmarks: List<CustomBenchmarkDefinition>
+    ) {
+        val configuredCustomKeys = configuredCustomBenchmarks.map(CustomBenchmarkDefinition::key).toSet()
+        val supportedKeys = BUILT_IN_KEYS + configuredCustomKeys
+        require(enabledKeys.all { it in supportedKeys }) {
+            "Benchmark settings contain unsupported keys."
+        }
+        require(pinnedKeys.all { it in enabledKeys }) {
+            "Pinned benchmarks must be enabled."
+        }
+        require(enabledKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
+            "Enabled custom benchmarks must provide both a label and a symbol."
+        }
+        require(pinnedKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
+            "Pinned custom benchmarks must provide both a label and a symbol."
+        }
+    }
+
+    private fun storedSettings(
+        enabledKeys: List<String>,
+        pinnedKeys: List<String>,
+        customBenchmarks: List<CustomBenchmarkDefinition>
+    ): StoredBenchmarkSettings = StoredBenchmarkSettings(
+        enabledKeys = enabledKeys,
+        pinnedKeys = pinnedKeys,
+        customBenchmarks = customBenchmarks.map { benchmark ->
+            StoredCustomBenchmark(
+                key = benchmark.key,
+                label = benchmark.label,
+                symbol = benchmark.symbol
+            )
+        }
+    )
+
+    private suspend fun recordUpdate(stored: StoredBenchmarkSettings) {
+        auditLogService.record(
+            category = AuditEventCategory.SYSTEM,
+            action = "BENCHMARK_SETTINGS_UPDATED",
+            entityType = "BENCHMARK_SETTINGS",
+            message = "Updated benchmark configuration.",
+            metadata = mapOf(
+                "enabledKeys" to stored.enabledKeys.joinToString(","),
+                "pinnedKeys" to stored.pinnedKeys.joinToString(","),
+                "customSymbols" to stored.customBenchmarks.joinToString(",") { it.symbol },
+                "updatedAt" to java.time.Instant.now(clock).toString()
+            )
+        )
+    }
 
     companion object {
         const val PREFERENCE_KEY = "portfolio.benchmark-settings"
@@ -267,6 +303,12 @@ class PortfolioBenchmarkSettingsService(
         )
     }
 }
+
+private data class NormalizedBenchmarkSettingsCommand(
+    val enabledKeys: List<String>,
+    val pinnedKeys: List<String>,
+    val customBenchmarks: List<CustomBenchmarkDefinition>
+)
 
 data class PortfolioBenchmarkSettings(
     val enabledKeys: List<String>,

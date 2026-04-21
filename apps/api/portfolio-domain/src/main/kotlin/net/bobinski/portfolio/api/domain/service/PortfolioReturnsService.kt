@@ -129,15 +129,13 @@ class PortfolioReturnsService(
                     return@mapNotNull null
                 }
                 buildBenchmarkComparison(
-                    key = option.key,
-                    label = option.label,
+                    option = option,
                     start = effectiveFrom,
                     end = history.until,
                     portfolioMetric = nominalPln,
                     pinned = benchmarkSettings.isPinned(option.key),
                     values = values,
-                    status = health?.status ?: BenchmarkSeriesStatus.HEALTHY,
-                    issue = health?.issue
+                    health = health
                 )
             }
             .toList()
@@ -175,31 +173,30 @@ class PortfolioReturnsService(
     }
 
     private fun buildBenchmarkComparison(
-        key: String,
-        label: String,
+        option: BenchmarkOptionDefinition,
         start: LocalDate,
         end: LocalDate,
         portfolioMetric: ReturnMetric?,
         pinned: Boolean,
         values: List<ValuationPoint>,
-        status: BenchmarkSeriesStatus,
-        issue: String?
+        health: BenchmarkSeriesHealth?
     ): BenchmarkComparison {
         val metric = calculateBenchmarkMetric(start = start, end = end, values = values)
+        val status = health?.status ?: BenchmarkSeriesStatus.HEALTHY
         val resolvedStatus = when {
             metric != null -> status
             status == BenchmarkSeriesStatus.HEALTHY -> BenchmarkSeriesStatus.UNAVAILABLE
             else -> status
         }
-        val resolvedIssue = issue ?: if (metric == null) {
+        val resolvedIssue = health?.issue ?: if (metric == null) {
             "Benchmark series does not cover the selected period."
         } else {
             null
         }
 
         return BenchmarkComparison(
-            key = key,
-            label = label,
+            key = option.key,
+            label = option.label,
             pinned = pinned,
             nominalPln = metric,
             excessTimeWeightedReturn = subtractRates(
