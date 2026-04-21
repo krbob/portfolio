@@ -34,6 +34,12 @@ export type PortfolioAllocationSummary =
 export type PortfolioContributionPlan =
   paths['/v1/portfolio/allocation/contribution-plan']['get']['responses'][200]['content']['application/json']
 
+export type PortfolioManualContributionPreview =
+  paths['/v1/portfolio/allocation/manual-contribution-preview']['post']['responses'][200]['content']['application/json']
+
+export type ManualContributionPreviewPayload =
+  NonNullable<paths['/v1/portfolio/allocation/manual-contribution-preview']['post']['requestBody']>['content']['application/json']
+
 export type PortfolioAuditEvent =
   paths['/v1/portfolio/audit/events']['get']['responses'][200]['content']['application/json'][number]
 
@@ -89,6 +95,13 @@ export function fetchPortfolioContributionPlan(
     params.set('equitiesTargetWeightPct', equitiesTargetWeightPct)
   }
   return requestJson<PortfolioContributionPlan>(`/api/v1/portfolio/allocation/contribution-plan?${params.toString()}`)
+}
+
+export function previewPortfolioManualContribution(payload: ManualContributionPreviewPayload) {
+  return requestJson<PortfolioManualContributionPreview>('/api/v1/portfolio/allocation/manual-contribution-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export function fetchPortfolioAuditEvents({

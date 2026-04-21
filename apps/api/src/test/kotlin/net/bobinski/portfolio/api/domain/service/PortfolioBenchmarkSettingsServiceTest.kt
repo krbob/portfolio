@@ -21,16 +21,16 @@ class PortfolioBenchmarkSettingsServiceTest {
 
         service.update(
             SavePortfolioBenchmarkSettingsCommand(
-                enabledKeys = listOf(BenchmarkKey.VWRA, BenchmarkKey.CUSTOM_1, BenchmarkKey.CUSTOM_2),
-                pinnedKeys = listOf(BenchmarkKey.VWRA),
+                enabledKeys = listOf(BenchmarkKey.VWRA.name, "EUROPE_600", "WORLD_SMALL_CAP"),
+                pinnedKeys = listOf(BenchmarkKey.VWRA.name),
                 customBenchmarks = listOf(
                     SaveCustomBenchmarkCommand(
-                        key = BenchmarkKey.CUSTOM_1,
+                        key = "EUROPE_600",
                         label = "Europe 600",
                         symbol = " exsa.de "
                     ),
                     SaveCustomBenchmarkCommand(
-                        key = BenchmarkKey.CUSTOM_2,
+                        key = "WORLD_SMALL_CAP",
                         label = "World Small Cap",
                         symbol = "EXUS.DE"
                     )
@@ -55,11 +55,11 @@ class PortfolioBenchmarkSettingsServiceTest {
             runBlocking {
                 service.update(
                     SavePortfolioBenchmarkSettingsCommand(
-                        enabledKeys = listOf(BenchmarkKey.CUSTOM_1),
+                        enabledKeys = listOf("BROKEN_BENCHMARK"),
                         pinnedKeys = emptyList(),
                         customBenchmarks = listOf(
                             SaveCustomBenchmarkCommand(
-                                key = BenchmarkKey.CUSTOM_1,
+                                key = "BROKEN_BENCHMARK",
                                 label = "Broken benchmark",
                                 symbol = "BAD.SYMBOL"
                             )

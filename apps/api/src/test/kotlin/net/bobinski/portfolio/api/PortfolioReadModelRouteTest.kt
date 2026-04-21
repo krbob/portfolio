@@ -533,6 +533,96 @@ class PortfolioReadModelRouteTest {
     }
 
     @Test
+    fun `allocation manual contribution preview projects portfolio after explicit split`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val equityInstrumentId = createInstrument()
+        val bondInstrumentId = createBondInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "10000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$equityInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "60",
+              "unitPrice": "100.00",
+              "grossAmount": "6000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$bondInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-03",
+              "settlementDate": "2026-03-03",
+              "quantity": "20",
+              "unitPrice": "100.00",
+              "grossAmount": "2000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val saveTargetsResponse = client.post("/v1/portfolio/targets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "items": [
+                    { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                    { "assetClass": "BONDS", "targetWeight": "0.20" },
+                    { "assetClass": "CASH", "targetWeight": "0.00" }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, saveTargetsResponse.status)
+
+        val response = client.post("/v1/portfolio/allocation/manual-contribution-preview") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "equitiesAmountPln": "3000.00",
+                  "bondsAmountPln": "1000.00",
+                  "cashAmountPln": "0.00"
+                }
+                """.trimIndent()
+            )
+        }
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"amountPln\": \"4000.00\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"3000.00\""))
+        assertTrue(body.contains("\"plannedContributionPln\": \"1000.00\""))
+        assertTrue(body.contains("\"projectedWeightPct\": \"64.29\""))
+        assertTrue(body.contains("\"projectedWeightPct\": \"21.43\""))
+    }
+
+    @Test
     fun `benchmark settings can be saved and read back`() = testApplication {
         application {
             module()

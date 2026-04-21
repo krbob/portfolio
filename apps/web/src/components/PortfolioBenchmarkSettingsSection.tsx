@@ -1,38 +1,32 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import type { BenchmarkOption, PortfolioBenchmarkSettings } from '../api/write-model'
 import { usePortfolioBenchmarkSettings, useSavePortfolioBenchmarkSettings } from '../hooks/use-write-model'
 import { useI18n } from '../lib/i18n'
 import { translateBenchmarkLabel } from '../lib/labels'
-import { formatMessage, t } from '../lib/messages'
-import { badge, badgeVariants, btnPrimary, input, label as labelClass } from '../lib/styles'
+import { t } from '../lib/messages'
+import {
+  badge,
+  badgeVariants,
+  btnDanger,
+  btnPrimary,
+  btnSecondary,
+  input,
+  label as labelClass,
+} from '../lib/styles'
 import { Card, SectionHeader } from './ui'
+import { IconPlus } from './ui/icons'
 
-const CUSTOM_BENCHMARK_KEYS = ['CUSTOM_1', 'CUSTOM_2', 'CUSTOM_3'] as const
+const CUSTOM_KIND = 'CUSTOM'
+const SYMBOL_FORMAT_PATTERN = /^[A-Z0-9._-]+$/
 
-type CustomBenchmarkKey = typeof CUSTOM_BENCHMARK_KEYS[number]
-
-type BenchmarkKey =
-  | 'VWRA'
-  | 'INFLATION'
-  | 'TARGET_MIX'
-  | 'V80A'
-  | 'V60A'
-  | 'V40A'
-  | 'V20A'
-  | 'VAGF'
-  | CustomBenchmarkKey
-
-type CustomBenchmarkFormRow = {
-  key: CustomBenchmarkKey
+type BenchmarkFormRow = {
+  key: string
   label: string
   symbol: string
-}
-
-function buildEmptyCustomBenchmarks(): CustomBenchmarkFormRow[] {
-  return CUSTOM_BENCHMARK_KEYS.map((key) => ({
-    key,
-    label: '',
-    symbol: '',
-  }))
+  kind: string
+  enabled: boolean
+  pinned: boolean
+  removable: boolean
 }
 
 export function PortfolioBenchmarkSettingsSection() {
@@ -40,9 +34,7 @@ export function PortfolioBenchmarkSettingsSection() {
   const settingsQuery = usePortfolioBenchmarkSettings()
   const saveMutation = useSavePortfolioBenchmarkSettings()
 
-  const [enabledKeys, setEnabledKeys] = useState<BenchmarkKey[]>([])
-  const [pinnedKeys, setPinnedKeys] = useState<BenchmarkKey[]>([])
-  const [customBenchmarks, setCustomBenchmarks] = useState<CustomBenchmarkFormRow[]>(() => buildEmptyCustomBenchmarks())
+  const [rows, setRows] = useState<BenchmarkFormRow[]>([])
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -50,63 +42,77 @@ export function PortfolioBenchmarkSettingsSection() {
     if (!settingsQuery.data) {
       return
     }
-    const customByKey = new Map(
-      (settingsQuery.data.customBenchmarks ?? []).map((benchmark) => [benchmark.key, benchmark]),
-    )
-
-    setEnabledKeys(settingsQuery.data.enabledKeys as BenchmarkKey[])
-    setPinnedKeys(settingsQuery.data.pinnedKeys as BenchmarkKey[])
-    setCustomBenchmarks(
-      CUSTOM_BENCHMARK_KEYS.map((key) => ({
-        key,
-        label: customByKey.get(key)?.label ?? '',
-        symbol: customByKey.get(key)?.symbol ?? '',
-      })),
-    )
+    setRows(buildBenchmarkRows(settingsQuery.data))
   }, [settingsQuery.data])
 
-  const options = useMemo(() => settingsQuery.data?.options ?? [], [settingsQuery.data?.options])
-  const groupedOptions = useMemo(() => {
-    return {
-      system: options.filter((option) => option.kind === 'SYSTEM'),
-      multiAsset: options.filter((option) => option.kind === 'MULTI_ASSET'),
-    }
-  }, [options])
+  const counts = useMemo(() => {
+    const enabledCount = rows.filter((row) => row.enabled).length
+    const pinnedCount = rows.filter((row) => row.enabled && row.pinned).length
+    return { enabledCount, pinnedCount }
+  }, [rows])
 
-  function toggleEnabled(key: BenchmarkKey) {
+  const groupedRows = useMemo(() => ({
+    system: rows.filter((row) => row.kind === 'SYSTEM'),
+    multiAsset: rows.filter((row) => row.kind === 'MULTI_ASSET'),
+    custom: rows.filter((row) => row.removable),
+  }), [rows])
+
+  function toggleEnabled(key: string) {
     setFeedback(null)
     setActionError(null)
-    setEnabledKeys((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
+    setRows((current) =>
+      current.map((row) => {
+        if (row.key !== key) {
+          return row
+        }
+        const enabled = !row.enabled
+        return {
+          ...row,
+          enabled,
+          pinned: enabled ? row.pinned : false,
+        }
+      }),
     )
-    setPinnedKeys((current) => current.filter((item) => item !== key))
   }
 
-  function togglePinned(key: BenchmarkKey) {
+  function togglePinned(key: string) {
     setFeedback(null)
     setActionError(null)
-    if (!enabledKeys.includes(key)) {
-      return
-    }
-    setPinnedKeys((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
+    setRows((current) =>
+      current.map((row) => (
+        row.key === key && row.enabled
+          ? { ...row, pinned: !row.pinned }
+          : row
+      )),
     )
   }
 
-  function updateCustomBenchmark(key: CustomBenchmarkKey, field: 'label' | 'symbol', value: string) {
+  function updateCustomBenchmark(key: string, field: 'label' | 'symbol', value: string) {
     setFeedback(null)
     setActionError(null)
-    setCustomBenchmarks((current) =>
-      current.map((benchmark) => {
-        if (benchmark.key !== key) {
-          return benchmark
+    setRows((current) =>
+      current.map((row) => {
+        if (row.key !== key) {
+          return row
         }
         return {
-          ...benchmark,
+          ...row,
           [field]: field === 'symbol' ? value.toUpperCase() : value,
         }
       }),
     )
+  }
+
+  function addCustomBenchmark() {
+    setFeedback(null)
+    setActionError(null)
+    setRows((current) => [...current, createEmptyCustomBenchmark(new Set(current.map((row) => row.key)))])
+  }
+
+  function removeCustomBenchmark(key: string) {
+    setFeedback(null)
+    setActionError(null)
+    setRows((current) => current.filter((row) => row.key !== key))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -114,18 +120,30 @@ export function PortfolioBenchmarkSettingsSection() {
     setFeedback(null)
     setActionError(null)
 
+    const customRowStates = rows.filter((row) => row.removable).map(customRowState)
+    if (customRowStates.some((state) => state.kind === 'invalid')) {
+      setActionError(t('benchmarks.symbolFormatInvalidGlobal'))
+      return
+    }
+    if (customRowStates.some((state) => state.kind === 'incomplete')) {
+      setActionError(t('benchmarks.rowIncompleteGlobal'))
+      return
+    }
+
     try {
       const result = await saveMutation.mutateAsync({
-        enabledKeys,
-        pinnedKeys,
-        customBenchmarks: customBenchmarks
-          .map((benchmark) => ({
-            key: benchmark.key,
-            label: benchmark.label.trim(),
-            symbol: benchmark.symbol.trim().toUpperCase(),
+        enabledKeys: rows.filter((row) => row.enabled).map((row) => row.key),
+        pinnedKeys: rows.filter((row) => row.enabled && row.pinned).map((row) => row.key),
+        customBenchmarks: rows
+          .filter((row) => row.removable)
+          .map((row) => ({
+            key: row.key,
+            label: row.label.trim(),
+            symbol: row.symbol.trim().toUpperCase(),
           }))
-          .filter((benchmark) => benchmark.label.length > 0 || benchmark.symbol.length > 0),
+          .filter((row) => row.label.length > 0 || row.symbol.length > 0),
       })
+      setRows(buildBenchmarkRows(result))
       setFeedback(
         isPolish
           ? `Zapisano ${result.enabledKeys.length} aktywnych benchmarków i ${result.pinnedKeys.length} przypiętych.`
@@ -163,100 +181,55 @@ export function PortfolioBenchmarkSettingsSection() {
           <BenchmarkGroup
             title={t('benchmarks.system')}
             description={t('benchmarks.systemDescription')}
-            options={groupedOptions.system}
-            enabledKeys={enabledKeys}
-            pinnedKeys={pinnedKeys}
+            rows={groupedRows.system}
             onToggleEnabled={toggleEnabled}
             onTogglePinned={togglePinned}
+            onUpdateCustomBenchmark={updateCustomBenchmark}
+            onRemoveCustomBenchmark={removeCustomBenchmark}
           />
 
           <BenchmarkGroup
             title={t('benchmarks.multiAsset')}
             description={t('benchmarks.multiAssetDescription')}
-            options={groupedOptions.multiAsset}
-            enabledKeys={enabledKeys}
-            pinnedKeys={pinnedKeys}
+            rows={groupedRows.multiAsset}
             onToggleEnabled={toggleEnabled}
             onTogglePinned={togglePinned}
+            onUpdateCustomBenchmark={updateCustomBenchmark}
+            onRemoveCustomBenchmark={removeCustomBenchmark}
           />
 
-          <div className="space-y-4 rounded-lg border border-zinc-800/50 p-4">
-            <div>
-              <h4 className="text-sm font-semibold text-zinc-100">{t('benchmarks.customTitle')}</h4>
-              <p className="mt-1 text-sm text-zinc-500">
-                {t('benchmarks.customDescription')}
-              </p>
-            </div>
+          <BenchmarkGroup
+            title={t('benchmarks.customTitle')}
+            description={t('benchmarks.customDescription')}
+            rows={groupedRows.custom}
+            emptyCopy={t('benchmarks.customEmpty')}
+            footer={(
+              <button
+                type="button"
+                className={`${btnSecondary} inline-flex items-center gap-2`}
+                onClick={addCustomBenchmark}
+                disabled={saveMutation.isPending}
+              >
+                <IconPlus className="h-4 w-4" />
+                {t('benchmarks.addBenchmark')}
+              </button>
+            )}
+            onToggleEnabled={toggleEnabled}
+            onTogglePinned={togglePinned}
+            onUpdateCustomBenchmark={updateCustomBenchmark}
+            onRemoveCustomBenchmark={removeCustomBenchmark}
+          />
 
-            {customBenchmarks.map((benchmark, index) => {
-              const enabled = enabledKeys.includes(benchmark.key)
-              const pinned = pinnedKeys.includes(benchmark.key)
-
-              return (
-                <div key={benchmark.key} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <h5 className="text-sm font-medium text-zinc-100">
-                        {formatMessage(t('benchmarks.customSlotTitle'), { index: index + 1 })}
-                      </h5>
-                      <p className="mt-1 text-xs text-zinc-500">{benchmark.key}</p>
-                    </div>
-                    <span className={`${badge} ${enabled ? badgeVariants.info : badgeVariants.default}`}>
-                      {enabled ? t('benchmarks.enabled') : t('benchmarks.off')}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end">
-                    <label>
-                      <span className={labelClass}>{t('benchmarks.label')}</span>
-                      <input
-                        className={input}
-                        value={benchmark.label}
-                        onChange={(event) => updateCustomBenchmark(benchmark.key, 'label', event.target.value)}
-                        placeholder={t('benchmarks.labelPlaceholder')}
-                      />
-                    </label>
-                    <label>
-                      <span className={labelClass}>{t('benchmarks.symbol')}</span>
-                      <input
-                        className={input}
-                        value={benchmark.symbol}
-                        onChange={(event) => updateCustomBenchmark(benchmark.key, 'symbol', event.target.value)}
-                        placeholder="EXUS.DE"
-                      />
-                    </label>
-                    <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                        checked={enabled}
-                        onChange={() => toggleEnabled(benchmark.key)}
-                      />
-                      {t('benchmarks.enabled')}
-                    </label>
-                    {enabled && (
-                      <label className="flex items-center gap-2 pb-2 text-sm text-zinc-300">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                          checked={pinned}
-                          onChange={() => togglePinned(benchmark.key)}
-                        />
-                        {t('benchmarks.pinned')}
-                      </label>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+          <div className="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-4 text-xs text-zinc-500">
+            {t('benchmarks.pinnedHint')}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <span className={`${badge} ${badgeVariants.info}`}>
-              {t('benchmarks.enabledCount')} {enabledKeys.length}
+              {t('benchmarks.enabledCount')} {counts.enabledCount}
             </span>
             <span className={`${badge} ${badgeVariants.default}`}>
-              {t('benchmarks.pinnedCount')} {pinnedKeys.length}
+              {t('benchmarks.pinnedCount')} {counts.pinnedCount}
             </span>
           </div>
 
@@ -271,24 +244,24 @@ export function PortfolioBenchmarkSettingsSection() {
 function BenchmarkGroup({
   title,
   description,
-  options,
-  enabledKeys,
-  pinnedKeys,
+  rows,
+  emptyCopy,
+  footer,
   onToggleEnabled,
   onTogglePinned,
+  onUpdateCustomBenchmark,
+  onRemoveCustomBenchmark,
 }: {
   title: string
   description: string
-  options: Array<{ key: string; label: string; symbol?: string | null }>
-  enabledKeys: BenchmarkKey[]
-  pinnedKeys: BenchmarkKey[]
-  onToggleEnabled: (key: BenchmarkKey) => void
-  onTogglePinned: (key: BenchmarkKey) => void
+  rows: BenchmarkFormRow[]
+  emptyCopy?: string
+  footer?: ReactNode
+  onToggleEnabled: (key: string) => void
+  onTogglePinned: (key: string) => void
+  onUpdateCustomBenchmark: (key: string, field: 'label' | 'symbol', value: string) => void
+  onRemoveCustomBenchmark: (key: string) => void
 }) {
-  if (options.length === 0) {
-    return null
-  }
-
   return (
     <div className="rounded-lg border border-zinc-800/50 p-4">
       <div className="mb-4">
@@ -296,49 +269,252 @@ function BenchmarkGroup({
         <p className="mt-1 text-sm text-zinc-500">{description}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {options.map((option) => {
-          const key = option.key as BenchmarkKey
-          const enabled = enabledKeys.includes(key)
-          const pinned = pinnedKeys.includes(key)
-          return (
-            <label key={option.key} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-zinc-100">{translateBenchmarkLabel(option.label)}</div>
-                  {option.symbol ? <div className="mt-1 text-xs text-zinc-500">{option.symbol}</div> : null}
-                </div>
-                <span className={`${badge} ${enabled ? badgeVariants.info : badgeVariants.default}`}>
-                  {enabled ? t('benchmarks.enabled') : t('benchmarks.off')}
-                </span>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-zinc-300">
-                <span className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                    checked={enabled}
-                    onChange={() => onToggleEnabled(key)}
-                  />
-                  {t('benchmarks.enabled')}
-                </span>
-                {enabled && (
-                  <span className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
-                      checked={pinned}
-                      onChange={() => onTogglePinned(key)}
-                    />
-                    {t('benchmarks.pinned')}
-                  </span>
-                )}
-              </div>
-            </label>
-          )
-        })}
+      <div className="space-y-3">
+        {rows.length > 0 ? rows.map((row) => (
+          <BenchmarkRowCard
+            key={row.key}
+            row={row}
+            onToggleEnabled={onToggleEnabled}
+            onTogglePinned={onTogglePinned}
+            onUpdateCustomBenchmark={onUpdateCustomBenchmark}
+            onRemoveCustomBenchmark={onRemoveCustomBenchmark}
+          />
+        )) : emptyCopy ? (
+          <p className="text-sm text-zinc-500">{emptyCopy}</p>
+        ) : null}
       </div>
+
+      {footer ? <div className="mt-4">{footer}</div> : null}
     </div>
   )
+}
+
+function BenchmarkRowCard({
+  row,
+  onToggleEnabled,
+  onTogglePinned,
+  onUpdateCustomBenchmark,
+  onRemoveCustomBenchmark,
+}: {
+  row: BenchmarkFormRow
+  onToggleEnabled: (key: string) => void
+  onTogglePinned: (key: string) => void
+  onUpdateCustomBenchmark: (key: string, field: 'label' | 'symbol', value: string) => void
+  onRemoveCustomBenchmark: (key: string) => void
+}) {
+  const rowState = row.removable ? customRowState(row) : null
+  const title = row.removable
+    ? (row.label.trim().length > 0 ? row.label : t('benchmarks.translateCustom'))
+    : translateBenchmarkLabel(row.label)
+
+  return (
+    <article className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h5 className="text-sm font-semibold text-zinc-100">{title}</h5>
+            <span className={`${badge} ${row.enabled ? badgeVariants.info : badgeVariants.default}`}>
+              {row.enabled ? t('benchmarks.enabled') : t('benchmarks.off')}
+            </span>
+          </div>
+          {row.symbol ? <p className="mt-1 text-xs text-zinc-500">{row.symbol}</p> : null}
+        </div>
+
+        {row.removable ? (
+          <button
+            type="button"
+            className={btnDanger}
+            onClick={() => onRemoveCustomBenchmark(row.key)}
+          >
+            {t('benchmarks.removeBenchmark')}
+          </button>
+        ) : null}
+      </div>
+
+      {row.removable ? (
+        <>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-start">
+            <label>
+              <span className={labelClass}>{t('benchmarks.label')}</span>
+              <input
+                className={input}
+                value={row.label}
+                onChange={(event) => onUpdateCustomBenchmark(row.key, 'label', event.target.value)}
+                placeholder={t('benchmarks.labelPlaceholder')}
+              />
+            </label>
+            <label>
+              <span className={labelClass}>{t('benchmarks.symbol')}</span>
+              <input
+                className={input}
+                value={row.symbol}
+                onChange={(event) => onUpdateCustomBenchmark(row.key, 'symbol', event.target.value)}
+                placeholder="EXUS.DE"
+              />
+            </label>
+            <ToggleField
+              checked={row.enabled}
+              label={t('benchmarks.enabled')}
+              onChange={() => onToggleEnabled(row.key)}
+            />
+            <ToggleField
+              checked={row.pinned}
+              disabled={!row.enabled}
+              label={t('benchmarks.pinned')}
+              title={t('benchmarks.pinnedHint')}
+              onChange={() => onTogglePinned(row.key)}
+            />
+          </div>
+          <p className={`mt-3 text-xs ${rowState!.colorClass}`}>
+            {rowState!.message}
+          </p>
+        </>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <ToggleField
+            checked={row.enabled}
+            label={t('benchmarks.enabled')}
+            onChange={() => onToggleEnabled(row.key)}
+          />
+          <ToggleField
+            checked={row.pinned}
+            disabled={!row.enabled}
+            label={t('benchmarks.pinned')}
+            title={t('benchmarks.pinnedHint')}
+            onChange={() => onTogglePinned(row.key)}
+          />
+        </div>
+      )}
+    </article>
+  )
+}
+
+function ToggleField({
+  checked,
+  disabled = false,
+  label,
+  title,
+  onChange,
+}: {
+  checked: boolean
+  disabled?: boolean
+  label: string
+  title?: string
+  onChange: () => void
+}) {
+  return (
+    <label
+      className={`flex items-center gap-2 text-sm ${disabled ? 'text-zinc-600' : 'text-zinc-300'}`}
+      title={title}
+    >
+      <input
+        type="checkbox"
+        className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-blue-500/30"
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+      />
+      {label}
+    </label>
+  )
+}
+
+function buildBenchmarkRows(settings: PortfolioBenchmarkSettings): BenchmarkFormRow[] {
+  const enabledKeys = new Set(settings.enabledKeys)
+  const pinnedKeys = new Set(settings.pinnedKeys)
+
+  const builtInRows = settings.options
+    .filter((option) => option.kind !== CUSTOM_KIND)
+    .map((option) => buildBuiltInRow(option, enabledKeys, pinnedKeys))
+  const customRows = (settings.customBenchmarks ?? []).map((benchmark) => ({
+    key: benchmark.key,
+    label: benchmark.label,
+    symbol: benchmark.symbol,
+    kind: CUSTOM_KIND,
+    enabled: enabledKeys.has(benchmark.key),
+    pinned: pinnedKeys.has(benchmark.key),
+    removable: true,
+  }))
+
+  return [...builtInRows, ...customRows]
+}
+
+function buildBuiltInRow(option: BenchmarkOption, enabledKeys: Set<string>, pinnedKeys: Set<string>): BenchmarkFormRow {
+  return {
+    key: option.key,
+    label: option.label,
+    symbol: option.symbol ?? '',
+    kind: option.kind,
+    enabled: enabledKeys.has(option.key),
+    pinned: pinnedKeys.has(option.key),
+    removable: false,
+  }
+}
+
+function createEmptyCustomBenchmark(existingKeys: Set<string>): BenchmarkFormRow {
+  return {
+    key: nextCustomBenchmarkKey(existingKeys),
+    label: '',
+    symbol: '',
+    kind: CUSTOM_KIND,
+    enabled: false,
+    pinned: false,
+    removable: true,
+  }
+}
+
+function nextCustomBenchmarkKey(existingKeys: Set<string>): string {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const suffix = Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0').toUpperCase()
+    const candidate = `CUSTOM_${suffix}`
+    if (!existingKeys.has(candidate)) {
+      return candidate
+    }
+  }
+  return `CUSTOM_${Date.now().toString(16).toUpperCase()}`
+}
+
+function isValidCustomSymbol(symbol: string) {
+  return SYMBOL_FORMAT_PATTERN.test(symbol.trim().toUpperCase())
+}
+
+type CustomRowState =
+  | { kind: 'empty'; colorClass: string; message: string }
+  | { kind: 'incomplete'; colorClass: string; message: string }
+  | { kind: 'invalid'; colorClass: string; message: string }
+  | { kind: 'valid'; colorClass: string; message: string }
+
+function customRowState(row: BenchmarkFormRow): CustomRowState {
+  const label = row.label.trim()
+  const symbol = row.symbol.trim()
+
+  if (label.length === 0 && symbol.length === 0) {
+    return {
+      kind: 'empty',
+      colorClass: 'text-zinc-500',
+      message: t('benchmarks.symbolFormatHint'),
+    }
+  }
+
+  if (label.length === 0 || symbol.length === 0) {
+    return {
+      kind: 'incomplete',
+      colorClass: 'text-amber-400',
+      message: t('benchmarks.rowIncomplete'),
+    }
+  }
+
+  if (!isValidCustomSymbol(symbol)) {
+    return {
+      kind: 'invalid',
+      colorClass: 'text-red-400',
+      message: t('benchmarks.symbolFormatInvalid'),
+    }
+  }
+
+  return {
+    kind: 'valid',
+    colorClass: 'text-emerald-400',
+    message: t('benchmarks.symbolFormatValid'),
+  }
 }

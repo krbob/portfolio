@@ -120,7 +120,7 @@ class PortfolioReturnsService(
             .filter { option -> benchmarkSettings.isEnabled(option.key) }
             .mapNotNull { option ->
                 val values = history.points.mapNotNull { point ->
-                    point.benchmarkIndices[option.key.name]?.let { value ->
+                    point.benchmarkIndices[option.key]?.let { value ->
                         ValuationPoint(date = point.date, value = value)
                     }
                 }
@@ -175,7 +175,7 @@ class PortfolioReturnsService(
     }
 
     private fun buildBenchmarkComparison(
-        key: BenchmarkKey,
+        key: String,
         label: String,
         start: LocalDate,
         end: LocalDate,
@@ -769,7 +769,7 @@ data class InflationWindow(
 )
 
 data class BenchmarkComparison(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val pinned: Boolean,
     val nominalPln: ReturnMetric?,
@@ -786,7 +786,7 @@ enum class BenchmarkSeriesStatus {
 }
 
 data class BenchmarkSeriesHealth(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val status: BenchmarkSeriesStatus,
     val issue: String? = null

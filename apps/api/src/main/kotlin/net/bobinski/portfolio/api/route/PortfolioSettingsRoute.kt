@@ -8,7 +8,6 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
-import net.bobinski.portfolio.api.domain.service.BenchmarkKey
 import net.bobinski.portfolio.api.domain.service.BenchmarkOptionKind
 import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
@@ -177,18 +176,18 @@ private fun ReplacePortfolioTargetsRequest.toDomain() = ReplacePortfolioTargetsC
 
 private fun net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettings.toResponse(): PortfolioBenchmarkSettingsResponse =
     PortfolioBenchmarkSettingsResponse(
-        enabledKeys = enabledKeys.map(BenchmarkKey::name),
-        pinnedKeys = pinnedKeys.map(BenchmarkKey::name),
+        enabledKeys = enabledKeys,
+        pinnedKeys = pinnedKeys,
         customBenchmarks = customBenchmarks.map { benchmark ->
             CustomBenchmarkResponse(
-                key = benchmark.key.name,
+                key = benchmark.key,
                 label = benchmark.label,
                 symbol = benchmark.symbol
             )
         },
         options = options.map { option ->
             BenchmarkOptionResponse(
-                key = option.key.name,
+                key = option.key,
                 label = option.label,
                 symbol = option.symbol,
                 kind = option.kind.name,
@@ -213,22 +212,16 @@ private fun SavePortfolioRebalancingSettingsRequest.toDomain(): SavePortfolioReb
 
 private fun SavePortfolioBenchmarkSettingsRequest.toDomain(): SavePortfolioBenchmarkSettingsCommand =
     SavePortfolioBenchmarkSettingsCommand(
-        enabledKeys = enabledKeys.map(::parseBenchmarkKey),
-        pinnedKeys = pinnedKeys.map(::parseBenchmarkKey),
+        enabledKeys = enabledKeys,
+        pinnedKeys = pinnedKeys,
         customBenchmarks = customBenchmarks.map { benchmark ->
             net.bobinski.portfolio.api.domain.service.SaveCustomBenchmarkCommand(
-                key = parseBenchmarkKey(benchmark.key),
+                key = benchmark.key,
                 label = benchmark.label,
                 symbol = benchmark.symbol
             )
         }
     )
-
-private fun parseBenchmarkKey(value: String): BenchmarkKey = try {
-    BenchmarkKey.valueOf(value.uppercase())
-} catch (_: IllegalArgumentException) {
-    throw IllegalArgumentException("Unsupported benchmark key: $value")
-}
 
 private fun parseRebalancingMode(value: String): RebalancingMode = try {
     RebalancingMode.valueOf(value.uppercase())

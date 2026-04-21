@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
@@ -8,8 +8,10 @@ import {
   fetchPortfolioDailyHistory,
   fetchPortfolioHoldings,
   fetchPortfolioOverview,
+  previewPortfolioManualContribution,
   fetchReadModelCacheSnapshots,
   fetchPortfolioReturns,
+  type ManualContributionPreviewPayload,
 } from '../api/read-model'
 
 export function usePortfolioOverview() {
@@ -63,6 +65,12 @@ export function usePortfolioContributionPlan(
     queryKey: ['portfolio-allocation-contribution-plan', amountPln ?? '', revision, equitiesTargetWeightPct ?? 'BASE'],
     queryFn: () => fetchPortfolioContributionPlan(amountPln ?? '', { equitiesTargetWeightPct }),
     enabled: amountPln != null,
+  })
+}
+
+export function usePortfolioManualContributionPreview() {
+  return useMutation({
+    mutationFn: (payload: ManualContributionPreviewPayload) => previewPortfolioManualContribution(payload),
   })
 }
 

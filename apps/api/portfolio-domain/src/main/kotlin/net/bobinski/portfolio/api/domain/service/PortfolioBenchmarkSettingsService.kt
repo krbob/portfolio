@@ -22,29 +22,39 @@ class PortfolioBenchmarkSettingsService(
     }
 
     suspend fun update(command: SavePortfolioBenchmarkSettingsCommand): PortfolioBenchmarkSettings {
-        val supportedKeys = BenchmarkKey.entries.toSet()
+        val enabledKeys = command.enabledKeys
+            .map(::normalizeKey)
+            .distinct()
+        val pinnedKeys = command.pinnedKeys
+            .map(::normalizeKey)
+            .distinct()
         val customBenchmarks = command.customBenchmarks
             .map { benchmark ->
                 CustomBenchmarkDefinition(
-                    key = benchmark.key,
+                    key = normalizeKey(benchmark.key),
                     label = benchmark.label.trim(),
                     symbol = benchmark.symbol.trim().uppercase()
                 )
             }
-        require(customBenchmarks.size <= MAX_CUSTOM_BENCHMARKS) {
-            "Benchmark settings support at most $MAX_CUSTOM_BENCHMARKS custom benchmarks."
-        }
+
         require(customBenchmarks.map(CustomBenchmarkDefinition::key).distinct().size == customBenchmarks.size) {
             "Custom benchmark keys must be unique."
         }
-        require(customBenchmarks.all { it.key in CUSTOM_KEYS }) {
-            "Custom benchmark settings contain unsupported keys."
+        require(customBenchmarks.none { it.key.isBlank() }) {
+            "Custom benchmark keys must not be blank."
+        }
+        require(customBenchmarks.none { it.key in BUILT_IN_KEYS }) {
+            "Custom benchmark keys must not reuse built-in benchmark keys."
+        }
+        require(customBenchmarks.all { CUSTOM_KEY_PATTERN.matches(it.key) }) {
+            "Custom benchmark keys must use only letters, digits, underscores or hyphens."
         }
         customBenchmarks.forEach { benchmark ->
             require((benchmark.label.isBlank() && benchmark.symbol.isBlank()) || (benchmark.label.isNotBlank() && benchmark.symbol.isNotBlank())) {
                 "Custom benchmark label and symbol must either both be set or both be empty."
             }
         }
+
         val configuredCustomBenchmarks = customBenchmarks.filter { it.label.isNotBlank() && it.symbol.isNotBlank() }
         val configuredCustomKeys = configuredCustomBenchmarks.map(CustomBenchmarkDefinition::key).toSet()
         configuredCustomBenchmarks
@@ -53,25 +63,27 @@ class PortfolioBenchmarkSettingsService(
             .forEach { symbol ->
                 valuationProbeService.verifyStockAnalystSymbol(symbol)
             }
-        require(command.enabledKeys.all { it in supportedKeys }) {
+
+        val supportedKeys = BUILT_IN_KEYS + configuredCustomKeys
+        require(enabledKeys.all { it in supportedKeys }) {
             "Benchmark settings contain unsupported keys."
         }
-        require(command.pinnedKeys.all { it in command.enabledKeys }) {
+        require(pinnedKeys.all { it in enabledKeys }) {
             "Pinned benchmarks must be enabled."
         }
-        require(command.enabledKeys.none { it in CUSTOM_KEYS && it !in configuredCustomKeys }) {
+        require(enabledKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
             "Enabled custom benchmarks must provide both a label and a symbol."
         }
-        require(command.pinnedKeys.none { it in CUSTOM_KEYS && it !in configuredCustomKeys }) {
+        require(pinnedKeys.none { it !in BUILT_IN_KEYS && it !in configuredCustomKeys }) {
             "Pinned custom benchmarks must provide both a label and a symbol."
         }
 
         val stored = StoredBenchmarkSettings(
-            enabledKeys = command.enabledKeys.map(BenchmarkKey::name).distinct(),
-            pinnedKeys = command.pinnedKeys.map(BenchmarkKey::name).distinct(),
+            enabledKeys = enabledKeys,
+            pinnedKeys = pinnedKeys,
             customBenchmarks = configuredCustomBenchmarks.map { benchmark ->
                 StoredCustomBenchmark(
-                    key = benchmark.key.name,
+                    key = benchmark.key,
                     label = benchmark.label,
                     symbol = benchmark.symbol
                 )
@@ -100,8 +112,8 @@ class PortfolioBenchmarkSettingsService(
     private fun normalize(stored: StoredBenchmarkSettings): PortfolioBenchmarkSettings {
         val configuredCustomBenchmarks = stored.customBenchmarks
             .mapNotNull { benchmark ->
-                val key = benchmark.key.toBenchmarkKeyOrNull()
-                if (key == null || key !in CUSTOM_KEYS) {
+                val key = normalizeKey(benchmark.key)
+                if (key.isBlank() || key in BUILT_IN_KEYS) {
                     return@mapNotNull null
                 }
                 val label = benchmark.label.trim()
@@ -115,19 +127,18 @@ class PortfolioBenchmarkSettingsService(
                     symbol = symbol
                 )
             }
-        val supportedKeys = BenchmarkKey.entries.toSet()
+        val configuredCustomKeys = configuredCustomBenchmarks.map(CustomBenchmarkDefinition::key).toSet()
+        val supportedKeys = BUILT_IN_KEYS + configuredCustomKeys
         val enabledKeys = stored.enabledKeys
-            .mapNotNull { raw -> raw.toBenchmarkKeyOrNull() }
-            .filterTo(linkedSetOf()) { key ->
-                key in supportedKeys && (key !in CUSTOM_KEYS || configuredCustomBenchmarks.any { it.key == key })
-            }
+            .map(::normalizeKey)
+            .filterTo(linkedSetOf()) { key -> key in supportedKeys }
             .ifEmpty {
                 defaultStoredSettings().enabledKeys
-                    .mapNotNull { raw -> raw.toBenchmarkKeyOrNull() }
+                    .map(::normalizeKey)
                     .toCollection(linkedSetOf())
             }
         val pinnedKeys = stored.pinnedKeys
-            .mapNotNull { raw -> raw.toBenchmarkKeyOrNull() }
+            .map(::normalizeKey)
             .filterTo(linkedSetOf()) { key -> key in enabledKeys }
 
         return PortfolioBenchmarkSettings(
@@ -148,9 +159,7 @@ class PortfolioBenchmarkSettingsService(
         )
     }
 
-    private fun String.toBenchmarkKeyOrNull(): BenchmarkKey? = runCatching {
-        BenchmarkKey.valueOf(this)
-    }.getOrNull()
+    private fun normalizeKey(key: String): String = key.trim().uppercase()
 
     companion object {
         const val PREFERENCE_KEY = "portfolio.benchmark-settings"
@@ -176,7 +185,7 @@ class PortfolioBenchmarkSettingsService(
 
         private val DEFAULT_OPTIONS = listOf(
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.VWRA,
+                key = BenchmarkKey.VWRA.name,
                 label = "VWRA benchmark",
                 symbol = "VWRA.L",
                 kind = BenchmarkOptionKind.SYSTEM,
@@ -185,7 +194,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = true
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.INFLATION,
+                key = BenchmarkKey.INFLATION.name,
                 label = "Inflation benchmark",
                 symbol = null,
                 kind = BenchmarkOptionKind.SYSTEM,
@@ -194,7 +203,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = true
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.TARGET_MIX,
+                key = BenchmarkKey.TARGET_MIX.name,
                 label = "Configured target mix",
                 symbol = null,
                 kind = BenchmarkOptionKind.SYSTEM,
@@ -203,7 +212,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = true
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.V80A,
+                key = BenchmarkKey.V80A.name,
                 label = "V80A 80/20 benchmark",
                 symbol = "V80A.DE",
                 kind = BenchmarkOptionKind.MULTI_ASSET,
@@ -212,7 +221,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = false
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.V60A,
+                key = BenchmarkKey.V60A.name,
                 label = "V60A 60/40 benchmark",
                 symbol = "V60A.DE",
                 kind = BenchmarkOptionKind.MULTI_ASSET,
@@ -221,7 +230,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = false
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.V40A,
+                key = BenchmarkKey.V40A.name,
                 label = "V40A 40/60 benchmark",
                 symbol = "V40A.DE",
                 kind = BenchmarkOptionKind.MULTI_ASSET,
@@ -230,7 +239,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = false
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.V20A,
+                key = BenchmarkKey.V20A.name,
                 label = "V20A 20/80 benchmark",
                 symbol = "V20A.DE",
                 kind = BenchmarkOptionKind.MULTI_ASSET,
@@ -239,7 +248,7 @@ class PortfolioBenchmarkSettingsService(
                 defaultPinned = false
             ),
             BenchmarkOptionDefinition(
-                key = BenchmarkKey.VAGF,
+                key = BenchmarkKey.VAGF.name,
                 label = "VAGF 0/100 benchmark",
                 symbol = "VAGF.DE",
                 kind = BenchmarkOptionKind.MULTI_ASSET,
@@ -249,24 +258,29 @@ class PortfolioBenchmarkSettingsService(
             )
         )
 
-        val CUSTOM_KEYS = listOf(
-            BenchmarkKey.CUSTOM_1,
-            BenchmarkKey.CUSTOM_2,
-            BenchmarkKey.CUSTOM_3
+        private val BUILT_IN_KEYS = DEFAULT_OPTIONS.map(BenchmarkOptionDefinition::key).toSet()
+        private val CUSTOM_KEY_PATTERN = Regex("[A-Z0-9_-]+")
+        private val SYSTEM_REFERENCE_KEYS = setOf(
+            BenchmarkKey.VWRA.name,
+            BenchmarkKey.INFLATION.name,
+            BenchmarkKey.TARGET_MIX.name
         )
-        const val MAX_CUSTOM_BENCHMARKS = 3
     }
 }
 
 data class PortfolioBenchmarkSettings(
-    val enabledKeys: List<BenchmarkKey>,
-    val pinnedKeys: List<BenchmarkKey>,
+    val enabledKeys: List<String>,
+    val pinnedKeys: List<String>,
     val customBenchmarks: List<CustomBenchmarkDefinition>,
     val options: List<BenchmarkOptionDefinition>
 ) {
-    fun isEnabled(key: BenchmarkKey): Boolean = key in enabledKeys
+    fun isEnabled(key: BenchmarkKey): Boolean = isEnabled(key.name)
 
-    fun isPinned(key: BenchmarkKey): Boolean = key in pinnedKeys
+    fun isEnabled(key: String): Boolean = key in enabledKeys
+
+    fun isPinned(key: BenchmarkKey): Boolean = isPinned(key.name)
+
+    fun isPinned(key: String): Boolean = key in pinnedKeys
 
     fun activeReferenceBenchmarks(): List<ReferenceBenchmarkDefinition> = buildList {
         options.forEach { option ->
@@ -286,21 +300,21 @@ data class PortfolioBenchmarkSettings(
 
     companion object {
         private val SYSTEM_REFERENCE_KEYS = setOf(
-            BenchmarkKey.VWRA,
-            BenchmarkKey.INFLATION,
-            BenchmarkKey.TARGET_MIX
+            BenchmarkKey.VWRA.name,
+            BenchmarkKey.INFLATION.name,
+            BenchmarkKey.TARGET_MIX.name
         )
     }
 }
 
 data class SavePortfolioBenchmarkSettingsCommand(
-    val enabledKeys: List<BenchmarkKey>,
-    val pinnedKeys: List<BenchmarkKey>,
+    val enabledKeys: List<String>,
+    val pinnedKeys: List<String>,
     val customBenchmarks: List<SaveCustomBenchmarkCommand>
 )
 
 data class BenchmarkOptionDefinition(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val symbol: String?,
     val kind: BenchmarkOptionKind,
@@ -316,19 +330,19 @@ enum class BenchmarkOptionKind {
 }
 
 data class ReferenceBenchmarkDefinition(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val symbol: String
 )
 
 data class CustomBenchmarkDefinition(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val symbol: String
 )
 
 data class SaveCustomBenchmarkCommand(
-    val key: BenchmarkKey,
+    val key: String,
     val label: String,
     val symbol: String
 )

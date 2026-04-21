@@ -196,7 +196,7 @@ private fun PortfolioDailyHistory.toRefreshResponse(): PortfolioDailyHistoryResp
     benchmarkSeriesIssueCount = benchmarkSeriesIssueCount,
     benchmarkStatuses = benchmarkStatuses.map { status ->
         BenchmarkStatusResponse(
-            key = status.key.name,
+            key = status.key,
             label = status.label,
             status = status.status.name,
             issue = status.issue
@@ -274,7 +274,7 @@ private fun ReturnMetric.toRefreshResponse(): ReturnMetricResponse = ReturnMetri
 )
 
 private fun BenchmarkComparison.toRefreshResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(
-    key = key.name,
+    key = key,
     label = label,
     pinned = pinned,
     status = status.name,

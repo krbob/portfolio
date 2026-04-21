@@ -1,11 +1,15 @@
 package net.bobinski.portfolio.api.route
 
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlinx.serialization.Serializable
+import net.bobinski.portfolio.api.domain.model.AssetClass
 import kotlin.text.toBigDecimalOrNull
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
@@ -97,6 +101,16 @@ internal fun Route.registerPortfolioAnalyticsRoutes(
         tag = "Portfolio"
     )
 
+    post("/allocation/manual-contribution-preview") {
+        val request = call.receive<ManualContributionPreviewRequest>()
+        call.respond(portfolioAllocationService.manualContributionPreview(request.toDomain()).toResponse())
+    }.documented(
+        operationId = "previewPortfolioManualContribution",
+        summary = "Preview manual contribution split",
+        description = "Returns the projected allocation after manually assigning PLN contribution amounts to equities, bonds and cash.",
+        tag = "Portfolio"
+    )
+
     get("/allocation") {
         call.respond(portfolioAllocationService.summary().toResponse())
     }.documented(
@@ -123,3 +137,21 @@ private fun ApplicationCall.optionalPercentQueryParameter(name: String): BigDeci
         ?.setScale(2, RoundingMode.HALF_UP)
         ?: throw IllegalArgumentException("Query parameter $name must be a valid percentage.")
 }
+
+@Serializable
+data class ManualContributionPreviewRequest(
+    val equitiesAmountPln: String = "0.00",
+    val bondsAmountPln: String = "0.00",
+    val cashAmountPln: String = "0.00"
+)
+
+private fun ManualContributionPreviewRequest.toDomain(): Map<AssetClass, BigDecimal> = mapOf(
+    AssetClass.EQUITIES to equitiesAmountPln.toMoneyAmount("equitiesAmountPln"),
+    AssetClass.BONDS to bondsAmountPln.toMoneyAmount("bondsAmountPln"),
+    AssetClass.CASH to cashAmountPln.toMoneyAmount("cashAmountPln")
+)
+
+private fun String.toMoneyAmount(fieldName: String): BigDecimal =
+    toBigDecimalOrNull()
+        ?.setScale(2, RoundingMode.HALF_UP)
+        ?: throw IllegalArgumentException("Field $fieldName must be a valid PLN amount.")

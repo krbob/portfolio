@@ -12,6 +12,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanScenario
 import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanScenarioBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioContributionPlanTargetMix
+import net.bobinski.portfolio.api.domain.service.PortfolioManualContributionPreview
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
@@ -194,6 +195,13 @@ data class PortfolioContributionPlanResponse(
     val projected: PortfolioAllocationResponse,
     val minimalContributionToTolerancePln: String? = null,
     val scenarios: List<PortfolioContributionPlanScenarioResponse> = emptyList(),
+    val buckets: List<PortfolioContributionPlanBucketResponse>
+)
+
+@Serializable
+data class PortfolioManualContributionPreviewResponse(
+    val amountPln: String,
+    val projected: PortfolioAllocationResponse,
     val buckets: List<PortfolioContributionPlanBucketResponse>
 )
 
@@ -478,6 +486,13 @@ internal fun PortfolioContributionPlan.toResponse(): PortfolioContributionPlanRe
     buckets = buckets.map { it.toResponse() }
 )
 
+internal fun PortfolioManualContributionPreview.toResponse(): PortfolioManualContributionPreviewResponse =
+    PortfolioManualContributionPreviewResponse(
+        amountPln = amountPln.toPlainString(),
+        projected = projected.toResponse(),
+        buckets = buckets.map { it.toResponse() }
+    )
+
 internal fun PortfolioContributionPlanTargetMix.toResponse(): PortfolioContributionPlanTargetMixResponse = PortfolioContributionPlanTargetMixResponse(
     equitiesTargetWeightPct = equitiesTargetWeightPct?.toPlainString(),
     bondsTargetWeightPct = bondsTargetWeightPct?.toPlainString(),
@@ -566,7 +581,7 @@ internal fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricRespo
 )
 
 internal fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(
-    key = key.name,
+    key = key,
     label = label,
     pinned = pinned,
     status = status.name,
@@ -577,7 +592,7 @@ internal fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = Ben
 )
 
 internal fun BenchmarkSeriesHealth.toResponse(): BenchmarkStatusResponse = BenchmarkStatusResponse(
-    key = key.name,
+    key = key,
     label = label,
     status = status.name,
     issue = issue

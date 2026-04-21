@@ -72,7 +72,7 @@ class PortfolioReturnsServiceTest {
         val oneYearNominalUsd = requireNotNull(oneYear.nominalUsd)
         val oneYearRealPln = requireNotNull(oneYear.realPln)
         val oneYearInflation = requireNotNull(oneYear.inflation)
-        val vwraBenchmark = oneYear.benchmarks.first { it.key == BenchmarkKey.VWRA }
+        val vwraBenchmark = oneYear.benchmarks.first { it.key == BenchmarkKey.VWRA.name }
         val vwraBenchmarkNominalPln = requireNotNull(vwraBenchmark.nominalPln)
 
         assertEquals(LocalDate.parse("2026-03-01"), returns.asOf)
@@ -87,7 +87,7 @@ class PortfolioReturnsServiceTest {
         assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.moneyWeightedReturn)
         assertEquals(BigDecimal("-0.0476190476"), oneYearRealPln.timeWeightedReturn)
         assertEquals(BigDecimal("1.05"), oneYearInflation.multiplier)
-        assertEquals(BenchmarkKey.VWRA, vwraBenchmark.key)
+        assertEquals(BenchmarkKey.VWRA.name, vwraBenchmark.key)
         assertEquals(BigDecimal("0.08"), vwraBenchmarkNominalPln.timeWeightedReturn)
         assertEquals(BigDecimal("0.1"), max.nominalPln!!.moneyWeightedReturn)
     }
@@ -147,13 +147,13 @@ class PortfolioReturnsServiceTest {
 
         assertEquals(
             setOf(
-                BenchmarkKey.VWRA,
-                BenchmarkKey.V80A,
-                BenchmarkKey.V60A,
-                BenchmarkKey.V40A,
-                BenchmarkKey.V20A,
-                BenchmarkKey.VAGF,
-                BenchmarkKey.INFLATION
+                BenchmarkKey.VWRA.name,
+                BenchmarkKey.V80A.name,
+                BenchmarkKey.V60A.name,
+                BenchmarkKey.V40A.name,
+                BenchmarkKey.V20A.name,
+                BenchmarkKey.VAGF.name,
+                BenchmarkKey.INFLATION.name
             ),
             benchmarkKeys
         )
@@ -164,11 +164,11 @@ class PortfolioReturnsServiceTest {
         val fixture = returnsFixture()
         fixture.benchmarkSettingsService.update(
             SavePortfolioBenchmarkSettingsCommand(
-                enabledKeys = listOf(BenchmarkKey.V80A, BenchmarkKey.CUSTOM_1),
-                pinnedKeys = listOf(BenchmarkKey.CUSTOM_1),
+                enabledKeys = listOf(BenchmarkKey.V80A.name, "EUROPE_600"),
+                pinnedKeys = listOf("EUROPE_600"),
                 customBenchmarks = listOf(
                     SaveCustomBenchmarkCommand(
-                        key = BenchmarkKey.CUSTOM_1,
+                        key = "EUROPE_600",
                         label = "Europe 600",
                         symbol = "EXSA.DE"
                     )
@@ -217,7 +217,7 @@ class PortfolioReturnsServiceTest {
         val returns = fixture.service.returns()
         val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
 
-        assertEquals(listOf(BenchmarkKey.CUSTOM_1, BenchmarkKey.V80A), oneYear.benchmarks.map { it.key })
+        assertEquals(listOf("EUROPE_600", BenchmarkKey.V80A.name), oneYear.benchmarks.map { it.key })
         assertEquals("Europe 600", oneYear.benchmarks.first().label)
         assertTrue(oneYear.benchmarks.first().pinned)
     }
@@ -227,11 +227,11 @@ class PortfolioReturnsServiceTest {
         val fixture = returnsFixture()
         fixture.benchmarkSettingsService.update(
             SavePortfolioBenchmarkSettingsCommand(
-                enabledKeys = listOf(BenchmarkKey.CUSTOM_1),
+                enabledKeys = listOf("EUROPE_600"),
                 pinnedKeys = emptyList(),
                 customBenchmarks = listOf(
                     SaveCustomBenchmarkCommand(
-                        key = BenchmarkKey.CUSTOM_1,
+                        key = "EUROPE_600",
                         label = "Europe 600",
                         symbol = "EXSA.DE"
                     )
@@ -268,7 +268,7 @@ class PortfolioReturnsServiceTest {
 
         val returns = fixture.service.returns()
         val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
-        val customBenchmark = oneYear.benchmarks.first { it.key == BenchmarkKey.CUSTOM_1 }
+        val customBenchmark = oneYear.benchmarks.first { it.key == "EUROPE_600" }
 
         assertEquals(BenchmarkSeriesStatus.UNAVAILABLE, customBenchmark.status)
         assertEquals(null, customBenchmark.nominalPln)

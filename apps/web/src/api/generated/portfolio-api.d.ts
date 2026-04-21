@@ -320,6 +320,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/allocation/manual-contribution-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview manual contribution split
+         * @description Returns the projected allocation after manually assigning PLN contribution amounts to equities, bonds and cash.
+         */
+        post: operations["previewPortfolioManualContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/allocation": {
         parameters: {
             query?: never;
@@ -1248,6 +1268,18 @@ export interface components {
             scenarios?: components["schemas"]["PortfolioContributionPlanScenarioResponse"][];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
+        /** net.bobinski.portfolio.api.route.ManualContributionPreviewRequest */
+        ManualContributionPreviewRequest: {
+            equitiesAmountPln?: string;
+            bondsAmountPln?: string;
+            cashAmountPln?: string;
+        };
+        /** net.bobinski.portfolio.api.route.PortfolioManualContributionPreviewResponse */
+        PortfolioManualContributionPreviewResponse: {
+            amountPln: string;
+            projected: components["schemas"]["PortfolioAllocationResponse"];
+            buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
+        };
         /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
@@ -2117,6 +2149,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioContributionPlanResponse"];
+                };
+            };
+        };
+    };
+    previewPortfolioManualContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ManualContributionPreviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioManualContributionPreviewResponse"];
                 };
             };
         };

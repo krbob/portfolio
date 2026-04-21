@@ -7,9 +7,6 @@ export const DEFAULT_BENCHMARK_ORDER = [
   'V40A',
   'V20A',
   'VAGF',
-  'CUSTOM_1',
-  'CUSTOM_2',
-  'CUSTOM_3',
   'INFLATION',
   'TARGET_MIX',
 ]

@@ -22,6 +22,6 @@ describe('benchmarks helpers', () => {
   })
 
   it('falls back to default order and appends unknown keys deterministically', () => {
-    expect(orderAvailableBenchmarkKeys(['TARGET_MIX', 'ZZZ', 'VWRA', 'CUSTOM_2', 'VAGF'])).toEqual(['VWRA', 'VAGF', 'CUSTOM_2', 'TARGET_MIX', 'ZZZ'])
+    expect(orderAvailableBenchmarkKeys(['TARGET_MIX', 'ZZZ', 'VWRA', 'CUSTOM_2', 'VAGF'])).toEqual(['VWRA', 'VAGF', 'TARGET_MIX', 'CUSTOM_2', 'ZZZ'])
   })
 })

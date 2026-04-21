@@ -579,6 +579,87 @@ class PortfolioAllocationServiceTest {
     }
 
     @Test
+    fun `manual contribution preview projects weights from explicit bucket inputs`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "6000.00", "60"))
+        transactionRepository.save(buyTransaction(BOND_ID, "2000.00", "20", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20")),
+                    ReplacePortfolioTargetItem(AssetClass.CASH, BigDecimal("0.00"))
+                )
+            )
+        )
+
+        val preview = allocationService.manualContributionPreview(
+            mapOf(
+                AssetClass.EQUITIES to BigDecimal("3000.00"),
+                AssetClass.BONDS to BigDecimal("1000.00"),
+                AssetClass.CASH to BigDecimal("0.00")
+            )
+        )
+
+        val equities = preview.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val bonds = preview.buckets.first { it.assetClass == AssetClass.BONDS }
+        val cash = preview.buckets.first { it.assetClass == AssetClass.CASH }
+
+        assertEquals(BigDecimal("4000.00"), preview.amountPln)
+        assertEquals(BigDecimal("3000.00"), equities.plannedContributionPln)
+        assertEquals(BigDecimal("1000.00"), bonds.plannedContributionPln)
+        assertEquals(BigDecimal("0.00"), cash.plannedContributionPln)
+        assertEquals(BigDecimal("9000.00"), equities.projectedValuePln)
+        assertEquals(BigDecimal("64.29"), equities.projectedWeightPct)
+        assertEquals(BigDecimal("3000.00"), bonds.projectedValuePln)
+        assertEquals(BigDecimal("21.43"), bonds.projectedWeightPct)
+        assertEquals(BigDecimal("2000.00"), cash.projectedValuePln)
+        assertEquals(BigDecimal("14.29"), cash.projectedWeightPct)
+        assertEquals(PortfolioAllocationAction.DEPLOY_EXISTING_CASH, preview.projected.recommendedAction)
+    }
+
+    @Test
     fun `contribution plan requires configured targets`() = runBlocking {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()

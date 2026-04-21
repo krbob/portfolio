@@ -108,6 +108,52 @@ class PortfolioAllocationService(
         )
     }
 
+    suspend fun manualContributionPreview(
+        contributionsByAssetClass: Map<AssetClass, BigDecimal>
+    ): PortfolioManualContributionPreview {
+        val normalizedContributions = ASSET_CLASSES.associateWith { assetClass ->
+            contributionsByAssetClass[assetClass]?.money() ?: BigDecimal.ZERO.money()
+        }
+        require(normalizedContributions.values.none { it < BigDecimal.ZERO }) {
+            "Manual contribution amounts must not be negative."
+        }
+
+        val totalContributionAmount = normalizedContributions.values
+            .fold(BigDecimal.ZERO) { total, amount -> total.add(amount) }
+            .money()
+        require(totalContributionAmount > BigDecimal.ZERO) {
+            "Contribution amount must be greater than zero."
+        }
+
+        val context = loadContext()
+        require(context.targets.isNotEmpty()) { "Configure target allocation before previewing a contribution." }
+        val projectedSummary = projectedSummary(
+            context = context,
+            effectiveTargets = EffectiveTargets(
+                targets = context.targets,
+                targetsByAssetClass = context.targetsByAssetClass
+            ),
+            contributionAmountPln = totalContributionAmount,
+            contributionByAssetClass = normalizedContributions
+        )
+
+        return PortfolioManualContributionPreview(
+            amountPln = totalContributionAmount,
+            projected = projectedSummary,
+            buckets = projectedSummary.buckets.map { bucket ->
+                PortfolioContributionPlanBucket(
+                    assetClass = bucket.assetClass,
+                    plannedContributionPln = normalizedContributions[bucket.assetClass] ?: BigDecimal.ZERO.money(),
+                    projectedValuePln = bucket.currentValuePln,
+                    projectedWeightPct = bucket.currentWeightPct,
+                    projectedDriftPctPoints = bucket.driftPctPoints,
+                    projectedGapValuePln = bucket.gapValuePln,
+                    projectedStatus = bucket.status
+                )
+            }
+        )
+    }
+
     private fun effectiveTargets(
         context: AllocationContext,
         equitiesTargetWeightPct: BigDecimal?
@@ -653,6 +699,12 @@ data class PortfolioContributionPlan(
     val projected: PortfolioAllocationSummary,
     val minimalContributionToTolerancePln: BigDecimal?,
     val scenarios: List<PortfolioContributionPlanScenario>,
+    val buckets: List<PortfolioContributionPlanBucket>
+)
+
+data class PortfolioManualContributionPreview(
+    val amountPln: BigDecimal,
+    val projected: PortfolioAllocationSummary,
     val buckets: List<PortfolioContributionPlanBucket>
 )
 

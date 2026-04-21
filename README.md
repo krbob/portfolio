@@ -23,10 +23,10 @@ The product is built around a few explicit rules:
 
 - accounts, instruments, transactions, targets, and reusable CSV import profiles
 - holdings, allocation drift, and contribution-first rebalance guidance
-- dashboard contribution planner for splitting a new deposit against current drift
+- dashboard contribution planner with suggested splits and manual asset-class previews
 - daily history and performance in `PLN`, `USD`, and gold
 - `MWRR`, `TWR`, real return, and benchmark-relative comparison
-- benchmark configuration, including target-mix and custom references
+- benchmark configuration with shipped defaults, target-mix, and unlimited custom references
 - EDO valuation via `edo-calculator`
 - ETF, FX, and benchmark history via `stock-analyst`
 - fallback market-data snapshots surfaced as `STALE` or degraded coverage instead of pretending freshness

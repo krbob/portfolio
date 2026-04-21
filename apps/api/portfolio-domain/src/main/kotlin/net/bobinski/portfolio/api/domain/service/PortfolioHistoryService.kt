@@ -463,7 +463,7 @@ class PortfolioHistoryService(
         val settings = settingsDeferred.await()
         val benchmarkStatuses = mutableListOf<BenchmarkSeriesHealth>()
         fun labelFor(key: BenchmarkKey): String =
-            settings.options.find { option -> option.key == key }?.label ?: key.name
+            settings.options.find { option -> option.key == key.name }?.label ?: key.name
         val equityLookup = when (equity) {
             is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
                 from = from,
@@ -474,7 +474,7 @@ class PortfolioHistoryService(
             is ReferenceSeriesResult.Failure -> TreeMap()
         }
         val equityHealth = referenceBenchmarkHealth(
-            key = BenchmarkKey.VWRA,
+            key = BenchmarkKey.VWRA.name,
             label = labelFor(BenchmarkKey.VWRA),
             result = equity,
             lookup = equityLookup,
@@ -491,7 +491,7 @@ class PortfolioHistoryService(
             is ReferenceSeriesResult.Failure -> TreeMap()
         }
         val bondHealth = referenceBenchmarkHealth(
-            key = BenchmarkKey.VAGF,
+            key = BenchmarkKey.VAGF.name,
             label = labelFor(BenchmarkKey.VAGF),
             result = bond,
             lookup = bondLookup,
@@ -525,7 +525,7 @@ class PortfolioHistoryService(
         val additionalBenchmarks = settings.activeReferenceBenchmarks()
         val additionalResults = additionalBenchmarks.map { ref ->
             async {
-                ref to if (ref.key == BenchmarkKey.VAGF) {
+                ref to if (ref.key == BenchmarkKey.VAGF.name) {
                     bond
                 } else {
                     referenceSeriesProvider.benchmarkPln(symbol = ref.symbol, from = from, to = until)
@@ -543,7 +543,7 @@ class PortfolioHistoryService(
 
                 is ReferenceSeriesResult.Failure -> TreeMap()
             }
-            indices[definition.key.name] = normalizedLookup
+            indices[definition.key] = normalizedLookup
             benchmarkStatuses += referenceBenchmarkHealth(
                 key = definition.key,
                 label = definition.label,
@@ -571,7 +571,7 @@ class PortfolioHistoryService(
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.INFLATION,
+                    key = BenchmarkKey.INFLATION.name,
                     label = "Inflation benchmark",
                     status = BenchmarkSeriesStatus.HEALTHY
                 )
@@ -581,7 +581,7 @@ class PortfolioHistoryService(
             ?: return InflationBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.INFLATION,
+                    key = BenchmarkKey.INFLATION.name,
                     label = "Inflation benchmark",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Inflation benchmark series is unavailable."
@@ -591,7 +591,7 @@ class PortfolioHistoryService(
             return InflationBenchmarkLoad(
                 lookup = buildFlatIndexLookup(from = from, until = until),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.INFLATION,
+                    key = BenchmarkKey.INFLATION.name,
                     label = "Inflation benchmark",
                     status = BenchmarkSeriesStatus.HEALTHY
                 )
@@ -610,7 +610,7 @@ class PortfolioHistoryService(
                 availableUntil = series.until
             ),
             health = BenchmarkSeriesHealth(
-                key = BenchmarkKey.INFLATION,
+                key = BenchmarkKey.INFLATION.name,
                 label = "Inflation benchmark",
                 status = if (series.fromCache) BenchmarkSeriesStatus.STALE else BenchmarkSeriesStatus.HEALTHY,
                 issue = if (series.fromCache) "Inflation benchmark series was served from cache." else null
@@ -751,7 +751,7 @@ class PortfolioHistoryService(
             val firstEquityDate = equityBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX,
+                    key = BenchmarkKey.TARGET_MIX.name,
                     label = "Configured target mix",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Target-mix benchmark is missing equity benchmark coverage."
@@ -763,7 +763,7 @@ class PortfolioHistoryService(
             val firstBondDate = bondBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX,
+                    key = BenchmarkKey.TARGET_MIX.name,
                     label = "Configured target mix",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Target-mix benchmark is missing bond benchmark coverage."
@@ -777,7 +777,7 @@ class PortfolioHistoryService(
             return TargetMixBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX,
+                    key = BenchmarkKey.TARGET_MIX.name,
                     label = "Configured target mix",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Target-mix benchmark does not cover the selected period."
@@ -800,7 +800,7 @@ class PortfolioHistoryService(
             ) ?: return TargetMixBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX,
+                    key = BenchmarkKey.TARGET_MIX.name,
                     label = "Configured target mix",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Target-mix benchmark is missing equity data inside the selected period."
@@ -814,7 +814,7 @@ class PortfolioHistoryService(
             ) ?: return TargetMixBenchmarkLoad(
                 lookup = TreeMap(),
                 health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX,
+                    key = BenchmarkKey.TARGET_MIX.name,
                     label = "Configured target mix",
                     status = BenchmarkSeriesStatus.UNAVAILABLE,
                     issue = "Target-mix benchmark is missing bond data inside the selected period."
@@ -840,7 +840,7 @@ class PortfolioHistoryService(
         return TargetMixBenchmarkLoad(
             lookup = lookup,
             health = BenchmarkSeriesHealth(
-                key = BenchmarkKey.TARGET_MIX,
+                key = BenchmarkKey.TARGET_MIX.name,
                 label = "Configured target mix",
                 status = status,
                 issue = when (status) {
@@ -852,7 +852,7 @@ class PortfolioHistoryService(
     }
 
     private fun referenceBenchmarkHealth(
-        key: BenchmarkKey,
+        key: String,
         label: String,
         result: ReferenceSeriesResult,
         lookup: TreeMap<LocalDate, BigDecimal>,

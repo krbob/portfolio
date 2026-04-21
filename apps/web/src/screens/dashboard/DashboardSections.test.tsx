@@ -1,9 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PortfolioAllocationSummary, PortfolioContributionPlan } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
-import { usePortfolioContributionPlan } from '../../hooks/use-read-model'
+import { usePortfolioContributionPlan, usePortfolioManualContributionPreview } from '../../hooks/use-read-model'
 import { DashboardTargetDriftCard } from './DashboardSections'
 
 vi.mock('../../hooks/use-read-model', async () => {
@@ -11,7 +11,13 @@ vi.mock('../../hooks/use-read-model', async () => {
   return {
     ...actual,
     usePortfolioContributionPlan: vi.fn(),
+    usePortfolioManualContributionPreview: vi.fn(),
   }
+})
+
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
 })
 
 function setLanguage(language: 'pl' | 'en') {
@@ -217,11 +223,21 @@ const allocation = {
 } satisfies PortfolioAllocationSummary
 
 describe('DashboardTargetDriftCard', () => {
-  it('opens the contribution planner modal, shows scenarios and simulates another target mix', async () => {
+  it('opens the simplified planner and lets the user copy the suggested split into manual mode', async () => {
     setLanguage('en')
+    const manualPreviewMutate = vi.fn()
+    const manualPreviewReset = vi.fn()
     vi.mocked(usePortfolioContributionPlan).mockImplementation((amountPln, _revision, options) => (
       contributionPlanQueryStub(amountPln, options)
     ) as unknown as ReturnType<typeof usePortfolioContributionPlan>)
+    vi.mocked(usePortfolioManualContributionPreview).mockReturnValue({
+      data: undefined,
+      error: null,
+      isError: false,
+      isPending: false,
+      mutate: manualPreviewMutate,
+      reset: manualPreviewReset,
+    } as unknown as ReturnType<typeof usePortfolioManualContributionPreview>)
 
     render(
       <MemoryRouter>
@@ -245,18 +261,72 @@ describe('DashboardTargetDriftCard', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Calculate contribution plan' }))
 
-    expect((await screen.findAllByText('Post-contribution value')).length).toBeGreaterThan(0)
-    expect(screen.getByText('Minimum to return within band')).toBeInTheDocument()
-    expect(screen.getByText('Scenario comparison')).toBeInTheDocument()
-    expect(screen.queryByText('UNCONFIGURED')).not.toBeInTheDocument()
-    expect(screen.queryByText('Cash')).not.toBeInTheDocument()
+    expect(await screen.findByText('Suggested split for this contribution: Equities PLN 92,246.02 · Bonds PLN 27,753.98.')).toBeInTheDocument()
+    expect(screen.getByText('Current vs after contribution')).toBeInTheDocument()
+    expect(screen.queryByText('Scenario comparison')).not.toBeInTheDocument()
+    expect(screen.queryByText('What-if target mix')).not.toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Equities %'), {
-      target: { value: '75' },
+    fireEvent.click(screen.getByRole('button', { name: 'Use suggested split' }))
+    expect(screen.getByLabelText('Equities')).toHaveValue('92246.02')
+    expect(screen.getByLabelText('Bonds')).toHaveValue('27753.98')
+    expect(screen.getByLabelText('Cash')).toHaveValue('0.00')
+    expect(manualPreviewMutate).toHaveBeenCalledWith({
+      equitiesAmountPln: '92246.02',
+      bondsAmountPln: '27753.98',
+      cashAmountPln: '0.00',
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Simulate another target' }))
+    expect(manualPreviewReset).not.toHaveBeenCalled()
+  })
 
-    expect(await screen.findByText('Simulated target')).toBeInTheDocument()
-    expect(screen.getByText('75% / 25%')).toBeInTheDocument()
+  it('opens manual mode and clears the entered split', async () => {
+    setLanguage('en')
+    const manualPreviewMutate = vi.fn()
+    const manualPreviewReset = vi.fn()
+    vi.mocked(usePortfolioContributionPlan).mockImplementation((amountPln, _revision, options) => (
+      contributionPlanQueryStub(amountPln, options)
+    ) as unknown as ReturnType<typeof usePortfolioContributionPlan>)
+    vi.mocked(usePortfolioManualContributionPreview).mockReturnValue({
+      data: undefined,
+      error: null,
+      isError: false,
+      isPending: false,
+      mutate: manualPreviewMutate,
+      reset: manualPreviewReset,
+    } as unknown as ReturnType<typeof usePortfolioManualContributionPreview>)
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardTargetDriftCard
+            isPolish={false}
+            allocation={allocation}
+            isLoading={false}
+            isError={false}
+            onRetry={vi.fn()}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Plan contribution' }))
+    expect(await screen.findByRole('dialog', { name: 'Contribution planner' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Split manually instead' }))
+    fireEvent.change(screen.getByLabelText('Equities'), {
+      target: { value: '1000' },
+    })
+    fireEvent.change(screen.getByLabelText('Bonds'), {
+      target: { value: '500' },
+    })
+
+    expect(screen.getByLabelText('Equities')).toHaveValue('1000')
+    expect(screen.getByLabelText('Bonds')).toHaveValue('500')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear split' }))
+
+    expect(screen.getByLabelText('Equities')).toHaveValue('')
+    expect(screen.getByLabelText('Bonds')).toHaveValue('')
+    expect(screen.getByLabelText('Cash')).toHaveValue('')
+    expect(manualPreviewReset).toHaveBeenCalled()
   })
 })
