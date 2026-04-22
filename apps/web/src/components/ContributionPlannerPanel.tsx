@@ -209,14 +209,14 @@ export function ContributionPlannerPanel({
       </section>
 
       <section className="rounded-lg border border-zinc-800/50 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h4 className="text-sm font-semibold text-zinc-100">{t('targets.manualContributionTitle')}</h4>
             <p className="mt-1 text-sm text-zinc-400">{t('targets.manualContributionDescription')}</p>
           </div>
           <button
             type="button"
-            className={btnSecondary}
+            className={`${btnSecondary} w-full sm:w-auto sm:shrink-0`}
             onClick={() => setIsManualSectionOpen((current) => !current)}
           >
             {isManualSectionOpen ? t('targets.manualContributionHide') : t('targets.manualContributionReveal')}
@@ -340,18 +340,29 @@ function MixComparisonCard({
       </h5>
       <MixRow label={t('targets.current')} mix={currentMix} />
       <MixRow label={t('targets.afterContribution')} mix={projectedMix} />
-      <dl className="grid grid-cols-1 gap-2 text-xs text-zinc-400 md:grid-cols-3">
+      <dl className="divide-y divide-zinc-800/60 rounded-lg border border-zinc-800/60 text-xs md:grid md:grid-cols-3 md:divide-x md:divide-y-0">
         {projectedMix.map((segment) => {
           const currentWeight = currentMix.find((item) => item.assetClass === segment.assetClass)?.weightPct ?? '0.00'
           const diff = Number(segment.weightPct) - Number(currentWeight)
           return (
-            <div key={segment.assetClass} className="rounded-lg border border-zinc-800/60 px-3 py-2">
-              <dt className="text-zinc-500">{labelAssetClass(segment.assetClass)}</dt>
-              <dd className="mt-1 text-zinc-200">
-                {formatPercent(currentWeight, { maximumFractionDigits: 1 })} → {formatPercent(segment.weightPct, { maximumFractionDigits: 1 })}
-              </dd>
-              <dd className={diffColor(diff)}>
-                {formatPercent(diff, { signed: true, maximumFractionDigits: 1, suffix: ' pp' })}
+            <div
+              key={segment.assetClass}
+              className="flex items-center justify-between gap-3 px-3 py-2 md:flex-col md:items-start md:gap-1"
+            >
+              <dt className="flex items-center gap-2">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${mixSegmentColor(segment.assetClass)}`}
+                  aria-hidden="true"
+                />
+                <span className="font-medium text-zinc-300">{labelAssetClass(segment.assetClass)}</span>
+              </dt>
+              <dd className="flex items-baseline gap-2">
+                <span className="text-zinc-400">
+                  {formatPercent(currentWeight, { maximumFractionDigits: 1 })} → {formatPercent(segment.weightPct, { maximumFractionDigits: 1 })}
+                </span>
+                <span className={`font-medium ${diffColor(diff)}`}>
+                  {formatPercent(diff, { signed: true, maximumFractionDigits: 1, suffix: ' pp' })}
+                </span>
               </dd>
             </div>
           )
@@ -370,8 +381,8 @@ function MixRow({
 }) {
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-zinc-500">{label}</span>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</span>
         <span className="text-xs text-zinc-400">{formatMixSentence(mix)}</span>
       </div>
       <div className="flex h-3 overflow-hidden rounded-full bg-zinc-800">
