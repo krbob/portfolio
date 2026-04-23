@@ -166,4 +166,72 @@ describe('PortfolioValueChart', () => {
 
     expect(chartRemoveMock).toHaveBeenCalledTimes(1)
   })
+
+  it('uses compact chart precision by unit', () => {
+    const points = [
+      {
+        date: '2026-03-01',
+        totalBookValuePln: '1000.00',
+        totalCurrentValuePln: '1000.00',
+        netContributionsPln: '800.00',
+        cashBalancePln: '200.00',
+        totalCurrentValueUsd: '250.00',
+        netContributionsUsd: '200.00',
+        cashBalanceUsd: '50.00',
+        totalCurrentValueAu: '0.166667',
+        netContributionsAu: '0.164609',
+        cashBalanceAu: '0.081893',
+        equityCurrentValuePln: '800.00',
+        bondCurrentValuePln: '0.00',
+        cashCurrentValuePln: '200.00',
+        equityAllocationPct: '80.00',
+        bondAllocationPct: '0.00',
+        cashAllocationPct: '20.00',
+        portfolioPerformanceIndex: '100.00',
+        benchmarkIndices: { VWRA: '100.00' },
+        activeHoldingCount: 1,
+        valuedHoldingCount: 1,
+      },
+    ]
+
+    const { rerender } = render(
+      <PortfolioValueChart
+        points={points}
+        valueKey="totalCurrentValueAu"
+        contributionsKey="netContributionsAu"
+        unit="AU"
+      />,
+    )
+
+    expect(chartAddSeriesMock).toHaveBeenNthCalledWith(
+      1,
+      AreaSeriesToken,
+      expect.objectContaining({
+        priceFormat: { type: 'price', minMove: 0.01, precision: 2 },
+      }),
+    )
+    expect(chartAddSeriesMock).toHaveBeenNthCalledWith(
+      2,
+      LineSeriesToken,
+      expect.objectContaining({
+        priceFormat: { type: 'price', minMove: 0.01, precision: 2 },
+      }),
+    )
+
+    rerender(
+      <PortfolioValueChart
+        points={points}
+        valueKey="totalCurrentValueUsd"
+        contributionsKey="netContributionsUsd"
+        unit="USD"
+      />,
+    )
+
+    expect(valueSeries.applyOptions).toHaveBeenLastCalledWith({
+      priceFormat: { type: 'price', minMove: 1, precision: 0 },
+    })
+    expect(contributionsSeries.applyOptions).toHaveBeenLastCalledWith({
+      priceFormat: { type: 'price', minMove: 1, precision: 0 },
+    })
+  })
 })

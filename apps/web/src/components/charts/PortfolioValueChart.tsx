@@ -115,7 +115,7 @@ export function PortfolioValueChart({
 
 function priceFormatForUnit(unit: 'PLN' | 'USD' | 'AU') {
   if (unit === 'AU') {
-    return { type: 'price' as const, minMove: 0.000001, precision: 6 }
+    return { type: 'price' as const, minMove: 0.01, precision: 2 }
   }
-  return { type: 'price' as const, minMove: 0.01, precision: 2 }
+  return { type: 'price' as const, minMove: 1, precision: 0 }
 }
