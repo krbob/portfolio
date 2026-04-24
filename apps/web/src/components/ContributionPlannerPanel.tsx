@@ -225,25 +225,27 @@ export function ContributionPlannerPanel({
 
         {isManualSectionOpen ? (
           <div className="mt-4 space-y-4">
-            <form className="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end" onSubmit={handleManualContributionSubmit}>
-              <MoneyField
-                id={manualEquitiesInputId}
-                label={t('targets.manualContributionEquities')}
-                value={manualEquitiesInput}
-                onChange={setManualEquitiesInput}
-              />
-              <MoneyField
-                id={manualBondsInputId}
-                label={t('targets.manualContributionBonds')}
-                value={manualBondsInput}
-                onChange={setManualBondsInput}
-              />
-              <MoneyField
-                id={manualCashInputId}
-                label={t('targets.manualContributionCash')}
-                value={manualCashInput}
-                onChange={setManualCashInput}
-              />
+            <form className="space-y-3" onSubmit={handleManualContributionSubmit}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <MoneyField
+                  id={manualEquitiesInputId}
+                  label={t('targets.manualContributionEquities')}
+                  value={manualEquitiesInput}
+                  onChange={setManualEquitiesInput}
+                />
+                <MoneyField
+                  id={manualBondsInputId}
+                  label={t('targets.manualContributionBonds')}
+                  value={manualBondsInput}
+                  onChange={setManualBondsInput}
+                />
+                <MoneyField
+                  id={manualCashInputId}
+                  label={t('targets.manualContributionCash')}
+                  value={manualCashInput}
+                  onChange={setManualCashInput}
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
