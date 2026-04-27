@@ -1,5 +1,18 @@
-const CACHE_NAME = 'portfolio-shell-v1'
+const CACHE_NAME = 'portfolio-shell-v2'
 const APP_SHELL_PATHS = ['/', '/manifest.webmanifest', '/favicon.svg', '/apple-touch-icon.svg']
+
+function shouldCacheResponse(url, response) {
+  if (!response.ok) {
+    return false
+  }
+
+  if (url.pathname.startsWith('/assets/')) {
+    const contentType = response.headers.get('content-type') || ''
+    return !contentType.includes('text/html')
+  }
+
+  return true
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -64,7 +77,7 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(request).then((response) => {
-        if (response.ok) {
+        if (shouldCacheResponse(url, response)) {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
         }
         return response
