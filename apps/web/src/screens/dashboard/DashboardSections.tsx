@@ -422,6 +422,9 @@ export function DashboardQuickStats({
   overview,
   valuationState,
   hasMarketBackedCurrentValuation,
+  ytdTwrr,
+  ytdTwrrAvailable,
+  ytdTwrrLoading,
   contributionBreakdownSubtitle,
   cashBreakdownSubtitle,
 }: {
@@ -429,11 +432,32 @@ export function DashboardQuickStats({
   overview: PortfolioOverview
   valuationState: string
   hasMarketBackedCurrentValuation: boolean
+  ytdTwrr?: string | null
+  ytdTwrrAvailable: boolean
+  ytdTwrrLoading: boolean
   contributionBreakdownSubtitle?: string
   cashBreakdownSubtitle?: string
 }) {
+  const ytdTwrrChange = returnTone(ytdTwrr, ytdTwrrAvailable && !ytdTwrrLoading)
+  const ytdTwrrSubtitle = ytdTwrrLoading
+    ? t('dashboardSections.waitingForData')
+    : ytdTwrrAvailable && ytdTwrr != null
+      ? t('dashboardSections.ytdTwrrSubtitle')
+      : hasMarketBackedCurrentValuation
+        ? t('dashboardSections.noReturnData')
+        : t('dashboardSections.requiresMarketValuation')
+
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <StatCard
+        label={t('dashboardSections.ytdTwrr')}
+        value={ytdTwrrLoading ? '—' : formatReturnValue(ytdTwrr, ytdTwrrAvailable, isPolish)}
+        numericValue={ytdTwrr != null && ytdTwrrAvailable ? Number(ytdTwrr) : undefined}
+        subtitle={ytdTwrrSubtitle}
+        change={ytdTwrrChange}
+        loading={ytdTwrrLoading}
+        to={appRoutes.performance}
+      />
       <StatCard
         label={t('dashboardSections.unrealizedPL')}
         value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
@@ -468,6 +492,35 @@ export function DashboardQuickStats({
       />
     </div>
   )
+}
+
+function formatReturnValue(value: string | null | undefined, available: boolean, isPolish: boolean) {
+  if (!available || value == null) {
+    return missingDataLabel(isPolish)
+  }
+
+  return formatPercent(value, { scale: 100, signed: true })
+}
+
+function returnTone(
+  value: string | null | undefined,
+  available: boolean,
+): 'positive' | 'negative' | 'neutral' | undefined {
+  if (!available || value == null) {
+    return undefined
+  }
+
+  const numericValue = Number(value)
+  if (Number.isNaN(numericValue)) {
+    return undefined
+  }
+  if (numericValue > 0) {
+    return 'positive'
+  }
+  if (numericValue < 0) {
+    return 'negative'
+  }
+  return 'neutral'
 }
 
 export function DashboardContributorsCard({ holdings }: { holdings: PortfolioHolding[] }) {

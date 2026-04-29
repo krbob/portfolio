@@ -81,6 +81,12 @@ export const appMessages = {
   'benchmark.modeSingle': { pl: 'Jeden', en: 'Single' },
   'benchmark.modeCompare': { pl: 'Porównaj', en: 'Compare' },
   'benchmark.selectLabel': { pl: 'Wybierz benchmark', en: 'Select benchmark' },
+  'portfolioPerformance.title': { pl: 'Wynik portfela', en: 'Portfolio performance' },
+  'portfolioPerformance.subtitle': {
+    pl: 'Indeks TWRR, baza 100, bez wpływu wpłat i wypłat.',
+    en: 'TWRR index, base 100, excluding deposits and withdrawals.',
+  },
+  'portfolioPerformance.legend': { pl: 'TWRR portfela', en: 'Portfolio TWRR' },
   'allocation.title': { pl: 'Historia alokacji', en: 'Allocation History' },
   'allocation.subtitle': { pl: 'Akcje, obligacje i gotówka jako procent portfela', en: 'Equities, bonds and cash as percentage of portfolio' },
   'allocation.selectedDate': { pl: 'Wybrany dzień', en: 'Selected date' },

@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { Link } from 'react-router-dom'
 
 interface StatCardProps {
   label: string
@@ -9,6 +10,7 @@ interface StatCardProps {
   dot?: 'equity' | 'bond' | 'cash' | string
   hero?: boolean
   loading?: boolean
+  to?: string
 }
 
 const dotColors: Record<string, string> = {
@@ -17,13 +19,18 @@ const dotColors: Record<string, string> = {
   cash: 'bg-zinc-500',
 }
 
-export function StatCard({ label, value, numericValue, subtitle, change, dot, hero, loading }: StatCardProps) {
+export function StatCard({ label, value, numericValue, subtitle, change, dot, hero, loading, to }: StatCardProps) {
   const dotClass = dot ? dotColors[dot] ?? dot : undefined
   const isZero = numericValue != null ? numericValue === 0 : value === '0' || value === '0,00 zł' || value === '0.00 zł'
   const isLong = value.length > 10
 
-  return (
-    <div className="min-h-[5.5rem] rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:min-h-[6rem] sm:p-5">
+  const content = (
+    <div
+      className={clsx(
+        'min-h-[5.5rem] rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:min-h-[6rem] sm:p-5',
+        to && 'transition-colors hover:border-zinc-700',
+      )}
+    >
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-400 sm:text-sm sm:normal-case sm:tracking-normal">
         {dotClass && <span className={clsx('inline-block h-2 w-2 rounded-full', dotClass)} />}
         {label}
@@ -51,4 +58,17 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
       )}
     </div>
   )
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return content
 }

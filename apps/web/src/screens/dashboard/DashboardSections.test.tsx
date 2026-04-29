@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PortfolioAllocationSummary, PortfolioContributionPlan } from '../../api/read-model'
+import type { PortfolioAllocationSummary, PortfolioContributionPlan, PortfolioOverview } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
 import { usePortfolioContributionPlan, usePortfolioManualContributionPreview } from '../../hooks/use-read-model'
-import { DashboardTargetDriftCard } from './DashboardSections'
+import { DashboardQuickStats, DashboardTargetDriftCard } from './DashboardSections'
 
 vi.mock('../../hooks/use-read-model', async () => {
   const actual = await vi.importActual<typeof import('../../hooks/use-read-model')>('../../hooks/use-read-model')
@@ -221,6 +221,59 @@ const allocation = {
     },
   ],
 } satisfies PortfolioAllocationSummary
+
+const overview = {
+  asOf: '2026-03-13',
+  valuationState: 'MARK_TO_MARKET',
+  totalBookValuePln: '400000.00',
+  totalCurrentValuePln: '427135.54',
+  investedBookValuePln: '399000.00',
+  investedCurrentValuePln: '426000.00',
+  cashBalancePln: '1135.54',
+  netContributionsPln: '390000.00',
+  equityBookValuePln: '320000.00',
+  equityCurrentValuePln: '346396.42',
+  bondBookValuePln: '79000.00',
+  bondCurrentValuePln: '79583.58',
+  cashBookValuePln: '1135.54',
+  cashCurrentValuePln: '1135.54',
+  totalUnrealizedGainPln: '27135.54',
+  accountCount: 2,
+  instrumentCount: 4,
+  activeHoldingCount: 4,
+  valuedHoldingCount: 4,
+  unvaluedHoldingCount: 0,
+  valuationIssueCount: 0,
+  missingFxTransactions: 0,
+  unsupportedCorrectionTransactions: 0,
+} satisfies PortfolioOverview
+
+describe('DashboardQuickStats', () => {
+  it('shows YTD TWRR as a glanceable dashboard metric', () => {
+    setLanguage('en')
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardQuickStats
+            isPolish={false}
+            overview={overview}
+            valuationState="MARK_TO_MARKET"
+            hasMarketBackedCurrentValuation
+            ytdTwrr="0.1234"
+            ytdTwrrAvailable
+            ytdTwrrLoading={false}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('YTD TWRR')).toBeInTheDocument()
+    expect(screen.getByText('+12.34%')).toBeInTheDocument()
+    expect(screen.getByText('Return excluding cash flows')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /YTD TWRR/i })).toHaveAttribute('href', '/performance')
+  })
+})
 
 describe('DashboardTargetDriftCard', () => {
   it('opens the simplified planner and lets the user copy the suggested split into manual mode', async () => {

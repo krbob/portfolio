@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPeriod } from '../../api/read-model'
-import { AllocationTimeChart, BenchmarkChart, PortfolioValueChart } from '../../components/charts'
+import { AllocationTimeChart, BenchmarkChart, PortfolioPerformanceChart, PortfolioValueChart } from '../../components/charts'
 import { ErrorState, InlineRefreshIndicator, StatePanel, SegmentedControl } from '../../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
 import { missingDataLabel } from '../../lib/availability'
@@ -76,19 +76,26 @@ export function ChartsTab({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-medium text-zinc-400">{t('performanceSections.range')}</span>
+          <SegmentedControl
+            options={PERIODS.map((value) => ({ value, label: value }))}
+            value={period}
+            onChange={(value) => onPeriodChange(value as Period)}
+            ariaLabel={t('performanceSections.chartPeriodLabel')}
+          />
+        </div>
+        <InlineRefreshIndicator active={isRefreshing} />
+      </div>
+
       <div className={card}>
-        <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-400">{t('performanceSections.range')}</span>
-            <SegmentedControl
-              options={PERIODS.map((value) => ({ value, label: value }))}
-              value={period}
-              onChange={(value) => onPeriodChange(value as Period)}
-              ariaLabel={t('performanceSections.chartPeriodLabel')}
-            />
-          </div>
+        <PortfolioPerformanceChart points={points} height={340} />
+      </div>
+
+      <div className={card}>
+        <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
           <div className="flex items-center justify-between gap-3 xl:ml-auto">
-            <InlineRefreshIndicator active={isRefreshing} />
             <span className="text-sm font-medium text-zinc-400">{t('performanceSections.unit')}</span>
             <SegmentedControl
               options={[
@@ -113,16 +120,16 @@ export function ChartsTab({
       </div>
 
       <div className={card}>
-        <AllocationTimeChart points={points} />
-      </div>
-
-      <div className={card}>
         <BenchmarkChart
           points={points}
           benchmarkOrder={benchmarkOrder}
           pinnedBenchmarkKeys={pinnedBenchmarkKeys}
           customBenchmarkLabels={customBenchmarkLabels}
         />
+      </div>
+
+      <div className={card}>
+        <AllocationTimeChart points={points} />
       </div>
     </div>
   )

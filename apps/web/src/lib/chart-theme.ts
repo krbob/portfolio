@@ -9,6 +9,7 @@ export const chartPalette = {
 
   // Series
   portfolio: '#3b82f6',  // blue-500 — primary PLN area
+  performance: '#10b981', // emerald-500 — TWR-style index line
   equities: '#3b82f6',   // blue-500
   bonds: '#f59e0b',      // amber-500
   cash: '#71717a',       // zinc-500

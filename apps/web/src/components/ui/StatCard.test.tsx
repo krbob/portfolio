@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { StatCard } from './StatCard'
 
@@ -47,6 +48,16 @@ describe('StatCard', () => {
     render(<StatCard label="Change" value="—" loading />)
     const valueEl = screen.getByText('—')
     expect(valueEl.className).toContain('animate-pulse')
+  })
+
+  it('renders as a link when destination is provided', () => {
+    render(
+      <MemoryRouter>
+        <StatCard label="YTD TWRR" value="+12.34%" to="/performance" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: /YTD TWRR/i })).toHaveAttribute('href', '/performance')
   })
 
   describe('zero detection with numericValue', () => {

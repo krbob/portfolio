@@ -1,5 +1,7 @@
 export { ChartContainer, ChartLegendItem } from './ChartContainer'
 export { PortfolioValueChart } from './PortfolioValueChart'
+export { PerformanceIndexChart, type PerformanceIndexSeriesConfig } from './PerformanceIndexChart'
+export { PortfolioPerformanceChart } from './PortfolioPerformanceChart'
 export { AllocationTimeChart } from './AllocationTimeChart'
 export { BenchmarkChart } from './BenchmarkChart'
 export { MiniChart, type MiniChartHoverInfo } from './MiniChart'

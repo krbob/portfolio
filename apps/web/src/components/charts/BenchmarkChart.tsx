@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LineSeries, type IChartApi, type ISeriesApi, type SeriesType } from 'lightweight-charts'
+import { useEffect, useMemo, useState } from 'react'
+import { LineStyle } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { orderAvailableBenchmarkKeys } from '../../lib/benchmarks'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
 import { filterInput } from '../../lib/styles'
 import { t } from '../../lib/messages'
-import { ChartContainer, ChartLegendItem } from './ChartContainer'
+import { ChartLegendItem } from './ChartContainer'
+import { PerformanceIndexChart, type PerformanceIndexSeriesConfig } from './PerformanceIndexChart'
 import { SegmentedControl } from '../ui'
 
 const BENCHMARK_LABELS: Record<string, { pl: string; en: string }> = {
@@ -33,8 +34,6 @@ interface BenchmarkChartProps {
   pinnedBenchmarkKeys?: string[]
 }
 
-const benchmarkPriceFormat = { type: 'price' as const, minMove: 0.01, precision: 2 }
-
 export function BenchmarkChart({
   points,
   height = 300,
@@ -43,16 +42,6 @@ export function BenchmarkChart({
   pinnedBenchmarkKeys,
 }: BenchmarkChartProps) {
   const { language } = useI18n()
-  const benchmarkSeriesRef = useRef<Map<string, ISeriesApi<SeriesType>>>(new Map())
-  const hasMountedRef = useRef(false)
-  const portfolioSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
-  const chartRef = useRef<IChartApi | null>(null)
-  const dataRef = useRef({
-    points,
-    mode: 'single' as BenchmarkChartMode,
-    activeKey: 'VWRA',
-    compareKeys: [] as string[],
-  })
 
   const availableKeys = useMemo(() => {
     if (points.length === 0) return []
@@ -97,83 +86,33 @@ export function BenchmarkChart({
     }
   }, [availableKeys.length, defaultCompareKeys, mode, resolvedCompareKeys.length])
 
-  dataRef.current = {
-    points,
-    mode,
-    activeKey,
-    compareKeys: resolvedCompareKeys,
-  }
-
   const displayLabel = labelForBenchmarkKey(activeKey, language, customBenchmarkLabels)
-
-  const updateSeriesData = useCallback(() => {
-    const { points: currentPoints, activeKey: currentActiveKey, mode: currentMode, compareKeys: currentCompareKeys } = dataRef.current
-    portfolioSeriesRef.current?.setData(
-      currentPoints
-        .filter((point) => point.portfolioPerformanceIndex != null)
-        .map((point) => ({ time: point.date, value: Number(point.portfolioPerformanceIndex) })),
-    )
-    const desiredKeys = currentMode === 'compare' ? currentCompareKeys : [currentActiveKey]
-    const currentSeries = benchmarkSeriesRef.current
-    currentSeries.forEach((series, key) => {
-      if (!desiredKeys.includes(key)) {
-        chartRef.current?.removeSeries(series)
-        currentSeries.delete(key)
-      }
-    })
-
-    desiredKeys.forEach((key, index) => {
-      const color = currentMode === 'compare'
+  const desiredKeys = useMemo(
+    () => mode === 'compare' ? resolvedCompareKeys : [activeKey],
+    [activeKey, mode, resolvedCompareKeys],
+  )
+  const chartSeries = useMemo<PerformanceIndexSeriesConfig[]>(() => {
+    const benchmarkSeries = desiredKeys.map((key, index) => ({
+      id: `benchmark:${key}`,
+      color: mode === 'compare'
         ? BENCHMARK_COMPARE_COLORS[index % BENCHMARK_COMPARE_COLORS.length]
-        : BENCHMARK_LINE_COLOR
-      let series = currentSeries.get(key)
-      if (!series && chartRef.current) {
-        series = chartRef.current.addSeries(LineSeries, {
-          color,
-          lineWidth: 2,
-          lineStyle: currentMode === 'compare' ? 0 : 2,
-          priceFormat: benchmarkPriceFormat,
-        })
-        currentSeries.set(key, series)
-      }
-      series?.applyOptions({
-        color,
-        lineStyle: currentMode === 'compare' ? 0 : 2,
-      })
-      series?.setData(
-        currentPoints
-          .filter((point) => point.benchmarkIndices?.[key] != null)
-          .map((point) => ({ time: point.date, value: Number(point.benchmarkIndices![key]) })),
-      )
-    })
-    chartRef.current?.timeScale().fitContent()
-  }, [])
+        : BENCHMARK_LINE_COLOR,
+      lineWidth: 2 as const,
+      lineStyle: mode === 'compare' ? LineStyle.Solid : LineStyle.Dashed,
+      getValue: (point: PortfolioDailyHistoryPoint) => point.benchmarkIndices?.[key],
+    }))
 
-  const onChartReady = useCallback((chart: IChartApi) => {
-    chartRef.current = chart
-    portfolioSeriesRef.current = chart.addSeries(LineSeries, {
-      color: chartPalette.portfolio,
-      lineWidth: 3,
-      priceFormat: benchmarkPriceFormat,
-    })
-    benchmarkSeriesRef.current = new Map()
-
-    updateSeriesData()
-
-    return () => {
-      chartRef.current = null
-      portfolioSeriesRef.current = null
-      benchmarkSeriesRef.current = new Map()
-    }
-  }, [updateSeriesData])
-
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true
-      return
-    }
-    updateSeriesData()
-  }, [activeKey, compareKeys, mode, points, updateSeriesData])
+    return [
+      {
+        id: 'portfolio',
+        color: chartPalette.portfolio,
+        lineWidth: 3,
+        lineStyle: LineStyle.Solid,
+        getValue: (point) => point.portfolioPerformanceIndex,
+      },
+      ...benchmarkSeries,
+    ]
+  }, [desiredKeys, mode])
 
   const compareLegendItems = resolvedCompareKeys.map((key, index) => ({
     key,
@@ -194,7 +133,9 @@ export function BenchmarkChart({
   }
 
   return (
-    <ChartContainer
+    <PerformanceIndexChart
+      points={points}
+      series={chartSeries}
       height={height}
       title={t('benchmark.title')}
       subtitle={t('benchmark.subtitle')}
@@ -258,7 +199,6 @@ export function BenchmarkChart({
           ) : null}
         </div>
       }
-      onChartReady={onChartReady}
     />
   )
 }

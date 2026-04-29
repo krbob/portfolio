@@ -7,7 +7,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
-import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory } from '../hooks/use-read-model'
+import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
@@ -30,13 +30,15 @@ export function DashboardScreen() {
   const [range, setRange] = useState<DashboardRange>('1Y')
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
+  const returnsQuery = usePortfolioReturns()
   const allocationQuery = usePortfolioAllocation()
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
-  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, allocationQuery])
+  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, allocationQuery])
   const overview = overviewQuery.data
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
+  const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
   const chartPoints = useMemo(() => filterHistoryPoints(allPoints, range), [allPoints, range])
   const valuationState = overview?.valuationState ?? 'MARK_TO_MARKET'
   const historyValuationState = historyQuery.data?.valuationState ?? valuationState
@@ -81,6 +83,8 @@ export function DashboardScreen() {
   const cashPct = overview && totalCurrentValue > 0 ? (Number(displayedCashValuePln) / totalCurrentValue) * 100 : 0
   const cashBreakdownSubtitle = undefined
   const contributionBreakdownSubtitle = undefined
+  const ytdTwrr = allPeriods.find((period) => period.key === 'YTD')?.nominalPln?.timeWeightedReturn
+  const returnsDisplayAvailable = isMarketValuationState(historyValuationState)
 
   function handleRetry() {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
@@ -194,6 +198,9 @@ export function DashboardScreen() {
         overview={overview}
         valuationState={valuationState}
         hasMarketBackedCurrentValuation={hasMarketBackedCurrentValuation}
+        ytdTwrr={ytdTwrr}
+        ytdTwrrAvailable={returnsDisplayAvailable}
+        ytdTwrrLoading={returnsQuery.isLoading && allPeriods.length === 0}
         contributionBreakdownSubtitle={contributionBreakdownSubtitle}
         cashBreakdownSubtitle={cashBreakdownSubtitle}
       />
