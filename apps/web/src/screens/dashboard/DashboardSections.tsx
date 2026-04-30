@@ -281,7 +281,7 @@ export function DashboardTargetDriftCard({
           {/* Per-bucket bars */}
           <div className="space-y-2.5">
             {buckets.map((bucket) => (
-              <AllocationBucketBar key={bucket.assetClass} bucket={bucket} />
+              <AllocationBucketBar key={bucket.assetClass} bucket={bucket} recommendedAction={allocation.recommendedAction} />
             ))}
           </div>
 
@@ -360,14 +360,20 @@ const bucketColor: Record<string, string> = {
   CASH: 'bg-zinc-500',
 }
 
-function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) {
+function AllocationBucketBar({
+  bucket,
+  recommendedAction,
+}: {
+  bucket: PortfolioAllocationBucket
+  recommendedAction: string
+}) {
   const actual = Number(bucket.currentWeightPct)
   const target = Number(bucket.targetWeightPct ?? 0)
   const barWidth = actual
   const markerPos = target
   const withinTolerance = bucket.withinTolerance
   const color = bucketColor[bucket.assetClass] ?? 'bg-zinc-500'
-  const adjustment = allocationAdjustmentLabel(bucket)
+  const adjustment = allocationAdjustmentLabel(bucket, recommendedAction)
 
   return (
     <div className="grid grid-cols-[4rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1">
@@ -386,7 +392,8 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
         {formatPercent(actual, { maximumFractionDigits: 0 })} / {formatPercent(target, { maximumFractionDigits: 0 })}
       </span>
       {adjustment ? (
-        <span className={clsx('col-span-2 col-start-2 text-xs tabular-nums', adjustment.color)}>
+        <span className={clsx('col-span-2 col-start-2 text-xs tabular-nums', adjustmentToneColor[adjustment.tone])}>
+          <span aria-hidden="true" className="mr-1">{adjustment.sign}</span>
           {adjustment.label}
         </span>
       ) : null}
@@ -394,16 +401,39 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
   )
 }
 
-function allocationAdjustmentLabel(bucket: PortfolioAllocationBucket): { label: string; color: string } | null {
+const adjustmentToneColor = {
+  neutral: 'text-zinc-500',
+  over: 'text-amber-400',
+  under: 'text-emerald-400',
+} as const
+
+type AllocationAdjustment = {
+  label: string
+  tone: keyof typeof adjustmentToneColor
+  sign: '+' | '−'
+}
+
+function allocationAdjustmentLabel(
+  bucket: PortfolioAllocationBucket,
+  recommendedAction: string,
+): AllocationAdjustment | null {
   const gapValue = Number(bucket.gapValuePln)
   if (!Number.isFinite(gapValue) || Math.abs(gapValue) < 0.005) {
     return null
   }
 
+  const muted = bucket.withinTolerance || recommendedAction === 'WITHIN_TOLERANCE'
+
   if (gapValue < 0) {
+    const amount = formatCurrencyPln(Math.abs(gapValue))
+    const trim = !muted && recommendedAction === 'FULL_REBALANCE'
     return {
-      label: formatMessage(t('dashboardSections.overTargetBy'), { amount: formatCurrencyPln(Math.abs(gapValue)) }),
-      color: 'text-amber-300',
+      label: formatMessage(
+        trim ? t('dashboardSections.allocationTrim') : t('dashboardSections.allocationOverBy'),
+        { amount },
+      ),
+      tone: muted ? 'neutral' : 'over',
+      sign: '−',
     }
   }
 
@@ -414,12 +444,11 @@ function allocationAdjustmentLabel(bucket: PortfolioAllocationBucket): { label: 
 
   return {
     label: formatMessage(
-      Number.isFinite(contributionToTarget) && contributionToTarget > 0
-        ? t('dashboardSections.buyToReachTarget')
-        : t('dashboardSections.underTargetBy'),
+      muted ? t('dashboardSections.allocationToTarget') : t('dashboardSections.allocationBuy'),
       { amount },
     ),
-    color: 'text-emerald-300',
+    tone: muted ? 'neutral' : 'under',
+    sign: '+',
   }
 }
 

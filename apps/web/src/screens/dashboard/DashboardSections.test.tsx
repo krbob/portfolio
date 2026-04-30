@@ -309,8 +309,10 @@ describe('DashboardTargetDriftCard', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Over target by PLN 4,687.99.')).toBeInTheDocument()
-    expect(screen.getByText('Buy PLN 5,865.59 to put this bucket on target.')).toBeInTheDocument()
+    expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
+    expect(screen.getByText('To target: PLN 5,865.59')).toBeInTheDocument()
+    expect(screen.queryByText(/Buy PLN/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Trim PLN/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Plan contribution' }))
     expect(await screen.findByRole('dialog', { name: 'Contribution planner' })).toBeInTheDocument()
@@ -387,5 +389,38 @@ describe('DashboardTargetDriftCard', () => {
     expect(screen.getByLabelText('Bonds')).toHaveValue('')
     expect(screen.getByLabelText('Cash')).toHaveValue('')
     expect(manualPreviewReset).toHaveBeenCalled()
+  })
+
+  it('shows actionable adjustment labels when buckets are out of tolerance', () => {
+    setLanguage('en')
+    const outOfBand = {
+      ...allocation,
+      recommendedAction: 'DEPLOY_EXISTING_CASH',
+      recommendedAssetClass: 'BONDS',
+      breachedBucketCount: 2,
+      buckets: [
+        { ...allocation.buckets[0], withinTolerance: false },
+        { ...allocation.buckets[1], withinTolerance: false },
+        allocation.buckets[2],
+      ],
+    } satisfies PortfolioAllocationSummary
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardTargetDriftCard
+            isPolish={false}
+            allocation={outOfBand}
+            isLoading={false}
+            isError={false}
+            onRetry={vi.fn()}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
+    expect(screen.getByText('Buy PLN 5,865.59 to hit target')).toBeInTheDocument()
+    expect(screen.queryByText(/To target:/)).not.toBeInTheDocument()
   })
 })
