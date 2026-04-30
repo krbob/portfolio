@@ -310,8 +310,9 @@ describe('DashboardTargetDriftCard', () => {
     )
 
     expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
-    expect(screen.getByText('To target: PLN 4,692.47')).toBeInTheDocument()
-    expect(screen.queryByText(/Buy PLN/)).not.toBeInTheDocument()
+    expect(screen.getByText('Contribution to target: PLN 5,865.59')).toBeInTheDocument()
+    expect(screen.queryByText(/PLN 4,692.47/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Contribute PLN/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Trim PLN/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Plan contribution' }))
@@ -391,41 +392,7 @@ describe('DashboardTargetDriftCard', () => {
     expect(manualPreviewReset).toHaveBeenCalled()
   })
 
-  it('uses gap (not external contribution) when redeploying existing cash', () => {
-    setLanguage('en')
-    const outOfBand = {
-      ...allocation,
-      recommendedAction: 'DEPLOY_EXISTING_CASH',
-      recommendedAssetClass: 'BONDS',
-      breachedBucketCount: 2,
-      buckets: [
-        { ...allocation.buckets[0], withinTolerance: false },
-        { ...allocation.buckets[1], withinTolerance: false },
-        allocation.buckets[2],
-      ],
-    } satisfies PortfolioAllocationSummary
-
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <DashboardTargetDriftCard
-            isPolish={false}
-            allocation={outOfBand}
-            isLoading={false}
-            isError={false}
-            onRetry={vi.fn()}
-          />
-        </I18nProvider>
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
-    expect(screen.getByText('Buy PLN 4,692.47 to hit target')).toBeInTheDocument()
-    expect(screen.queryByText(/PLN 5,865.59/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/To target:/)).not.toBeInTheDocument()
-  })
-
-  it('uses external contribution amount when waiting for next contribution', () => {
+  it('frames out-of-tolerance under-target as a contribution to hit target', () => {
     setLanguage('en')
     const outOfBand = {
       ...allocation,
@@ -453,7 +420,9 @@ describe('DashboardTargetDriftCard', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Buy PLN 5,865.59 to hit target')).toBeInTheDocument()
+    expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
+    expect(screen.getByText('Contribute PLN 5,865.59 to hit target')).toBeInTheDocument()
     expect(screen.queryByText(/PLN 4,692.47/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Contribution to target:/)).not.toBeInTheDocument()
   })
 })

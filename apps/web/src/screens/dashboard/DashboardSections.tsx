@@ -438,11 +438,7 @@ function allocationAdjustmentLabel(
   }
 
   const contributionToTarget = Number(bucket.contributionToTargetPln)
-  const useExternalContribution =
-    recommendedAction === 'WAIT_FOR_NEXT_CONTRIBUTION' &&
-    Number.isFinite(contributionToTarget) &&
-    contributionToTarget > 0
-  const amount = useExternalContribution
+  const amount = Number.isFinite(contributionToTarget) && contributionToTarget > 0
     ? formatCurrencyPln(contributionToTarget)
     : formatCurrencyPln(gapValue)
 
