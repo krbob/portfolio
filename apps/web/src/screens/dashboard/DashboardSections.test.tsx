@@ -310,7 +310,7 @@ describe('DashboardTargetDriftCard', () => {
     )
 
     expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
-    expect(screen.getByText('To target: PLN 5,865.59')).toBeInTheDocument()
+    expect(screen.getByText('To target: PLN 4,692.47')).toBeInTheDocument()
     expect(screen.queryByText(/Buy PLN/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Trim PLN/)).not.toBeInTheDocument()
 
@@ -391,7 +391,7 @@ describe('DashboardTargetDriftCard', () => {
     expect(manualPreviewReset).toHaveBeenCalled()
   })
 
-  it('shows actionable adjustment labels when buckets are out of tolerance', () => {
+  it('uses gap (not external contribution) when redeploying existing cash', () => {
     setLanguage('en')
     const outOfBand = {
       ...allocation,
@@ -420,7 +420,40 @@ describe('DashboardTargetDriftCard', () => {
     )
 
     expect(screen.getByText('Over by PLN 4,687.99')).toBeInTheDocument()
-    expect(screen.getByText('Buy PLN 5,865.59 to hit target')).toBeInTheDocument()
+    expect(screen.getByText('Buy PLN 4,692.47 to hit target')).toBeInTheDocument()
+    expect(screen.queryByText(/PLN 5,865.59/)).not.toBeInTheDocument()
     expect(screen.queryByText(/To target:/)).not.toBeInTheDocument()
+  })
+
+  it('uses external contribution amount when waiting for next contribution', () => {
+    setLanguage('en')
+    const outOfBand = {
+      ...allocation,
+      recommendedAction: 'WAIT_FOR_NEXT_CONTRIBUTION',
+      recommendedAssetClass: 'BONDS',
+      breachedBucketCount: 2,
+      buckets: [
+        { ...allocation.buckets[0], withinTolerance: false },
+        { ...allocation.buckets[1], withinTolerance: false },
+        allocation.buckets[2],
+      ],
+    } satisfies PortfolioAllocationSummary
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardTargetDriftCard
+            isPolish={false}
+            allocation={outOfBand}
+            isLoading={false}
+            isError={false}
+            onRetry={vi.fn()}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Buy PLN 5,865.59 to hit target')).toBeInTheDocument()
+    expect(screen.queryByText(/PLN 4,692.47/)).not.toBeInTheDocument()
   })
 })
