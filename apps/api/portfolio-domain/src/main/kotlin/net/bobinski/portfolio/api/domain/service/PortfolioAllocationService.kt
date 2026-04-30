@@ -208,9 +208,12 @@ class PortfolioAllocationService(
                 .divide(totalCurrentValue, 8, RoundingMode.HALF_UP)
                 .multiply(HUNDRED)
         }.scalePercent()
-        val targetWeightPct = target?.targetWeight?.multiply(HUNDRED)?.scalePercent()
-        val targetValue = target?.let { totalCurrentValue.multiply(it.targetWeight).money() }
-        val gapValue = targetValue?.subtract(currentValue)?.money()
+        val targetWeight = target?.targetWeight
+        val targetWeightPct = targetWeight?.multiply(HUNDRED)?.scalePercent()
+        val rawTargetValue = targetWeight?.let { totalCurrentValue.multiply(it) }
+        val targetValue = rawTargetValue?.money()
+        val rawGapValue = rawTargetValue?.subtract(currentValue)
+        val gapValue = rawGapValue?.money()
         val driftPctPoints = targetWeightPct?.let { currentWeightPct.subtract(it).scalePercent() }
         val withinTolerance = driftPctPoints != null && driftPctPoints.abs() <= toleranceBandPctPoints
         AllocationBucketInput(
@@ -221,6 +224,7 @@ class PortfolioAllocationService(
             targetValuePln = targetValue,
             driftPctPoints = driftPctPoints,
             gapValuePln = gapValue,
+            contributionToTargetPln = contributionToTarget(rawGapValue, targetWeight),
             toleranceLowerPct = targetWeightPct?.subtract(toleranceBandPctPoints)?.max(BigDecimal.ZERO)?.scalePercent(),
             toleranceUpperPct = targetWeightPct?.add(toleranceBandPctPoints)?.min(HUNDRED)?.scalePercent(),
             withinTolerance = withinTolerance,
@@ -233,6 +237,22 @@ class PortfolioAllocationService(
                 else -> AllocationBucketAction.HOLD
             }
         )
+    }
+
+    private fun contributionToTarget(
+        rawGapValue: BigDecimal?,
+        targetWeight: BigDecimal?
+    ): BigDecimal? {
+        if (rawGapValue == null || targetWeight == null || rawGapValue <= BigDecimal.ZERO) {
+            return null
+        }
+        if (targetWeight <= BigDecimal.ZERO || targetWeight >= BigDecimal.ONE) {
+            return null
+        }
+
+        return rawGapValue
+            .divide(BigDecimal.ONE.subtract(targetWeight), 8, RoundingMode.HALF_UP)
+            .money()
     }
 
     private suspend fun loadContext(): AllocationContext {
@@ -650,6 +670,7 @@ private fun AllocationBucketInput.toSummaryBucket(
     targetValuePln = targetValuePln,
     driftPctPoints = driftPctPoints,
     gapValuePln = gapValuePln,
+    contributionToTargetPln = contributionToTargetPln,
     toleranceLowerPct = toleranceLowerPct,
     toleranceUpperPct = toleranceUpperPct,
     withinTolerance = withinTolerance,
@@ -750,6 +771,7 @@ data class PortfolioAllocationBucket(
     val targetValuePln: BigDecimal?,
     val driftPctPoints: BigDecimal?,
     val gapValuePln: BigDecimal?,
+    val contributionToTargetPln: BigDecimal?,
     val toleranceLowerPct: BigDecimal?,
     val toleranceUpperPct: BigDecimal?,
     val withinTolerance: Boolean,
@@ -766,6 +788,7 @@ data class AllocationBucketInput(
     val targetValuePln: BigDecimal?,
     val driftPctPoints: BigDecimal?,
     val gapValuePln: BigDecimal?,
+    val contributionToTargetPln: BigDecimal?,
     val toleranceLowerPct: BigDecimal?,
     val toleranceUpperPct: BigDecimal?,
     val withinTolerance: Boolean,

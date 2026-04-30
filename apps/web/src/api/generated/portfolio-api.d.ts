@@ -1204,6 +1204,7 @@ export interface components {
             targetValuePln?: string | null;
             driftPctPoints?: string | null;
             gapValuePln?: string | null;
+            contributionToTargetPln?: string | null;
             toleranceLowerPct?: string | null;
             toleranceUpperPct?: string | null;
             withinTolerance: boolean;

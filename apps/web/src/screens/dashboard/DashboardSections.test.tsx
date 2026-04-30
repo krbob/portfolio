@@ -182,6 +182,7 @@ const allocation = {
       targetValuePln: '341708.43',
       driftPctPoints: '1.10',
       gapValuePln: '-4687.99',
+      contributionToTargetPln: null,
       toleranceLowerPct: '78.00',
       toleranceUpperPct: '82.00',
       withinTolerance: true,
@@ -197,6 +198,7 @@ const allocation = {
       targetValuePln: '85427.11',
       driftPctPoints: '-1.10',
       gapValuePln: '4692.47',
+      contributionToTargetPln: '5865.59',
       toleranceLowerPct: '18.00',
       toleranceUpperPct: '22.00',
       withinTolerance: true,
@@ -212,6 +214,7 @@ const allocation = {
       targetValuePln: null,
       driftPctPoints: null,
       gapValuePln: null,
+      contributionToTargetPln: null,
       toleranceLowerPct: null,
       toleranceUpperPct: null,
       withinTolerance: false,
@@ -305,6 +308,9 @@ describe('DashboardTargetDriftCard', () => {
         </I18nProvider>
       </MemoryRouter>,
     )
+
+    expect(screen.getByText('Over target by PLN 4,687.99.')).toBeInTheDocument()
+    expect(screen.getByText('Buy PLN 5,865.59 to put this bucket on target.')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Plan contribution' }))
     expect(await screen.findByRole('dialog', { name: 'Contribution planner' })).toBeInTheDocument()

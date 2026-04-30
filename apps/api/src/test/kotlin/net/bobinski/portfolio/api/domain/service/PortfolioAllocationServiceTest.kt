@@ -8,6 +8,7 @@ import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -30,9 +31,9 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import kotlinx.serialization.json.Json
 
 class PortfolioAllocationServiceTest {
 
@@ -119,12 +120,80 @@ class PortfolioAllocationServiceTest {
         assertEquals(BigDecimal("80.00"), equities.targetWeightPct)
         assertEquals(BigDecimal("-20.00"), equities.driftPctPoints)
         assertEquals(BigDecimal("2000.00"), equities.gapValuePln)
+        assertEquals(BigDecimal("10000.00"), equities.contributionToTargetPln)
         assertEquals(BigDecimal("2000.00"), equities.suggestedContributionPln)
         assertEquals(AllocationBucketStatus.ON_TARGET, bonds.status)
         assertEquals(true, bonds.withinTolerance)
         assertEquals(BigDecimal("0.00"), bonds.gapValuePln)
+        assertNull(bonds.contributionToTargetPln)
         assertEquals(AllocationBucketStatus.OVERWEIGHT, cash.status)
         assertEquals(BigDecimal("-2000.00"), cash.gapValuePln)
+        assertNull(cash.contributionToTargetPln)
+    }
+
+    @Test
+    fun `summary reports exact contribution needed to reach target without selling`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val auditLogService = AuditLogService(
+            auditEventRepository = InMemoryAuditEventRepository(),
+            clock = CLOCK
+        )
+        val rebalancingSettingsService = PortfolioRebalancingSettingsService(
+            appPreferenceService = AppPreferenceService(
+                repository = appPreferenceRepository,
+                json = Json,
+                clock = CLOCK
+            ),
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val readModelService = PortfolioReadModelService(
+            accountRepository = accountRepository,
+            instrumentRepository = instrumentRepository,
+            transactionRepository = transactionRepository,
+            currentInstrumentValuationProvider = NoopValuationProvider,
+            edoLotValuationProvider = NoopEdoLotValuationProvider,
+            transactionFxConversionService = TransactionFxConversionService(NoopFxRateProvider),
+            clock = CLOCK
+        )
+        val targetService = PortfolioTargetService(
+            portfolioTargetRepository = targetRepository,
+            auditLogService = auditLogService,
+            clock = CLOCK
+        )
+        val allocationService = PortfolioAllocationService(
+            portfolioTargetRepository = targetRepository,
+            portfolioReadModelService = readModelService,
+            rebalancingSettingsService = rebalancingSettingsService
+        )
+
+        accountRepository.save(account())
+        instrumentRepository.save(equityInstrument())
+        instrumentRepository.save(bondInstrument())
+        transactionRepository.save(depositTransaction("10000.00"))
+        transactionRepository.save(buyTransaction(EQUITY_ID, "8200.00", "82"))
+        transactionRepository.save(buyTransaction(BOND_ID, "1800.00", "18", tradeDate = LocalDate.parse("2026-03-03")))
+        targetService.replace(
+            ReplacePortfolioTargetsCommand(
+                items = listOf(
+                    ReplacePortfolioTargetItem(AssetClass.EQUITIES, BigDecimal("0.80")),
+                    ReplacePortfolioTargetItem(AssetClass.BONDS, BigDecimal("0.20"))
+                )
+            )
+        )
+
+        val summary = allocationService.summary()
+        val equities = summary.buckets.first { it.assetClass == AssetClass.EQUITIES }
+        val bonds = summary.buckets.first { it.assetClass == AssetClass.BONDS }
+
+        assertEquals(BigDecimal("-200.00"), equities.gapValuePln)
+        assertNull(equities.contributionToTargetPln)
+        assertEquals(BigDecimal("200.00"), bonds.gapValuePln)
+        assertEquals(BigDecimal("250.00"), bonds.contributionToTargetPln)
     }
 
     @Test

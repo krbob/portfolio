@@ -365,6 +365,7 @@ class PortfolioReadModelRouteTest {
         assertTrue(body.contains("\"rebalancingMode\": \"CONTRIBUTIONS_ONLY\""))
         assertTrue(body.contains("\"recommendedAction\": \"DEPLOY_EXISTING_CASH\""))
         assertTrue(body.contains("\"targetWeightSumPct\": \"100.00\""))
+        assertTrue(body.contains("\"contributionToTargetPln\": \"10000.00\""))
         assertTrue(body.contains("\"suggestedContributionPln\": \"2000.00\""))
         assertTrue(body.contains("\"rebalanceAction\": \"BUY\""))
         assertTrue(body.contains("\"status\": \"UNDERWEIGHT\""))

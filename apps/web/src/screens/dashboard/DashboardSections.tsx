@@ -367,10 +367,11 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
   const markerPos = target
   const withinTolerance = bucket.withinTolerance
   const color = bucketColor[bucket.assetClass] ?? 'bg-zinc-500'
+  const adjustment = allocationAdjustmentLabel(bucket)
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-16 shrink-0 text-xs text-zinc-400">{labelAssetClass(bucket.assetClass)}</span>
+    <div className="grid grid-cols-[4rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1">
+      <span className="text-xs text-zinc-400">{labelAssetClass(bucket.assetClass)}</span>
       <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
         <div
           className={`h-full rounded-full ${color} transition-all`}
@@ -381,11 +382,45 @@ function AllocationBucketBar({ bucket }: { bucket: PortfolioAllocationBucket }) 
           style={{ left: `${markerPos}%` }}
         />
       </div>
-      <span className={clsx('w-20 shrink-0 text-right text-xs tabular-nums', withinTolerance ? 'text-zinc-400' : 'text-amber-400')}>
+      <span className={clsx('text-right text-xs tabular-nums', withinTolerance ? 'text-zinc-400' : 'text-amber-400')}>
         {formatPercent(actual, { maximumFractionDigits: 0 })} / {formatPercent(target, { maximumFractionDigits: 0 })}
       </span>
+      {adjustment ? (
+        <span className={clsx('col-span-2 col-start-2 text-xs tabular-nums', adjustment.color)}>
+          {adjustment.label}
+        </span>
+      ) : null}
     </div>
   )
+}
+
+function allocationAdjustmentLabel(bucket: PortfolioAllocationBucket): { label: string; color: string } | null {
+  const gapValue = Number(bucket.gapValuePln)
+  if (!Number.isFinite(gapValue) || Math.abs(gapValue) < 0.005) {
+    return null
+  }
+
+  if (gapValue < 0) {
+    return {
+      label: formatMessage(t('dashboardSections.overTargetBy'), { amount: formatCurrencyPln(Math.abs(gapValue)) }),
+      color: 'text-amber-300',
+    }
+  }
+
+  const contributionToTarget = Number(bucket.contributionToTargetPln)
+  const amount = Number.isFinite(contributionToTarget) && contributionToTarget > 0
+    ? formatCurrencyPln(contributionToTarget)
+    : formatCurrencyPln(gapValue)
+
+  return {
+    label: formatMessage(
+      Number.isFinite(contributionToTarget) && contributionToTarget > 0
+        ? t('dashboardSections.buyToReachTarget')
+        : t('dashboardSections.underTargetBy'),
+      { amount },
+    ),
+    color: 'text-emerald-300',
+  }
 }
 
 export function DashboardDataQualityCard({
