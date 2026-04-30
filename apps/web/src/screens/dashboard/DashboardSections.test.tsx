@@ -425,4 +425,38 @@ describe('DashboardTargetDriftCard', () => {
     expect(screen.queryByText(/PLN 4,692.47/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Contribution to target:/)).not.toBeInTheDocument()
   })
+
+  it('keeps the bucket amount framed as a contribution when existing cash is deployable', () => {
+    setLanguage('en')
+    const deployCash = {
+      ...allocation,
+      recommendedAction: 'DEPLOY_EXISTING_CASH',
+      recommendedAssetClass: 'BONDS',
+      recommendedContributionPln: '4692.47',
+      breachedBucketCount: 2,
+      buckets: [
+        { ...allocation.buckets[0], withinTolerance: false },
+        { ...allocation.buckets[1], withinTolerance: false },
+        allocation.buckets[2],
+      ],
+    } satisfies PortfolioAllocationSummary
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardTargetDriftCard
+            isPolish={false}
+            allocation={deployCash}
+            isLoading={false}
+            isError={false}
+            onRetry={vi.fn()}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/Deploy PLN 4,692.47 from cash/)).toBeInTheDocument()
+    expect(screen.getByText('Contribute PLN 5,865.59 to hit target')).toBeInTheDocument()
+    expect(screen.queryByText('Contribute PLN 4,692.47 to hit target')).not.toBeInTheDocument()
+  })
 })
