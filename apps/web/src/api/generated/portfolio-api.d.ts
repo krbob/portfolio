@@ -872,7 +872,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** net.bobinski.portfolio.api.route.HealthResponse */
+        /** HealthResponse */
         HealthResponse: {
             status: string;
             name: string;
@@ -881,18 +881,18 @@ export interface components {
             persistenceMode: string;
             authEnabled: boolean;
         };
-        /** net.bobinski.portfolio.api.route.AuthSummary */
+        /** AuthSummary */
         AuthSummary: {
             enabled: boolean;
             mode: string;
         };
-        /** net.bobinski.portfolio.api.route.StackSummary */
+        /** StackSummary */
         StackSummary: {
             web: string;
             api: string;
             database: string;
         };
-        /** net.bobinski.portfolio.api.route.AppMetaResponse */
+        /** AppMetaResponse */
         AppMetaResponse: {
             name: string;
             stage: string;
@@ -903,7 +903,7 @@ export interface components {
             stockAnalystUiUrl?: string | null;
             capabilities: string[];
         };
-        /** net.bobinski.portfolio.api.route.ReadinessCheckResponse */
+        /** ReadinessCheckResponse */
         ReadinessCheckResponse: {
             key: string;
             label: string;
@@ -913,27 +913,27 @@ export interface components {
                 [key: string]: string;
             };
         };
-        /** net.bobinski.portfolio.api.route.ReadinessResponse */
+        /** ReadinessResponse */
         ReadinessResponse: {
             status: string;
             checkedAt: string;
             checks: components["schemas"]["ReadinessCheckResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.AuthSessionResponse */
+        /** AuthSessionResponse */
         AuthSessionResponse: {
             authEnabled: boolean;
             authenticated: boolean;
             mode: string;
         };
-        /** net.bobinski.portfolio.api.route.CreateAuthSessionRequest */
+        /** CreateAuthSessionRequest */
         CreateAuthSessionRequest: {
             password: string;
         };
-        /** net.bobinski.portfolio.api.plugins.ErrorResponse */
+        /** ErrorResponse */
         ErrorResponse: {
             message: string;
         };
-        /** net.bobinski.portfolio.api.route.AccountResponse */
+        /** AccountResponse */
         AccountResponse: {
             id: string;
             name: string;
@@ -944,20 +944,20 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.CreateAccountRequest */
+        /** CreateAccountRequest */
         CreateAccountRequest: {
             name: string;
             institution: string;
             type: string;
             baseCurrency: string;
         };
-        /** net.bobinski.portfolio.api.route.EdoTermsResponse */
+        /** EdoTermsResponse */
         EdoTermsResponse: {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
         };
-        /** net.bobinski.portfolio.api.route.InstrumentResponse */
+        /** InstrumentResponse */
         InstrumentResponse: {
             id: string;
             name: string;
@@ -971,13 +971,13 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.EdoTermsRequest */
+        /** EdoTermsRequest */
         EdoTermsRequest: {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
         };
-        /** net.bobinski.portfolio.api.route.CreateInstrumentRequest */
+        /** CreateInstrumentRequest */
         CreateInstrumentRequest: {
             name: string;
             kind: string;
@@ -987,7 +987,7 @@ export interface components {
             valuationSource: string;
             edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
         };
-        /** net.bobinski.portfolio.api.route.UpdateInstrumentRequest */
+        /** UpdateInstrumentRequest */
         UpdateInstrumentRequest: {
             name: string;
             symbol?: string | null;
@@ -995,13 +995,13 @@ export interface components {
             valuationSource: string;
             edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
         };
-        /** net.bobinski.portfolio.api.route.CurrencyAmountResponse */
+        /** CurrencyAmountResponse */
         CurrencyAmountResponse: {
             currency: string;
             amount: string;
             bookValuePln: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioOverviewResponse */
+        /** PortfolioOverviewResponse */
         PortfolioOverviewResponse: {
             asOf: string;
             valuationState: string;
@@ -1030,7 +1030,7 @@ export interface components {
             unsupportedCorrectionTransactions: number;
             totalPreviousCloseValuePln?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.HoldingEdoLotResponse */
+        /** HoldingEdoLotResponse */
         HoldingEdoLotResponse: {
             purchaseDate: string;
             quantity: string;
@@ -1044,7 +1044,7 @@ export interface components {
             valuationIssue?: string | null;
             currentRatePercent?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.HoldingResponse */
+        /** HoldingResponse */
         HoldingResponse: {
             accountId: string;
             accountName: string;
@@ -1067,7 +1067,7 @@ export interface components {
             transactionCount: number;
             edoLots?: components["schemas"]["HoldingEdoLotResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioAccountResponse */
+        /** PortfolioAccountResponse */
         PortfolioAccountResponse: {
             accountId: string;
             accountName: string;
@@ -1089,14 +1089,14 @@ export interface components {
             valuedHoldingCount: number;
             valuationIssueCount: number;
         };
-        /** net.bobinski.portfolio.api.route.BenchmarkStatusResponse */
+        /** BenchmarkStatusResponse */
         BenchmarkStatusResponse: {
             key: string;
             label: string;
             status: string;
             issue?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse */
+        /** PortfolioDailyHistoryPointResponse */
         PortfolioDailyHistoryPointResponse: {
             date: string;
             totalBookValuePln: string;
@@ -1122,7 +1122,7 @@ export interface components {
             activeHoldingCount: number;
             valuedHoldingCount: number;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioDailyHistoryResponse */
+        /** PortfolioDailyHistoryResponse */
         PortfolioDailyHistoryResponse: {
             from: string;
             until: string;
@@ -1135,14 +1135,14 @@ export interface components {
             unsupportedCorrectionTransactions: number;
             points: components["schemas"]["PortfolioDailyHistoryPointResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.ReturnMetricResponse */
+        /** ReturnMetricResponse */
         ReturnMetricResponse: {
             moneyWeightedReturn: string;
             annualizedMoneyWeightedReturn?: string | null;
             timeWeightedReturn?: string | null;
             annualizedTimeWeightedReturn?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.ReturnBreakdownResponse */
+        /** ReturnBreakdownResponse */
         ReturnBreakdownResponse: {
             openingValuePln: string;
             closingValuePln: string;
@@ -1154,7 +1154,7 @@ export interface components {
             marketAndFxPln: string;
             netInvestmentResultPln: string;
         };
-        /** net.bobinski.portfolio.api.route.BenchmarkComparisonResponse */
+        /** BenchmarkComparisonResponse */
         BenchmarkComparisonResponse: {
             key: string;
             label: string;
@@ -1165,7 +1165,7 @@ export interface components {
             excessTimeWeightedReturn?: string | null;
             excessAnnualizedTimeWeightedReturn?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse */
+        /** PortfolioReturnPeriodResponse */
         PortfolioReturnPeriodResponse: {
             key: string;
             label: string;
@@ -1183,19 +1183,19 @@ export interface components {
             breakdown?: components["schemas"]["ReturnBreakdownResponse"] | null;
             benchmarks: components["schemas"]["BenchmarkComparisonResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioReturnsResponse */
+        /** PortfolioReturnsResponse */
         PortfolioReturnsResponse: {
             asOf: string;
             periods: components["schemas"]["PortfolioReturnPeriodResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanTargetMixResponse */
+        /** PortfolioContributionPlanTargetMixResponse */
         PortfolioContributionPlanTargetMixResponse: {
             equitiesTargetWeightPct?: string | null;
             bondsTargetWeightPct?: string | null;
             cashTargetWeightPct?: string | null;
             overridden: boolean;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioAllocationBucketResponse */
+        /** PortfolioAllocationBucketResponse */
         PortfolioAllocationBucketResponse: {
             assetClass: string;
             currentValuePln: string;
@@ -1212,7 +1212,7 @@ export interface components {
             rebalanceAction: string;
             status: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioAllocationResponse */
+        /** PortfolioAllocationResponse */
         PortfolioAllocationResponse: {
             asOf: string;
             valuationState: string;
@@ -1233,7 +1233,7 @@ export interface components {
             requiresSelling: boolean;
             buckets: components["schemas"]["PortfolioAllocationBucketResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanScenarioBucketResponse */
+        /** PortfolioContributionPlanScenarioBucketResponse */
         PortfolioContributionPlanScenarioBucketResponse: {
             assetClass: string;
             plannedContributionPln: string;
@@ -1241,7 +1241,7 @@ export interface components {
             projectedDriftPctPoints?: string | null;
             projectedStatus: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanScenarioResponse */
+        /** PortfolioContributionPlanScenarioResponse */
         PortfolioContributionPlanScenarioResponse: {
             amountPln: string;
             withinTolerance: boolean;
@@ -1250,7 +1250,7 @@ export interface components {
             projectedAction: string;
             buckets: components["schemas"]["PortfolioContributionPlanScenarioBucketResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanBucketResponse */
+        /** PortfolioContributionPlanBucketResponse */
         PortfolioContributionPlanBucketResponse: {
             assetClass: string;
             plannedContributionPln: string;
@@ -1260,7 +1260,7 @@ export interface components {
             projectedGapValuePln?: string | null;
             projectedStatus: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioContributionPlanResponse */
+        /** PortfolioContributionPlanResponse */
         PortfolioContributionPlanResponse: {
             amountPln: string;
             targetMix: components["schemas"]["PortfolioContributionPlanTargetMixResponse"];
@@ -1269,19 +1269,19 @@ export interface components {
             scenarios?: components["schemas"]["PortfolioContributionPlanScenarioResponse"][];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.ManualContributionPreviewRequest */
+        /** ManualContributionPreviewRequest */
         ManualContributionPreviewRequest: {
             equitiesAmountPln?: string;
             bondsAmountPln?: string;
             cashAmountPln?: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioManualContributionPreviewResponse */
+        /** PortfolioManualContributionPreviewResponse */
         PortfolioManualContributionPreviewResponse: {
             amountPln: string;
             projected: components["schemas"]["PortfolioAllocationResponse"];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioTargetResponse */
+        /** PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
             assetClass: string;
@@ -1289,22 +1289,22 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioTargetRequestItem */
+        /** PortfolioTargetRequestItem */
         PortfolioTargetRequestItem: {
             assetClass: string;
             targetWeight: string;
         };
-        /** net.bobinski.portfolio.api.route.ReplacePortfolioTargetsRequest */
+        /** ReplacePortfolioTargetsRequest */
         ReplacePortfolioTargetsRequest: {
             items: components["schemas"]["PortfolioTargetRequestItem"][];
         };
-        /** net.bobinski.portfolio.api.route.CustomBenchmarkResponse */
+        /** CustomBenchmarkResponse */
         CustomBenchmarkResponse: {
             key: string;
             label: string;
             symbol: string;
         };
-        /** net.bobinski.portfolio.api.route.BenchmarkOptionResponse */
+        /** BenchmarkOptionResponse */
         BenchmarkOptionResponse: {
             key: string;
             label: string;
@@ -1314,36 +1314,36 @@ export interface components {
             defaultEnabled: boolean;
             defaultPinned: boolean;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioBenchmarkSettingsResponse */
+        /** PortfolioBenchmarkSettingsResponse */
         PortfolioBenchmarkSettingsResponse: {
             enabledKeys: string[];
             pinnedKeys: string[];
             customBenchmarks: components["schemas"]["CustomBenchmarkResponse"][];
             options: components["schemas"]["BenchmarkOptionResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.SaveCustomBenchmarkRequest */
+        /** SaveCustomBenchmarkRequest */
         SaveCustomBenchmarkRequest: {
             key: string;
             label: string;
             symbol: string;
         };
-        /** net.bobinski.portfolio.api.route.SavePortfolioBenchmarkSettingsRequest */
+        /** SavePortfolioBenchmarkSettingsRequest */
         SavePortfolioBenchmarkSettingsRequest: {
             enabledKeys: string[];
             pinnedKeys: string[];
             customBenchmarks?: components["schemas"]["SaveCustomBenchmarkRequest"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioRebalancingSettingsResponse */
+        /** PortfolioRebalancingSettingsResponse */
         PortfolioRebalancingSettingsResponse: {
             toleranceBandPctPoints: string;
             mode: string;
         };
-        /** net.bobinski.portfolio.api.route.SavePortfolioRebalancingSettingsRequest */
+        /** SavePortfolioRebalancingSettingsRequest */
         SavePortfolioRebalancingSettingsRequest: {
             toleranceBandPctPoints: string;
             mode: string;
         };
-        /** net.bobinski.portfolio.api.route.ReadModelCacheSnapshotResponse */
+        /** ReadModelCacheSnapshotResponse */
         ReadModelCacheSnapshotResponse: {
             cacheKey: string;
             modelName: string;
@@ -1355,11 +1355,11 @@ export interface components {
             invalidationReason: string;
             payloadSizeBytes: number;
         };
-        /** net.bobinski.portfolio.api.route.ReadModelCacheInvalidationResponse */
+        /** ReadModelCacheInvalidationResponse */
         ReadModelCacheInvalidationResponse: {
             clearedSnapshotCount: number;
         };
-        /** net.bobinski.portfolio.api.route.MarketDataSnapshotResponse */
+        /** MarketDataSnapshotResponse */
         MarketDataSnapshotResponse: {
             snapshotType: string;
             identity: string;
@@ -1376,7 +1376,7 @@ export interface components {
             lastFailureAt?: string | null;
             lastFailureReason?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.ReadModelRefreshStatusResponse */
+        /** ReadModelRefreshStatusResponse */
         ReadModelRefreshStatusResponse: {
             schedulerEnabled: boolean;
             intervalMinutes: number;
@@ -1390,7 +1390,7 @@ export interface components {
             lastDurationMs?: number | null;
             modelNames: string[];
         };
-        /** net.bobinski.portfolio.api.route.ReadModelRefreshRunResponse */
+        /** ReadModelRefreshRunResponse */
         ReadModelRefreshRunResponse: {
             trigger: string;
             completedAt: string;
@@ -1398,7 +1398,7 @@ export interface components {
             refreshedModelCount: number;
             modelNames: string[];
         };
-        /** net.bobinski.portfolio.api.route.AuditEventResponse */
+        /** AuditEventResponse */
         AuditEventResponse: {
             id: string;
             category: string;
@@ -1412,7 +1412,7 @@ export interface components {
             };
             occurredAt: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioBackupRecordResponse */
+        /** PortfolioBackupRecordResponse */
         PortfolioBackupRecordResponse: {
             fileName: string;
             createdAt: string;
@@ -1428,7 +1428,7 @@ export interface components {
             isReadable: boolean;
             errorMessage?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioBackupStatusResponse */
+        /** PortfolioBackupStatusResponse */
         PortfolioBackupStatusResponse: {
             schedulerEnabled: boolean;
             directory: string;
@@ -1441,13 +1441,13 @@ export interface components {
             lastFailureMessage?: string | null;
             backups: components["schemas"]["PortfolioBackupRecordResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.RestorePortfolioBackupRequest */
+        /** RestorePortfolioBackupRequest */
         RestorePortfolioBackupRequest: {
             fileName: string;
             mode?: string;
             confirmation?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioBackupRestoreResultResponse */
+        /** PortfolioBackupRestoreResultResponse */
         PortfolioBackupRestoreResultResponse: {
             fileName: string;
             mode: string;
@@ -1459,7 +1459,7 @@ export interface components {
             importProfileCount: number;
             safetyBackupFileName?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.AccountSnapshotResponse */
+        /** AccountSnapshotResponse */
         AccountSnapshotResponse: {
             id: string;
             name: string;
@@ -1471,19 +1471,19 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.AppPreferenceSnapshotResponse */
+        /** AppPreferenceSnapshotResponse */
         AppPreferenceSnapshotResponse: {
             key: string;
             valueJson: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.EdoTermsSnapshotResponse */
+        /** EdoTermsSnapshotResponse */
         EdoTermsSnapshotResponse: {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
         };
-        /** net.bobinski.portfolio.api.route.InstrumentSnapshotResponse */
+        /** InstrumentSnapshotResponse */
         InstrumentSnapshotResponse: {
             id: string;
             name: string;
@@ -1497,7 +1497,7 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioTargetSnapshotResponse */
+        /** PortfolioTargetSnapshotResponse */
         PortfolioTargetSnapshotResponse: {
             id: string;
             assetClass: string;
@@ -1505,7 +1505,7 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsResponse */
+        /** TransactionImportHeaderMappingsResponse */
         TransactionImportHeaderMappingsResponse: {
             account?: string | null;
             type?: string | null;
@@ -1521,12 +1521,12 @@ export interface components {
             fxRateToPln?: string | null;
             notes?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsResponse */
+        /** TransactionImportDefaultsResponse */
         TransactionImportDefaultsResponse: {
             accountId?: string | null;
             currency?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportProfileSnapshotResponse */
+        /** TransactionImportProfileSnapshotResponse */
         TransactionImportProfileSnapshotResponse: {
             id: string;
             name: string;
@@ -1540,7 +1540,7 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.TransactionSnapshotResponse */
+        /** TransactionSnapshotResponse */
         TransactionSnapshotResponse: {
             id: string;
             accountId: string;
@@ -1559,7 +1559,7 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioSnapshotResponse */
+        /** PortfolioSnapshotResponse */
         PortfolioSnapshotResponse: {
             schemaVersion: number;
             exportedAt: string;
@@ -1570,13 +1570,13 @@ export interface components {
             importProfiles?: components["schemas"]["TransactionImportProfileSnapshotResponse"][];
             transactions: components["schemas"]["TransactionSnapshotResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.ImportPortfolioStateRequest */
+        /** ImportPortfolioStateRequest */
         ImportPortfolioStateRequest: {
             mode?: string;
             confirmation?: string | null;
             snapshot: components["schemas"]["PortfolioSnapshotResponse"];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioImportEntityDiffResponse */
+        /** PortfolioImportEntityDiffResponse */
         PortfolioImportEntityDiffResponse: {
             createdCount: number;
             updatedCount: number;
@@ -1585,7 +1585,7 @@ export interface components {
             deletedCount: number;
             sectionSkipped: boolean;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioImportDiffResponse */
+        /** PortfolioImportDiffResponse */
         PortfolioImportDiffResponse: {
             accounts: components["schemas"]["PortfolioImportEntityDiffResponse"];
             appPreferences: components["schemas"]["PortfolioImportEntityDiffResponse"];
@@ -1594,13 +1594,13 @@ export interface components {
             transactions: components["schemas"]["PortfolioImportEntityDiffResponse"];
             importProfiles: components["schemas"]["PortfolioImportEntityDiffResponse"];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioImportIssueResponse */
+        /** PortfolioImportIssueResponse */
         PortfolioImportIssueResponse: {
             severity: string;
             code: string;
             message: string;
         };
-        /** net.bobinski.portfolio.api.route.PortfolioImportPreviewResponse */
+        /** PortfolioImportPreviewResponse */
         PortfolioImportPreviewResponse: {
             mode: string;
             schemaVersion: number;
@@ -1628,7 +1628,7 @@ export interface components {
             diff: components["schemas"]["PortfolioImportDiffResponse"];
             issues: components["schemas"]["PortfolioImportIssueResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.PortfolioImportResultResponse */
+        /** PortfolioImportResultResponse */
         PortfolioImportResultResponse: {
             mode: string;
             accountCount: number;
@@ -1639,7 +1639,7 @@ export interface components {
             importProfileCount: number;
             safetyBackupFileName?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportProfileResponse */
+        /** TransactionImportProfileResponse */
         TransactionImportProfileResponse: {
             id: string;
             name: string;
@@ -1653,7 +1653,7 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportHeaderMappingsRequest */
+        /** TransactionImportHeaderMappingsRequest */
         TransactionImportHeaderMappingsRequest: {
             account?: string | null;
             type?: string | null;
@@ -1669,12 +1669,12 @@ export interface components {
             fxRateToPln?: string | null;
             notes?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.TransactionImportDefaultsRequest */
+        /** TransactionImportDefaultsRequest */
         TransactionImportDefaultsRequest: {
             accountId?: string | null;
             currency?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.SaveTransactionImportProfileRequest */
+        /** SaveTransactionImportProfileRequest */
         SaveTransactionImportProfileRequest: {
             name: string;
             description?: string;
@@ -1685,7 +1685,7 @@ export interface components {
             headerMappings?: components["schemas"]["TransactionImportHeaderMappingsRequest"];
             defaults?: components["schemas"]["TransactionImportDefaultsRequest"];
         };
-        /** net.bobinski.portfolio.api.route.CsvTransactionsImportRequest */
+        /** CsvTransactionsImportRequest */
         CsvTransactionsImportRequest: {
             profileId: string;
             csv: string;
@@ -1693,13 +1693,13 @@ export interface components {
             sourceFileName?: string | null;
             sourceLabel?: string | null;
         };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewRowResponse */
+        /** ImportTransactionsPreviewRowResponse */
         ImportTransactionsPreviewRowResponse: {
             rowNumber: number;
             status: string;
             message: string;
         };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsPreviewResponse */
+        /** ImportTransactionsPreviewResponse */
         ImportTransactionsPreviewResponse: {
             totalRowCount: number;
             importableRowCount: number;
@@ -1709,7 +1709,7 @@ export interface components {
             invalidRowCount: number;
             rows: components["schemas"]["ImportTransactionsPreviewRowResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.TransactionResponse */
+        /** TransactionResponse */
         TransactionResponse: {
             id: string;
             accountId: string;
@@ -1728,13 +1728,13 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsResponse */
+        /** ImportTransactionsResponse */
         ImportTransactionsResponse: {
             createdCount: number;
             skippedDuplicateCount: number;
             transactions: components["schemas"]["TransactionResponse"][];
         };
-        /** net.bobinski.portfolio.api.route.CreateTransactionRequest */
+        /** CreateTransactionRequest */
         CreateTransactionRequest: {
             accountId: string;
             instrumentId?: string | null;
@@ -1750,7 +1750,7 @@ export interface components {
             fxRateToPln?: string | null;
             notes?: string;
         };
-        /** net.bobinski.portfolio.api.route.ImportTransactionsRequest */
+        /** ImportTransactionsRequest */
         ImportTransactionsRequest: {
             skipDuplicates?: boolean;
             rows: components["schemas"]["CreateTransactionRequest"][];
