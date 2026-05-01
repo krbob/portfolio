@@ -1,4 +1,4 @@
-FROM gradle:9.4.1-jdk21 AS build
+FROM gradle:9.5.0-jdk21 AS build
 
 WORKDIR /workspace
 
@@ -12,7 +12,7 @@ COPY src src
 
 RUN ./gradlew --no-daemon installDist
 
-FROM eclipse-temurin:25.0.2_10-jre
+FROM eclipse-temurin:25.0.3_9-jre
 
 WORKDIR /app
 
