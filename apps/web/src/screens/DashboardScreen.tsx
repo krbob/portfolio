@@ -167,7 +167,6 @@ export function DashboardScreen() {
       {/* Chart + Strategy / Issues side by side */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <DashboardHistoryCard
-          isPolish={isPolish}
           historyValuationState={historyValuationState}
           chartPoints={chartPoints}
           range={range}

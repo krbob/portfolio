@@ -8,6 +8,7 @@ import { Badge, ErrorState, InlineRefreshIndicator, Modal, StatCard, StatePanel 
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
+import { useI18n } from '../../lib/i18n'
 import { labelAssetClass } from '../../lib/labels'
 import { formatMessage, t } from '../../lib/messages'
 import {
@@ -121,7 +122,6 @@ export function DashboardAllocationBar({
 }
 
 export function DashboardHistoryCard({
-  isPolish,
   historyValuationState,
   chartPoints,
   range,
@@ -131,7 +131,6 @@ export function DashboardHistoryCard({
   isError,
   isRefreshing,
 }: {
-  isPolish: boolean
   historyValuationState: string
   chartPoints: PortfolioDailyHistoryPoint[]
   range: '1Y' | 'MAX'
@@ -141,6 +140,7 @@ export function DashboardHistoryCard({
   isError: boolean
   isRefreshing: boolean
 }) {
+  const { isPolish } = useI18n()
   const [hoverInfo, setHoverInfo] = useState<MiniChartHoverInfo | null>(null)
 
   return (
@@ -201,8 +201,13 @@ export function DashboardHistoryCard({
           className="border-0 bg-transparent px-0 py-8"
         />
       ) : (
-        <Link to="/performance" className="block">
+        <Link
+          to={appRoutes.performance}
+          aria-label={t('performance.title')}
+          className="relative block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+        >
           <MiniChart points={chartPoints} height={200} onHover={setHoverInfo} />
+          <span aria-hidden="true" className="touch-chart-link-overlay absolute inset-0 z-10 hidden rounded-lg" />
         </Link>
       )}
     </div>

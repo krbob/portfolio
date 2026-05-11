@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PortfolioAllocationSummary, PortfolioContributionPlan, PortfolioOverview } from '../../api/read-model'
+import type { PortfolioAllocationSummary, PortfolioContributionPlan, PortfolioDailyHistoryPoint, PortfolioOverview } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
 import { usePortfolioContributionPlan, usePortfolioManualContributionPreview } from '../../hooks/use-read-model'
-import { DashboardQuickStats, DashboardTargetDriftCard } from './DashboardSections'
+import { DashboardHistoryCard, DashboardQuickStats, DashboardTargetDriftCard } from './DashboardSections'
 
 vi.mock('../../hooks/use-read-model', async () => {
   const actual = await vi.importActual<typeof import('../../hooks/use-read-model')>('../../hooks/use-read-model')
@@ -251,6 +251,30 @@ const overview = {
   unsupportedCorrectionTransactions: 0,
 } satisfies PortfolioOverview
 
+const historyPoint = {
+  date: '2026-03-13',
+  totalBookValuePln: '400000.00',
+  totalCurrentValuePln: '427135.54',
+  netContributionsPln: '390000.00',
+  cashBalancePln: '1135.54',
+  totalCurrentValueUsd: '106783.89',
+  netContributionsUsd: '97500.00',
+  cashBalanceUsd: '283.89',
+  totalCurrentValueAu: null,
+  netContributionsAu: null,
+  cashBalanceAu: null,
+  equityCurrentValuePln: '346396.42',
+  bondCurrentValuePln: '79583.58',
+  cashCurrentValuePln: '1135.54',
+  equityAllocationPct: '81.10',
+  bondAllocationPct: '18.63',
+  cashAllocationPct: '0.27',
+  portfolioPerformanceIndex: '109.12',
+  benchmarkIndices: { VWRA: '108.50' },
+  activeHoldingCount: 4,
+  valuedHoldingCount: 4,
+} satisfies PortfolioDailyHistoryPoint
+
 describe('DashboardQuickStats', () => {
   it('shows YTD TWRR as a glanceable dashboard metric', () => {
     setLanguage('en')
@@ -275,6 +299,34 @@ describe('DashboardQuickStats', () => {
     expect(screen.getByText('+12.34%')).toBeInTheDocument()
     expect(screen.getByText('Return excluding cash flows')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /YTD TWRR/i })).toHaveAttribute('href', '/performance')
+  })
+})
+
+describe('DashboardHistoryCard', () => {
+  it('keeps chart navigation stable on touch devices without removing the performance link', () => {
+    setLanguage('en')
+
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <DashboardHistoryCard
+            historyValuationState="MARK_TO_MARKET"
+            chartPoints={[historyPoint]}
+            range="1Y"
+            onRangeChange={vi.fn()}
+            onRetry={vi.fn()}
+            isLoading={false}
+            isError={false}
+            isRefreshing={false}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Performance' })
+
+    expect(link).toHaveAttribute('href', '/performance')
+    expect(link.querySelector('.touch-chart-link-overlay')).toBeInTheDocument()
   })
 })
 

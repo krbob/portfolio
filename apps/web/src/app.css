@@ -15,6 +15,13 @@
   }
 }
 
+@media (hover: none), (pointer: coarse) {
+  .touch-chart-link-overlay {
+    display: block;
+    touch-action: manipulation;
+  }
+}
+
 @layer base {
   :root {
     --safe-top: env(safe-area-inset-top, 0px);
