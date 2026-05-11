@@ -4,8 +4,8 @@ import type {
   SaveTransactionImportProfilePayload,
   TransactionImportProfile,
 } from '../../api/write-model'
-import { getActiveUiLanguage } from '../../lib/i18n'
-import { t } from '../../lib/messages'
+import { getActiveUiLanguage, type UiLanguage } from '../../lib/i18n'
+import { formatMessage, t, tFor, type MessageKey } from '../../lib/messages'
 
 export type { ImportTransactionsPayload, ImportTransactionsPreviewResult, SaveTransactionImportProfilePayload }
 export type { Transaction, TransactionImportProfile } from '../../api/write-model'
@@ -126,6 +126,22 @@ export const importMappingFields: Array<{
   { key: 'fxRateToPln', label: 'FX to PLN column', placeholder: 'fxRateToPln' },
   { key: 'notes', label: 'Notes column', placeholder: 'notes' },
 ]
+
+const importMappingLabelKeys: Record<ImportMappingField, MessageKey> = {
+  account: 'txHelpers.mappingAccount',
+  type: 'txHelpers.mappingType',
+  tradeDate: 'txHelpers.mappingTradeDate',
+  settlementDate: 'txHelpers.mappingSettlementDate',
+  instrument: 'txHelpers.mappingInstrument',
+  quantity: 'txHelpers.mappingQuantity',
+  unitPrice: 'txHelpers.mappingUnitPrice',
+  grossAmount: 'txHelpers.mappingGrossAmount',
+  feeAmount: 'txHelpers.mappingFeeAmount',
+  taxAmount: 'txHelpers.mappingTaxAmount',
+  currency: 'txHelpers.mappingCurrency',
+  fxRateToPln: 'txHelpers.mappingFxRateToPln',
+  notes: 'txHelpers.mappingNotes',
+}
 
 export function createInitialImportProfileForm(): ImportProfileFormState {
   return {
@@ -262,9 +278,9 @@ export function serializeImportProfilePayload(payload: SaveTransactionImportProf
 }
 
 export function buildImportProfileTemplate(form: ImportProfileFormState): string {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   const delimiter = delimiterCharacter(form.delimiter)
-  const mappedFields = getImportMappingFields(isPolish).filter((field) => form.headerMappings[field.key].trim() !== '')
+  const mappedFields = getImportMappingFields(language).filter((field) => form.headerMappings[field.key].trim() !== '')
   if (mappedFields.length === 0) {
     return t('txHelpers.mapAtLeastOneColumn')
   }
@@ -346,90 +362,55 @@ export function escapeCsvCell(delimiter: string, value: string) {
 }
 
 export function buildImportResultMessage(createdCount: number, skippedDuplicateCount: number) {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   if (skippedDuplicateCount === 0) {
-    return isPolish
-      ? `Zaimportowano ${createdCount} transakcji.`
-      : `Imported ${createdCount} transactions.`
+    return formatMessage(tFor('txHelpers.importResultCreated', language), { createdCount })
   }
 
-  return isPolish
-    ? `Zaimportowano ${createdCount} transakcji i pominięto ${skippedDuplicateCount} duplikatów.`
-    : `Imported ${createdCount} transactions and skipped ${skippedDuplicateCount} duplicates.`
+  return formatMessage(tFor('txHelpers.importResultCreatedSkipped', language), {
+    createdCount,
+    skippedDuplicateCount,
+  })
 }
 
 export function buildImportPreviewSummary(
   preview: ImportTransactionsPreviewResult,
   skipDuplicates: boolean,
 ) {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   if (preview.invalidRowCount > 0) {
     return skipDuplicates
-      ? isPolish
-        ? `${preview.invalidRowCount} błędnych wierszy nadal blokuje import. Duplikaty można pominąć automatycznie, ale błędne wiersze trzeba najpierw poprawić.`
-        : `${preview.invalidRowCount} invalid rows still block the import. Duplicate rows can be skipped automatically, but invalid rows must be fixed first.`
-      : isPolish
-        ? `${preview.invalidRowCount} błędnych wierszy i ${preview.duplicateRowCount} duplikatów blokuje obecnie import.`
-        : `${preview.invalidRowCount} invalid rows and ${preview.duplicateRowCount} duplicate rows currently block the import.`
+      ? formatMessage(tFor('txHelpers.previewInvalidSkipDuplicates', language), {
+          invalidRowCount: preview.invalidRowCount,
+        })
+      : formatMessage(tFor('txHelpers.previewInvalidBlocking', language), {
+          invalidRowCount: preview.invalidRowCount,
+          duplicateRowCount: preview.duplicateRowCount,
+        })
   }
 
   if (preview.duplicateRowCount > 0) {
     return skipDuplicates
-      ? isPolish
-        ? `${preview.duplicateRowCount} duplikatów zostanie pominiętych, jeśli będziesz kontynuować.`
-        : `${preview.duplicateRowCount} duplicate rows will be skipped if you continue.`
-      : isPolish
-        ? `${preview.duplicateRowCount} duplikatów blokuje obecnie import. Włącz pomijanie duplikatów albo popraw paczkę.`
-        : `${preview.duplicateRowCount} duplicate rows currently block the import. Enable duplicate skipping or adjust the batch.`
+      ? formatMessage(tFor('txHelpers.previewDuplicatesSkipped', language), {
+          duplicateRowCount: preview.duplicateRowCount,
+        })
+      : formatMessage(tFor('txHelpers.previewDuplicatesBlocking', language), {
+          duplicateRowCount: preview.duplicateRowCount,
+        })
   }
 
-  return isPolish
-    ? 'Wszystkie wiersze nadają się do importu. Możesz bezpiecznie zatwierdzić tę paczkę.'
-    : 'All rows are importable. You can safely commit this batch.'
+  return tFor('txHelpers.previewAllImportable', language)
 }
 
-export function getImportMappingFields(isPolish: boolean) {
+export function getImportMappingFields(language: UiLanguage) {
   return importMappingFields.map((field) => ({
     ...field,
-    label: translateImportMappingLabel(field.key, isPolish),
+    label: translateImportMappingLabel(field.key, language),
   }))
 }
 
-export function translateImportMappingLabel(field: ImportMappingField, isPolish: boolean) {
-  if (!isPolish) {
-    return importMappingFields.find((candidate) => candidate.key === field)?.label ?? field
-  }
-
-  switch (field) {
-    case 'account':
-      return 'Kolumna konta'
-    case 'type':
-      return 'Kolumna typu'
-    case 'tradeDate':
-      return 'Kolumna daty transakcji'
-    case 'settlementDate':
-      return 'Kolumna daty rozliczenia'
-    case 'instrument':
-      return 'Kolumna instrumentu'
-    case 'quantity':
-      return 'Kolumna liczby sztuk'
-    case 'unitPrice':
-      return 'Kolumna ceny jednostkowej'
-    case 'grossAmount':
-      return 'Kolumna kwoty brutto'
-    case 'feeAmount':
-      return 'Kolumna prowizji'
-    case 'taxAmount':
-      return 'Kolumna podatku'
-    case 'currency':
-      return 'Kolumna waluty'
-    case 'fxRateToPln':
-      return 'Kolumna kursu FX do PLN'
-    case 'notes':
-      return 'Kolumna notatek'
-    default:
-      return field
-  }
+export function translateImportMappingLabel(field: ImportMappingField, language: UiLanguage) {
+  return tFor(importMappingLabelKeys[field], language)
 }
 
 export function importPreviewBadgeVariant(status: string) {

@@ -1,469 +1,176 @@
 import { getActiveUiLanguage } from './i18n'
-import { t } from './messages'
+import { t, tFor, type MessageKey } from './messages'
+
+const assetClassLabels: Record<string, MessageKey> = {
+  EQUITIES: 'label.assetClassEquities',
+  BONDS: 'label.assetClassBonds',
+  CASH: 'label.assetClassCash',
+  FX: 'label.assetClassFx',
+  BENCHMARK: 'label.assetClassBenchmark',
+}
+
+const accountTypeLabels: Record<string, MessageKey> = {
+  BROKERAGE: 'label.accountTypeBrokerage',
+  BOND_REGISTER: 'label.accountTypeBondRegister',
+  CASH: 'label.accountTypeCash',
+}
+
+const instrumentKindLabels: Record<string, MessageKey> = {
+  ETF: 'label.instrumentKindEtf',
+  STOCK: 'label.instrumentKindStock',
+  BOND_EDO: 'label.instrumentKindBondEdo',
+  CASH: 'label.instrumentKindCash',
+  BENCHMARK_GOLD: 'label.instrumentKindBenchmarkGold',
+}
+
+const valuationSourceLabels: Record<string, MessageKey> = {
+  STOCK_ANALYST: 'label.valuationSourceStockAnalyst',
+  EDO_CALCULATOR: 'label.valuationSourceEdoCalculator',
+  MANUAL: 'label.valuationSourceManual',
+}
+
+const valuationStatusLabels: Record<string, MessageKey> = {
+  VALUED: 'label.valuationStatusValued',
+  STALE: 'label.valuationStatusStale',
+  MISSING_MARKET_DATA: 'label.valuationStatusMissingMarketData',
+  MISSING_FX: 'label.valuationStatusMissingFx',
+  UNSUPPORTED_CORRECTIONS: 'label.valuationStatusUnsupportedCorrections',
+  BOOK_ONLY: 'label.valuationStatusBookOnly',
+  UNAVAILABLE: 'label.valuationStatusUnavailable',
+}
+
+const readinessStatusLabels: Record<string, MessageKey> = {
+  READY: 'label.readinessReady',
+  DEGRADED: 'label.readinessDegraded',
+  NOT_READY: 'label.readinessNotReady',
+}
+
+const marketDataSnapshotTypeLabels: Record<string, MessageKey> = {
+  QUOTE: 'label.marketSnapshotQuote',
+  PRICE_SERIES: 'label.marketSnapshotPriceSeries',
+  INFLATION_MONTHLY: 'label.marketSnapshotInflationMonthly',
+  INFLATION_WINDOW: 'label.marketSnapshotInflationWindow',
+}
+
+const transactionTypeLabels: Record<string, MessageKey> = {
+  DEPOSIT: 'label.transactionDeposit',
+  WITHDRAWAL: 'label.transactionWithdrawal',
+  BUY: 'label.transactionBuy',
+  SELL: 'label.transactionSell',
+  REDEEM: 'label.transactionRedeem',
+  FEE: 'label.transactionFee',
+  TAX: 'label.transactionTax',
+  INTEREST: 'label.transactionInterest',
+  CORRECTION: 'label.transactionCorrection',
+}
+
+const auditOutcomeLabels: Record<string, MessageKey> = {
+  ALL: 'label.auditOutcomeAll',
+  SUCCESS: 'label.auditOutcomeSuccess',
+  FAILURE: 'label.auditOutcomeFailure',
+}
+
+const auditCategoryLabels: Record<string, MessageKey> = {
+  ALL: 'label.auditCategoryAll',
+  IMPORTS: 'label.auditCategoryImports',
+  BACKUPS: 'label.auditCategoryBackups',
+  TRANSACTIONS: 'label.auditCategoryTransactions',
+  ACCOUNTS: 'label.auditCategoryAccounts',
+  INSTRUMENTS: 'label.auditCategoryInstruments',
+  TARGETS: 'label.auditCategoryTargets',
+  SYSTEM: 'label.auditCategorySystem',
+}
+
+const auditActionLabels: Record<string, MessageKey> = {
+  ACCOUNT_CREATED: 'label.auditActionAccountCreated',
+  BACKUP_CREATED: 'label.auditActionBackupCreated',
+  BACKUP_CREATE_FAILED: 'label.auditActionBackupCreateFailed',
+  BACKUP_PRUNED: 'label.auditActionBackupPruned',
+  BACKUP_RESTORED: 'label.auditActionBackupRestored',
+  BENCHMARK_SETTINGS_UPDATED: 'label.auditActionBenchmarkSettingsUpdated',
+  INSTRUMENT_CREATED: 'label.auditActionInstrumentCreated',
+  MARKET_DATA_REQUEST_FAILED: 'label.auditActionMarketDataRequestFailed',
+  PORTFOLIO_STATE_IMPORTED: 'label.auditActionPortfolioStateImported',
+  PORTFOLIO_TARGETS_REPLACED: 'label.auditActionPortfolioTargetsReplaced',
+  READ_MODEL_CACHE_INVALIDATED: 'label.auditActionReadModelCacheInvalidated',
+  READ_MODEL_REFRESH_COMPLETED: 'label.auditActionReadModelRefreshCompleted',
+  READ_MODEL_REFRESH_FAILED: 'label.auditActionReadModelRefreshFailed',
+  REBALANCING_SETTINGS_UPDATED: 'label.auditActionRebalancingSettingsUpdated',
+  TRANSACTION_BATCH_IMPORTED: 'label.auditActionTransactionBatchImported',
+  TRANSACTION_CREATED: 'label.auditActionTransactionCreated',
+  TRANSACTION_DELETED: 'label.auditActionTransactionDeleted',
+  TRANSACTION_IMPORT_PROFILE_CREATED: 'label.auditActionTransactionImportProfileCreated',
+  TRANSACTION_IMPORT_PROFILE_UPDATED: 'label.auditActionTransactionImportProfileUpdated',
+  TRANSACTION_IMPORT_PROFILE_DELETED: 'label.auditActionTransactionImportProfileDeleted',
+  TRANSACTION_UPDATED: 'label.auditActionTransactionUpdated',
+}
+
+const readModelInvalidationReasonLabels: Record<string, MessageKey> = {
+  CACHE_MISS: 'label.readModelInvalidationCacheMiss',
+  MODEL_VERSION_CHANGED: 'label.readModelInvalidationModelVersionChanged',
+  INPUT_WINDOW_CHANGED: 'label.readModelInvalidationInputWindowChanged',
+  CANONICAL_STATE_CHANGED: 'label.readModelInvalidationCanonicalStateChanged',
+  PAYLOAD_DECODE_FAILED: 'label.readModelInvalidationPayloadDecodeFailed',
+  EXPLICIT_REFRESH: 'label.readModelInvalidationExplicitRefresh',
+}
+
+const importRowStatusLabels: Record<string, MessageKey> = {
+  IMPORTABLE: 'label.importRowImportable',
+  DUPLICATE_EXISTING: 'label.importRowDuplicateExisting',
+  DUPLICATE_BATCH: 'label.importRowDuplicateBatch',
+  INVALID: 'label.importRowInvalid',
+}
 
 export function labelAssetClass(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'EQUITIES':
-        return 'Akcje'
-      case 'BONDS':
-        return 'Obligacje'
-      case 'CASH':
-        return 'Gotówka'
-      case 'FX':
-        return 'Waluty'
-      case 'BENCHMARK':
-        return 'Benchmark'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'EQUITIES':
-      return 'Equities'
-    case 'BONDS':
-      return 'Bonds'
-    case 'CASH':
-      return 'Cash'
-    case 'FX':
-      return 'FX'
-    case 'BENCHMARK':
-      return 'Benchmark'
-    default:
-      return value
-  }
+  return labelFromMap(value, assetClassLabels)
 }
 
 export function labelAccountType(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'BROKERAGE':
-        return 'Maklerskie'
-      case 'BOND_REGISTER':
-        return 'Rejestr obligacji'
-      case 'CASH':
-        return 'Gotówka'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'BROKERAGE':
-      return 'Brokerage'
-    case 'BOND_REGISTER':
-      return 'Bond register'
-    case 'CASH':
-      return 'Cash'
-    default:
-      return value
-  }
+  return labelFromMap(value, accountTypeLabels)
 }
 
 export function labelInstrumentKind(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'ETF':
-        return 'ETF'
-      case 'STOCK':
-        return 'Akcja'
-      case 'BOND_EDO':
-        return 'Obligacja EDO'
-      case 'CASH':
-        return 'Gotówka'
-      case 'BENCHMARK_GOLD':
-        return 'Benchmark złota'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'ETF':
-      return 'ETF'
-    case 'STOCK':
-      return 'Stock'
-    case 'BOND_EDO':
-      return 'EDO bond'
-    case 'CASH':
-      return 'Cash'
-    case 'BENCHMARK_GOLD':
-      return 'Gold benchmark'
-    default:
-      return value
-  }
+  return labelFromMap(value, instrumentKindLabels)
 }
 
 export function labelValuationSource(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'STOCK_ANALYST':
-        return 'stock-analyst'
-      case 'EDO_CALCULATOR':
-        return 'edo-calculator'
-      case 'MANUAL':
-        return 'Ręcznie'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'STOCK_ANALYST':
-      return 'stock-analyst'
-    case 'EDO_CALCULATOR':
-      return 'edo-calculator'
-    case 'MANUAL':
-      return 'Manual'
-    default:
-      return value
-  }
+  return labelFromMap(value, valuationSourceLabels)
 }
 
 export function labelValuationStatus(value: string | null | undefined) {
-  if (!value) {
-    return getActiveUiLanguage() === 'pl' ? 'Brak danych' : 'Unavailable'
-  }
-
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'VALUED':
-        return 'Wycenione'
-      case 'STALE':
-        return 'Opóźnione'
-      case 'MISSING_MARKET_DATA':
-        return 'Brak danych rynkowych'
-      case 'MISSING_FX':
-        return 'Brak kursu walutowego'
-      case 'UNSUPPORTED_CORRECTIONS':
-        return 'Nieobsługiwane korekty'
-      case 'BOOK_ONLY':
-        return 'Tylko wycena księgowa'
-      case 'UNAVAILABLE':
-        return 'Niedostępne'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'VALUED':
-      return 'Valued'
-    case 'STALE':
-      return 'Stale'
-    case 'MISSING_MARKET_DATA':
-      return 'Missing market data'
-    case 'MISSING_FX':
-      return 'Missing FX'
-    case 'UNSUPPORTED_CORRECTIONS':
-      return 'Unsupported corrections'
-    case 'BOOK_ONLY':
-      return 'Book value only'
-    case 'UNAVAILABLE':
-      return 'Unavailable'
-    default:
-      return value
-  }
+  return value ? labelFromMap(value, valuationStatusLabels) : t('label.valuationStatusMissingData')
 }
 
 export function labelReadinessStatus(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'READY':
-        return 'Gotowy'
-      case 'DEGRADED':
-        return 'Ograniczony'
-      case 'NOT_READY':
-        return 'Niegotowy'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'READY':
-      return 'Ready'
-    case 'DEGRADED':
-      return 'Degraded'
-    case 'NOT_READY':
-      return 'Not ready'
-    default:
-      return value
-  }
+  return labelFromMap(value, readinessStatusLabels)
 }
 
 export function labelMarketDataSnapshotType(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'QUOTE':
-        return 'Kwotowanie'
-      case 'PRICE_SERIES':
-        return 'Seria cen'
-      case 'INFLATION_MONTHLY':
-        return 'Inflacja miesięczna'
-      case 'INFLATION_WINDOW':
-        return 'Okno inflacji'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'QUOTE':
-      return 'Quote'
-    case 'PRICE_SERIES':
-      return 'Price series'
-    case 'INFLATION_MONTHLY':
-      return 'Monthly inflation'
-    case 'INFLATION_WINDOW':
-      return 'Inflation window'
-    default:
-      return value
-  }
+  return labelFromMap(value, marketDataSnapshotTypeLabels)
 }
 
 export function labelTransactionType(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'DEPOSIT':
-        return 'Wpłata'
-      case 'WITHDRAWAL':
-        return 'Wypłata'
-      case 'BUY':
-        return 'Kupno'
-      case 'SELL':
-        return 'Sprzedaż'
-      case 'REDEEM':
-        return 'Wykup'
-      case 'FEE':
-        return 'Prowizja'
-      case 'TAX':
-        return 'Podatek'
-      case 'INTEREST':
-        return 'Odsetki'
-      case 'CORRECTION':
-        return 'Korekta'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'DEPOSIT':
-      return 'Deposit'
-    case 'WITHDRAWAL':
-      return 'Withdrawal'
-    case 'BUY':
-      return 'Buy'
-    case 'SELL':
-      return 'Sell'
-    case 'REDEEM':
-      return 'Redeem'
-    case 'FEE':
-      return 'Fee'
-    case 'TAX':
-      return 'Tax'
-    case 'INTEREST':
-      return 'Interest'
-    case 'CORRECTION':
-      return 'Correction'
-    default:
-      return value
-  }
+  return labelFromMap(value, transactionTypeLabels)
 }
 
 export function labelAuditOutcome(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'ALL':
-        return 'Wszystkie'
-      case 'SUCCESS':
-        return 'Sukces'
-      case 'FAILURE':
-        return 'Błąd'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'ALL':
-      return 'All'
-    case 'SUCCESS':
-      return 'Success'
-    case 'FAILURE':
-      return 'Failure'
-    default:
-      return value
-  }
+  return labelFromMap(value, auditOutcomeLabels)
 }
 
 export function labelAuditCategory(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'ALL':
-        return 'Wszystkie'
-      case 'IMPORTS':
-        return 'Import'
-      case 'BACKUPS':
-        return 'Kopie zapasowe'
-      case 'TRANSACTIONS':
-        return 'Transakcje'
-      case 'ACCOUNTS':
-        return 'Konta'
-      case 'INSTRUMENTS':
-        return 'Instrumenty'
-      case 'TARGETS':
-        return 'Cele'
-      case 'SYSTEM':
-        return 'System'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'ALL':
-      return 'All'
-    case 'IMPORTS':
-      return 'Imports'
-    case 'BACKUPS':
-      return 'Backups'
-    case 'TRANSACTIONS':
-      return 'Transactions'
-    case 'ACCOUNTS':
-      return 'Accounts'
-    case 'INSTRUMENTS':
-      return 'Instruments'
-    case 'TARGETS':
-      return 'Targets'
-    case 'SYSTEM':
-      return 'System'
-    default:
-      return value
-  }
+  return labelFromMap(value, auditCategoryLabels)
 }
 
 export function labelAuditAction(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'ACCOUNT_CREATED':
-        return 'Dodano konto'
-      case 'BACKUP_CREATED':
-        return 'Utworzono kopię zapasową'
-      case 'BACKUP_CREATE_FAILED':
-        return 'Nie udało się utworzyć kopii zapasowej'
-      case 'BACKUP_PRUNED':
-        return 'Usunięto starą kopię zapasową'
-      case 'BACKUP_RESTORED':
-        return 'Przywrócono kopię zapasową'
-      case 'BENCHMARK_SETTINGS_UPDATED':
-        return 'Zapisano benchmarki'
-      case 'INSTRUMENT_CREATED':
-        return 'Dodano instrument'
-      case 'MARKET_DATA_REQUEST_FAILED':
-        return 'Błąd pobierania danych rynkowych'
-      case 'PORTFOLIO_STATE_IMPORTED':
-        return 'Zaimportowano stan portfela'
-      case 'PORTFOLIO_TARGETS_REPLACED':
-        return 'Zapisano alokację docelową'
-      case 'READ_MODEL_CACHE_INVALIDATED':
-        return 'Wyczyszczono pamięć modeli odczytowych'
-      case 'READ_MODEL_REFRESH_COMPLETED':
-        return 'Odświeżono modele odczytowe'
-      case 'READ_MODEL_REFRESH_FAILED':
-        return 'Nie udało się odświeżyć modeli odczytowych'
-      case 'REBALANCING_SETTINGS_UPDATED':
-        return 'Zapisano zasady rebalansowania'
-      case 'TRANSACTION_BATCH_IMPORTED':
-        return 'Zaimportowano paczkę transakcji'
-      case 'TRANSACTION_CREATED':
-        return 'Dodano transakcję'
-      case 'TRANSACTION_DELETED':
-        return 'Usunięto transakcję'
-      case 'TRANSACTION_IMPORT_PROFILE_CREATED':
-        return 'Dodano profil importu'
-      case 'TRANSACTION_IMPORT_PROFILE_UPDATED':
-        return 'Zaktualizowano profil importu'
-      case 'TRANSACTION_IMPORT_PROFILE_DELETED':
-        return 'Usunięto profil importu'
-      case 'TRANSACTION_UPDATED':
-        return 'Zmieniono transakcję'
-      default:
-        return value
-    }
-  }
-
-  return value
+  return labelFromMap(value, auditActionLabels)
 }
 
 export function labelReadModelInvalidationReason(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'CACHE_MISS':
-        return 'Brak zapisanej migawki'
-      case 'MODEL_VERSION_CHANGED':
-        return 'Zmieniła się wersja modelu'
-      case 'INPUT_WINDOW_CHANGED':
-        return 'Zmienił się zakres danych'
-      case 'CANONICAL_STATE_CHANGED':
-        return 'Zmienił się stan źródłowy'
-      case 'PAYLOAD_DECODE_FAILED':
-        return 'Nie udało się odczytać zapisanych danych'
-      case 'EXPLICIT_REFRESH':
-        return 'Wymuszone odświeżenie'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'CACHE_MISS':
-      return 'Cache miss'
-    case 'MODEL_VERSION_CHANGED':
-      return 'Model version changed'
-    case 'INPUT_WINDOW_CHANGED':
-      return 'Input window changed'
-    case 'CANONICAL_STATE_CHANGED':
-      return 'Canonical state changed'
-    case 'PAYLOAD_DECODE_FAILED':
-      return 'Payload decode failed'
-    case 'EXPLICIT_REFRESH':
-      return 'Explicit refresh'
-    default:
-      return value
-  }
+  return labelFromMap(value, readModelInvalidationReasonLabels)
 }
 
 export function labelImportRowStatus(value: string) {
-  if (getActiveUiLanguage() === 'pl') {
-    switch (value) {
-      case 'IMPORTABLE':
-        return 'Gotowy do importu'
-      case 'DUPLICATE_EXISTING':
-        return 'Duplikat istniejącej transakcji'
-      case 'DUPLICATE_BATCH':
-        return 'Duplikat w imporcie'
-      case 'INVALID':
-        return 'Nieprawidłowy'
-      default:
-        return value
-    }
-  }
-
-  switch (value) {
-    case 'IMPORTABLE':
-      return 'Importable'
-    case 'DUPLICATE_EXISTING':
-      return 'Existing duplicate'
-    case 'DUPLICATE_BATCH':
-      return 'Batch duplicate'
-    case 'INVALID':
-      return 'Invalid'
-    default:
-      return value
-  }
+  return labelFromMap(value, importRowStatusLabels)
 }
 
 export function translateBenchmarkLabel(label: string): string {
@@ -479,4 +186,9 @@ export function translateBenchmarkLabel(label: string): string {
     default:
       return label
   }
+}
+
+function labelFromMap(value: string, labels: Record<string, MessageKey>) {
+  const key = labels[value]
+  return key ? tFor(key, getActiveUiLanguage()) : value
 }

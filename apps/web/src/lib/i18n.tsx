@@ -5,7 +5,6 @@ export type UiLanguage = 'pl' | 'en'
 interface I18nValue {
   language: UiLanguage
   localeTag: string
-  isPolish: boolean
 }
 
 const LOCALE_TAGS: Record<UiLanguage, string> = {
@@ -18,7 +17,6 @@ let activeLanguage: UiLanguage = detectUiLanguage()
 const I18nContext = createContext<I18nValue>({
   language: activeLanguage,
   localeTag: LOCALE_TAGS[activeLanguage],
-  isPolish: activeLanguage === 'pl',
 })
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -27,7 +25,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return {
       language: activeLanguage,
       localeTag: LOCALE_TAGS[activeLanguage],
-      isPolish: activeLanguage === 'pl',
     }
   }, [])
 

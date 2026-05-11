@@ -44,7 +44,7 @@ interface BuildPortfolioDataQualitySummaryInput {
   returns?: PortfolioReturns
   cacheSnapshots?: ReadModelCacheSnapshot[]
   refreshStatus?: ReadModelRefreshStatus
-  isPolish: boolean
+  language: UiLanguage
   now?: Date
 }
 
@@ -54,14 +54,14 @@ export function buildPortfolioDataQualitySummary({
   returns,
   cacheSnapshots = [],
   refreshStatus,
-  isPolish,
+  language,
   now = new Date(),
 }: BuildPortfolioDataQualitySummaryInput): PortfolioDataQualitySummary | null {
   if (!overview || !history || !returns || !refreshStatus) {
     return null
   }
 
-  const lang = toLanguage(isPolish)
+  const lang = language
 
   const latestPoint = history.points.at(-1)
   const usdSeriesAvailable = Boolean(latestPoint?.totalCurrentValueUsd && latestPoint?.netContributionsUsd)
@@ -122,7 +122,7 @@ export function buildPortfolioDataQualitySummary({
     availableBenchmarkCount,
     totalBenchmarkCount,
     cpiCoverageThroughMonth,
-    cpiCoverageThroughLabel: cpiCoverageThroughMonth ? formatYearMonth(cpiCoverageThroughMonth) : missingDataLabel(isPolish),
+    cpiCoverageThroughLabel: cpiCoverageThroughMonth ? formatYearMonth(cpiCoverageThroughMonth) : missingDataLabel(language),
     lastRefreshAt,
     lastHistoryRefreshAt: historySnapshot?.generatedAt ?? null,
     lastReturnsRefreshAt: returnsSnapshot?.generatedAt ?? null,
@@ -131,10 +131,6 @@ export function buildPortfolioDataQualitySummary({
     goldSeriesAvailable,
     noticeMessages: checks.filter((check) => check.status === 'WARN').map((check) => check.message).slice(0, 3),
   }
-}
-
-function toLanguage(isPolish: boolean): UiLanguage {
-  return isPolish ? 'pl' : 'en'
 }
 
 function buildValuationCheck(overview: PortfolioOverview, lang: UiLanguage): PortfolioDataQualityCheck {

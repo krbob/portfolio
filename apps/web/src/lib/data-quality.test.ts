@@ -11,7 +11,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       returns: returns(),
       cacheSnapshots: cacheSnapshots(),
       refreshStatus: refreshStatus(),
-      isPolish: false,
+      language: 'en',
       now: new Date('2026-03-20T12:00:00Z'),
     })
 
@@ -37,7 +37,7 @@ describe('buildPortfolioDataQualitySummary', () => {
         lastFailureAt: '2026-03-20T13:05:00Z',
         lastFailureMessage: 'benchmark refresh timed out',
       },
-      isPolish: false,
+      language: 'en',
       now: new Date('2026-03-20T13:05:00Z'),
     })
 
@@ -58,7 +58,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       returns: returns(),
       cacheSnapshots: cacheSnapshots(),
       refreshStatus: refreshStatus(),
-      isPolish: false,
+      language: 'en',
       now: new Date('2026-03-20T12:00:00Z'),
     })
 
@@ -81,7 +81,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       }),
       cacheSnapshots: cacheSnapshots(),
       refreshStatus: refreshStatus(),
-      isPolish: false,
+      language: 'en',
       now: new Date('2026-03-20T12:00:00Z'),
     })
 
@@ -97,7 +97,7 @@ describe('buildPortfolioDataQualitySummary', () => {
       returns: returns({ inflationUntil: '2026-01' }),
       cacheSnapshots: cacheSnapshots(),
       refreshStatus: refreshStatus(),
-      isPolish: false,
+      language: 'en',
       now: new Date('2026-03-27T12:00:00Z'),
     })
 

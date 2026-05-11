@@ -1,6 +1,6 @@
 import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
-import { getActiveUiLanguage } from '../lib/i18n'
+import { getActiveUiLanguage, type UiLanguage } from '../lib/i18n'
 import { labelMarketDataSnapshotType } from '../lib/labels'
 import { t } from '../lib/messages'
 import { badge, badgeVariants } from '../lib/styles'
@@ -8,7 +8,7 @@ import { useMarketDataSnapshots } from '../hooks/use-read-model'
 import { Card, SectionHeader } from './ui'
 
 export function MarketDataSnapshotsSection() {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   const snapshotsQuery = useMarketDataSnapshots()
   const snapshots = snapshotsQuery.data ?? []
   const latestCachedAt = snapshots[0]?.cachedAt
@@ -31,7 +31,7 @@ export function MarketDataSnapshotsSection() {
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">{t('marketDataSnapshots.latest')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
-            {latestCachedAt ? formatDateTime(latestCachedAt) : notApplicableLabel(isPolish)}
+            {latestCachedAt ? formatDateTime(latestCachedAt) : notApplicableLabel(language)}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
@@ -68,15 +68,15 @@ export function MarketDataSnapshotsSection() {
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-3">
                 <div>
                   <dt className="text-zinc-500">{t('marketDataSnapshots.coverage')}</dt>
-                  <dd className="text-zinc-100">{formatCoverage(snapshot.sourceFrom, snapshot.sourceTo, isPolish)}</dd>
+                  <dd className="text-zinc-100">{formatCoverage(snapshot.sourceFrom, snapshot.sourceTo, language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('marketDataSnapshots.asOf')}</dt>
-                  <dd className="text-zinc-100">{snapshot.sourceAsOf ?? notApplicableLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100">{snapshot.sourceAsOf ?? notApplicableLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('marketDataSnapshots.points')}</dt>
-                  <dd className="text-zinc-100">{snapshot.pointCount ?? notApplicableLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100">{snapshot.pointCount ?? notApplicableLabel(language)}</dd>
                 </div>
               </dl>
             </article>
@@ -87,12 +87,12 @@ export function MarketDataSnapshotsSection() {
   )
 }
 
-function formatCoverage(from: string | null | undefined, to: string | null | undefined, isPolish: boolean) {
+function formatCoverage(from: string | null | undefined, to: string | null | undefined, language: UiLanguage) {
   if (!from && !to) {
-    return notApplicableLabel(isPolish)
+    return notApplicableLabel(language)
   }
   if (from && to) {
     return from === to ? from : `${from} -> ${to}`
   }
-  return from ?? to ?? notApplicableLabel(isPolish)
+  return from ?? to ?? notApplicableLabel(language)
 }

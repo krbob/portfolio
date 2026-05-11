@@ -26,7 +26,7 @@ import {
 type DashboardRange = '1Y' | 'MAX'
 
 export function DashboardScreen() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const [range, setRange] = useState<DashboardRange>('1Y')
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
@@ -134,7 +134,7 @@ export function DashboardScreen() {
       <PageHeader title={t('dashboard.title')}>
         <RefreshIndicator active={isRefreshing} />
         <span className="text-xs text-zinc-500">
-          {t('dashboard.asOf')} {overview.asOf} · {labelPortfolioValuationBasis(valuationState, isPolish)}
+          {t('dashboard.asOf')} {overview.asOf} · {labelPortfolioValuationBasis(valuationState, language)}
         </span>
       </PageHeader>
 
@@ -144,7 +144,6 @@ export function DashboardScreen() {
 
       <FadeIn className="mt-4">
       <DashboardHeroStats
-        isPolish={isPolish}
         overview={overview}
         valuationState={valuationState}
         displayedTotalValuePln={displayedTotalValuePln}
@@ -179,7 +178,6 @@ export function DashboardScreen() {
 
         <div className="space-y-4">
           <DashboardTargetDriftCard
-            isPolish={isPolish}
             allocation={allocationQuery.data}
             isLoading={allocationQuery.isLoading}
             isError={allocationQuery.isError}
@@ -193,7 +191,6 @@ export function DashboardScreen() {
       </div>
 
       <DashboardQuickStats
-        isPolish={isPolish}
         overview={overview}
         valuationState={valuationState}
         hasMarketBackedCurrentValuation={hasMarketBackedCurrentValuation}

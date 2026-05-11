@@ -9,7 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function MobileAppSection() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isStandalone, setIsStandalone] = useState(false)
   const [installResult, setInstallResult] = useState<'accepted' | 'dismissed' | null>(null)
@@ -65,8 +65,8 @@ export function MobileAppSection() {
       title: t('mobile.availableTitle'),
       description: t('mobile.availableDescription'),
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- isPolish triggers re-translation via t()
-  }, [isPolish, isStandalone])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- language triggers re-translation via t()
+  }, [language, isStandalone])
 
   async function handleInstall() {
     if (!installPrompt) {

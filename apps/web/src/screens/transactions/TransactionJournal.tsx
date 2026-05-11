@@ -46,7 +46,7 @@ export function TransactionJournal({
   deleteTransactionMutation,
   onFilteredRowCountChange,
 }: TransactionJournalProps) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -65,7 +65,7 @@ export function TransactionJournal({
 
   const composerOpen = showComposer || editingTransactionId != null
   const requiresInstrument = form.type === 'BUY' || form.type === 'SELL' || form.type === 'REDEEM'
-  const decimalSeparator = isPolish ? ',' : '.'
+  const decimalSeparator = language === 'pl' ? ',' : '.'
   const accountOptions = accounts
   const instrumentOptions = instruments
 

@@ -2,11 +2,12 @@ import { Card, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
-import { getActiveUiLanguage } from '../lib/i18n'
+import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { badge, badgeVariants } from '../lib/styles'
 
 export function PortfolioDataQualitySection() {
+  const { language } = useI18n()
   const { summary, isLoading, error, refetchAll } = usePortfolioDataQuality()
 
   return (
@@ -56,7 +57,7 @@ export function PortfolioDataQualitySection() {
             />
             <MetricCard
               label={t('dataQuality.lastRefresh')}
-              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : notApplicableLabel(getActiveUiLanguage() === 'pl')}
+              value={summary.lastRefreshAt ? formatDateTime(summary.lastRefreshAt) : notApplicableLabel(language)}
             />
           </div>
 

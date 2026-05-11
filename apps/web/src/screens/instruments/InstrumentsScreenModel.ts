@@ -1,6 +1,5 @@
 import type { PortfolioHolding } from '../../api/read-model'
 import type { Instrument } from '../../api/write-model'
-import { getActiveUiLanguage } from '../../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
 import { t } from '../../lib/messages'
 import { parsePortfolioNumber } from '../../lib/portfolio-presentation'
@@ -151,7 +150,7 @@ export function statusVariant(status: InstrumentRow['status']) {
   }
 }
 
-export function labelInstrumentStatus(status: InstrumentRow['status'], _isPolish?: boolean) {
+export function labelInstrumentStatus(status: InstrumentRow['status']) {
   switch (status) {
     case 'VALUED':
       return t('instrumentModel.valued')
@@ -169,5 +168,5 @@ function instrumentCatalogLabel(row: InstrumentRow) {
 }
 
 function instrumentStatusLabel(status: InstrumentRow['status']) {
-  return labelInstrumentStatus(status, getActiveUiLanguage() === 'pl')
+  return labelInstrumentStatus(status)
 }

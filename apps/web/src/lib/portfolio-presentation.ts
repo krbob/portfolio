@@ -33,9 +33,9 @@ export function calculateGainPct(
   return ((current - book) / book) * 100
 }
 
-export function formatPortfolioGainDisplay(value: number, valuedHoldingCount: number, isPolish: boolean) {
+export function formatPortfolioGainDisplay(value: number, valuedHoldingCount: number, language: UiLanguage) {
   if (valuedHoldingCount === 0) {
-    return missingDataLabel(isPolish)
+    return missingDataLabel(language)
   }
 
   return formatSignedCurrencyPln(value)
@@ -44,10 +44,10 @@ export function formatPortfolioGainDisplay(value: number, valuedHoldingCount: nu
 export function describePortfolioGain(
   activeHoldingCount: number,
   valuedHoldingCount: number,
-  isPolish: boolean,
+  language: UiLanguage,
   options: PortfolioGainDescriptionOptions = {},
 ) {
-  const lang = toLanguage(isPolish)
+  const lang = language
 
   if (activeHoldingCount === 0) {
     return tFor('presentation.noActiveHoldings', lang)
@@ -79,9 +79,9 @@ export function describeHoldingGainRate(
   activeHoldingCount: number,
   valuedHoldingCount: number,
   gainPct: number | null,
-  isPolish: boolean,
+  language: UiLanguage,
 ) {
-  const lang = toLanguage(isPolish)
+  const lang = language
 
   if (activeHoldingCount === 0) {
     return tFor('presentation.noActiveHoldings', lang)
@@ -98,16 +98,16 @@ export function describeHoldingGainRate(
     })
   }
 
-  return gainPct == null ? notApplicableLabel(isPolish) : formatPercent(gainPct, { signed: true })
+  return gainPct == null ? notApplicableLabel(language) : formatPercent(gainPct, { signed: true })
 }
 
 export function describeHoldingGainValue(
   activeHoldingCount: number,
   valuedHoldingCount: number,
   value: string | number | null | undefined,
-  isPolish: boolean,
+  language: UiLanguage,
 ) {
-  const lang = toLanguage(isPolish)
+  const lang = language
 
   if (activeHoldingCount === 0) {
     return tFor('presentation.noActiveHoldings', lang)
@@ -120,8 +120,8 @@ export function describeHoldingGainValue(
   return formatSignedCurrencyPln(value ?? 0)
 }
 
-export function formatHoldingGainPreview(value: string | number | null | undefined, isPolish: boolean) {
-  return value == null ? missingDataLabel(isPolish) : formatSignedCurrencyPln(value)
+export function formatHoldingGainPreview(value: string | number | null | undefined, language: UiLanguage) {
+  return value == null ? missingDataLabel(language) : formatSignedCurrencyPln(value)
 }
 
 export function formatHoldingQuantity(value: string | number) {
@@ -138,8 +138,8 @@ export function formatHoldingQuantity(value: string | number) {
   return formatNumber(amount, { maximumFractionDigits: 2 })
 }
 
-export function labelPortfolioValuationState(valuationState: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function labelPortfolioValuationState(valuationState: string, language: UiLanguage) {
+  const lang = language
 
   switch (valuationState) {
     case 'MARK_TO_MARKET':
@@ -170,8 +170,8 @@ export function portfolioValuationStateVariant(valuationState: string) {
   }
 }
 
-export function labelPrimaryPortfolioValueMetric(valuationState: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function labelPrimaryPortfolioValueMetric(valuationState: string, language: UiLanguage) {
+  const lang = language
 
   if (valuationState === 'BOOK_ONLY') {
     return tFor('presentation.metricBookValue', lang)
@@ -182,8 +182,8 @@ export function labelPrimaryPortfolioValueMetric(valuationState: string, isPolis
   return tFor('presentation.metricPortfolioValue', lang)
 }
 
-export function labelPortfolioValuationBasis(valuationState: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function labelPortfolioValuationBasis(valuationState: string, language: UiLanguage) {
+  const lang = language
 
   if (valuationState === 'BOOK_ONLY') {
     return tFor('presentation.basisBook', lang)
@@ -200,9 +200,9 @@ export function labelPortfolioValuationBasis(valuationState: string, isPolish: b
 export function describePrimaryPortfolioValue(
   overview: PortfolioOverview,
   valuationState: string,
-  isPolish: boolean,
+  language: UiLanguage,
 ) {
-  const lang = toLanguage(isPolish)
+  const lang = language
 
   if (valuationState === 'BOOK_ONLY') {
     return formatMessage(tFor('presentation.descBookOnly', lang), {
@@ -232,8 +232,8 @@ export function describePrimaryPortfolioValue(
   })
 }
 
-export function describeAssetSliceValuation(pct: number, valuationState: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function describeAssetSliceValuation(pct: number, valuationState: string, language: UiLanguage) {
+  const lang = language
   const base = formatMessage(tFor('presentation.sliceBase', lang), { pct: formatPercent(pct) })
 
   if (valuationState === 'BOOK_ONLY') {
@@ -251,8 +251,8 @@ export function describeAssetSliceValuation(pct: number, valuationState: string,
   return base
 }
 
-export function describePortfolioValuationBasis(overview: PortfolioOverview, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function describePortfolioValuationBasis(overview: PortfolioOverview, language: UiLanguage) {
+  const lang = language
 
   if (overview.activeHoldingCount === 0) {
     return tFor('presentation.noActiveHoldingsToValue', lang)
@@ -269,10 +269,6 @@ export function describePortfolioValuationBasis(overview: PortfolioOverview, isP
     valued: overview.valuedHoldingCount,
     active: overview.activeHoldingCount,
   })
-}
-
-function toLanguage(isPolish: boolean): UiLanguage {
-  return isPolish ? 'pl' : 'en'
 }
 
 function withGainScope(

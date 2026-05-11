@@ -4,7 +4,7 @@ import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { buildAuditMetadataEntries, buildAuditMetadataSummary, formatAuditEventMessage, formatAuditEventTitle, isHighImpactAuditAction } from '../lib/audit-copy'
 import { labelAuditCategory, labelAuditOutcome } from '../lib/labels'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { badge, badgeVariants, filterInput, label as labelClass } from '../lib/styles'
 
 const CATEGORY_OPTIONS = [
@@ -28,7 +28,7 @@ interface OperationalAuditPanelProps {
 }
 
 export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL')
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('ALL')
   const [impactFilter, setImpactFilter] = useState<ImpactFilter>('ALL')
@@ -65,9 +65,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
           <span className="text-xs text-zinc-500">
             {categoryFilter === 'ALL'
               ? t('audit.eventsInWindow')
-              : isPolish
-                ? `Zdarzenia: ${labelAuditCategory(categoryFilter)}`
-                : `${categoryFilter} events`}
+              : formatMessage(t('audit.categoryEvents'), { category: labelAuditCategory(categoryFilter) })}
           </span>
           <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
         </article>
@@ -142,14 +140,14 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
         <div className="space-y-3">
           {visibleEvents.map((event) => {
-            const metadataSummary = buildAuditMetadataSummary(event.metadata, isPolish)
-            const metadataEntries = buildAuditMetadataEntries(event.metadata, isPolish)
+            const metadataSummary = buildAuditMetadataSummary(event.metadata, language)
+            const metadataEntries = buildAuditMetadataEntries(event.metadata, language)
             const highImpact = isHighImpactAuditAction(event.action)
             return (
               <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
+                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
                     <p className="text-sm text-zinc-500">
                       {labelAuditCategory(event.category)} · {formatDateTime(event.occurredAt)}
                     </p>
@@ -164,7 +162,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                   </div>
                 </div>
 
-                <p className="mt-2 text-sm text-zinc-300">{formatAuditEventMessage(event, isPolish)}</p>
+                <p className="mt-2 text-sm text-zinc-300">{formatAuditEventMessage(event, language)}</p>
                 {metadataSummary ? <p className="text-sm text-zinc-500">{metadataSummary}</p> : null}
                 {metadataEntries.length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">

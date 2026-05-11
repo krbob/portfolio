@@ -1,13 +1,13 @@
 import { useAppReadiness } from '../hooks/use-app-readiness'
 import { Card, SectionHeader } from './ui'
 import { formatDateTime } from '../lib/format'
-import { getActiveUiLanguage } from '../lib/i18n'
+import { getActiveUiLanguage, type UiLanguage } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelReadinessStatus } from '../lib/labels'
 import { badge, badgeVariants } from '../lib/styles'
 
 export function SystemReadinessSection() {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   const readinessQuery = useAppReadiness()
   const readiness = readinessQuery.data
 
@@ -50,14 +50,14 @@ export function SystemReadinessSection() {
               <article className="rounded-lg border border-zinc-800/50 p-4" key={check.key}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <strong className="text-sm text-zinc-100">{formatCheckLabel(check.key, check.label, isPolish)}</strong>
+                    <strong className="text-sm text-zinc-100">{formatCheckLabel(check.key, check.label, language)}</strong>
                     <p className="text-sm text-zinc-500">{check.key}</p>
                   </div>
                   <span className={`${badge} ${readinessBadgeVariant(check.status)}`}>
                     {labelCheckStatus(check.status)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-zinc-400">{formatCheckMessage(check, isPolish)}</p>
+                <p className="mt-2 text-sm text-zinc-400">{formatCheckMessage(check, language)}</p>
                 {check.details && Object.keys(check.details).length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
                     <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -136,8 +136,8 @@ function labelDetailKey(key: string) {
   return messageKey ? t(messageKey) : key
 }
 
-function formatCheckLabel(key: string, label: string, isPolish: boolean) {
-  if (!isPolish) {
+function formatCheckLabel(key: string, label: string, language: UiLanguage) {
+  if (language === 'en') {
     return label
   }
 
@@ -170,9 +170,9 @@ function formatCheckMessage(
     message: string
     details?: Record<string, string>
   },
-  isPolish: boolean,
+  language: UiLanguage,
 ) {
-  if (!isPolish) {
+  if (language === 'en') {
     return check.message
   }
 

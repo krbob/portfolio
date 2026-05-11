@@ -5,7 +5,7 @@ import { ErrorState, InlineRefreshIndicator, StatePanel, SegmentedControl } from
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
 import { missingDataLabel } from '../../lib/availability'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
-import { useI18n } from '../../lib/i18n'
+import { getActiveUiLanguage, useI18n, type UiLanguage } from '../../lib/i18n'
 import { translateBenchmarkLabel } from '../../lib/labels'
 import { formatMessage, t } from '../../lib/messages'
 import { card, td, tdRight, th, thRight, tr } from '../../lib/styles'
@@ -365,10 +365,10 @@ function periodToReturnKey(period: Period): PortfolioReturnPeriod['key'] {
 export function formatReturn(
   value: string | null | undefined,
   available = true,
-  isPolish = false,
+  language: UiLanguage = getActiveUiLanguage(),
 ) {
   if (!available) {
-    return missingDataLabel(isPolish)
+    return missingDataLabel(language)
   }
 
   return formatPercent(value, { scale: 100, signed: true })
@@ -392,7 +392,7 @@ function BenchmarkCard({
   benchmark: BenchmarkComparison
   returnsDisplayAvailable: boolean
 }) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const statusTone =
     benchmark.status === 'UNAVAILABLE'
       ? 'border-red-500/20 bg-red-500/5'
@@ -421,10 +421,10 @@ function BenchmarkCard({
         ) : null}
       </div>
       <p className={`mt-1 text-lg font-bold tabular-nums ${returnColor(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable)}`}>
-        {formatReturn(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable, isPolish)}
+        {formatReturn(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable, language)}
       </p>
       <p className="mt-0.5 text-xs text-zinc-600">
-        {t('performanceSections.benchTwr')} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, isPolish)}
+        {t('performanceSections.benchTwr')} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, language)}
       </p>
       {benchmark.status !== 'HEALTHY' ? (
         <p className="mt-1 text-xs text-zinc-500">

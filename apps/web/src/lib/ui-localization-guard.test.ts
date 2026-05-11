@@ -35,8 +35,8 @@ describe('ui localization guard', () => {
     expect(unexpected).toEqual([])
   })
 
-  it('does not use isPolish ternary in production code', () => {
-    const violations = collectIsPolishTernaries()
+  it('does not use language ternary in production code', () => {
+    const violations = collectLanguageTernaries()
     expect(violations).toEqual([])
   })
 })
@@ -112,7 +112,7 @@ function isUserFacingLiteral(text: string) {
   return text.length > 0 && /[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/.test(text)
 }
 
-function collectIsPolishTernaries(): Array<{ file: string; line: number; text: string }> {
+function collectLanguageTernaries(): Array<{ file: string; line: number; text: string }> {
   const results: Array<{ file: string; line: number; text: string }> = []
   const srcDir = sourceRoot
 
@@ -134,14 +134,9 @@ function collectIsPolishTernaries(): Array<{ file: string; line: number; text: s
       const lines = source.split('\n')
 
       for (let i = 0; i < lines.length; i++) {
-        if (/isPolish\s*\?/.test(lines[i])) {
+        if (/\blanguage\s+\?/.test(lines[i])) {
           const relativePath = path.relative(sourceRoot, fullPath)
           const trimmed = lines[i].trim()
-
-          // Allow toLanguage helpers and type annotations
-          if (/return isPolish \? ['"]pl['"] : ['"]en['"]/.test(trimmed)) continue
-          if (/isPolish \? ['"],['"] : ['"]\.['"]/.test(trimmed)) continue
-          if (/_isPolish\??:/.test(trimmed)) continue
 
           results.push({ file: relativePath, line: i + 1, text: trimmed })
         }

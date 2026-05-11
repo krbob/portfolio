@@ -2,6 +2,7 @@ import type { PortfolioAccountSummary, PortfolioHolding } from '../../api/read-m
 import { Card } from '../../components/ui'
 import { formatCurrencyPln, formatPercent } from '../../lib/format'
 import { labelAccountType, labelAssetClass } from '../../lib/labels'
+import type { UiLanguage } from '../../lib/i18n'
 import {
   describeHoldingGainValue,
   formatHoldingGainPreview,
@@ -41,11 +42,11 @@ export function AccountSummaryTile({
 export function AccountDetailsCard({
   account,
   holdings,
-  isPolish,
+  language,
 }: {
   account: PortfolioAccountSummary
   holdings: PortfolioHolding[]
-  isPolish: boolean
+  language: UiLanguage
 }) {
   const cashSharePct = parsePortfolioNumber(account.totalCurrentValuePln) > 0
     ? (parsePortfolioNumber(account.cashBalancePln) / parsePortfolioNumber(account.totalCurrentValuePln)) * 100
@@ -64,7 +65,7 @@ export function AccountDetailsCard({
           </p>
         </div>
         <span className={`${badge} ${portfolioValuationStateVariant(account.valuationState)}`}>
-          {labelPortfolioValuationState(account.valuationState, isPolish)}
+          {labelPortfolioValuationState(account.valuationState, language)}
         </span>
       </div>
 
@@ -83,7 +84,7 @@ export function AccountDetailsCard({
         <AccountDetailMetric
           label={t('accountDetails.netContributions')}
           value={formatCurrencyPln(account.netContributionsPln)}
-          detail={describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, isPolish)}
+          detail={describeHoldingGainValue(account.activeHoldingCount, account.valuedHoldingCount, account.totalUnrealizedGainPln, language)}
         />
       </div>
 
@@ -115,7 +116,7 @@ export function AccountDetailsCard({
                     <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                     <p className="text-xs text-zinc-500">
                       {isMarketValuedStatus(holding.valuationStatus)
-                        ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)}`
+                        ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, language)}`
                         : `${formatPercent(weightPct)} · ${t('accountDetails.bookBasis')}`}
                     </p>
                   </div>
@@ -152,6 +153,5 @@ function AccountDetailMetric({
     </div>
   )
 }
-
 
 

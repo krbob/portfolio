@@ -40,7 +40,7 @@ const PRESET_80_20_INPUTS: Record<AssetClass, string> = {
 }
 
 export function PortfolioTargetsSection() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const targetsQuery = usePortfolioTargets()
   const targetEventsQuery = usePortfolioAuditEvents({ limit: 8, category: 'TARGETS' })
   const allocationQuery = usePortfolioAllocation()
@@ -328,8 +328,8 @@ export function PortfolioTargetsSection() {
               <article key={event.id} className="rounded-lg border border-zinc-800/50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
-                    <p className="mt-1 text-sm text-zinc-500">{formatAuditEventMessage(event, isPolish)}</p>
+                    <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
+                    <p className="mt-1 text-sm text-zinc-500">{formatAuditEventMessage(event, language)}</p>
                   </div>
                   <span className="text-xs text-zinc-500">{formatDateTime(event.occurredAt)}</span>
                 </div>

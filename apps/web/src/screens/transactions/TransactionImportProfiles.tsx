@@ -62,8 +62,8 @@ export function TransactionImportProfiles({
   const [pendingDeleteImportProfileId, setPendingDeleteImportProfileId] = useState<string | null>(null)
 
   const sortedAccountOptions = useMemo(() => [...accounts].sort(compareAccountsByDisplayOrder), [accounts])
-  const isPolish = getActiveUiLanguage() === 'pl'
-  const localizedImportMappingFields = useMemo(() => getImportMappingFields(isPolish), [isPolish])
+  const language = getActiveUiLanguage()
+  const localizedImportMappingFields = useMemo(() => getImportMappingFields(language), [language])
   const importProfilePayload = useMemo(() => buildImportProfilePayload(importProfileForm), [importProfileForm])
   const selectedImportProfilePayload = useMemo(
     () => (selectedImportProfile ? buildImportProfilePayload(importProfileToForm(selectedImportProfile)) : null),

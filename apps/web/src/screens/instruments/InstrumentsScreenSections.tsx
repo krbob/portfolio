@@ -1,6 +1,7 @@
 import type { PortfolioHolding } from '../../api/read-model'
 import { Card } from '../../components/ui'
 import { formatCurrency, formatCurrencyPln, formatDate, formatNumber } from '../../lib/format'
+import type { UiLanguage } from '../../lib/i18n'
 import { labelAssetClass, labelInstrumentKind, labelValuationSource } from '../../lib/labels'
 import { t } from '../../lib/messages'
 import {
@@ -40,12 +41,12 @@ export function InstrumentSummaryTile({
 export function InstrumentDetailsCard({
   row,
   holdings,
-  isPolish,
+  language,
   analysisUrl,
 }: {
   row: InstrumentRow
   holdings: PortfolioHolding[]
-  isPolish: boolean
+  language: UiLanguage
   analysisUrl: string | null
 }) {
   const representativeHolding = holdings.find((holding) => holding.currentPriceNative != null || holding.currentPricePln != null) ?? null
@@ -79,7 +80,7 @@ export function InstrumentDetailsCard({
             </a>
           ) : null}
           <span className={`${badge} ${statusVariant(row.status)}`}>
-            {labelInstrumentStatus(row.status, isPolish)}
+            {labelInstrumentStatus(row.status)}
           </span>
         </div>
       </div>
@@ -100,7 +101,7 @@ export function InstrumentDetailsCard({
         <InstrumentDetailMetric
           label={t('instrumentDetails.currentValue')}
           value={formatCurrencyPln(row.totalCurrentValuePln)}
-          detail={describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
+          detail={describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, language)}
           tone={row.valuedHoldingCount === 0 ? 'default' : row.totalUnrealizedGainPln >= 0 ? 'success' : 'warning'}
         />
         <InstrumentDetailMetric
@@ -158,7 +159,7 @@ export function InstrumentDetailsCard({
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(holding.valuationStatus)
-                      ? formatHoldingGainPreview(holding.unrealizedGainPln, isPolish)
+                      ? formatHoldingGainPreview(holding.unrealizedGainPln, language)
                       : t('instrumentDetails.bookBasis')}
                   </p>
                 </div>
@@ -192,7 +193,7 @@ export function InstrumentDetailsCard({
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
                   <p className="text-xs text-zinc-500">
                     {isMarketValuedStatus(lot.valuationStatus)
-                      ? formatHoldingGainPreview(lot.unrealizedGainPln, isPolish)
+                      ? formatHoldingGainPreview(lot.unrealizedGainPln, language)
                       : t('instrumentDetails.bookBasis')}
                   </p>
                 </div>

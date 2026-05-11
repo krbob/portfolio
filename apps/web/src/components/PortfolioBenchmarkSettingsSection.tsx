@@ -30,7 +30,7 @@ type BenchmarkFormRow = {
 }
 
 export function PortfolioBenchmarkSettingsSection() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const settingsQuery = usePortfolioBenchmarkSettings()
   const saveMutation = useSavePortfolioBenchmarkSettings()
 
@@ -145,7 +145,7 @@ export function PortfolioBenchmarkSettingsSection() {
       })
       setRows(buildBenchmarkRows(result))
       setFeedback(
-        isPolish
+        language
           ? `Zapisano ${result.enabledKeys.length} aktywnych benchmarków i ${result.pinnedKeys.length} przypiętych.`
           : `Saved ${result.enabledKeys.length} active benchmarks and ${result.pinnedKeys.length} pinned ones.`,
       )

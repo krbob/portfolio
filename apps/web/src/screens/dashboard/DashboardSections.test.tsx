@@ -283,7 +283,6 @@ describe('DashboardQuickStats', () => {
       <MemoryRouter>
         <I18nProvider>
           <DashboardQuickStats
-            isPolish={false}
             overview={overview}
             valuationState="MARK_TO_MARKET"
             hasMarketBackedCurrentValuation
@@ -351,7 +350,6 @@ describe('DashboardTargetDriftCard', () => {
       <MemoryRouter>
         <I18nProvider>
           <DashboardTargetDriftCard
-            isPolish={false}
             allocation={allocation}
             isLoading={false}
             isError={false}
@@ -412,7 +410,6 @@ describe('DashboardTargetDriftCard', () => {
       <MemoryRouter>
         <I18nProvider>
           <DashboardTargetDriftCard
-            isPolish={false}
             allocation={allocation}
             isLoading={false}
             isError={false}
@@ -462,7 +459,6 @@ describe('DashboardTargetDriftCard', () => {
       <MemoryRouter>
         <I18nProvider>
           <DashboardTargetDriftCard
-            isPolish={false}
             allocation={outOfBand}
             isLoading={false}
             isError={false}
@@ -497,7 +493,6 @@ describe('DashboardTargetDriftCard', () => {
       <MemoryRouter>
         <I18nProvider>
           <DashboardTargetDriftCard
-            isPolish={false}
             allocation={deployCash}
             isLoading={false}
             isError={false}

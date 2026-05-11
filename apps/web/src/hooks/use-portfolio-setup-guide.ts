@@ -7,8 +7,8 @@ import {
 } from './use-write-model'
 import { useAppReadiness } from './use-app-readiness'
 import { usePortfolioDataQuality } from './use-portfolio-data-quality'
-import { useI18n } from '../lib/i18n'
-import { t } from '../lib/messages'
+import { useI18n, type UiLanguage } from '../lib/i18n'
+import { formatMessage, t, tFor, type MessageKey } from '../lib/messages'
 import { appRoutes } from '../lib/routes'
 
 export type GuideStatus = 'done' | 'action' | 'warning' | 'info'
@@ -28,7 +28,7 @@ export interface GuideItem {
 }
 
 export function usePortfolioSetupGuide() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const accountsQuery = useAccounts()
   const instrumentsQuery = useInstruments()
   const transactionsQuery = useTransactions()
@@ -44,10 +44,7 @@ export function usePortfolioSetupGuide() {
       count: accountsQuery.data?.length ?? 0,
       loading: accountsQuery.isLoading,
       loadingDescription: t('setup.checkingAccounts'),
-      successDescription: (count) =>
-        isPolish
-          ? `${count} ${count === 1 ? 'konto jest gotowe do księgowania' : 'konta są gotowe do księgowania'}.`
-          : `${count} ${count === 1 ? 'account is' : 'accounts are'} ready for posting.`,
+      successDescription: (count) => formatCountMessage(count, 'setup.accountsReadyOne', 'setup.accountsReadyMany', language),
       emptyDescription: t('setup.accountsEmpty'),
       action: {
         kind: 'route',
@@ -61,10 +58,7 @@ export function usePortfolioSetupGuide() {
       count: instrumentsQuery.data?.length ?? 0,
       loading: instrumentsQuery.isLoading,
       loadingDescription: t('setup.checkingInstruments'),
-      successDescription: (count) =>
-        isPolish
-          ? `${count} ${count === 1 ? 'instrument jest dostępny w katalogu' : 'instrumentów jest dostępnych w katalogu'}.`
-          : `${count} ${count === 1 ? 'instrument is' : 'instruments are'} available in the catalog.`,
+      successDescription: (count) => formatCountMessage(count, 'setup.instrumentsReadyOne', 'setup.instrumentsReadyMany', language),
       emptyDescription: t('setup.instrumentsEmpty'),
       action: {
         kind: 'route',
@@ -78,10 +72,7 @@ export function usePortfolioSetupGuide() {
       count: transactionsQuery.data?.length ?? 0,
       loading: transactionsQuery.isLoading,
       loadingDescription: t('setup.checkingTransactions'),
-      successDescription: (count) =>
-        isPolish
-          ? `${count} ${count === 1 ? 'transakcja zasila modele odczytowe' : 'transakcji zasila modele odczytowe'}.`
-          : `${count} ${count === 1 ? 'transaction feeds' : 'transactions feed'} the read models.`,
+      successDescription: (count) => formatCountMessage(count, 'setup.transactionsReadyOne', 'setup.transactionsReadyMany', language),
       emptyDescription: t('setup.transactionsEmpty'),
       action: {
         kind: 'route',
@@ -95,10 +86,7 @@ export function usePortfolioSetupGuide() {
       count: targetsQuery.data?.length ?? 0,
       loading: targetsQuery.isLoading,
       loadingDescription: t('setup.checkingTargets'),
-      successDescription: (count) =>
-        isPolish
-          ? `${count} ${count === 1 ? 'cel wspiera sygnały odchylenia' : 'cele wspierają sygnały odchylenia'}.`
-          : `${count} ${count === 1 ? 'target supports' : 'targets support'} drift diagnostics.`,
+      successDescription: (count) => formatCountMessage(count, 'setup.targetsReadyOne', 'setup.targetsReadyMany', language),
       emptyDescription: t('setup.targetsEmpty'),
       action: {
         kind: 'route',
@@ -112,9 +100,9 @@ export function usePortfolioSetupGuide() {
       description: benchmarkSettingsQuery.isLoading
         ? t('setup.checkingBenchmarks')
         : (benchmarkSettingsQuery.data?.enabledKeys?.length ?? 0) > 0
-          ? isPolish
-            ? `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarków jest aktywnych w zakładce Wyniki.`
-            : `${benchmarkSettingsQuery.data!.enabledKeys.length} benchmarks are active in Performance.`
+          ? formatMessage(tFor('setup.benchmarksActive', language), {
+              count: benchmarkSettingsQuery.data!.enabledKeys.length,
+            })
           : t('setup.benchmarksEmpty'),
       status: benchmarkSettingsQuery.isLoading
         ? 'info'
@@ -128,7 +116,7 @@ export function usePortfolioSetupGuide() {
       },
     },
     buildReadinessItem(readinessQuery.data, readinessQuery.isLoading, readinessQuery.isError),
-    buildDataQualityItem(dataQuality.summary?.warningCount, dataQuality.isLoading, Boolean(dataQuality.error), isPolish),
+    buildDataQualityItem(dataQuality.summary?.warningCount, dataQuality.isLoading, Boolean(dataQuality.error), language),
   ]
 
   const doneCount = items.filter((item) => item.status === 'done').length
@@ -177,6 +165,10 @@ function buildSetupItem({
     status: count > 0 ? 'done' : 'action',
     action,
   }
+}
+
+function formatCountMessage(count: number, oneKey: MessageKey, manyKey: MessageKey, language: UiLanguage) {
+  return formatMessage(tFor(count === 1 ? oneKey : manyKey, language), { count })
 }
 
 function buildReadinessItem(
@@ -255,7 +247,7 @@ function buildReadinessItem(
   }
 }
 
-function buildDataQualityItem(warningCount: number | undefined, isLoading: boolean, hasError: boolean, isPolish: boolean): GuideItem {
+function buildDataQualityItem(warningCount: number | undefined, isLoading: boolean, hasError: boolean, language: UiLanguage): GuideItem {
   if (isLoading) {
     return {
       key: 'data-quality',
@@ -274,9 +266,9 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
     return {
       key: 'data-quality',
       title: t('setup.dataQuality'),
-      description: isPolish
-        ? `Są sygnały wymagające uwagi${warningCount ? ` (${warningCount})` : ''}. Przejrzyj pokrycie wycen, benchmarków i odświeżeń.`
-        : `There are data signals that need attention${warningCount ? ` (${warningCount})` : ''}. Review valuations, benchmarks and refresh coverage.`,
+      description: formatMessage(tFor('setup.dataQualityWarning', language), {
+        countSuffix: warningCount ? ` (${warningCount})` : '',
+      }),
       status: 'warning',
       action: {
         kind: 'route',

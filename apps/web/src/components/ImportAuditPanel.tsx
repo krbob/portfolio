@@ -19,7 +19,7 @@ export function ImportAuditPanel({
   description,
   limit = 12,
 }: ImportAuditPanelProps) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const eventsQuery = usePortfolioAuditEvents({ limit, category: 'IMPORTS' })
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'SUCCESS' | 'FAILURE'>('ALL')
 
@@ -36,7 +36,7 @@ export function ImportAuditPanel({
 
       {latestEvent && (
         <p className="text-sm text-zinc-500">
-          {t('importAudit.latestEvent')} {formatAuditEventMessage(latestEvent, isPolish)} ·{' '}
+          {t('importAudit.latestEvent')} {formatAuditEventMessage(latestEvent, language)} ·{' '}
           {formatDateTime(latestEvent.occurredAt)}
         </p>
       )}
@@ -72,14 +72,14 @@ export function ImportAuditPanel({
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
         <div className="space-y-3 animate-fade-in">
           {visibleEvents.map((event) => {
-            const metadataSummary = buildAuditMetadataSummary(event.metadata, isPolish)
+            const metadataSummary = buildAuditMetadataSummary(event.metadata, language)
             return (
               <article className="rounded-lg border border-zinc-800/50 p-3" key={event.id}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <strong className="text-sm font-medium text-zinc-200">{formatAuditEventTitle(event.action, isPolish)}</strong>
+                    <strong className="text-sm font-medium text-zinc-200">{formatAuditEventTitle(event.action)}</strong>
                     <p className="text-xs text-zinc-500">
-                      {formatAuditEventMessage(event, isPolish)} · {formatDateTime(event.occurredAt)}
+                      {formatAuditEventMessage(event, language)} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
                   <span

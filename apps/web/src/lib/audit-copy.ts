@@ -15,13 +15,12 @@ interface AuditEventLike {
   entityId?: string | null
 }
 
-export function formatAuditEventTitle(action: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
-  return lang === 'pl' ? labelAuditAction(action) : humanizeAuditAction(action)
+export function formatAuditEventTitle(action: string) {
+  return labelAuditAction(action)
 }
 
-export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean) {
-  if (!isPolish) {
+export function formatAuditEventMessage(event: AuditEventLike, language: UiLanguage) {
+  if (language === 'en') {
     return event.message
   }
 
@@ -78,7 +77,7 @@ export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean
     case 'PORTFOLIO_TARGETS_REPLACED': {
       const newMix = event.metadata.newMix
       return newMix
-        ? `Zapisano nową alokację docelową: ${summarizeMix(newMix, true)}.`
+        ? `Zapisano nową alokację docelową: ${summarizeMix(newMix)}.`
         : 'Zapisano nową alokację docelową.'
     }
     case 'READ_MODEL_CACHE_INVALIDATED':
@@ -125,8 +124,8 @@ export function formatAuditEventMessage(event: AuditEventLike, isPolish: boolean
   }
 }
 
-export function buildAuditMetadataSummary(metadata: Record<string, string>, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+export function buildAuditMetadataSummary(metadata: Record<string, string>, language: UiLanguage) {
+  const lang = language
   const parts: string[] = []
 
   const source = formatAuditSource(metadata)
@@ -139,7 +138,7 @@ export function buildAuditMetadataSummary(metadata: Record<string, string>, isPo
   }
 
   if (metadata.trigger) {
-    parts.push(`${tFor('auditCopy.triggerPrefix', lang)} ${labelAuditTrigger(metadata.trigger)}`)
+    parts.push(`${tFor('auditCopy.triggerPrefix', lang)} ${labelAuditTrigger(metadata.trigger, lang)}`)
   }
 
   if (metadata.profileName) {
@@ -167,8 +166,8 @@ export function buildAuditMetadataSummary(metadata: Record<string, string>, isPo
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
-export function buildAuditMetadataEntries(metadata: Record<string, string>, isPolish: boolean): Array<[string, string]> {
-  const lang = toLanguage(isPolish)
+export function buildAuditMetadataEntries(metadata: Record<string, string>, language: UiLanguage): Array<[string, string]> {
+  const lang = language
 
   const labels: Record<string, string> = {
     upstream: tFor('auditCopy.metaUpstream', lang),
@@ -229,15 +228,11 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, isPo
   return Object.entries(metadata)
     .filter(([, value]) => value.trim().length > 0)
     .sort(([left], [right]) => metadataSortOrder(left) - metadataSortOrder(right) || left.localeCompare(right))
-    .map(([key, value]) => [labels[key] ?? humanizeMetadataKey(key), translateMetadataValue(key, value, isPolish)])
+    .map(([key, value]) => [labels[key] ?? humanizeMetadataKey(key), translateMetadataValue(key, value, language)])
 }
 
 export function isHighImpactAuditAction(action: string) {
   return ['DELETED', 'RESTORED', 'IMPORTED', 'PRUNED', 'FAILED'].some((marker) => action.includes(marker))
-}
-
-function toLanguage(isPolish: boolean): UiLanguage {
-  return isPolish ? 'pl' : 'en'
 }
 
 function pushCount(parts: string[], value: string | undefined, label: string) {
@@ -266,16 +261,16 @@ function extractMessagePart(message: string, pattern: RegExp) {
   return message.match(pattern)?.[1] ?? null
 }
 
-function labelAuditTrigger(trigger: string) {
+function labelAuditTrigger(trigger: string, language: UiLanguage) {
   switch (trigger) {
     case 'MANUAL':
-      return 'ręcznie'
+      return tFor('auditCopy.triggerManual', language)
     case 'SCHEDULED':
-      return 'harmonogram'
+      return tFor('auditCopy.triggerScheduled', language)
     case 'STARTUP':
-      return 'start aplikacji'
+      return tFor('auditCopy.triggerStartup', language)
     case 'PRE_RESTORE_REPLACE':
-      return 'przed przywróceniem REPLACE'
+      return tFor('auditCopy.triggerPreRestoreReplace', language)
     default:
       return trigger
   }
@@ -294,14 +289,14 @@ function labelUpstream(upstream: string) {
   }
 }
 
-function translateMetadataValue(key: string, value: string, isPolish: boolean) {
-  if (!isPolish) {
+function translateMetadataValue(key: string, value: string, language: UiLanguage) {
+  if (language === 'en') {
     return value
   }
 
   switch (key) {
     case 'trigger':
-      return labelAuditTrigger(value)
+      return labelAuditTrigger(value, language)
     case 'type':
       return labelTransactionType(value)
     case 'kind':
@@ -312,7 +307,7 @@ function translateMetadataValue(key: string, value: string, isPolish: boolean) {
       return labelValuationSource(value)
     case 'previousMix':
     case 'newMix':
-      return summarizeMix(value, true)
+      return summarizeMix(value)
     case 'assetClasses':
       return value
         .split(',')
@@ -339,15 +334,14 @@ function translateMetadataValue(key: string, value: string, isPolish: boolean) {
   }
 }
 
-function summarizeMix(rawMix: string, isPolish: boolean) {
-  const lang = toLanguage(isPolish)
+function summarizeMix(rawMix: string) {
   return rawMix
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => {
       const [assetClass, weight] = entry.split('=')
-      const label = lang === 'pl' ? labelAssetClass(assetClass) : assetClass
+      const label = labelAssetClass(assetClass)
       const pct = Number(weight) * 100
       return Number.isFinite(pct) ? `${label} ${pct.toFixed(2)}%` : label
     })
@@ -387,12 +381,4 @@ function humanizeMetadataKey(key: string) {
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[_-]+/g, ' ')
     .replace(/^\w/, (match) => match.toUpperCase())
-}
-
-function humanizeAuditAction(action: string) {
-  return action
-    .toLowerCase()
-    .split('_')
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ')
 }

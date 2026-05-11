@@ -8,7 +8,7 @@ import { Badge, ErrorState, InlineRefreshIndicator, Modal, StatCard, StatePanel 
 import { missingDataLabel } from '../../lib/availability'
 import type { PortfolioDataQualitySummary } from '../../lib/data-quality'
 import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln } from '../../lib/format'
-import { useI18n } from '../../lib/i18n'
+import { useI18n, type UiLanguage } from '../../lib/i18n'
 import { labelAssetClass } from '../../lib/labels'
 import { formatMessage, t } from '../../lib/messages'
 import {
@@ -22,7 +22,6 @@ import { appRoutes } from '../../lib/routes'
 import { btnSecondary, card } from '../../lib/styles'
 
 export function DashboardHeroStats({
-  isPolish,
   overview,
   valuationState,
   displayedTotalValuePln,
@@ -35,7 +34,6 @@ export function DashboardHeroStats({
   equityPct,
   bondPct,
 }: {
-  isPolish: boolean
   overview: PortfolioOverview
   valuationState: string
   displayedTotalValuePln: string
@@ -48,22 +46,23 @@ export function DashboardHeroStats({
   equityPct: number
   bondPct: number
 }) {
+  const { language } = useI18n()
   const dailyChangeLoading = historyLoading && dailyChange == null
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        label={labelPrimaryPortfolioValueMetric(valuationState, isPolish)}
+        label={labelPrimaryPortfolioValueMetric(valuationState, language)}
         value={formatCurrencyPln(displayedTotalValuePln)}
         numericValue={Number(displayedTotalValuePln)}
-        subtitle={describePrimaryPortfolioValue(overview, valuationState, isPolish)}
+        subtitle={describePrimaryPortfolioValue(overview, valuationState, language)}
         hero
       />
       <StatCard
         label={t('dashboardSections.dailyChange')}
         value={dailyChangeLoading
           ? '—'
-          : dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(isPolish)}
+          : dailyChange != null ? formatSignedCurrencyPln(dailyChange) : missingDataLabel(language)}
         numericValue={dailyChange ?? undefined}
         subtitle={dailyChangeLoading
           ? t('dashboardSections.waitingForData')
@@ -79,14 +78,14 @@ export function DashboardHeroStats({
         label={t('dashboardSections.equities')}
         value={formatCurrencyPln(displayedEquityValuePln)}
         numericValue={Number(displayedEquityValuePln)}
-        subtitle={describeAssetSliceValuation(equityPct, valuationState, isPolish)}
+        subtitle={describeAssetSliceValuation(equityPct, valuationState, language)}
         dot="equity"
       />
       <StatCard
         label={t('dashboardSections.bonds')}
         value={formatCurrencyPln(displayedBondValuePln)}
         numericValue={Number(displayedBondValuePln)}
-        subtitle={describeAssetSliceValuation(bondPct, valuationState, isPolish)}
+        subtitle={describeAssetSliceValuation(bondPct, valuationState, language)}
         dot="bond"
       />
     </div>
@@ -140,7 +139,7 @@ export function DashboardHistoryCard({
   isError: boolean
   isRefreshing: boolean
 }) {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const [hoverInfo, setHoverInfo] = useState<MiniChartHoverInfo | null>(null)
 
   return (
@@ -148,7 +147,7 @@ export function DashboardHistoryCard({
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-baseline gap-3">
-            <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, isPolish)}</h3>
+            <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, language)}</h3>
             {hoverInfo && (
               <span className="text-sm font-semibold tabular-nums text-zinc-100">
                 {formatCurrencyPln(hoverInfo.value)} <span className="text-xs font-normal text-zinc-500">{hoverInfo.date}</span>
@@ -215,13 +214,11 @@ export function DashboardHistoryCard({
 }
 
 export function DashboardTargetDriftCard({
-  isPolish,
   allocation,
   isLoading,
   isError,
   onRetry,
 }: {
-  isPolish: boolean
   allocation: PortfolioAllocationSummary | undefined
   isLoading: boolean
   isError: boolean
@@ -247,7 +244,7 @@ export function DashboardTargetDriftCard({
         </div>
         {allocation?.configured ? (
           <Badge variant={allocationActionVariant(allocation.recommendedAction)}>
-            {labelAllocationAction(allocation.recommendedAction, isPolish)}
+            {labelAllocationAction(allocation.recommendedAction)}
           </Badge>
         ) : (
           <Badge variant="default">{t('dashboardSections.notConfigured')}</Badge>
@@ -487,7 +484,6 @@ export function DashboardDataQualityCard({
 }
 
 export function DashboardQuickStats({
-  isPolish,
   overview,
   valuationState,
   hasMarketBackedCurrentValuation,
@@ -497,7 +493,6 @@ export function DashboardQuickStats({
   contributionBreakdownSubtitle,
   cashBreakdownSubtitle,
 }: {
-  isPolish: boolean
   overview: PortfolioOverview
   valuationState: string
   hasMarketBackedCurrentValuation: boolean
@@ -507,6 +502,7 @@ export function DashboardQuickStats({
   contributionBreakdownSubtitle?: string
   cashBreakdownSubtitle?: string
 }) {
+  const { language } = useI18n()
   const ytdTwrrChange = returnTone(ytdTwrr, ytdTwrrAvailable && !ytdTwrrLoading)
   const ytdTwrrSubtitle = ytdTwrrLoading
     ? t('dashboardSections.waitingForData')
@@ -520,7 +516,7 @@ export function DashboardQuickStats({
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <StatCard
         label={t('dashboardSections.ytdTwrr')}
-        value={ytdTwrrLoading ? '—' : formatReturnValue(ytdTwrr, ytdTwrrAvailable, isPolish)}
+        value={ytdTwrrLoading ? '—' : formatReturnValue(ytdTwrr, ytdTwrrAvailable, language)}
         numericValue={ytdTwrr != null && ytdTwrrAvailable ? Number(ytdTwrr) : undefined}
         subtitle={ytdTwrrSubtitle}
         change={ytdTwrrChange}
@@ -529,7 +525,7 @@ export function DashboardQuickStats({
       />
       <StatCard
         label={t('dashboardSections.unrealizedPL')}
-        value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(isPolish)}
+        value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(language)}
         numericValue={hasMarketBackedCurrentValuation ? Number(overview.totalUnrealizedGainPln) : undefined}
         subtitle={hasMarketBackedCurrentValuation
           ? undefined
@@ -556,16 +552,16 @@ export function DashboardQuickStats({
       />
       <StatCard
         label={t('dashboardSections.valuationBasis')}
-        value={labelPortfolioValuationBasis(valuationState, isPolish)}
-        subtitle={describePortfolioValuationBasis(overview, isPolish)}
+        value={labelPortfolioValuationBasis(valuationState, language)}
+        subtitle={describePortfolioValuationBasis(overview, language)}
       />
     </div>
   )
 }
 
-function formatReturnValue(value: string | null | undefined, available: boolean, isPolish: boolean) {
+function formatReturnValue(value: string | null | undefined, available: boolean, language: UiLanguage) {
   if (!available || value == null) {
-    return missingDataLabel(isPolish)
+    return missingDataLabel(language)
   }
 
   return formatPercent(value, { scale: 100, signed: true })
@@ -652,7 +648,7 @@ function allocationActionVariant(action: string) {
   }
 }
 
-function labelAllocationAction(action: string, _isPolish: boolean) {
+function labelAllocationAction(action: string) {
   switch (action) {
     case 'WITHIN_TOLERANCE':
       return t('dashboardSections.withinTolerance')

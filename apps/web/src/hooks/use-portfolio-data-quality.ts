@@ -5,7 +5,7 @@ import { buildPortfolioDataQualitySummary } from '../lib/data-quality'
 import { useI18n } from '../lib/i18n'
 
 export function usePortfolioDataQuality() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
@@ -20,9 +20,9 @@ export function usePortfolioDataQuality() {
         returns: returnsQuery.data,
         cacheSnapshots: cacheQuery.data,
         refreshStatus: refreshStatusQuery.data,
-        isPolish,
+        language,
       }),
-    [overviewQuery.data, historyQuery.data, returnsQuery.data, cacheQuery.data, refreshStatusQuery.data, isPolish],
+    [overviewQuery.data, historyQuery.data, returnsQuery.data, cacheQuery.data, refreshStatusQuery.data, language],
   )
 
   const isLoading =

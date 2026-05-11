@@ -53,7 +53,7 @@ export function HoldingsScreen() {
 }
 
 export function HoldingsContent() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const navigate = useNavigate()
   const appMetaQuery = useAppMeta()
   const holdingsQuery = usePortfolioHoldings()
@@ -314,7 +314,7 @@ export function HoldingsContent() {
                   const isSelected = key === selectedHoldingKey
                   const gainPln = holding.unrealizedGainPln
                   const gainPct = holdingGainPercent(holding)
-                  const statusPresentation = holdingStatusPresentation(status, isPolish)
+                  const statusPresentation = holdingStatusPresentation(status)
 
                   return (
                     <tr
@@ -347,7 +347,7 @@ export function HoldingsContent() {
                         {formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}
                       </td>
                       <td className={`${tdRight} font-medium ${gainColor(gainPln)}`}>
-                        <div>{gainPln == null ? missingDataLabel(isPolish) : formatSignedCurrencyPln(gainPln)}</div>
+                        <div>{gainPln == null ? missingDataLabel(language) : formatSignedCurrencyPln(gainPln)}</div>
                         {gainPct != null ? (
                           <div className="mt-0.5 text-xs font-normal text-zinc-500">
                             {formatPercent(gainPct, { signed: true, scale: 100, maximumFractionDigits: 2 })}
@@ -400,8 +400,8 @@ export function HoldingsContent() {
                   {t('instrumentDetails.openStockAnalyst')}
                 </a>
               ) : null}
-              <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).className}`}>
-                {holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus), isPolish).label}
+              <span className={`${badge} ${holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus)).className}`}>
+                {holdingStatusPresentation(normalizedValuationStatus(selectedHolding.valuationStatus)).label}
               </span>
             </div>
           </div>
@@ -412,7 +412,7 @@ export function HoldingsContent() {
             <DetailStat
               label={t('holdings.unrealizedPL')}
               value={selectedHolding.unrealizedGainPln == null
-                ? missingDataLabel(isPolish)
+                ? missingDataLabel(language)
                 : formatSignedCurrencyPln(selectedHolding.unrealizedGainPln)}
               detail={formatHoldingGainPercent(selectedHolding)}
               className={gainColor(selectedHolding.unrealizedGainPln)}
@@ -788,7 +788,7 @@ function valuationStatusFilterLabel(value: string | null | undefined) {
   }
 }
 
-function holdingStatusPresentation(value: string | null | undefined, _isPolish?: boolean) {
+function holdingStatusPresentation(value: string | null | undefined) {
   switch (normalizedValuationStatus(value)) {
     case 'VALUED':
       return { label: t('holdings.statusValued'), className: badgeVariants.success }

@@ -64,7 +64,7 @@ function InstrumentsPageHeaderContent() {
 }
 
 export function InstrumentsManagement() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const appMetaQuery = useAppMeta()
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
@@ -157,8 +157,8 @@ export function InstrumentsManagement() {
           />
           <InstrumentSummaryTile
             label={t('instrumentsScreen.unrealizedPL')}
-            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldingCount, isPolish)}
-            detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, isPolish)}
+            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldingCount, language)}
+            detail={describePortfolioGain(totalHoldingCount, totalValuedHoldingCount, language)}
             tone={totalValuedHoldingCount === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <InstrumentSummaryTile
@@ -270,16 +270,16 @@ export function InstrumentsManagement() {
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
-                                {formatPortfolioGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, isPolish)}
+                                {formatPortfolioGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, language)}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, isPolish)}
+                                {describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, language)}
                               </p>
                             </div>
                           </td>
                           <td className={tdRight}>
                             <span className={`${badge} ${statusVariant(row.status)}`}>
-                              {labelInstrumentStatus(row.status, isPolish)}
+                              {labelInstrumentStatus(row.status)}
                             </span>
                           </td>
                         </tr>
@@ -297,7 +297,7 @@ export function InstrumentsManagement() {
                 <InstrumentDetailsCard
                   row={selectedRow}
                   holdings={selectedHoldings}
-                  isPolish={isPolish}
+                  language={language}
                   analysisUrl={stockAnalystAnalysisUrl}
                 />
               </div>

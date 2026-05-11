@@ -24,7 +24,7 @@ import { PerformanceContributors } from './performance/PerformanceContributors'
 import type { Period, Tab, Unit } from './performance/PerformanceScreenSections'
 
 export function PerformanceScreen() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const [tab, setTab] = useState<Tab>('charts')
   const [period, setPeriod] = useState<Period>('MAX')
   const [unit, setUnit] = useState<Unit>('PLN')
@@ -117,24 +117,24 @@ export function PerformanceScreen() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label={t('performance.latestValue')}
-          value={overviewQuery.data ? formatCurrencyPln(overviewQuery.data.totalCurrentValuePln) : latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(isPolish)}
+          value={overviewQuery.data ? formatCurrencyPln(overviewQuery.data.totalCurrentValuePln) : latest ? formatCurrencyPln(latest.totalCurrentValuePln) : missingDataLabel(language)}
           subtitle={!overviewQuery.data && !latest ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label="YTD MWRR"
-          value={formatReturn(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          value={formatReturn(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, language)}
           change={returnChange(ytdPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
           subtitle={!returnsDisplayAvailable || ytdPeriod?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label="1Y MWRR"
-          value={formatReturn(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          value={formatReturn(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, language)}
           change={returnChange(y1Period?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
           subtitle={!returnsDisplayAvailable || y1Period?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
         <StatCard
           label={t('performance.inceptionMwrr')}
-          value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, isPolish)}
+          value={formatReturn(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable, language)}
           change={returnChange(inceptionPeriod?.nominalPln?.moneyWeightedReturn, returnsDisplayAvailable)}
           subtitle={!returnsDisplayAvailable || inceptionPeriod?.nominalPln?.moneyWeightedReturn == null ? t('performance.noDataSubtitle') : undefined}
         />
@@ -147,11 +147,7 @@ export function PerformanceScreen() {
       <TabBar
         tabs={TABS.map((tabItem) => ({
           ...tabItem,
-          label: isPolish
-            ? tabItem.value === 'charts'
-              ? t('performance.tabCharts')
-              : t('performance.tabReturns')
-            : tabItem.label,
+          label: tabItem.value === 'charts' ? t('performance.tabCharts') : t('performance.tabReturns'),
         }))}
         value={tab}
         onChange={setTab}

@@ -22,13 +22,13 @@ describe('portfolio-presentation', () => {
   })
 
   it('uses explicit fallback labels when gain preview is unavailable', () => {
-    expect(formatHoldingGainPreview(null, true)).toBe('b/d')
-    expect(formatHoldingGainPreview(null, false)).toBe('N/A')
+    expect(formatHoldingGainPreview(null, 'pl')).toBe('b/d')
+    expect(formatHoldingGainPreview(null, 'en')).toBe('N/A')
   })
 
   it('describes partially valued holdings in the gain summary', () => {
-    expect(describePortfolioGain(7, 4, true)).toBe('4/7 pozycji z wyceną rynkową')
-    expect(describePortfolioGain(7, 4, false, { cashExcluded: true })).toBe(
+    expect(describePortfolioGain(7, 4, 'pl')).toBe('4/7 pozycji z wyceną rynkową')
+    expect(describePortfolioGain(7, 4, 'en', { cashExcluded: true })).toBe(
       '4/7 holdings with market valuation · cash excluded',
     )
   })
@@ -45,23 +45,23 @@ describe('portfolio-presentation', () => {
       valuedHoldingCount: 0,
     } as PortfolioOverview
 
-    expect(describePortfolioValuationBasis(staleOverview, true)).toBe(
+    expect(describePortfolioValuationBasis(staleOverview, 'pl')).toBe(
       '5 z 7 pozycji ma ostatnią dostępną wycenę rynkową',
     )
-    expect(describePortfolioValuationBasis(bookOnlyOverview, false)).toBe(
+    expect(describePortfolioValuationBasis(bookOnlyOverview, 'en')).toBe(
       '0 of 3 holdings have market valuations',
     )
   })
 
   it('keeps holding gain copy explicit when no market valuation is available', () => {
-    expect(describeHoldingGainValue(2, 0, null, true)).toBe('Brak wyceny rynkowej pozycji')
-    expect(describeHoldingGainValue(2, 2, '15.25', false)).toMatch(/15\.25/)
+    expect(describeHoldingGainValue(2, 0, null, 'pl')).toBe('Brak wyceny rynkowej pozycji')
+    expect(describeHoldingGainValue(2, 2, '15.25', 'en')).toMatch(/15\.25/)
   })
 
   it('maps valuation states to concise polish labels', () => {
-    expect(labelPortfolioValuationState('MARK_TO_MARKET', true)).toBe('Rynkowa')
-    expect(labelPortfolioValuationState('STALE', true)).toBe('Opóźniona')
-    expect(labelPortfolioValuationState('PARTIALLY_VALUED', true)).toBe('Niepełna')
-    expect(labelPortfolioValuationState('BOOK_ONLY', true)).toBe('Księgowa')
+    expect(labelPortfolioValuationState('MARK_TO_MARKET', 'pl')).toBe('Rynkowa')
+    expect(labelPortfolioValuationState('STALE', 'pl')).toBe('Opóźniona')
+    expect(labelPortfolioValuationState('PARTIALLY_VALUED', 'pl')).toBe('Niepełna')
+    expect(labelPortfolioValuationState('BOOK_ONLY', 'pl')).toBe('Księgowa')
   })
 })

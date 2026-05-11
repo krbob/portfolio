@@ -1,17 +1,16 @@
-import { tFor } from './messages'
 import type { UiLanguage } from './i18n'
-import { t } from './messages'
+import { t, tFor } from './messages'
 
-export function unavailableLabel(isPolish: boolean) {
-  return tFor('common.unavailable', toLanguage(isPolish))
+export function unavailableLabel(language: UiLanguage) {
+  return tFor('common.unavailable', language)
 }
 
-export function notApplicableLabel(isPolish: boolean) {
-  return tFor('common.na', toLanguage(isPolish))
+export function notApplicableLabel(language: UiLanguage) {
+  return tFor('common.na', language)
 }
 
-export function missingDataLabel(isPolish: boolean) {
-  return tFor('common.missingData', toLanguage(isPolish))
+export function missingDataLabel(language: UiLanguage) {
+  return tFor('common.missingData', language)
 }
 
 export function activeUnavailableLabel() {
@@ -24,8 +23,4 @@ export function activeNotApplicableLabel() {
 
 export function activeMissingDataLabel() {
   return t('common.missingData')
-}
-
-function toLanguage(isPolish: boolean): UiLanguage {
-  return isPolish ? 'pl' : 'en'
 }

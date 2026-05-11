@@ -16,7 +16,7 @@ import { formatMessage, t } from '../lib/messages'
 import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
 
 export function PortfolioBackupsSection() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const backupsQuery = usePortfolioBackups()
   const backupEventsQuery = usePortfolioAuditEvents({ limit: 10, category: 'BACKUPS' })
   const downloadBackupMutation = useDownloadPortfolioBackup()
@@ -203,31 +203,31 @@ export function PortfolioBackupsSection() {
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
                 <div>
                   <dt className="text-zinc-500">{t('backups.accounts')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.appSettings')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.instruments')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.targets')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.transactions')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.importProfilesLabel')}</dt>
-                  <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.schema')}</dt>
-                  <dd className="text-zinc-100">{backup.schemaVersion ?? missingDataLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100">{backup.schemaVersion ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('backups.created')}</dt>
@@ -297,9 +297,9 @@ export function PortfolioBackupsSection() {
             <article className="rounded-lg border border-zinc-800/50 p-4" key={event.id}>
               <div className="flex items-start justify-between">
                     <div>
-                      <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action, isPolish)}</strong>
+                      <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
                       <p className="text-sm text-zinc-500">
-                        {formatAuditEventMessage(event, isPolish)} · {formatDateTime(event.occurredAt)}
+                        {formatAuditEventMessage(event, language)} · {formatDateTime(event.occurredAt)}
                       </p>
                     </div>
                     <span className={`${badge} ${event.outcome === 'FAILURE' ? badgeVariants.error : badgeVariants.success}`}>

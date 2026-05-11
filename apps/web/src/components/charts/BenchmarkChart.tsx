@@ -5,7 +5,7 @@ import { orderAvailableBenchmarkKeys } from '../../lib/benchmarks'
 import { chartPalette } from '../../lib/chart-theme'
 import { useI18n } from '../../lib/i18n'
 import { filterInput } from '../../lib/styles'
-import { t } from '../../lib/messages'
+import { formatMessage, t, tFor } from '../../lib/messages'
 import { ChartLegendItem } from './ChartContainer'
 import { PerformanceIndexChart, type PerformanceIndexSeriesConfig } from './PerformanceIndexChart'
 import { SegmentedControl } from '../ui'
@@ -227,12 +227,12 @@ function labelForBenchmarkKey(
 
   const label = BENCHMARK_LABELS[key]
   if (label) {
-    return language === 'pl' ? label.pl : label.en
+    return label[language]
   }
 
   if (key.startsWith('CUSTOM_')) {
     const index = Number(key.split('_')[1])
-    return language === 'pl' ? `Własny benchmark ${index}` : `Custom benchmark ${index}`
+    return formatMessage(tFor('benchmarks.customSlotTitle', language), { index })
   }
 
   return key

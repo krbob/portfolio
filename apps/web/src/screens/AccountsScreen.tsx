@@ -49,7 +49,7 @@ export function AccountsScreen() {
 }
 
 export function AccountsContent() {
-  const { isPolish } = useI18n()
+  const { language } = useI18n()
   const accountsQuery = usePortfolioAccounts()
   const holdingsQuery = usePortfolioHoldings()
   const isRefreshing = useBackgroundRefreshing([accountsQuery, holdingsQuery])
@@ -124,8 +124,8 @@ export function AccountsContent() {
           />
           <AccountSummaryTile
             label={t('accountsScreen.unrealizedPL')}
-            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldings, isPolish)}
-            detail={describePortfolioGain(totalHoldings, totalValuedHoldings, isPolish, { cashExcluded: true })}
+            value={formatPortfolioGainDisplay(totalGainPln, totalValuedHoldings, language)}
+            detail={describePortfolioGain(totalHoldings, totalValuedHoldings, language, { cashExcluded: true })}
             tone={totalValuedHoldings === 0 ? 'default' : totalGainPln >= 0 ? 'success' : 'warning'}
           />
           <AccountSummaryTile
@@ -231,16 +231,16 @@ export function AccountsContent() {
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
-                                {formatPortfolioGainDisplay(parsePortfolioNumber(account.totalUnrealizedGainPln), account.valuedHoldingCount, isPolish)}
+                                {formatPortfolioGainDisplay(parsePortfolioNumber(account.totalUnrealizedGainPln), account.valuedHoldingCount, language)}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {describeHoldingGainRate(account.activeHoldingCount, account.valuedHoldingCount, gainPct, isPolish)}
+                                {describeHoldingGainRate(account.activeHoldingCount, account.valuedHoldingCount, gainPct, language)}
                               </p>
                             </div>
                           </td>
                           <td className={tdRight}>
                             <span className={`${badge} ${portfolioValuationStateVariant(account.valuationState)}`}>
-                              {labelPortfolioValuationState(account.valuationState, isPolish)}
+                              {labelPortfolioValuationState(account.valuationState, language)}
                             </span>
                           </td>
                         </tr>
@@ -257,7 +257,7 @@ export function AccountsContent() {
               <AccountDetailsCard
                 account={selectedAccount}
                 holdings={selectedAccountHoldings}
-                isPolish={isPolish}
+                language={language}
               />
             )}
           </AnimatePresence>

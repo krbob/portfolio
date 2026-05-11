@@ -5,12 +5,12 @@ import { useInvalidateReadModelCache, useReadModelRefreshStatus, useRunReadModel
 import { Card, SectionHeader } from './ui'
 import { formatBytes, formatDateTime } from '../lib/format'
 import { getActiveUiLanguage } from '../lib/i18n'
-import { t } from '../lib/messages'
+import { formatMessage, t } from '../lib/messages'
 import { labelReadModelInvalidationReason } from '../lib/labels'
 import { badge, badgeVariants, btnPrimary, btnSecondary } from '../lib/styles'
 
 export function ReadModelCacheSection() {
-  const isPolish = getActiveUiLanguage() === 'pl'
+  const language = getActiveUiLanguage()
   const cacheQuery = useReadModelCacheSnapshots()
   const refreshStatusQuery = useReadModelRefreshStatus()
   const runRefreshMutation = useRunReadModelRefresh()
@@ -25,9 +25,9 @@ export function ReadModelCacheSection() {
     try {
       const result = await invalidateCacheMutation.mutateAsync()
       setFeedback(
-        isPolish
-          ? `Wyczyszczono ${result.clearedSnapshotCount} migawek pamięci podręcznej. Historia i zwroty odbudują się przy następnym odczycie.`
-          : `Cleared ${result.clearedSnapshotCount} cached snapshots. History and returns will rebuild on next access.`,
+        formatMessage(t('cache.clearedFeedback'), {
+          count: result.clearedSnapshotCount,
+        }),
       )
     } catch {
       // handled by mutation error rendering below
@@ -40,9 +40,10 @@ export function ReadModelCacheSection() {
     try {
       const result = await runRefreshMutation.mutateAsync()
       setFeedback(
-        isPolish
-          ? `Odświeżono ${result.refreshedModelCount} modeli: ${result.modelNames.join(', ')}.`
-          : `Refreshed ${result.refreshedModelCount} models: ${result.modelNames.join(', ')}.`,
+        formatMessage(t('cache.refreshedFeedback'), {
+          count: result.refreshedModelCount,
+          models: result.modelNames.join(', '),
+        }),
       )
     } catch {
       // handled by mutation error rendering below
@@ -109,7 +110,7 @@ export function ReadModelCacheSection() {
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-500">{t('cache.lastRefresh')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
-            {refreshStatusQuery.data?.lastSuccessAt ? formatDateTime(refreshStatusQuery.data.lastSuccessAt) : notApplicableLabel(isPolish)}
+            {refreshStatusQuery.data?.lastSuccessAt ? formatDateTime(refreshStatusQuery.data.lastSuccessAt) : notApplicableLabel(language)}
           </strong>
         </article>
       </div>
@@ -174,7 +175,7 @@ export function ReadModelCacheSection() {
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('cache.sourceUpdated')}</dt>
-                  <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : notApplicableLabel(isPolish)}</dd>
+                  <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : notApplicableLabel(language)}</dd>
                 </div>
                 <div>
                   <dt className="text-zinc-500">{t('cache.payload')}</dt>

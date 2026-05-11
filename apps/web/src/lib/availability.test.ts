@@ -3,14 +3,14 @@ import { missingDataLabel, notApplicableLabel, unavailableLabel } from './availa
 
 describe('availability labels', () => {
   it('keeps date-style fallbacks separate from missing-data fallbacks', () => {
-    expect(notApplicableLabel(true)).toBe('n/d')
-    expect(notApplicableLabel(false)).toBe('n/a')
-    expect(missingDataLabel(true)).toBe('b/d')
-    expect(missingDataLabel(false)).toBe('N/A')
+    expect(notApplicableLabel('pl')).toBe('n/d')
+    expect(notApplicableLabel('en')).toBe('n/a')
+    expect(missingDataLabel('pl')).toBe('b/d')
+    expect(missingDataLabel('en')).toBe('N/A')
   })
 
   it('returns translated unavailable labels', () => {
-    expect(unavailableLabel(true)).toBe('Niedostępne')
-    expect(unavailableLabel(false)).toBe('Unavailable')
+    expect(unavailableLabel('pl')).toBe('Niedostępne')
+    expect(unavailableLabel('en')).toBe('Unavailable')
   })
 })
