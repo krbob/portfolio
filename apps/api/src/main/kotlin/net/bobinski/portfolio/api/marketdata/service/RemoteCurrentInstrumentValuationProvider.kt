@@ -4,8 +4,10 @@ import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.StockAnalystQuote
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import java.math.RoundingMode
+import java.time.LocalDate
 
 class RemoteCurrentInstrumentValuationProvider(
     private val config: MarketDataConfig,
@@ -93,11 +95,23 @@ class RemoteCurrentInstrumentValuationProvider(
             pricePerUnitPln = plnQuote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
             pricePerUnitNative = nativeQuote.lastPrice.toBigDecimal().setScale(4, RoundingMode.HALF_UP),
             valuedAt = plnQuote.date,
-            previousClosePln = plnQuote.previousClose?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)
+            previousClosePln = trustedPreviousClosePln(symbol = symbol, plnQuote = plnQuote)
         )
         snapshotCacheService.putQuote(identity = stockQuoteIdentity(symbol), valuation = valuation)
         return InstrumentValuationResult.Success(valuation = valuation)
     }
+
+    // Quote-only previousClose can drift on exchange holidays; require a same-day history bar.
+    private suspend fun trustedPreviousClosePln(symbol: String, plnQuote: StockAnalystQuote) =
+        plnQuote.previousClose?.takeIf {
+            hasTradingDayPrice(symbol = symbol, date = plnQuote.date)
+        }?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)
+
+    private suspend fun hasTradingDayPrice(symbol: String, date: LocalDate): Boolean =
+        runCatching {
+            stockAnalystClient.historyInPln(symbol = symbol, from = date, to = date)
+                .any { it.date == date }
+        }.getOrDefault(false)
 
     private suspend fun cachedQuoteResult(instrument: Instrument): InstrumentValuationResult.Success? {
         val symbol = instrument.symbol ?: return null
