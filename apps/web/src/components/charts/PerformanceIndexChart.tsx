@@ -104,17 +104,27 @@ export function PerformanceIndexChart({
 }
 
 function seriesDataFor(points: PortfolioDailyHistoryPoint[], config: PerformanceIndexSeriesConfig) {
-  return points.flatMap((point) => {
+  const rawData = points.flatMap((point) => {
     const value = config.getValue(point)
     if (value == null) {
       return []
     }
 
     const numericValue = Number(value)
-    if (Number.isNaN(numericValue)) {
+    if (!Number.isFinite(numericValue)) {
       return []
     }
 
     return [{ time: point.date, value: numericValue }]
   })
+
+  const baseValue = rawData.find((item) => item.value > 0)?.value
+  if (baseValue == null) {
+    return rawData
+  }
+
+  return rawData.map((item) => ({
+    ...item,
+    value: (item.value / baseValue) * 100,
+  }))
 }
