@@ -96,8 +96,8 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
         </div>
 
         <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-2 lg:min-w-[22rem]">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-[5rem]">
+          <div className="grid gap-3 sm:grid-cols-[minmax(8rem,1fr)_auto] sm:items-center">
+            <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 whitespace-nowrap">
                 {hoveredPoint ? t('allocation.selectedDate') : t('allocation.latestDate')}
               </p>
@@ -106,7 +106,7 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-right">
+            <div className="grid grid-cols-3 gap-2 text-left sm:gap-4 sm:text-right">
               <AllocationMetric
                 color={chartPalette.equities}
                 label={t('allocation.equities')}
@@ -152,12 +152,12 @@ function AllocationMetric({
   value: string | number | null | undefined
 }) {
   return (
-    <div>
-      <p className="flex items-center justify-end gap-1.5 text-[11px] uppercase tracking-[0.12em] text-zinc-500">
-        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+    <div className="min-w-0">
+      <p className="flex items-center justify-start gap-1 text-[10px] uppercase tracking-[0.08em] text-zinc-500 whitespace-nowrap sm:justify-end sm:gap-1.5 sm:text-[11px] sm:tracking-[0.12em]">
+        <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-zinc-100">
+      <p className="mt-1 text-sm font-semibold text-zinc-100 tabular-nums">
         {formatPercent(value, { maximumFractionDigits: 2 })}
       </p>
     </div>
