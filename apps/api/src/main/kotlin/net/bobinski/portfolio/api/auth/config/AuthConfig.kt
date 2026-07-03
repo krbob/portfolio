@@ -1,7 +1,7 @@
 package net.bobinski.portfolio.api.auth.config
 
 import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.config.propertyOrNull
+import net.bobinski.portfolio.api.config.readSetting
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
@@ -14,41 +14,40 @@ data class AuthConfig(
     val sessionMaxAgeDays: Long
 ) {
     companion object {
-        fun from(config: ApplicationConfig): AuthConfig {
-            val password = readSetting("PORTFOLIO_AUTH_PASSWORD", config, "portfolio.auth.password") ?: ""
-            val enabled = readSetting("PORTFOLIO_AUTH_ENABLED", config, "portfolio.auth.enabled")
+        fun from(config: ApplicationConfig, env: (String) -> String? = System::getenv): AuthConfig {
+            val password = readSetting("PORTFOLIO_AUTH_PASSWORD", config, "portfolio.auth.password", env) ?: ""
+            val enabled = readSetting("PORTFOLIO_AUTH_ENABLED", config, "portfolio.auth.enabled", env)
                 ?.toBooleanStrictOrNull()
                 ?: password.isNotBlank()
 
             return AuthConfig(
                 enabled = enabled,
                 password = password,
-                sessionSecret = readSetting("PORTFOLIO_AUTH_SESSION_SECRET", config, "portfolio.auth.sessionSecret")
+                sessionSecret = readSetting(
+                    "PORTFOLIO_AUTH_SESSION_SECRET",
+                    config,
+                    "portfolio.auth.sessionSecret",
+                    env
+                )
                     ?: "",
                 sessionCookieName = readSetting(
                     "PORTFOLIO_AUTH_SESSION_COOKIE_NAME",
                     config,
-                    "portfolio.auth.sessionCookieName"
+                    "portfolio.auth.sessionCookieName",
+                    env
                 ) ?: "portfolio_session",
-                secureCookie = readSetting("PORTFOLIO_AUTH_SECURE_COOKIE", config, "portfolio.auth.secureCookie")
+                secureCookie = readSetting("PORTFOLIO_AUTH_SECURE_COOKIE", config, "portfolio.auth.secureCookie", env)
                     ?.toBooleanStrictOrNull()
                     ?: false,
                 sessionMaxAgeDays = readSetting(
                     "PORTFOLIO_AUTH_SESSION_MAX_AGE_DAYS",
                     config,
-                    "portfolio.auth.sessionMaxAgeDays"
+                    "portfolio.auth.sessionMaxAgeDays",
+                    env
                 )?.toLongOrNull()
                     ?: 30L
             )
         }
-
-        private fun readSetting(
-            envKey: String,
-            config: ApplicationConfig,
-            configKey: String
-        ): String? = System.getenv(envKey)
-            ?.takeIf { it.isNotBlank() }
-            ?: config.propertyOrNull(configKey)?.getString()
     }
 }
 

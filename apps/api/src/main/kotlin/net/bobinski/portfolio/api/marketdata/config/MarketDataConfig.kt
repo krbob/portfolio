@@ -1,7 +1,7 @@
 package net.bobinski.portfolio.api.marketdata.config
 
 import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.config.propertyOrNull
+import net.bobinski.portfolio.api.config.readSetting
 
 data class MarketDataConfig(
     val enabled: Boolean,
@@ -17,69 +17,71 @@ data class MarketDataConfig(
     val bondBenchmarkSymbol: String
 ) {
     companion object {
-        fun from(config: ApplicationConfig): MarketDataConfig = MarketDataConfig(
-            enabled = readSetting("PORTFOLIO_MARKET_DATA_ENABLED", config, "portfolio.marketData.enabled")
+        fun from(config: ApplicationConfig, env: (String) -> String? = System::getenv): MarketDataConfig = MarketDataConfig(
+            enabled = readSetting("PORTFOLIO_MARKET_DATA_ENABLED", config, "portfolio.marketData.enabled", env)
                 ?.let(::toBooleanStrictOrNullSafe)
                 ?: true,
             stockAnalystApiUrl = readSetting(
                 "PORTFOLIO_STOCK_ANALYST_API_URL",
                 config,
-                "portfolio.marketData.stockAnalystApiUrl"
+                "portfolio.marketData.stockAnalystApiUrl",
+                env
             ) ?: "http://127.0.0.1:18080",
             stockAnalystUiUrl = readSetting(
                 "PORTFOLIO_STOCK_ANALYST_UI_URL",
                 config,
-                "portfolio.marketData.stockAnalystUiUrl"
+                "portfolio.marketData.stockAnalystUiUrl",
+                env
             )?.takeIf { it.isNotBlank() },
             edoCalculatorApiUrl = readSetting(
                 "PORTFOLIO_EDO_CALCULATOR_API_URL",
                 config,
-                "portfolio.marketData.edoCalculatorApiUrl"
+                "portfolio.marketData.edoCalculatorApiUrl",
+                env
             ) ?: "http://127.0.0.1:18081",
             goldApiUrl = readSetting(
                 "PORTFOLIO_GOLD_API_URL",
                 config,
-                "portfolio.marketData.goldApiUrl"
+                "portfolio.marketData.goldApiUrl",
+                env
             ) ?: "https://api.gold-api.com",
             goldApiKey = readSetting(
                 "PORTFOLIO_GOLD_API_KEY",
                 config,
-                "portfolio.marketData.goldApiKey"
+                "portfolio.marketData.goldApiKey",
+                env
             ),
             staleAfterDays = readSetting(
                 "PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS",
                 config,
-                "portfolio.marketData.staleAfterDays"
+                "portfolio.marketData.staleAfterDays",
+                env
             )?.toLongOrNull()?.takeIf { it > 0 } ?: 3,
             usdPlnSymbol = readSetting(
                 "PORTFOLIO_USDPLN_SYMBOL",
                 config,
-                "portfolio.marketData.usdPlnSymbol"
+                "portfolio.marketData.usdPlnSymbol",
+                env
             ) ?: "PLN=X",
             goldBenchmarkSymbol = readSetting(
                 "PORTFOLIO_GOLD_BENCHMARK_SYMBOL",
                 config,
-                "portfolio.marketData.goldBenchmarkSymbol"
+                "portfolio.marketData.goldBenchmarkSymbol",
+                env
             ) ?: "GC=F",
             equityBenchmarkSymbol = readSetting(
                 "PORTFOLIO_EQUITY_BENCHMARK_SYMBOL",
                 config,
-                "portfolio.marketData.equityBenchmarkSymbol"
+                "portfolio.marketData.equityBenchmarkSymbol",
+                env
             ) ?: "VWRA.L",
             bondBenchmarkSymbol = readSetting(
                 "PORTFOLIO_BOND_BENCHMARK_SYMBOL",
                 config,
-                "portfolio.marketData.bondBenchmarkSymbol"
+                "portfolio.marketData.bondBenchmarkSymbol",
+                env
             ) ?: "ETFBTBSP.WA"
         )
-
-        private fun readSetting(
-            envKey: String,
-            config: ApplicationConfig,
-            configKey: String
-        ): String? = System.getenv(envKey)
-            ?.takeIf { it.isNotBlank() }
-            ?: config.propertyOrNull(configKey)?.getString()
 
         private fun toBooleanStrictOrNullSafe(value: String): Boolean = when (value.trim().lowercase()) {
             "true" -> true

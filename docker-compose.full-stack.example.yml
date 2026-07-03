@@ -12,6 +12,7 @@ services:
       PORTFOLIO_EDO_CALCULATOR_API_URL: http://edo-calculator:8080
       PORTFOLIO_GOLD_API_URL: https://api.gold-api.com
       PORTFOLIO_GOLD_API_KEY: ${PORTFOLIO_GOLD_API_KEY:-}
+      PORTFOLIO_GOLD_API_KEY_FILE: ${PORTFOLIO_GOLD_API_KEY_FILE:-}
       PORTFOLIO_BACKUPS_ENABLED: "true"
       PORTFOLIO_BACKUPS_DIRECTORY: /srv/portfolio/backups
       PORTFOLIO_BACKUPS_INTERVAL_MINUTES: 1440
@@ -22,7 +23,9 @@ services:
       PORTFOLIO_OPENAPI_UI_ENABLED: "false"
       PORTFOLIO_AUTH_ENABLED: ${PORTFOLIO_AUTH_ENABLED:-false}
       PORTFOLIO_AUTH_PASSWORD: ${PORTFOLIO_AUTH_PASSWORD:-}
+      PORTFOLIO_AUTH_PASSWORD_FILE: ${PORTFOLIO_AUTH_PASSWORD_FILE:-}
       PORTFOLIO_AUTH_SESSION_SECRET: ${PORTFOLIO_AUTH_SESSION_SECRET:-}
+      PORTFOLIO_AUTH_SESSION_SECRET_FILE: ${PORTFOLIO_AUTH_SESSION_SECRET_FILE:-}
       PORTFOLIO_AUTH_SECURE_COOKIE: ${PORTFOLIO_AUTH_SECURE_COOKIE:-false}
     depends_on:
       - stock-analyst
@@ -32,16 +35,29 @@ services:
     volumes:
       - portfolio-sqlite-data:/srv/portfolio/data
       - portfolio-backup-data:/srv/portfolio/backups
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:18082/v1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     restart: unless-stopped
 
   portfolio-web:
     image: ghcr.io/krbob/portfolio-web:latest
     depends_on:
-      - portfolio-api
+      portfolio-api:
+        condition: service_healthy
     environment:
       PORTFOLIO_API_UPSTREAM: http://portfolio-api:18082
     ports:
       - "4174:4174"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4174/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     restart: unless-stopped
 
   stock-analyst:
