@@ -359,6 +359,39 @@ class PortfolioReturnsServiceTest {
         assertBigDecimalValue("75.00", breakdown.netInvestmentResultPln)
     }
 
+    @Test
+    fun `returns keep breakdown when a period transaction has missing fx`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(interestTransaction(currency = "USD"))
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Failure("Equity benchmark not required.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.05")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.05")
+        )
+
+        val returns = fixture.service.returns()
+        val oneYear = returns.periods.first { it.key == ReturnPeriodKey.ONE_YEAR }
+        val breakdown = requireNotNull(oneYear.breakdown)
+
+        assertBigDecimalValue("1000.00", breakdown.netExternalFlowsPln)
+        assertBigDecimalValue("0.00", breakdown.interestAndCouponsPln)
+    }
+
     private fun assertBigDecimalValue(expected: String, actual: BigDecimal) {
         assertTrue(
             actual.compareTo(BigDecimal(expected)) == 0,
@@ -460,7 +493,8 @@ class PortfolioReturnsServiceTest {
 
     private fun interestTransaction(
         tradeDate: String = "2026-03-01",
-        amount: String = "100.00"
+        amount: String = "100.00",
+        currency: String = "PLN"
     ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("returns-interest".toByteArray()),
         accountId = ACCOUNT_ID,
@@ -473,7 +507,7 @@ class PortfolioReturnsServiceTest {
         grossAmount = BigDecimal(amount),
         feeAmount = BigDecimal.ZERO,
         taxAmount = BigDecimal.ZERO,
-        currency = "PLN",
+        currency = currency,
         fxRateToPln = null,
         notes = "",
         createdAt = CREATED_AT.plusSeconds(1),

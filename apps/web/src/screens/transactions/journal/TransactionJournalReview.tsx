@@ -15,7 +15,7 @@ import {
   txBadgeVariants,
 } from '../../../lib/styles'
 import type { Account, Instrument, Transaction } from '../../../api/write-model'
-import type { JournalRow, JournalFilters } from '../transactions-helpers'
+import { transactionTypes, type JournalRow, type JournalFilters } from '../transactions-helpers'
 
 interface TransactionJournalReviewProps {
   transactions: Transaction[]
@@ -133,7 +133,7 @@ export function TransactionJournalReview({
               onChange={(event) => onUpdateJournalFilter('type', event.target.value)}
             >
               <option value="ALL">{t('journal.allTypes')}</option>
-              {['BUY', 'SELL', 'DIVIDEND', 'INTEREST', 'FEE', 'TAX', 'DEPOSIT', 'WITHDRAWAL', 'REDEEM'].map((type) => (
+              {transactionTypes.map((type) => (
                 <option key={type} value={type}>
                   {labelTransactionType(type)}
                 </option>

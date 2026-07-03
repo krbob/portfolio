@@ -1,5 +1,6 @@
 .DS_Store
 .idea/
+.env
 
 apps/api/.gradle/
 apps/api/build/

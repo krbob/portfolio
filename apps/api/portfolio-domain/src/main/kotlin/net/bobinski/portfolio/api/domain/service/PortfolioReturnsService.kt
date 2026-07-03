@@ -395,7 +395,7 @@ class PortfolioReturnsService(
         var taxes = BigDecimal.ZERO.scaleMoney(2)
 
         for (transaction in periodTransactions) {
-            val converted = fxLookups.convertedAmountsOrNull(transaction) ?: return null
+            val converted = fxLookups.convertedAmountsOrNull(transaction) ?: continue
 
             when (transaction.type) {
                 TransactionType.DEPOSIT -> netExternalFlows = netExternalFlows.add(converted.grossPln).scaleMoney(2)
@@ -458,25 +458,16 @@ class PortfolioReturnsService(
             .mapValues { (_, items) ->
                 items.fold(BigDecimal.ZERO) { total, item -> total.add(item.amount) }
             }
-        var previousValue = startValue
-        var totalFactor = 1.0
-
-        for (valuation in periodValuations) {
-            val externalFlowIntoPortfolio = cashFlowsByDate[valuation.date]?.negate() ?: BigDecimal.ZERO
-            val netGrowthValue = valuation.value.subtract(externalFlowIntoPortfolio)
-            val dailyFactor = when {
-                previousValue.signum() == 0 && netGrowthValue.signum() == 0 -> 1.0
-                previousValue.signum() == 0 -> return null
-                else -> netGrowthValue.divide(previousValue, 12, RoundingMode.HALF_UP).toDouble()
-            }
-
-            if (!dailyFactor.isFinite() || dailyFactor < 0.0) {
-                return null
-            }
-
-            totalFactor *= dailyFactor
-            previousValue = valuation.value
-        }
+        val totalFactor = TimeWeightedReturnCalculator.totalFactor(
+            listOf(TimeWeightedReturnCalculator.Point(date = start, value = startValue)) +
+                periodValuations.map { valuation ->
+                    TimeWeightedReturnCalculator.Point(
+                        date = valuation.date,
+                        value = valuation.value,
+                        externalFlowIntoPortfolio = cashFlowsByDate[valuation.date]?.negate() ?: BigDecimal.ZERO
+                    )
+                }
+        ) ?: return null
 
         val totalReturn = totalFactor - 1.0
         val annualizedReturn = when {

@@ -637,47 +637,18 @@ class PortfolioHistoryService(
 
     private fun buildPortfolioPerformanceIndex(
         points: List<PortfolioDailyHistoryPoint>
-    ): TreeMap<LocalDate, BigDecimal> {
-        val lookup = TreeMap<LocalDate, BigDecimal>()
-        if (points.isEmpty()) {
-            return lookup
+    ): TreeMap<LocalDate, BigDecimal> = TimeWeightedReturnCalculator.buildIndex(
+        points.mapIndexed { index, point ->
+            val previous = points.getOrNull(index - 1)
+            TimeWeightedReturnCalculator.Point(
+                date = point.date,
+                value = point.totalCurrentValuePln,
+                externalFlowIntoPortfolio = previous
+                    ?.let { point.netContributionsPln.subtract(it.netContributionsPln) }
+                    ?: BigDecimal.ZERO
+            )
         }
-
-        var currentIndex: BigDecimal? = null
-        var previousPoint: PortfolioDailyHistoryPoint? = null
-
-        points.forEach { point ->
-            when {
-                currentIndex == null && point.totalCurrentValuePln.signum() > 0 -> {
-                    currentIndex = BASE_INDEX
-                    lookup[point.date] = BASE_INDEX
-                }
-
-                currentIndex != null && previousPoint != null -> {
-                    val previous = previousPoint
-                    val index = currentIndex
-                    val previousValue = previous.totalCurrentValuePln
-                    val externalFlow = point.netContributionsPln.subtract(previous.netContributionsPln)
-                    if (previousValue.signum() > 0) {
-                        val dailyFactor = point.totalCurrentValuePln
-                            .subtract(externalFlow)
-                            .divide(previousValue, 12, RoundingMode.HALF_UP)
-
-                        if (dailyFactor.signum() >= 0) {
-                            currentIndex = index
-                                .multiply(dailyFactor, MONEY_CONTEXT)
-                                .index()
-                            lookup[point.date] = currentIndex
-                        }
-                    }
-                }
-            }
-
-            previousPoint = point
-        }
-
-        return lookup
-    }
+    )
 
     private fun buildNormalizedIndexLookup(
         from: LocalDate,
