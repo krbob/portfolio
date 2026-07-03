@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
 import { DashboardSetupBanner } from '../components/DashboardSetupBanner'
+import { PortfolioAlertsPanel } from '../components/PortfolioAlertsPanel'
 import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
 import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
-import { usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
+import { usePortfolioAlerts, usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
@@ -32,9 +33,10 @@ export function DashboardScreen() {
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
   const allocationQuery = usePortfolioAllocation()
+  const alertsQuery = usePortfolioAlerts()
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
-  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, allocationQuery])
+  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, allocationQuery, alertsQuery])
   const overview = overviewQuery.data
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
@@ -85,6 +87,10 @@ export function DashboardScreen() {
   const contributionBreakdownSubtitle = undefined
   const ytdTwrr = allPeriods.find((period) => period.key === 'YTD')?.nominalPln?.timeWeightedReturn
   const returnsDisplayAvailable = isMarketValuationState(historyValuationState)
+  const visibleAlerts = useMemo(
+    () => (alertsQuery.data ?? []).filter((alert) => alert.type !== 'MARKET_DATA_STALE' || staleAlert.alert == null),
+    [alertsQuery.data, staleAlert.alert],
+  )
 
   function handleRetry() {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
@@ -139,6 +145,13 @@ export function DashboardScreen() {
       </PageHeader>
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
+
+      <PortfolioAlertsPanel
+        alerts={visibleAlerts}
+        isLoading={alertsQuery.isLoading}
+        isError={alertsQuery.isError}
+        onRetry={() => void alertsQuery.refetch()}
+      />
 
       <DashboardSetupBanner />
 

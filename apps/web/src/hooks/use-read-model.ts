@@ -3,6 +3,7 @@ import {
   fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
   fetchPortfolioAllocation,
+  fetchPortfolioAlerts,
   fetchPortfolioAuditEvents,
   fetchPortfolioContributionPlan,
   fetchPortfolioDailyHistory,
@@ -53,6 +54,13 @@ export function usePortfolioAllocation() {
   return useQuery({
     queryKey: ['portfolio-allocation'],
     queryFn: fetchPortfolioAllocation,
+  })
+}
+
+export function usePortfolioAlerts() {
+  return useQuery({
+    queryKey: ['portfolio-alerts'],
+    queryFn: fetchPortfolioAlerts,
   })
 }
 

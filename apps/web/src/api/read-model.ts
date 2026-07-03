@@ -70,6 +70,9 @@ export type DrawdownEpisode =
 export type BenchmarkComparison =
   components['schemas']['BenchmarkComparisonResponse']
 
+export type PortfolioAlert =
+  paths['/v1/portfolio/alerts']['get']['responses'][200]['content']['application/json'][number]
+
 export function fetchPortfolioOverview() {
   return requestJson<PortfolioOverview>('/api/v1/portfolio/overview')
 }
@@ -92,6 +95,10 @@ export function fetchPortfolioReturns() {
 
 export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
+}
+
+export function fetchPortfolioAlerts() {
+  return requestJson<PortfolioAlert[]>('/api/v1/portfolio/alerts')
 }
 
 export function fetchPortfolioContributionPlan(

@@ -192,6 +192,17 @@ export const appMessages = {
   },
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
+  'portfolioAlerts.title': { pl: 'Aktywne alerty', en: 'Active alerts' },
+  'portfolioAlerts.count': { pl: '{count} aktywne', en: '{count} active' },
+  'portfolioAlerts.open': { pl: 'Otwórz', en: 'Open' },
+  'portfolioAlerts.unavailableTitle': { pl: 'Alerty są chwilowo niedostępne', en: 'Alerts are temporarily unavailable' },
+  'portfolioAlerts.unavailableDescription': {
+    pl: 'Nie udało się pobrać bieżących alertów portfela.',
+    en: 'Portfolio could not load the current active alerts.',
+  },
+  'portfolioAlerts.severityInfo': { pl: 'INFO', en: 'INFO' },
+  'portfolioAlerts.severityWarning': { pl: 'UWAGA', en: 'WARNING' },
+  'portfolioAlerts.severityCritical': { pl: 'KRYTYCZNE', en: 'CRITICAL' },
   'staleAlert.badge': { pl: 'STALE', en: 'STALE' },
   'staleAlert.title': { pl: 'Wycena działa na danych rynkowych z opóźnieniem', en: 'Valuation is running on stale market data' },
   'staleAlert.messageBase': {

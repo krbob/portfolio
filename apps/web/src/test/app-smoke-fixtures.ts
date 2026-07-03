@@ -94,6 +94,10 @@ export function createAppFetchMock() {
       })
     }
 
+    if (url.includes('/api/v1/portfolio/alerts')) {
+      return jsonResponse([])
+    }
+
     if (url.includes('/api/v1/portfolio/overview')) {
       return jsonResponse({
         asOf: '2026-03-27',
