@@ -354,4 +354,121 @@ describe('PerformanceScreen', () => {
     expect(screen.getByText('Maksymalne')).toBeInTheDocument()
     expect(screen.getAllByText('-18,00%').length).toBeGreaterThan(0)
   })
+
+  it('keeps the returns tab stable when the API omits risk metrics', async () => {
+    setLanguage('pl')
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+
+      if (url.includes('/api/v1/portfolio/history/daily')) {
+        return new Response(
+          JSON.stringify({
+            from: '2026-03-27',
+            until: '2026-03-27',
+            valuationState: 'MARK_TO_MARKET',
+            instrumentHistoryIssueCount: 0,
+            referenceSeriesIssueCount: 0,
+            benchmarkSeriesIssueCount: 0,
+            missingFxTransactions: 0,
+            unsupportedCorrectionTransactions: 0,
+            points: [
+              {
+                date: '2026-03-27',
+                totalBookValuePln: '1000.00',
+                totalCurrentValuePln: '1050.00',
+                netContributionsPln: '1000.00',
+                cashBalancePln: '150.00',
+                totalCurrentValueUsd: '260.00',
+                netContributionsUsd: '250.00',
+                cashBalanceUsd: '35.00',
+                totalCurrentValueAu: null,
+                netContributionsAu: null,
+                cashBalanceAu: null,
+                equityCurrentValuePln: '900.00',
+                bondCurrentValuePln: '0.00',
+                cashCurrentValuePln: '150.00',
+                equityAllocationPct: '85.71',
+                bondAllocationPct: '0.00',
+                cashAllocationPct: '14.29',
+                portfolioPerformanceIndex: '1.05',
+                benchmarkIndices: {},
+                activeHoldingCount: 1,
+                valuedHoldingCount: 1,
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/returns')) {
+        return new Response(
+          JSON.stringify({
+            asOf: '2026-03-27',
+            periods: [
+              {
+                key: 'YTD',
+                label: 'YTD',
+                requestedFrom: '2026-01-01',
+                from: '2026-01-01',
+                until: '2026-03-27',
+                clippedToInception: false,
+                dayCount: 86,
+                nominalPln: {
+                  moneyWeightedReturn: '0.05',
+                  annualizedMoneyWeightedReturn: '0.05',
+                  timeWeightedReturn: '0.05',
+                  annualizedTimeWeightedReturn: '0.05',
+                },
+                nominalUsd: null,
+                realPln: null,
+                inflationFrom: null,
+                inflationUntil: null,
+                inflationMultiplier: null,
+                benchmarks: [],
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('/api/v1/portfolio/benchmark-settings')) {
+        return new Response(
+          JSON.stringify({
+            enabledKeys: [],
+            pinnedKeys: [],
+            customBenchmarks: [],
+            options: [],
+          }),
+          { status: 200 },
+        )
+      }
+
+      throw new Error(`Unhandled fetch in legacy PerformanceScreen test: ${url}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <I18nProvider>
+            <PerformanceScreen />
+          </I18nProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Zwroty' }))
+
+    expect(await screen.findByText('Brak serii ryzyka')).toBeInTheDocument()
+    expect(screen.queryByText('Widok uległ awarii')).not.toBeInTheDocument()
+  })
 })

@@ -554,8 +554,8 @@ function RollingReturnsAndDrawdownsCard({
   returnsDisplayAvailable: boolean
 }) {
   const { language } = useI18n()
-  const rollingWindows = returns.rollingReturns
-  const drawdowns = returns.drawdowns
+  const rollingWindows = returns.rollingReturns ?? []
+  const drawdowns = returns.drawdowns ?? EMPTY_DRAWDOWNS
   const largestEpisodes = drawdowns.episodes.slice(0, 4)
   const hasRollingData = rollingWindows.some((window) => window.latest != null)
   const hasDrawdownData = drawdowns.current != null || drawdowns.max != null
@@ -607,6 +607,13 @@ function RollingReturnsAndDrawdownsCard({
       </div>
     </div>
   )
+}
+
+const EMPTY_DRAWDOWNS: PortfolioDrawdowns = {
+  current: null,
+  max: null,
+  episodes: [],
+  observations: [],
 }
 
 function RollingReturnWindowView({

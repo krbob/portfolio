@@ -5,6 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { createStorageMock } from './test/app-smoke-fixtures'
 
+const EMPTY_RETURNS_RISK_FIELDS = {
+  rollingReturns: [],
+  drawdowns: {
+    current: null,
+    max: null,
+    episodes: [],
+    observations: [],
+  },
+} as const
+
 describe('App', () => {
   beforeEach(() => {
     cleanup()
@@ -862,6 +872,7 @@ describe('App', () => {
           JSON.stringify({
             asOf: '2026-03-13',
             periods: [],
+            ...EMPTY_RETURNS_RISK_FIELDS,
           }),
           { status: 200 },
         )
@@ -1005,6 +1016,7 @@ describe('App', () => {
           JSON.stringify({
             asOf: '2026-03-13',
             periods: [],
+            ...EMPTY_RETURNS_RISK_FIELDS,
           }),
           { status: 200 },
         )
@@ -1245,6 +1257,7 @@ describe('App', () => {
                 benchmarks: [],
               },
             ],
+            ...EMPTY_RETURNS_RISK_FIELDS,
           }),
           { status: 200 },
         )
@@ -1508,6 +1521,7 @@ describe('App', () => {
                 benchmarks: [],
               },
             ],
+            ...EMPTY_RETURNS_RISK_FIELDS,
           }),
           { status: 200 },
         )
