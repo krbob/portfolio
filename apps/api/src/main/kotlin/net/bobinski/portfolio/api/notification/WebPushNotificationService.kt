@@ -8,6 +8,9 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Clock
 import java.time.Instant
 import java.util.Base64
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -30,10 +33,10 @@ class WebPushNotificationService(
 ) : PortfolioPushNotifier {
     private val logger = LoggerFactory.getLogger(WebPushNotificationService::class.java)
 
-    override suspend fun send(alerts: List<PortfolioAlert>): WebPushDispatchResult {
+    override suspend fun send(alerts: List<PortfolioAlert>): WebPushDispatchResult = withContext(Dispatchers.IO) {
         val subscriptions = subscriptionRepository.list()
         if (!config.webPushEnabled || alerts.isEmpty() || subscriptions.isEmpty()) {
-            return WebPushDispatchResult(
+            return@withContext WebPushDispatchResult(
                 subscriptionCount = subscriptions.size,
                 deliveredCount = 0,
                 failedCount = 0,
@@ -55,6 +58,9 @@ class WebPushNotificationService(
                 )
                 response.statusLine.statusCode
             }.getOrElse { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
                 logger.warn("Web push failed for endpoint={}", subscription.endpoint, error)
                 failed += 1
                 return@forEach
@@ -74,7 +80,7 @@ class WebPushNotificationService(
             }
         }
 
-        return WebPushDispatchResult(
+        return@withContext WebPushDispatchResult(
             subscriptionCount = subscriptions.size,
             deliveredCount = delivered,
             failedCount = failed,

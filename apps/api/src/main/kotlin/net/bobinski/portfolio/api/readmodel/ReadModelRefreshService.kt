@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.readmodel
 
 import java.time.Clock
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
@@ -121,6 +122,9 @@ class ReadModelRefreshService(
                 runCatching {
                     service.dispatchNewAlerts()
                 }.onFailure { error ->
+                    if (error is CancellationException) {
+                        throw error
+                    }
                     logger.warn("Portfolio alert dispatch failed after read-model refresh.", error)
                 }.getOrNull()
             }

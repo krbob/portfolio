@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Clock
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
@@ -49,16 +50,14 @@ class PortfolioAlertService(
         val previousIds = previousState.activeAlertIds.toSet()
         val newAlerts = alerts.filterNot { alert -> alert.id in previousIds }
 
-        appPreferenceService.put(
-            key = ALERT_STATE_PREFERENCE_KEY,
-            serializer = PortfolioAlertState.serializer(),
-            value = PortfolioAlertState(activeAlertIds = alerts.map(PortfolioAlert::id))
-        )
-
         val pushResult = if (newAlerts.isEmpty()) {
-            WebPushDispatchResult.empty()
+            pushNotifier.send(emptyList())
         } else {
             pushNotifier.send(newAlerts)
+        }
+
+        if (shouldStoreActiveAlertState(newAlerts, pushResult)) {
+            storeActiveAlertState(alerts)
         }
 
         return PortfolioAlertDispatchResult(
@@ -69,10 +68,10 @@ class PortfolioAlertService(
     }
 
     private suspend fun staleMarketDataAlerts(observedAt: Instant): List<PortfolioAlert> =
-        runCatching {
+        alertSection {
             val overview = portfolioReadModelService.overview()
             if (overview.valuationState != ValuationState.STALE) {
-                return@runCatching emptyList()
+                return@alertSection emptyList()
             }
 
             listOf(
@@ -86,10 +85,10 @@ class PortfolioAlertService(
                     observedAt = observedAt
                 )
             )
-        }.getOrDefault(emptyList())
+        }
 
     private suspend fun allocationDriftAlerts(observedAt: Instant): List<PortfolioAlert> =
-        runCatching {
+        alertSection {
             val summary = portfolioAllocationService.summary()
             summary.buckets
                 .filter { bucket -> bucket.driftPctPoints?.absGreaterOrEqual(config.allocationDriftThresholdPctPoints) == true }
@@ -104,14 +103,14 @@ class PortfolioAlertService(
                         observedAt = observedAt
                     )
                 }
-        }.getOrDefault(emptyList())
+        }
 
     private suspend fun benchmarkUnderperformanceAlerts(observedAt: Instant): List<PortfolioAlert> =
-        runCatching {
+        alertSection {
             val returns = portfolioReturnsService.returns()
             val period = returns.periods.firstOrNull { it.key == ReturnPeriodKey.ONE_YEAR }
                 ?: returns.periods.firstOrNull { it.key == ReturnPeriodKey.MAX }
-                ?: return@runCatching emptyList()
+                ?: return@alertSection emptyList()
             val thresholdRate = config.benchmarkUnderperformanceThresholdPctPoints
                 .divide(HUNDRED, 10, RoundingMode.HALF_UP)
                 .negate()
@@ -122,7 +121,25 @@ class PortfolioAlertService(
                 .filter { benchmark -> benchmark.excessTimeWeightedReturn?.let { it <= thresholdRate } == true }
                 .map { benchmark -> benchmark.toAlert(period, observedAt) }
                 .toList()
-        }.getOrDefault(emptyList())
+        }
+
+    private suspend fun storeActiveAlertState(alerts: List<PortfolioAlert>) {
+        appPreferenceService.put(
+            key = ALERT_STATE_PREFERENCE_KEY,
+            serializer = PortfolioAlertState.serializer(),
+            value = PortfolioAlertState(activeAlertIds = alerts.map(PortfolioAlert::id))
+        )
+    }
+
+    private fun shouldStoreActiveAlertState(
+        newAlerts: List<PortfolioAlert>,
+        pushResult: WebPushDispatchResult
+    ): Boolean =
+        newAlerts.isEmpty() ||
+            !pushResult.enabled ||
+            pushResult.subscriptionCount == 0 ||
+            pushResult.failedCount == 0 ||
+            pushResult.deliveredCount > 0
 
     private fun BenchmarkComparison.toAlert(
         period: PortfolioReturnPeriod,
@@ -149,6 +166,15 @@ class PortfolioAlertService(
         AssetClass.FX -> "waluty"
         AssetClass.BENCHMARK -> "benchmarki"
     }
+
+    private suspend fun alertSection(block: suspend () -> List<PortfolioAlert>): List<PortfolioAlert> =
+        try {
+            block()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     private companion object {
         const val ALERT_STATE_PREFERENCE_KEY = "portfolio.alerts.active"
