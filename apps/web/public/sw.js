@@ -143,6 +143,10 @@ self.addEventListener('notificationclick', (event) => {
   })())
 })
 
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(syncChangedPushSubscription(event).catch(() => undefined))
+})
+
 function resolveNotificationTarget(rawTargetUrl) {
   try {
     const targetUrl = new URL(rawTargetUrl || '/', self.location.origin)
@@ -150,4 +154,72 @@ function resolveNotificationTarget(rawTargetUrl) {
   } catch {
     return new URL('/', self.location.origin)
   }
+}
+
+async function syncChangedPushSubscription(event) {
+  const oldEndpoint = event.oldSubscription && event.oldSubscription.endpoint
+  if (oldEndpoint) {
+    await deleteStoredPushSubscription(oldEndpoint)
+  }
+
+  const config = await fetchPushConfig()
+  if (!config.enabled || !config.vapidPublicKey) {
+    return
+  }
+
+  const subscription = event.newSubscription || await self.registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
+  })
+  await savePushSubscription(subscription)
+}
+
+async function fetchPushConfig() {
+  const response = await fetch('/api/v1/push/config', {
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new Error(`Push config failed with ${response.status}`)
+  }
+  return response.json()
+}
+
+async function savePushSubscription(subscription) {
+  const payload = subscription.toJSON()
+  payload.user_agent = self.navigator && self.navigator.userAgent ? self.navigator.userAgent : 'service-worker'
+  const response = await fetch('/api/v1/push/subscriptions', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    throw new Error(`Push subscription save failed with ${response.status}`)
+  }
+}
+
+async function deleteStoredPushSubscription(endpoint) {
+  const response = await fetch('/api/v1/push/subscriptions', {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint }),
+  })
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Push subscription delete failed with ${response.status}`)
+  }
+}
+
+function urlBase64ToUint8Array(value) {
+  const padding = '='.repeat((4 - (value.length % 4)) % 4)
+  const base64 = `${value}${padding}`.replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = self.atob(base64)
+  const output = new Uint8Array(rawData.length)
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    output[index] = rawData.charCodeAt(index)
+  }
+
+  return output
 }

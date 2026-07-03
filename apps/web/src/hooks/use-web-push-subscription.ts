@@ -86,6 +86,21 @@ function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   return output
 }
 
+function subscriptionUsesVapidKey(subscription: PushSubscription, vapidPublicKey: string) {
+  const currentKey = subscription.options.applicationServerKey
+  if (!currentKey) {
+    return true
+  }
+
+  const expectedKey = urlBase64ToUint8Array(vapidPublicKey)
+  const actualKey = new Uint8Array(currentKey)
+  if (actualKey.length !== expectedKey.length) {
+    return false
+  }
+
+  return expectedKey.every((value, index) => actualKey[index] === value)
+}
+
 function toSubscriptionPayload(subscription: PushSubscription): WebPushSubscriptionPayload {
   const subscriptionJson = subscription.toJSON()
   const endpoint = subscriptionJson.endpoint ?? subscription.endpoint
@@ -156,6 +171,18 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
       const registration = await ensureServiceWorkerRegistration()
       const subscription = await registration.pushManager.getSubscription()
       if (subscription) {
+        if (nextConfig.vapidPublicKey && !subscriptionUsesVapidKey(subscription, nextConfig.vapidPublicKey)) {
+          const endpoint = subscription.endpoint
+          await subscription.unsubscribe()
+          await deleteWebPushSubscription(endpoint)
+          setState({
+            status: 'off',
+            enabled: false,
+            serverEnabled: true,
+            errorMessage: null,
+          })
+          return
+        }
         await saveWebPushSubscription(toSubscriptionPayload(subscription))
       }
 
@@ -223,8 +250,14 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
       }
 
       const registration = await ensureServiceWorkerRegistration()
-      const existingSubscription = await registration.pushManager.getSubscription()
-      const subscription = existingSubscription ?? await registration.pushManager.subscribe({
+      let subscription = await registration.pushManager.getSubscription()
+      if (subscription && !subscriptionUsesVapidKey(subscription, nextConfig.vapidPublicKey)) {
+        const endpoint = subscription.endpoint
+        await subscription.unsubscribe()
+        await deleteWebPushSubscription(endpoint)
+        subscription = null
+      }
+      subscription ??= await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(nextConfig.vapidPublicKey),
       })

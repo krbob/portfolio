@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PortfolioAlert } from '../api/read-model'
-import { formatMessage, t } from '../lib/messages'
+import { t } from '../lib/messages'
 import { appRoutes } from '../lib/routes'
 import { badge, badgeVariants, btnSecondary } from '../lib/styles'
 import { IconWarning } from './ui/icons'
@@ -49,14 +49,14 @@ export function PortfolioAlertsPanel({
   const iconClass = critical ? 'text-red-300' : 'text-amber-300'
 
   return (
-    <section className={`mt-4 rounded-xl border p-4 ${panelClass}`}>
+    <section className={`mt-4 rounded-xl border p-4 ${panelClass}`} aria-live="polite">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <IconWarning className={`h-5 w-5 ${iconClass}`} />
           <h2 className="text-sm font-semibold text-zinc-100">{t('portfolioAlerts.title')}</h2>
         </div>
         <span className={`${badge} ${critical ? badgeVariants.error : badgeVariants.warning}`}>
-          {formatMessage(t('portfolioAlerts.count'), { count: alerts.length })}
+          {labelAlertCount(alerts.length)}
         </span>
       </div>
 
@@ -83,6 +83,18 @@ export function PortfolioAlertsPanel({
       </div>
     </section>
   )
+}
+
+function labelAlertCount(count: number) {
+  if (count === 1) {
+    return t('portfolioAlerts.countOne')
+  }
+
+  if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)) {
+    return `${count} ${t('portfolioAlerts.countFew')}`
+  }
+
+  return `${count} ${t('portfolioAlerts.countMany')}`
 }
 
 function labelSeverity(severity: string) {

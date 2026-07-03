@@ -193,7 +193,9 @@ export const appMessages = {
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
   'portfolioAlerts.title': { pl: 'Aktywne alerty', en: 'Active alerts' },
-  'portfolioAlerts.count': { pl: '{count} aktywne', en: '{count} active' },
+  'portfolioAlerts.countOne': { pl: '1 aktywny', en: '1 active' },
+  'portfolioAlerts.countFew': { pl: 'aktywne', en: 'active' },
+  'portfolioAlerts.countMany': { pl: 'aktywnych', en: 'active' },
   'portfolioAlerts.open': { pl: 'Otwórz', en: 'Open' },
   'portfolioAlerts.unavailableTitle': { pl: 'Alerty są chwilowo niedostępne', en: 'Alerts are temporarily unavailable' },
   'portfolioAlerts.unavailableDescription': {
