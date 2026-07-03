@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -eu
+
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+PROJECT_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
+
+PORTFOLIO_CONTAINER_UID="${PORTFOLIO_CONTAINER_UID:-10001}"
+PORTFOLIO_CONTAINER_GID="${PORTFOLIO_CONTAINER_GID:-10001}"
+DATABASE_PATH="${PORTFOLIO_DATABASE_PATH:-/srv/portfolio/data/portfolio.db}"
+DATA_DIR=${DATABASE_PATH%/*}
+if [ "$DATA_DIR" = "$DATABASE_PATH" ]; then
+  DATA_DIR=/srv/portfolio/data
+fi
+BACKUPS_DIR=${PORTFOLIO_BACKUPS_DIRECTORY:-/srv/portfolio/backups}
+
+cd "$PROJECT_ROOT"
+docker compose --profile app run --rm --no-deps \
+  --user root \
+  --entrypoint sh \
+  -e PORTFOLIO_VOLUME_DATA_DIR="$DATA_DIR" \
+  -e PORTFOLIO_VOLUME_BACKUPS_DIR="$BACKUPS_DIR" \
+  -e PORTFOLIO_CONTAINER_UID="$PORTFOLIO_CONTAINER_UID" \
+  -e PORTFOLIO_CONTAINER_GID="$PORTFOLIO_CONTAINER_GID" \
+  portfolio-api \
+  -c 'set -eu
+      mkdir -p "$PORTFOLIO_VOLUME_DATA_DIR" "$PORTFOLIO_VOLUME_BACKUPS_DIR"
+      chown -R "$PORTFOLIO_CONTAINER_UID:$PORTFOLIO_CONTAINER_GID" "$PORTFOLIO_VOLUME_DATA_DIR" "$PORTFOLIO_VOLUME_BACKUPS_DIR"'
+
+printf 'Portfolio volume ownership set to %s:%s\n' "$PORTFOLIO_CONTAINER_UID" "$PORTFOLIO_CONTAINER_GID"

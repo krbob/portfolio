@@ -7,6 +7,12 @@ docker compose pull
 docker compose up -d
 ```
 
+If this deployment was created before the API image switched to UID/GID `10001:10001`, repair existing SQLite and backup volume ownership once before starting the updated API:
+
+```bash
+sh scripts/fix-volume-ownership.sh
+```
+
 If you use the self-hosted market-data override on ARM hardware, keep `PORTFOLIO_MARKET_DATA_PLATFORM=linux/amd64` unless the upstream images publish multi-arch images.
 
 ## Fresh start from zero

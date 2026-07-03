@@ -16,17 +16,20 @@ FROM eclipse-temurin:25.0.3_9-jre
 
 WORKDIR /app
 
+ARG PORTFOLIO_UID=10001
+ARG PORTFOLIO_GID=10001
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system portfolio \
-    && useradd --system --gid portfolio --home-dir /app --no-create-home portfolio \
+    && groupadd --gid "${PORTFOLIO_GID}" portfolio \
+    && useradd --uid "${PORTFOLIO_UID}" --gid portfolio --home-dir /app --no-create-home --shell /usr/sbin/nologin portfolio \
     && mkdir -p /srv/portfolio/data /srv/portfolio/backups \
-    && chown -R portfolio:portfolio /srv/portfolio
+    && chown -R portfolio:portfolio /app /srv/portfolio
 
-COPY --from=build --chown=portfolio:portfolio /workspace/build/install/portfolio-api/ /app/
+COPY --from=build --chown=${PORTFOLIO_UID}:${PORTFOLIO_GID} /workspace/build/install/portfolio-api/ /app/
 
-USER portfolio
+USER ${PORTFOLIO_UID}:${PORTFOLIO_GID}
 
 EXPOSE 18082
 

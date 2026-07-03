@@ -81,6 +81,12 @@ In the default local compose mode:
 - auth is off
 - Docker sets `PORTFOLIO_AUTH_SECURE_COOKIE=true`, which is the right default when the app later sits behind HTTPS
 
+The API container runs as UID/GID `10001:10001`. If you upgrade an existing deployment that created the SQLite or backup named volumes with an older root-running image, fix ownership once before starting the updated API:
+
+```bash
+sh scripts/fix-volume-ownership.sh
+```
+
 ### 2. Local app stack with remote market data
 
 ```dotenv
@@ -178,6 +184,7 @@ If preview says the snapshot is valid, import should not later fail on a hidden 
 - use `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
 - keep `PORTFOLIO_OPENAPI_UI_ENABLED=false` unless you actively need the docs UI
 - treat `REPLACE` import or restore as a maintenance action, not a casual workflow
+- for deployments created before the API ran as UID/GID `10001:10001`, run `sh scripts/fix-volume-ownership.sh` once after pulling the updated image
 
 If you want an empty reset:
 
