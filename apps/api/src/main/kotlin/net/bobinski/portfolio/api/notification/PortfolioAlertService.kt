@@ -5,6 +5,8 @@ import java.math.RoundingMode
 import java.time.Clock
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
@@ -27,6 +29,8 @@ class PortfolioAlertService(
     private val pushNotifier: PortfolioPushNotifier,
     private val clock: Clock
 ) {
+    private val dispatchMutex = Mutex()
+
     suspend fun currentAlerts(): List<PortfolioAlert> {
         if (!config.enabled) {
             return emptyList()
@@ -40,7 +44,7 @@ class PortfolioAlertService(
         }.sortedWith(compareByDescending<PortfolioAlert> { it.severity }.thenBy { it.id })
     }
 
-    suspend fun dispatchNewAlerts(): PortfolioAlertDispatchResult {
+    suspend fun dispatchNewAlerts(): PortfolioAlertDispatchResult = dispatchMutex.withLock {
         val alerts = currentAlerts()
         val previousState = appPreferenceService.get(
             key = ALERT_STATE_PREFERENCE_KEY,
