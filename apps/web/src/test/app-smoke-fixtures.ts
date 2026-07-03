@@ -87,6 +87,13 @@ export function createAppFetchMock() {
       })
     }
 
+    if (url.includes('/api/v1/push/config')) {
+      return jsonResponse({
+        enabled: false,
+        vapidPublicKey: null,
+      })
+    }
+
     if (url.includes('/api/v1/portfolio/overview')) {
       return jsonResponse({
         asOf: '2026-03-27',

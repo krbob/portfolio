@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
+  IconBell,
   IconClose,
   IconDashboard,
   IconEmptyList,
@@ -24,6 +25,7 @@ const allIcons = [
   { name: 'IconWarning', Component: IconWarning, defaultClass: 'h-5 w-5' },
   { name: 'IconEmptyList', Component: IconEmptyList, defaultClass: 'h-5 w-5' },
   { name: 'IconPlus', Component: IconPlus, defaultClass: 'h-5 w-5' },
+  { name: 'IconBell', Component: IconBell, defaultClass: 'h-5 w-5' },
 ]
 
 describe('icons', () => {

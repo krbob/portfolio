@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useWebPushSubscription, type WebPushStatus } from '../hooks/use-web-push-subscription'
 import { Card, SectionHeader } from './ui'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
+import { btnPrimary, btnSecondary } from '../lib/styles'
+import { IconBell } from './ui/icons'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -13,6 +16,7 @@ export function MobileAppSection() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isStandalone, setIsStandalone] = useState(false)
   const [installResult, setInstallResult] = useState<'accepted' | 'dismissed' | null>(null)
+  const webPush = useWebPushSubscription({ isStandalone })
 
   const canRegisterServiceWorker = typeof navigator !== 'undefined' && 'serviceWorker' in navigator
   const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
@@ -67,6 +71,12 @@ export function MobileAppSection() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- language triggers re-translation via t()
   }, [language, isStandalone])
+
+  const notificationStatus = useMemo(
+    () => notificationStatusCopy(webPush.status),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- language triggers re-translation via t()
+    [language, webPush.status],
+  )
 
   async function handleInstall() {
     if (!installPrompt) {
@@ -133,8 +143,97 @@ export function MobileAppSection() {
                 : t('mobile.offlineUnsupported')}
             </p>
           </div>
+
+          <div className="border-t border-zinc-800 pt-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-medium text-zinc-200">{t('mobile.notificationsTitle')}</p>
+                <p className="mt-2 text-sm font-medium text-zinc-100">{notificationStatus.title}</p>
+                <p className="mt-1 leading-6">{notificationStatus.description}</p>
+                {webPush.errorMessage && (
+                  <p className="mt-2 text-xs text-red-300">{webPush.errorMessage}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void webPush.toggle()
+                }}
+                disabled={!canToggleNotifications(webPush.status)}
+                className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-2 self-start ${webPush.enabled ? btnSecondary : btnPrimary}`}
+                title={notificationStatus.title}
+              >
+                <IconBell className="h-4 w-4" />
+                {webPush.enabled ? t('mobile.notificationsDisable') : notificationStatus.buttonLabel}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
   )
+}
+
+function canToggleNotifications(status: WebPushStatus) {
+  return status === 'off' || status === 'on' || status === 'error'
+}
+
+function notificationStatusCopy(status: WebPushStatus) {
+  switch (status) {
+    case 'checking':
+      return {
+        title: t('mobile.notificationsCheckingTitle'),
+        description: t('mobile.notificationsCheckingDescription'),
+        buttonLabel: t('mobile.notificationsCheckingButton'),
+      }
+    case 'install-required':
+      return {
+        title: t('mobile.notificationsInstallRequiredTitle'),
+        description: t('mobile.notificationsInstallRequiredDescription'),
+        buttonLabel: t('mobile.notificationsEnable'),
+      }
+    case 'server-disabled':
+      return {
+        title: t('mobile.notificationsServerDisabledTitle'),
+        description: t('mobile.notificationsServerDisabledDescription'),
+        buttonLabel: t('mobile.notificationsEnable'),
+      }
+    case 'blocked':
+      return {
+        title: t('mobile.notificationsBlockedTitle'),
+        description: t('mobile.notificationsBlockedDescription'),
+        buttonLabel: t('mobile.notificationsEnable'),
+      }
+    case 'off':
+      return {
+        title: t('mobile.notificationsOffTitle'),
+        description: t('mobile.notificationsOffDescription'),
+        buttonLabel: t('mobile.notificationsEnable'),
+      }
+    case 'on':
+      return {
+        title: t('mobile.notificationsOnTitle'),
+        description: t('mobile.notificationsOnDescription'),
+        buttonLabel: t('mobile.notificationsDisable'),
+      }
+    case 'pending':
+      return {
+        title: t('mobile.notificationsPendingTitle'),
+        description: t('mobile.notificationsPendingDescription'),
+        buttonLabel: t('mobile.notificationsPendingButton'),
+      }
+    case 'error':
+      return {
+        title: t('mobile.notificationsErrorTitle'),
+        description: t('mobile.notificationsErrorDescription'),
+        buttonLabel: t('common.retry'),
+      }
+    case 'unsupported':
+    default:
+      return {
+        title: t('mobile.notificationsUnsupportedTitle'),
+        description: t('mobile.notificationsUnsupportedDescription'),
+        buttonLabel: t('mobile.notificationsEnable'),
+      }
+  }
 }

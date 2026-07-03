@@ -85,3 +85,69 @@ self.addEventListener('fetch', (event) => {
     }),
   )
 })
+
+function parsePushPayload(event) {
+  if (!event.data) {
+    return {}
+  }
+
+  try {
+    return event.data.json()
+  } catch {
+    return {
+      body: event.data.text(),
+    }
+  }
+}
+
+self.addEventListener('push', (event) => {
+  const data = parsePushPayload(event)
+  const title = data.title || 'Portfolio'
+  const options = {
+    body: data.body || '',
+    tag: data.tag || 'portfolio-alerts',
+    icon: data.icon || '/favicon.svg',
+    badge: data.badge || '/favicon.svg',
+    data: {
+      url: data.url || '/',
+    },
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+
+  event.waitUntil((async () => {
+    const rawTargetUrl = event.notification.data && event.notification.data.url
+    const safeTargetUrl = resolveNotificationTarget(rawTargetUrl)
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true })
+
+    for (const client of windowClients) {
+      const clientUrl = new URL(client.url)
+      if (clientUrl.origin !== safeTargetUrl.origin || !('focus' in client)) {
+        continue
+      }
+
+      await client.focus()
+      if ('navigate' in client && client.url !== safeTargetUrl.href) {
+        await client.navigate(safeTargetUrl.href)
+      }
+      return
+    }
+
+    if (clients.openWindow) {
+      await clients.openWindow(safeTargetUrl.href)
+    }
+  })())
+})
+
+function resolveNotificationTarget(rawTargetUrl) {
+  try {
+    const targetUrl = new URL(rawTargetUrl || '/', self.location.origin)
+    return targetUrl.origin === self.location.origin ? targetUrl : new URL('/', self.location.origin)
+  } catch {
+    return new URL('/', self.location.origin)
+  }
+}

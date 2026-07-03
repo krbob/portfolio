@@ -183,6 +183,7 @@ If preview says the snapshot is valid, import should not later fail on a hidden 
 - prefer the example compose file or your own compose wrapper for real deployment
 - use `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
 - keep `PORTFOLIO_OPENAPI_UI_ENABLED=false` unless you actively need the docs UI
+- configure VAPID keys before enabling browser push notifications
 - treat `REPLACE` import or restore as a maintenance action, not a casual workflow
 - for deployments created before the API ran as UID/GID `10001:10001`, run `sh scripts/fix-volume-ownership.sh` once after pulling the updated image
 
@@ -219,6 +220,22 @@ docker compose up -d
 - `PORTFOLIO_READ_MODEL_REFRESH_ENABLED`
 - `PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES`
 - `PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START`
+
+### Alerts and web push
+
+- `PORTFOLIO_ALERTS_ENABLED`
+- `PORTFOLIO_ALERT_ALLOCATION_DRIFT_THRESHOLD_PCT_POINTS`
+- `PORTFOLIO_ALERT_BENCHMARK_UNDERPERFORMANCE_THRESHOLD_PCT_POINTS`
+- `PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY`
+- `PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY_FILE`
+- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64`
+- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64_FILE`
+- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY`
+- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_FILE`
+- `PORTFOLIO_WEB_PUSH_VAPID_SUBJECT`
+- `PORTFOLIO_WEB_PUSH_VAPID_SUBJECT_FILE`
+
+Web push is optional. Set the VAPID public key, one private-key variant and subject together; `_FILE` variants are supported by the API config reader for secret-backed deployments.
 
 ### OpenAPI UI
 
