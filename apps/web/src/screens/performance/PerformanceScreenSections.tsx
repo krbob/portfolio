@@ -1,10 +1,18 @@
 import { useState } from 'react'
-import type { BenchmarkComparison, PortfolioDailyHistoryPoint, PortfolioReturnPeriod } from '../../api/read-model'
+import type {
+  BenchmarkComparison,
+  DrawdownEpisode,
+  PortfolioDailyHistoryPoint,
+  PortfolioDrawdowns,
+  PortfolioReturnPeriod,
+  PortfolioReturns,
+  RollingReturnWindow,
+} from '../../api/read-model'
 import { AllocationTimeChart, BenchmarkChart, PortfolioPerformanceChart, PortfolioValueChart } from '../../components/charts'
 import { ErrorState, InlineRefreshIndicator, StatePanel, SegmentedControl } from '../../components/ui'
 import { usePortfolioDailyHistory, usePortfolioReturns } from '../../hooks/use-read-model'
 import { missingDataLabel } from '../../lib/availability'
-import { formatCurrencyPln, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
+import { formatCurrencyPln, formatDate, formatNumber, formatPercent, formatSignedCurrencyPln, formatYearMonth } from '../../lib/format'
 import { getActiveUiLanguage, useI18n, type UiLanguage } from '../../lib/i18n'
 import { translateBenchmarkLabel } from '../../lib/labels'
 import { formatMessage, t } from '../../lib/messages'
@@ -209,6 +217,11 @@ export function ReturnsTab({
           returnsDisplayAvailable={returnsDisplayAvailable}
         />
       ) : null}
+
+      <RollingReturnsAndDrawdownsCard
+        returns={data}
+        returnsDisplayAvailable={returnsDisplayAvailable}
+      />
 
       <div className="flex items-center justify-between gap-3">
         <SegmentedControl
@@ -529,6 +542,242 @@ function ReturnsBreakdownCard({
           description={t('performanceSections.noBridgeDescription')}
         />
       )}
+    </div>
+  )
+}
+
+function RollingReturnsAndDrawdownsCard({
+  returns,
+  returnsDisplayAvailable,
+}: {
+  returns: PortfolioReturns
+  returnsDisplayAvailable: boolean
+}) {
+  const { language } = useI18n()
+  const rollingWindows = returns.rollingReturns
+  const drawdowns = returns.drawdowns
+  const largestEpisodes = drawdowns.episodes.slice(0, 4)
+  const hasRollingData = rollingWindows.some((window) => window.latest != null)
+  const hasDrawdownData = drawdowns.current != null || drawdowns.max != null
+
+  if (!hasRollingData && !hasDrawdownData) {
+    return (
+      <StatePanel
+        eyebrow={t('performanceSections.riskEyebrow')}
+        title={t('performanceSections.riskEmptyTitle')}
+        description={t('performanceSections.riskEmptyDescription')}
+      />
+    )
+  }
+
+  return (
+    <div className={card}>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.riskTitle')}</h3>
+          <p className="mt-1 text-sm text-zinc-500">{t('performanceSections.riskDescription')}</p>
+        </div>
+        <p className="text-xs text-zinc-500">
+          {formatMessage(t('performanceSections.riskAsOf'), { date: formatDate(returns.asOf) })}
+        </p>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {rollingWindows.map((window) => (
+          <RollingReturnWindowView
+            key={window.key}
+            window={window}
+            returnsDisplayAvailable={returnsDisplayAvailable}
+            language={language}
+          />
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+        <DrawdownSummary
+          drawdowns={drawdowns}
+          returnsDisplayAvailable={returnsDisplayAvailable}
+          language={language}
+        />
+        <DrawdownEpisodes
+          episodes={largestEpisodes}
+          returnsDisplayAvailable={returnsDisplayAvailable}
+          language={language}
+        />
+      </div>
+    </div>
+  )
+}
+
+function RollingReturnWindowView({
+  window,
+  returnsDisplayAvailable,
+  language,
+}: {
+  window: RollingReturnWindow
+  returnsDisplayAvailable: boolean
+  language: UiLanguage
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{window.label}</p>
+        <span className="text-xs text-zinc-600">
+          {formatMessage(t('performanceSections.observations'), {
+            count: formatNumber(window.observationCount, { maximumFractionDigits: 0 }),
+          })}
+        </span>
+      </div>
+      <p className={`mt-2 text-2xl font-semibold tabular-nums ${returnColor(window.latest?.totalReturn, returnsDisplayAvailable)}`}>
+        {formatReturn(window.latest?.totalReturn, returnsDisplayAvailable, language)}
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <MetricLine
+          label={t('performanceSections.best')}
+          value={formatReturn(window.best?.totalReturn, returnsDisplayAvailable, language)}
+          tone={returnColor(window.best?.totalReturn, returnsDisplayAvailable)}
+        />
+        <MetricLine
+          label={t('performanceSections.worst')}
+          value={formatReturn(window.worst?.totalReturn, returnsDisplayAvailable, language)}
+          tone={returnColor(window.worst?.totalReturn, returnsDisplayAvailable)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DrawdownSummary({
+  drawdowns,
+  returnsDisplayAvailable,
+  language,
+}: {
+  drawdowns: PortfolioDrawdowns
+  returnsDisplayAvailable: boolean
+  language: UiLanguage
+}) {
+  return (
+    <div className="space-y-3">
+      <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdowns')}</h4>
+      <div className="grid grid-cols-2 gap-3">
+        <MetricBlock
+          label={t('performanceSections.currentDrawdown')}
+          value={formatReturn(drawdowns.current?.drawdown, returnsDisplayAvailable, language)}
+          tone={returnColor(drawdowns.current?.drawdown, returnsDisplayAvailable)}
+          subtitle={drawdowns.current ? formatDate(drawdowns.current.date) : undefined}
+        />
+        <MetricBlock
+          label={t('performanceSections.maxDrawdown')}
+          value={formatReturn(drawdowns.max?.drawdown, returnsDisplayAvailable, language)}
+          tone={returnColor(drawdowns.max?.drawdown, returnsDisplayAvailable)}
+          subtitle={drawdowns.max ? formatDate(drawdowns.max.date) : undefined}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DrawdownEpisodes({
+  episodes,
+  returnsDisplayAvailable,
+  language,
+}: {
+  episodes: DrawdownEpisode[]
+  returnsDisplayAvailable: boolean
+  language: UiLanguage
+}) {
+  if (episodes.length === 0) {
+    return (
+      <div>
+        <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdownEpisodes')}</h4>
+        <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3 text-sm text-zinc-500">
+          {t('performanceSections.noDrawdownEpisodes')}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdownEpisodes')}</h4>
+      <table className="w-full min-w-[520px]">
+        <thead>
+          <tr className="border-b border-zinc-800">
+            <th className={th}>{t('performanceSections.trough')}</th>
+            <th className={thRight}>{t('performanceSections.depth')}</th>
+            <th className={thRight}>{t('performanceSections.duration')}</th>
+            <th className={th}>{t('performanceSections.status')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {episodes.map((episode) => (
+            <tr key={`${episode.peakDate}:${episode.troughDate}:${episode.status}`} className={tr}>
+              <td className={td}>
+                <div className="font-medium text-zinc-200">{formatDate(episode.troughDate)}</div>
+                <div className="text-xs text-zinc-600">
+                  {formatMessage(t('performanceSections.peakDate'), { date: formatDate(episode.peakDate) })}
+                </div>
+              </td>
+              <td className={tdRight}>
+                <span className={returnColor(episode.depth, returnsDisplayAvailable)}>
+                  {formatReturn(episode.depth, returnsDisplayAvailable, language)}
+                </span>
+              </td>
+              <td className={`${tdRight} text-zinc-400`}>
+                {formatMessage(t('performanceSections.dayCount'), {
+                  count: formatNumber(episode.durationDays, { maximumFractionDigits: 0 }),
+                })}
+              </td>
+              <td className={td}>
+                <span className={episode.status === 'ONGOING' ? 'text-amber-300' : 'text-zinc-400'}>
+                  {episode.status === 'ONGOING'
+                    ? t('performanceSections.ongoing')
+                    : formatMessage(t('performanceSections.recovered'), {
+                      date: formatDate(episode.recoveredDate),
+                    })}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function MetricBlock({
+  label,
+  value,
+  tone,
+  subtitle,
+}: {
+  label: string
+  value: string
+  tone: string
+  subtitle?: string
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className={`mt-2 text-xl font-semibold tabular-nums ${tone}`}>{value}</p>
+      {subtitle ? <p className="mt-1 text-xs text-zinc-600">{subtitle}</p> : null}
+    </div>
+  )
+}
+
+function MetricLine({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: string
+}) {
+  return (
+    <div>
+      <p className="text-zinc-600">{label}</p>
+      <p className={`font-medium tabular-nums ${tone}`}>{value}</p>
     </div>
   )
 }

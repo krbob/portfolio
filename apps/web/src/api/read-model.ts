@@ -58,6 +58,15 @@ export type PortfolioReturnPeriod =
 export type ReturnMetric =
   components['schemas']['ReturnMetricResponse']
 
+export type RollingReturnWindow =
+  components['schemas']['RollingReturnWindowResponse']
+
+export type PortfolioDrawdowns =
+  components['schemas']['PortfolioDrawdownsResponse']
+
+export type DrawdownEpisode =
+  components['schemas']['DrawdownEpisodeResponse']
+
 export type BenchmarkComparison =
   components['schemas']['BenchmarkComparisonResponse']
 

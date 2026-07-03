@@ -209,6 +209,13 @@ function returns(overrides: { inflationUntil?: string; benchmarks?: PortfolioRet
         ],
       },
     ],
+    rollingReturns: [],
+    drawdowns: {
+      current: null,
+      max: null,
+      observations: [],
+      episodes: [],
+    },
   }
 }
 
