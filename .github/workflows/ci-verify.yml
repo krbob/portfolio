@@ -20,8 +20,8 @@ jobs:
 
       - name: Lint Dockerfiles
         run: |
-          docker run --rm -i hadolint/hadolint:v2.14.0 hadolint --failure-threshold error - < apps/api/Dockerfile
-          docker run --rm -i hadolint/hadolint:v2.14.0 hadolint --failure-threshold error - < apps/web/Dockerfile
+          docker run --rm -i hadolint/hadolint:latest hadolint --failure-threshold error - < apps/api/Dockerfile
+          docker run --rm -i hadolint/hadolint:latest hadolint --failure-threshold error - < apps/web/Dockerfile
 
       - name: ShellCheck scripts
         run: docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/*.sh
