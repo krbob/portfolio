@@ -38,7 +38,14 @@ class PortfolioReturnsService(
         if (history.points.isEmpty()) {
             return PortfolioReturns(
                 asOf = today,
-                periods = emptyList()
+                periods = emptyList(),
+                rollingReturns = emptyList(),
+                drawdowns = PortfolioDrawdowns(
+                    current = null,
+                    max = null,
+                    observations = emptyList(),
+                    episodes = emptyList()
+                )
             )
         }
 
@@ -79,7 +86,9 @@ class PortfolioReturnsService(
 
         return PortfolioReturns(
             asOf = history.until,
-            periods = periods
+            periods = periods,
+            rollingReturns = buildRollingReturns(history),
+            drawdowns = buildDrawdowns(history)
         )
     }
 
@@ -247,6 +256,153 @@ class PortfolioReturnsService(
             timeWeightedReturn = timeWeighted?.totalReturn,
             annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
         )
+    }
+
+    private fun buildRollingReturns(history: PortfolioDailyHistory): List<RollingReturnWindow> {
+        val indexPoints = history.performanceIndexPoints()
+        return RollingReturnWindowDefinition.entries.map { definition ->
+            val observations = calculateRollingReturnObservations(
+                indexPoints = indexPoints,
+                definition = definition
+            )
+            RollingReturnWindow(
+                key = definition.key,
+                label = definition.label,
+                years = definition.years,
+                observationCount = observations.size,
+                latest = observations.lastOrNull(),
+                best = observations.maxByOrNull(RollingReturnObservation::totalReturn),
+                worst = observations.minByOrNull(RollingReturnObservation::totalReturn),
+                observations = observations
+            )
+        }
+    }
+
+    private fun calculateRollingReturnObservations(
+        indexPoints: List<PerformanceIndexPoint>,
+        definition: RollingReturnWindowDefinition
+    ): List<RollingReturnObservation> {
+        if (indexPoints.size < 2) {
+            return emptyList()
+        }
+
+        return indexPoints.mapNotNull { endPoint ->
+            val requestedStart = endPoint.date.minusYears(definition.years.toLong())
+            val startPoint = indexPoints.lastOrNull { point -> !point.date.isAfter(requestedStart) }
+                ?: return@mapNotNull null
+            if (startPoint.index.signum() <= 0 || endPoint.index.signum() <= 0) {
+                return@mapNotNull null
+            }
+            val dayCount = ChronoUnit.DAYS.between(startPoint.date, endPoint.date)
+            if (dayCount <= 0) {
+                return@mapNotNull null
+            }
+
+            val totalFactor = endPoint.index.divide(startPoint.index, 16, RoundingMode.HALF_UP)
+            val totalReturn = totalFactor.subtract(BigDecimal.ONE).toRate()
+            val annualizedReturn = ((totalFactor.toDouble()).pow(365.0 / dayCount.toDouble()) - 1.0)
+                .takeIf(Double::isFinite)
+                ?.toRate()
+
+            RollingReturnObservation(
+                from = startPoint.date,
+                until = endPoint.date,
+                dayCount = dayCount,
+                totalReturn = totalReturn,
+                annualizedReturn = annualizedReturn
+            )
+        }
+    }
+
+    private fun buildDrawdowns(history: PortfolioDailyHistory): PortfolioDrawdowns {
+        val indexPoints = history.performanceIndexPoints()
+        if (indexPoints.isEmpty()) {
+            return PortfolioDrawdowns(
+                current = null,
+                max = null,
+                observations = emptyList(),
+                episodes = emptyList()
+            )
+        }
+
+        var peakPoint = indexPoints.first()
+        var activeEpisode: MutableDrawdownEpisode? = null
+        val observations = mutableListOf<DrawdownObservation>()
+        val episodes = mutableListOf<DrawdownEpisode>()
+
+        indexPoints.forEach { point ->
+            if (point.index >= peakPoint.index) {
+                activeEpisode?.let { episode ->
+                    episodes += episode.toRecoveredEpisode(point.date)
+                    activeEpisode = null
+                }
+                peakPoint = point
+            }
+
+            val drawdown = calculateDrawdown(point.index, peakPoint.index)
+            val observation = DrawdownObservation(
+                date = point.date,
+                peakDate = peakPoint.date,
+                peakIndex = peakPoint.index.scaleIndex(),
+                index = point.index.scaleIndex(),
+                drawdown = drawdown
+            )
+            observations += observation
+
+            if (drawdown.signum() < 0) {
+                val active = activeEpisode
+                if (active == null) {
+                    activeEpisode = MutableDrawdownEpisode(
+                        peakDate = peakPoint.date,
+                        startDate = point.date,
+                        troughDate = point.date,
+                        depth = drawdown
+                    )
+                } else if (drawdown < active.depth) {
+                    active.troughDate = point.date
+                    active.depth = drawdown
+                }
+            }
+        }
+
+        activeEpisode?.let { episode ->
+            episodes += episode.toOngoingEpisode(until = indexPoints.last().date)
+        }
+
+        return PortfolioDrawdowns(
+            current = observations.lastOrNull(),
+            max = observations.minByOrNull(DrawdownObservation::drawdown),
+            observations = observations,
+            episodes = episodes.sortedWith(
+                compareBy<DrawdownEpisode> { it.depth }
+                    .thenByDescending { it.durationDays }
+            )
+        )
+    }
+
+    private fun PortfolioDailyHistory.performanceIndexPoints(): List<PerformanceIndexPoint> =
+        points.mapNotNull { point ->
+            val index = point.portfolioPerformanceIndex ?: return@mapNotNull null
+            if (index.signum() <= 0) {
+                return@mapNotNull null
+            }
+            PerformanceIndexPoint(
+                date = point.date,
+                index = index
+            )
+        }.sortedBy(PerformanceIndexPoint::date)
+
+    private fun calculateDrawdown(
+        index: BigDecimal,
+        peakIndex: BigDecimal
+    ): BigDecimal {
+        if (peakIndex.signum() <= 0 || index.signum() <= 0) {
+            return BigDecimal.ZERO.toRate()
+        }
+        return index
+            .divide(peakIndex, 16, RoundingMode.HALF_UP)
+            .subtract(BigDecimal.ONE)
+            .toRate()
     }
 
     private suspend fun loadUsdPlnLookup(
@@ -654,6 +810,12 @@ class PortfolioReturnsService(
     private fun Double.toRate(): BigDecimal =
         BigDecimal.valueOf(this).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
 
+    private fun BigDecimal.toRate(): BigDecimal =
+        setScale(10, RoundingMode.HALF_UP).stripTrailingZeros()
+
+    private fun BigDecimal.scaleIndex(): BigDecimal =
+        setScale(4, RoundingMode.HALF_UP).stripTrailingZeros()
+
     private fun subtractRates(
         portfolioValue: BigDecimal?,
         benchmarkValue: BigDecimal?
@@ -688,6 +850,40 @@ class PortfolioReturnsService(
         val inflationWindow: InflationWindow
     )
 
+    private data class PerformanceIndexPoint(
+        val date: LocalDate,
+        val index: BigDecimal
+    )
+
+    private data class MutableDrawdownEpisode(
+        val peakDate: LocalDate,
+        val startDate: LocalDate,
+        var troughDate: LocalDate,
+        var depth: BigDecimal
+    ) {
+        fun toRecoveredEpisode(recoveredDate: LocalDate): DrawdownEpisode = DrawdownEpisode(
+            peakDate = peakDate,
+            startDate = startDate,
+            troughDate = troughDate,
+            recoveredDate = recoveredDate,
+            depth = depth,
+            durationDays = ChronoUnit.DAYS.between(startDate, troughDate),
+            recoveryDays = ChronoUnit.DAYS.between(troughDate, recoveredDate),
+            status = DrawdownEpisodeStatus.RECOVERED
+        )
+
+        fun toOngoingEpisode(until: LocalDate): DrawdownEpisode = DrawdownEpisode(
+            peakDate = peakDate,
+            startDate = startDate,
+            troughDate = troughDate,
+            recoveredDate = null,
+            depth = depth,
+            durationDays = ChronoUnit.DAYS.between(startDate, until),
+            recoveryDays = null,
+            status = DrawdownEpisodeStatus.ONGOING
+        )
+    }
+
     private enum class ReturnPeriodDefinition(
         val key: ReturnPeriodKey,
         val label: String
@@ -707,12 +903,24 @@ class PortfolioReturnsService(
         }
     }
 
+    private enum class RollingReturnWindowDefinition(
+        val key: RollingReturnWindowKey,
+        val label: String,
+        val years: Int
+    ) {
+        ONE_YEAR(key = RollingReturnWindowKey.ONE_YEAR, label = "1Y rolling TWR", years = 1),
+        THREE_YEARS(key = RollingReturnWindowKey.THREE_YEARS, label = "3Y rolling TWR", years = 3),
+        FIVE_YEARS(key = RollingReturnWindowKey.FIVE_YEARS, label = "5Y rolling TWR", years = 5)
+    }
+
     private companion object
 }
 
 data class PortfolioReturns(
     val asOf: LocalDate,
-    val periods: List<PortfolioReturnPeriod>
+    val periods: List<PortfolioReturnPeriod>,
+    val rollingReturns: List<RollingReturnWindow>,
+    val drawdowns: PortfolioDrawdowns
 )
 
 data class PortfolioReturnPeriod(
@@ -749,6 +957,62 @@ data class ReturnMetric(
     val timeWeightedReturn: BigDecimal?,
     val annualizedTimeWeightedReturn: BigDecimal?
 )
+
+data class RollingReturnWindow(
+    val key: RollingReturnWindowKey,
+    val label: String,
+    val years: Int,
+    val observationCount: Int,
+    val latest: RollingReturnObservation?,
+    val best: RollingReturnObservation?,
+    val worst: RollingReturnObservation?,
+    val observations: List<RollingReturnObservation>
+)
+
+data class RollingReturnObservation(
+    val from: LocalDate,
+    val until: LocalDate,
+    val dayCount: Long,
+    val totalReturn: BigDecimal,
+    val annualizedReturn: BigDecimal?
+)
+
+data class PortfolioDrawdowns(
+    val current: DrawdownObservation?,
+    val max: DrawdownObservation?,
+    val observations: List<DrawdownObservation>,
+    val episodes: List<DrawdownEpisode>
+)
+
+data class DrawdownObservation(
+    val date: LocalDate,
+    val peakDate: LocalDate,
+    val peakIndex: BigDecimal,
+    val index: BigDecimal,
+    val drawdown: BigDecimal
+)
+
+data class DrawdownEpisode(
+    val peakDate: LocalDate,
+    val startDate: LocalDate,
+    val troughDate: LocalDate,
+    val recoveredDate: LocalDate?,
+    val depth: BigDecimal,
+    val durationDays: Long,
+    val recoveryDays: Long?,
+    val status: DrawdownEpisodeStatus
+)
+
+enum class RollingReturnWindowKey {
+    ONE_YEAR,
+    THREE_YEARS,
+    FIVE_YEARS
+}
+
+enum class DrawdownEpisodeStatus {
+    RECOVERED,
+    ONGOING
+}
 
 data class InflationWindow(
     val from: YearMonth,

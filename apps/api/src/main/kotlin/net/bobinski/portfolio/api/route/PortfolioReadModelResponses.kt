@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.BenchmarkSeriesHealth
 import net.bobinski.portfolio.api.domain.service.CurrencyAmountSnapshot
+import net.bobinski.portfolio.api.domain.service.DrawdownEpisode
+import net.bobinski.portfolio.api.domain.service.DrawdownObservation
 import net.bobinski.portfolio.api.domain.service.HoldingSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioAccountSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
@@ -16,11 +18,14 @@ import net.bobinski.portfolio.api.domain.service.PortfolioManualContributionPrev
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationSummary
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
+import net.bobinski.portfolio.api.domain.service.PortfolioDrawdowns
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.ReturnBreakdown
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
+import net.bobinski.portfolio.api.domain.service.RollingReturnObservation
+import net.bobinski.portfolio.api.domain.service.RollingReturnWindow
 
 @Serializable
 data class PortfolioOverviewResponse(
@@ -163,7 +168,9 @@ data class PortfolioDailyHistoryPointResponse(
 @Serializable
 data class PortfolioReturnsResponse(
     val asOf: String,
-    val periods: List<PortfolioReturnPeriodResponse>
+    val periods: List<PortfolioReturnPeriodResponse>,
+    val rollingReturns: List<RollingReturnWindowResponse>,
+    val drawdowns: PortfolioDrawdownsResponse
 )
 
 @Serializable
@@ -299,6 +306,56 @@ data class ReturnMetricResponse(
     val annualizedMoneyWeightedReturn: String?,
     val timeWeightedReturn: String?,
     val annualizedTimeWeightedReturn: String?
+)
+
+@Serializable
+data class RollingReturnWindowResponse(
+    val key: String,
+    val label: String,
+    val years: Int,
+    val observationCount: Int,
+    val latest: RollingReturnObservationResponse?,
+    val best: RollingReturnObservationResponse?,
+    val worst: RollingReturnObservationResponse?,
+    val observations: List<RollingReturnObservationResponse>
+)
+
+@Serializable
+data class RollingReturnObservationResponse(
+    val from: String,
+    val until: String,
+    val dayCount: Long,
+    val totalReturn: String,
+    val annualizedReturn: String?
+)
+
+@Serializable
+data class PortfolioDrawdownsResponse(
+    val current: DrawdownObservationResponse?,
+    val max: DrawdownObservationResponse?,
+    val observations: List<DrawdownObservationResponse>,
+    val episodes: List<DrawdownEpisodeResponse>
+)
+
+@Serializable
+data class DrawdownObservationResponse(
+    val date: String,
+    val peakDate: String,
+    val peakIndex: String,
+    val index: String,
+    val drawdown: String
+)
+
+@Serializable
+data class DrawdownEpisodeResponse(
+    val peakDate: String,
+    val startDate: String,
+    val troughDate: String,
+    val recoveredDate: String?,
+    val depth: String,
+    val durationDays: Long,
+    val recoveryDays: Long?,
+    val status: String
 )
 
 @Serializable
@@ -454,7 +511,9 @@ internal fun PortfolioDailyHistoryPoint.toResponse(): PortfolioDailyHistoryPoint
 
 internal fun PortfolioReturns.toResponse(): PortfolioReturnsResponse = PortfolioReturnsResponse(
     asOf = asOf.toString(),
-    periods = periods.map { it.toResponse() }
+    periods = periods.map { it.toResponse() },
+    rollingReturns = rollingReturns.map { it.toResponse() },
+    drawdowns = drawdowns.toResponse()
 )
 
 internal fun PortfolioAllocationSummary.toResponse(): PortfolioAllocationResponse = PortfolioAllocationResponse(
@@ -580,6 +639,51 @@ internal fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricRespo
     annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString(),
     timeWeightedReturn = timeWeightedReturn?.toPlainString(),
     annualizedTimeWeightedReturn = annualizedTimeWeightedReturn?.toPlainString()
+)
+
+internal fun RollingReturnWindow.toResponse(): RollingReturnWindowResponse = RollingReturnWindowResponse(
+    key = key.name,
+    label = label,
+    years = years,
+    observationCount = observationCount,
+    latest = latest?.toResponse(),
+    best = best?.toResponse(),
+    worst = worst?.toResponse(),
+    observations = observations.map { it.toResponse() }
+)
+
+internal fun RollingReturnObservation.toResponse(): RollingReturnObservationResponse = RollingReturnObservationResponse(
+    from = from.toString(),
+    until = until.toString(),
+    dayCount = dayCount,
+    totalReturn = totalReturn.toPlainString(),
+    annualizedReturn = annualizedReturn?.toPlainString()
+)
+
+internal fun PortfolioDrawdowns.toResponse(): PortfolioDrawdownsResponse = PortfolioDrawdownsResponse(
+    current = current?.toResponse(),
+    max = max?.toResponse(),
+    observations = observations.map { it.toResponse() },
+    episodes = episodes.map { it.toResponse() }
+)
+
+internal fun DrawdownObservation.toResponse(): DrawdownObservationResponse = DrawdownObservationResponse(
+    date = date.toString(),
+    peakDate = peakDate.toString(),
+    peakIndex = peakIndex.toPlainString(),
+    index = index.toPlainString(),
+    drawdown = drawdown.toPlainString()
+)
+
+internal fun DrawdownEpisode.toResponse(): DrawdownEpisodeResponse = DrawdownEpisodeResponse(
+    peakDate = peakDate.toString(),
+    startDate = startDate.toString(),
+    troughDate = troughDate.toString(),
+    recoveredDate = recoveredDate?.toString(),
+    depth = depth.toPlainString(),
+    durationDays = durationDays,
+    recoveryDays = recoveryDays,
+    status = status.name
 )
 
 internal fun BenchmarkComparison.toResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(

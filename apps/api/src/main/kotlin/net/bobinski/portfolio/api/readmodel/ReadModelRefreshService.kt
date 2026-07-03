@@ -8,8 +8,11 @@ import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
+import net.bobinski.portfolio.api.domain.service.DrawdownEpisode
+import net.bobinski.portfolio.api.domain.service.DrawdownObservation
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistoryPoint
+import net.bobinski.portfolio.api.domain.service.PortfolioDrawdowns
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.ReturnBreakdown
@@ -18,15 +21,22 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
+import net.bobinski.portfolio.api.domain.service.RollingReturnObservation
+import net.bobinski.portfolio.api.domain.service.RollingReturnWindow
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import net.bobinski.portfolio.api.route.BenchmarkComparisonResponse
 import net.bobinski.portfolio.api.route.BenchmarkStatusResponse
+import net.bobinski.portfolio.api.route.DrawdownEpisodeResponse
+import net.bobinski.portfolio.api.route.DrawdownObservationResponse
 import net.bobinski.portfolio.api.route.PortfolioDailyHistoryPointResponse
 import net.bobinski.portfolio.api.route.PortfolioDailyHistoryResponse
+import net.bobinski.portfolio.api.route.PortfolioDrawdownsResponse
 import net.bobinski.portfolio.api.route.PortfolioReturnPeriodResponse
 import net.bobinski.portfolio.api.route.PortfolioReturnsResponse
 import net.bobinski.portfolio.api.route.ReturnBreakdownResponse
 import net.bobinski.portfolio.api.route.ReturnMetricResponse
+import net.bobinski.portfolio.api.route.RollingReturnObservationResponse
+import net.bobinski.portfolio.api.route.RollingReturnWindowResponse
 
 class ReadModelRefreshService(
     private val config: ReadModelRefreshConfig,
@@ -233,7 +243,9 @@ private fun PortfolioDailyHistoryPoint.toRefreshResponse(): PortfolioDailyHistor
 
 private fun PortfolioReturns.toRefreshResponse(): PortfolioReturnsResponse = PortfolioReturnsResponse(
     asOf = asOf.toString(),
-    periods = periods.map(PortfolioReturnPeriod::toRefreshResponse)
+    periods = periods.map(PortfolioReturnPeriod::toRefreshResponse),
+    rollingReturns = rollingReturns.map(RollingReturnWindow::toRefreshResponse),
+    drawdowns = drawdowns.toRefreshResponse()
 )
 
 private fun PortfolioReturnPeriod.toRefreshResponse(): PortfolioReturnPeriodResponse = PortfolioReturnPeriodResponse(
@@ -271,6 +283,52 @@ private fun ReturnMetric.toRefreshResponse(): ReturnMetricResponse = ReturnMetri
     annualizedMoneyWeightedReturn = annualizedMoneyWeightedReturn?.toPlainString(),
     timeWeightedReturn = timeWeightedReturn?.toPlainString(),
     annualizedTimeWeightedReturn = annualizedTimeWeightedReturn?.toPlainString()
+)
+
+private fun RollingReturnWindow.toRefreshResponse(): RollingReturnWindowResponse = RollingReturnWindowResponse(
+    key = key.name,
+    label = label,
+    years = years,
+    observationCount = observationCount,
+    latest = latest?.toRefreshResponse(),
+    best = best?.toRefreshResponse(),
+    worst = worst?.toRefreshResponse(),
+    observations = observations.map(RollingReturnObservation::toRefreshResponse)
+)
+
+private fun RollingReturnObservation.toRefreshResponse(): RollingReturnObservationResponse =
+    RollingReturnObservationResponse(
+        from = from.toString(),
+        until = until.toString(),
+        dayCount = dayCount,
+        totalReturn = totalReturn.toPlainString(),
+        annualizedReturn = annualizedReturn?.toPlainString()
+    )
+
+private fun PortfolioDrawdowns.toRefreshResponse(): PortfolioDrawdownsResponse = PortfolioDrawdownsResponse(
+    current = current?.toRefreshResponse(),
+    max = max?.toRefreshResponse(),
+    observations = observations.map(DrawdownObservation::toRefreshResponse),
+    episodes = episodes.map(DrawdownEpisode::toRefreshResponse)
+)
+
+private fun DrawdownObservation.toRefreshResponse(): DrawdownObservationResponse = DrawdownObservationResponse(
+    date = date.toString(),
+    peakDate = peakDate.toString(),
+    peakIndex = peakIndex.toPlainString(),
+    index = index.toPlainString(),
+    drawdown = drawdown.toPlainString()
+)
+
+private fun DrawdownEpisode.toRefreshResponse(): DrawdownEpisodeResponse = DrawdownEpisodeResponse(
+    peakDate = peakDate.toString(),
+    startDate = startDate.toString(),
+    troughDate = troughDate.toString(),
+    recoveredDate = recoveredDate?.toString(),
+    depth = depth.toPlainString(),
+    durationDays = durationDays,
+    recoveryDays = recoveryDays,
+    status = status.name
 )
 
 private fun BenchmarkComparison.toRefreshResponse(): BenchmarkComparisonResponse = BenchmarkComparisonResponse(

@@ -1183,10 +1183,57 @@ export interface components {
             breakdown?: components["schemas"]["ReturnBreakdownResponse"] | null;
             benchmarks: components["schemas"]["BenchmarkComparisonResponse"][];
         };
+        /** RollingReturnObservationResponse */
+        RollingReturnObservationResponse: {
+            from: string;
+            until: string;
+            dayCount: number;
+            totalReturn: string;
+            annualizedReturn?: string | null;
+        };
+        /** RollingReturnWindowResponse */
+        RollingReturnWindowResponse: {
+            key: string;
+            label: string;
+            years: number;
+            observationCount: number;
+            latest?: components["schemas"]["RollingReturnObservationResponse"] | null;
+            best?: components["schemas"]["RollingReturnObservationResponse"] | null;
+            worst?: components["schemas"]["RollingReturnObservationResponse"] | null;
+            observations: components["schemas"]["RollingReturnObservationResponse"][];
+        };
+        /** DrawdownObservationResponse */
+        DrawdownObservationResponse: {
+            date: string;
+            peakDate: string;
+            peakIndex: string;
+            index: string;
+            drawdown: string;
+        };
+        /** DrawdownEpisodeResponse */
+        DrawdownEpisodeResponse: {
+            peakDate: string;
+            startDate: string;
+            troughDate: string;
+            recoveredDate?: string | null;
+            depth: string;
+            durationDays: number;
+            recoveryDays?: number | null;
+            status: string;
+        };
+        /** PortfolioDrawdownsResponse */
+        PortfolioDrawdownsResponse: {
+            current?: components["schemas"]["DrawdownObservationResponse"] | null;
+            max?: components["schemas"]["DrawdownObservationResponse"] | null;
+            observations: components["schemas"]["DrawdownObservationResponse"][];
+            episodes: components["schemas"]["DrawdownEpisodeResponse"][];
+        };
         /** PortfolioReturnsResponse */
         PortfolioReturnsResponse: {
             asOf: string;
             periods: components["schemas"]["PortfolioReturnPeriodResponse"][];
+            rollingReturns: components["schemas"]["RollingReturnWindowResponse"][];
+            drawdowns: components["schemas"]["PortfolioDrawdownsResponse"];
         };
         /** PortfolioContributionPlanTargetMixResponse */
         PortfolioContributionPlanTargetMixResponse: {

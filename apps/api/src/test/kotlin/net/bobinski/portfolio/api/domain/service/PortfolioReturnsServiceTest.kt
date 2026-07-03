@@ -90,6 +90,11 @@ class PortfolioReturnsServiceTest {
         assertEquals(BenchmarkKey.VWRA.name, vwraBenchmark.key)
         assertEquals(BigDecimal("0.08"), vwraBenchmarkNominalPln.timeWeightedReturn)
         assertEquals(BigDecimal("0.1"), max.nominalPln!!.moneyWeightedReturn)
+
+        val rollingOneYear = returns.rollingReturns.first { it.key == RollingReturnWindowKey.ONE_YEAR }
+        assertEquals(BigDecimal("0.1"), rollingOneYear.latest?.totalReturn)
+        assertEquals(BigDecimal("0.1"), rollingOneYear.best?.totalReturn)
+        assertEquals(BigDecimal("0.1"), rollingOneYear.worst?.totalReturn)
     }
 
     @Test
@@ -390,6 +395,44 @@ class PortfolioReturnsServiceTest {
 
         assertBigDecimalValue("1000.00", breakdown.netExternalFlowsPln)
         assertBigDecimalValue("0.00", breakdown.interestAndCouponsPln)
+    }
+
+    @Test
+    fun `returns expose drawdown summary from performance index`() = runBlocking {
+        val fixture = returnsFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(feeTransaction(tradeDate = "2025-09-01", amount = "200.00"))
+        fixture.transactionRepository.save(interestTransaction(amount = "100.00"))
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2025-03-01", "4.00"),
+                pricePoint("2026-03-01", "4.00")
+            )
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Failure("Equity benchmark not required.")
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Failure("Gold not required.")
+        fixture.inflationProvider.result = InflationAdjustmentResult.Success(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            multiplier = BigDecimal("1.05")
+        )
+        fixture.inflationProvider.monthlySeries = fixedMonthlySeries(
+            from = YearMonth.parse("2025-03"),
+            until = YearMonth.parse("2026-03"),
+            firstMultiplier = BigDecimal("1.05")
+        )
+
+        val returns = fixture.service.returns()
+        val maxDrawdown = requireNotNull(returns.drawdowns.max)
+        val currentDrawdown = requireNotNull(returns.drawdowns.current)
+        val episode = returns.drawdowns.episodes.first()
+
+        assertEquals(LocalDate.parse("2025-09-01"), maxDrawdown.date)
+        assertEquals(BigDecimal("-0.2"), maxDrawdown.drawdown)
+        assertEquals(BigDecimal("-0.1"), currentDrawdown.drawdown)
+        assertEquals(BigDecimal("-0.2"), episode.depth)
+        assertEquals(DrawdownEpisodeStatus.ONGOING, episode.status)
     }
 
     private fun assertBigDecimalValue(expected: String, actual: BigDecimal) {

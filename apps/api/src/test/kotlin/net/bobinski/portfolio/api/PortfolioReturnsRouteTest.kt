@@ -44,6 +44,8 @@ class PortfolioReturnsRouteTest {
         assertTrue(body.contains("\"timeWeightedReturn\":"))
         assertTrue(body.contains("\"breakdown\":"))
         assertTrue(body.contains("\"benchmarks\":"))
+        assertTrue(body.contains("\"rollingReturns\":"))
+        assertTrue(body.contains("\"drawdowns\":"))
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(): String {
