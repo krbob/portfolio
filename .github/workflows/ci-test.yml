@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Run self-hosted market-data smoke test
         run: sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
