@@ -297,7 +297,8 @@ data class ReturnBreakdownResponse(
     val feesPln: String,
     val taxesPln: String,
     val marketAndFxPln: String,
-    val netInvestmentResultPln: String
+    val netInvestmentResultPln: String,
+    val skippedFxTransactionCount: Int
 )
 
 @Serializable
@@ -631,7 +632,8 @@ internal fun ReturnBreakdown.toResponse(): ReturnBreakdownResponse = ReturnBreak
     feesPln = feesPln.toPlainString(),
     taxesPln = taxesPln.toPlainString(),
     marketAndFxPln = marketAndFxPln.toPlainString(),
-    netInvestmentResultPln = netInvestmentResultPln.toPlainString()
+    netInvestmentResultPln = netInvestmentResultPln.toPlainString(),
+    skippedFxTransactionCount = skippedFxTransactionCount
 )
 
 internal fun ReturnMetric.toResponse(): ReturnMetricResponse = ReturnMetricResponse(

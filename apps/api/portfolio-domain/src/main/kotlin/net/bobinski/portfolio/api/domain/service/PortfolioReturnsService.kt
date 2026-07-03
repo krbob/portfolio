@@ -549,9 +549,14 @@ class PortfolioReturnsService(
         var interestAndCoupons = BigDecimal.ZERO.scaleMoney(2)
         var fees = BigDecimal.ZERO.scaleMoney(2)
         var taxes = BigDecimal.ZERO.scaleMoney(2)
+        var skippedFxTransactionCount = 0
 
         for (transaction in periodTransactions) {
-            val converted = fxLookups.convertedAmountsOrNull(transaction) ?: continue
+            val converted = fxLookups.convertedAmountsOrNull(transaction)
+            if (converted == null) {
+                skippedFxTransactionCount += 1
+                continue
+            }
 
             when (transaction.type) {
                 TransactionType.DEPOSIT -> netExternalFlows = netExternalFlows.add(converted.grossPln).scaleMoney(2)
@@ -587,7 +592,8 @@ class PortfolioReturnsService(
             feesPln = fees,
             taxesPln = taxes,
             marketAndFxPln = marketAndFx,
-            netInvestmentResultPln = netChange.subtract(netExternalFlows).scaleMoney(2)
+            netInvestmentResultPln = netChange.subtract(netExternalFlows).scaleMoney(2),
+            skippedFxTransactionCount = skippedFxTransactionCount
         )
     }
 
@@ -948,7 +954,8 @@ data class ReturnBreakdown(
     val feesPln: BigDecimal,
     val taxesPln: BigDecimal,
     val marketAndFxPln: BigDecimal,
-    val netInvestmentResultPln: BigDecimal
+    val netInvestmentResultPln: BigDecimal,
+    val skippedFxTransactionCount: Int
 )
 
 data class ReturnMetric(

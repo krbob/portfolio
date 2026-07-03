@@ -300,6 +300,10 @@ export const portfolioMessages = {
   'performanceSections.netInvestmentResult': { pl: 'Wynik netto', en: 'Net investment result' },
   'performanceSections.netInvestmentSubtitle': { pl: 'Bez wpłat i wypłat', en: 'Excluding deposits and withdrawals' },
   'performanceSections.closing': { pl: 'Zamknięcie', en: 'Closing value' },
+  'performanceSections.skippedFxTransactions': {
+    pl: 'Transakcje bez kursu FX pominięte w rozbiciu: {count}.',
+    en: 'Transactions without FX rate omitted from the bridge: {count}.',
+  },
   'performanceSections.bridgeEyebrow': { pl: 'Rozbicie wyniku', en: 'Value bridge' },
   'performanceSections.noBridgeTitle': { pl: 'Brak rozbicia dla tego okresu', en: 'No bridge available for this period' },
   'performanceSections.noBridgeDescription': { pl: 'Nie udało się złożyć rozbicia przepływów i kosztów dla wybranego okresu.', en: 'The app could not assemble a flow-and-cost bridge for the selected period.' },

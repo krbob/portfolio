@@ -1237,6 +1237,7 @@ export interface components {
             taxesPln: string;
             marketAndFxPln: string;
             netInvestmentResultPln: string;
+            skippedFxTransactionCount: number;
         };
         /** BenchmarkComparisonResponse */
         BenchmarkComparisonResponse: {

@@ -91,7 +91,7 @@ internal object TimeWeightedReturnCalculator {
         val netGrowthValue = currentValue.subtract(externalFlowIntoPortfolio, moneyContext)
         return when {
             previousValue.signum() == 0 && allowFlatZero && netGrowthValue.signum() == 0 -> BigDecimal.ONE
-            previousValue.signum() == 0 -> null
+            previousValue.signum() <= 0 -> null
             else -> netGrowthValue.divide(previousValue, 12, RoundingMode.HALF_UP)
                 .takeIf { factor -> factor.signum() >= 0 }
         }

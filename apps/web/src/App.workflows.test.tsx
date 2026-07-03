@@ -1443,6 +1443,7 @@ describe('App', () => {
                   taxesPln: '-15.00',
                   marketAndFxPln: '0.00',
                   netInvestmentResultPln: '75.00',
+                  skippedFxTransactionCount: 0,
                 },
                 benchmarks: [],
               },
@@ -1480,6 +1481,7 @@ describe('App', () => {
                   taxesPln: '-10.00',
                   marketAndFxPln: '100.00',
                   netInvestmentResultPln: '225.00',
+                  skippedFxTransactionCount: 0,
                 },
                 benchmarks: [],
               },
@@ -1517,6 +1519,7 @@ describe('App', () => {
                   taxesPln: '-15.00',
                   marketAndFxPln: '90.00',
                   netInvestmentResultPln: '175.00',
+                  skippedFxTransactionCount: 2,
                 },
                 benchmarks: [],
               },
@@ -1559,6 +1562,7 @@ describe('App', () => {
     expect(screen.getAllByText((_, element) => element?.textContent?.includes('2026-03-13') ?? false).length).toBeGreaterThan(0)
     expect(screen.getAllByText((content) => content.includes('1,325.00')).length).toBeGreaterThan(0)
     expect(screen.getAllByText((content) => content.includes('175.00')).length).toBeGreaterThan(0)
+    expect(screen.getByText(/transactions without fx rate omitted from the bridge: 2/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '1Y' }))
 

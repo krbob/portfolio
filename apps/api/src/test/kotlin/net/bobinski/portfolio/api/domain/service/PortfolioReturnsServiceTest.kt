@@ -362,6 +362,7 @@ class PortfolioReturnsServiceTest {
         assertBigDecimalValue("-15.00", breakdown.taxesPln)
         assertBigDecimalValue("0.00", breakdown.marketAndFxPln)
         assertBigDecimalValue("75.00", breakdown.netInvestmentResultPln)
+        assertEquals(0, breakdown.skippedFxTransactionCount)
     }
 
     @Test
@@ -395,6 +396,7 @@ class PortfolioReturnsServiceTest {
 
         assertBigDecimalValue("1000.00", breakdown.netExternalFlowsPln)
         assertBigDecimalValue("0.00", breakdown.interestAndCouponsPln)
+        assertEquals(1, breakdown.skippedFxTransactionCount)
     }
 
     @Test

@@ -469,6 +469,7 @@ function ReturnsBreakdownCard({
   returnsDisplayAvailable: boolean
 }) {
   const breakdown = period.breakdown
+  const skippedFxTransactionCount = breakdown?.skippedFxTransactionCount ?? 0
 
   return (
     <div className={card}>
@@ -534,6 +535,13 @@ function ReturnsBreakdownCard({
               tone="neutral"
             />
           </div>
+          {skippedFxTransactionCount > 0 ? (
+            <p className="mt-3 rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
+              {formatMessage(t('performanceSections.skippedFxTransactions'), {
+                count: formatNumber(skippedFxTransactionCount, { maximumFractionDigits: 0 }),
+              })}
+            </p>
+          ) : null}
         </>
       ) : (
         <StatePanel

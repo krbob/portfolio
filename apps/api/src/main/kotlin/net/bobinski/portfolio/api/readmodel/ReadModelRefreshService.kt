@@ -293,7 +293,8 @@ private fun ReturnBreakdown.toRefreshResponse(): ReturnBreakdownResponse = Retur
     feesPln = feesPln.toPlainString(),
     taxesPln = taxesPln.toPlainString(),
     marketAndFxPln = marketAndFxPln.toPlainString(),
-    netInvestmentResultPln = netInvestmentResultPln.toPlainString()
+    netInvestmentResultPln = netInvestmentResultPln.toPlainString(),
+    skippedFxTransactionCount = skippedFxTransactionCount
 )
 
 private fun ReturnMetric.toRefreshResponse(): ReturnMetricResponse = ReturnMetricResponse(
