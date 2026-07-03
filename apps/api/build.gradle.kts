@@ -34,6 +34,9 @@ dependencies {
     implementation(libs.hikaricp)
     implementation(libs.flyway.core)
     implementation(libs.sqlite.jdbc)
+    implementation(libs.web.push)
+    implementation(libs.bouncycastle.provider)
+    implementation(libs.apache.httpcore)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

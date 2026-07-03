@@ -23,6 +23,7 @@ import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReturnMetric
 import net.bobinski.portfolio.api.domain.service.RollingReturnObservation
 import net.bobinski.portfolio.api.domain.service.RollingReturnWindow
+import net.bobinski.portfolio.api.notification.PortfolioAlertService
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import net.bobinski.portfolio.api.route.BenchmarkComparisonResponse
 import net.bobinski.portfolio.api.route.BenchmarkStatusResponse
@@ -37,6 +38,7 @@ import net.bobinski.portfolio.api.route.ReturnBreakdownResponse
 import net.bobinski.portfolio.api.route.ReturnMetricResponse
 import net.bobinski.portfolio.api.route.RollingReturnObservationResponse
 import net.bobinski.portfolio.api.route.RollingReturnWindowResponse
+import org.slf4j.LoggerFactory
 
 class ReadModelRefreshService(
     private val config: ReadModelRefreshConfig,
@@ -44,9 +46,11 @@ class ReadModelRefreshService(
     private val descriptorService: PortfolioReadModelCacheDescriptorService,
     private val portfolioHistoryService: PortfolioHistoryService,
     private val portfolioReturnsService: PortfolioReturnsService,
+    private val portfolioAlertService: PortfolioAlertService? = null,
     private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
+    private val logger = LoggerFactory.getLogger(ReadModelRefreshService::class.java)
     private val mutex = Mutex()
 
     @Volatile
@@ -113,6 +117,14 @@ class ReadModelRefreshService(
                 portfolioReturnsService.returns().toRefreshResponse()
             }
 
+            val alertDispatchResult = portfolioAlertService?.let { service ->
+                runCatching {
+                    service.dispatchNewAlerts()
+                }.onFailure { error ->
+                    logger.warn("Portfolio alert dispatch failed after read-model refresh.", error)
+                }.getOrNull()
+            }
+
             val finishedAt = Instant.now(clock)
             val durationMs = finishedAt.toEpochMilli() - startedAt.toEpochMilli()
             lastSuccessAt = finishedAt
@@ -128,7 +140,9 @@ class ReadModelRefreshService(
                 metadata = mapOf(
                     "trigger" to trigger.name,
                     "modelNames" to MODEL_NAMES.joinToString(","),
-                    "durationMs" to durationMs.toString()
+                    "durationMs" to durationMs.toString(),
+                    "activeAlertCount" to (alertDispatchResult?.activeAlertCount?.toString() ?: "unknown"),
+                    "newAlertCount" to (alertDispatchResult?.newAlertCount?.toString() ?: "unknown")
                 )
             )
 

@@ -53,6 +53,11 @@ import net.bobinski.portfolio.api.marketdata.service.RemoteInflationAdjustmentPr
 import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.RemoteValuationProbeService
 import net.bobinski.portfolio.api.domain.service.ValuationProbeService
+import net.bobinski.portfolio.api.notification.PortfolioAlertService
+import net.bobinski.portfolio.api.notification.PortfolioPushNotifier
+import net.bobinski.portfolio.api.notification.WebPushNotificationService
+import net.bobinski.portfolio.api.notification.WebPushSubscriptionRepository
+import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.readmodel.ReadModelRefreshService
@@ -65,6 +70,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRe
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionImportProfileRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryWebPushSubscriptionRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAppPreferenceRepository
@@ -74,6 +80,7 @@ import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcTransactionImportProfileRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcWebPushSubscriptionRepository
 import net.bobinski.portfolio.api.system.SystemReadinessService
 import java.net.http.HttpClient
 import org.koin.dsl.module
@@ -81,6 +88,7 @@ import java.time.Clock
 import javax.sql.DataSource
 import kotlinx.serialization.json.Json
 
+@Suppress("LongMethod")
 fun appModule(
     config: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
@@ -88,6 +96,7 @@ fun appModule(
     backupConfig: BackupConfig,
     readModelRefreshConfig: ReadModelRefreshConfig,
     authConfig: AuthConfig,
+    alertConfig: PortfolioAlertConfig,
     repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
 ) = module {
     single<Clock> { Clock.systemUTC() }
@@ -97,6 +106,7 @@ fun appModule(
     single { backupConfig }
     single { readModelRefreshConfig }
     single { authConfig }
+    single { alertConfig }
     single<Json> { AppJsonFactory.create() }
     single<HttpClient> { HttpClient.newBuilder().build() }
     single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl) }
@@ -168,6 +178,7 @@ fun appModule(
         single<ReadModelCacheRepository> { JdbcReadModelCacheRepository(dataSource = get()) }
         single<TransactionRepository> { JdbcTransactionRepository(connectionManager = get()) }
         single<TransactionImportProfileRepository> { JdbcTransactionImportProfileRepository(connectionManager = get(), json = get()) }
+        single<WebPushSubscriptionRepository> { JdbcWebPushSubscriptionRepository(connectionManager = get()) }
     } else {
         single<PersistenceTransactionRunner> {
             object : PersistenceTransactionRunner {
@@ -182,6 +193,7 @@ fun appModule(
         single<ReadModelCacheRepository> { InMemoryReadModelCacheRepository() }
         single<TransactionRepository> { InMemoryTransactionRepository() }
         single<TransactionImportProfileRepository> { InMemoryTransactionImportProfileRepository() }
+        single<WebPushSubscriptionRepository> { InMemoryWebPushSubscriptionRepository() }
     }
 
     single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
@@ -189,6 +201,14 @@ fun appModule(
     single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { MarketDataFailureAuditService(auditLogService = get()) }
+    single<PortfolioPushNotifier> {
+        WebPushNotificationService(
+            config = get(),
+            subscriptionRepository = get(),
+            json = get(),
+            clock = get()
+        )
+    }
     single { AccountService(accountRepository = get(), auditLogService = get(), clock = get()) }
     if (repositoryBindingMode == RepositoryBindingMode.SQLITE_RUNTIME) {
         single<ValuationProbeService> {
@@ -320,6 +340,17 @@ fun appModule(
         )
     }
     single {
+        PortfolioAlertService(
+            config = get(),
+            portfolioReadModelService = get(),
+            portfolioAllocationService = get(),
+            portfolioReturnsService = get(),
+            appPreferenceService = get(),
+            pushNotifier = get(),
+            clock = get()
+        )
+    }
+    single {
         PortfolioTransferService(
             accountRepository = get(),
             appPreferenceRepository = get(),
@@ -348,6 +379,7 @@ fun appModule(
             descriptorService = get(),
             portfolioHistoryService = get(),
             portfolioReturnsService = get(),
+            portfolioAlertService = get(),
             auditLogService = get(),
             clock = get()
         )

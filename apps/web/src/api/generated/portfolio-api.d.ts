@@ -360,6 +360,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List active portfolio alerts
+         * @description Returns current portfolio risk, allocation, benchmark and market-data alerts.
+         */
+        get: operations["listPortfolioAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolio/alerts/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispatch new portfolio alerts
+         * @description Computes current alerts, records the active alert set and sends web push notifications for newly active alerts.
+         */
+        post: operations["dispatchPortfolioAlerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/targets": {
         parameters: {
             query?: never;
@@ -687,6 +727,50 @@ export interface paths {
          */
         post: operations["importPortfolioState"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get web push configuration
+         * @description Returns whether web push is configured and the public VAPID key for browser subscriptions.
+         */
+        get: operations["getPushConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create or update a web push subscription
+         * @description Stores the current browser push subscription endpoint and encryption keys.
+         */
+        post: operations["createPushSubscription"];
+        /**
+         * Delete a web push subscription
+         * @description Removes a browser push subscription by endpoint.
+         */
+        delete: operations["deletePushSubscription"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1328,6 +1412,30 @@ export interface components {
             projected: components["schemas"]["PortfolioAllocationResponse"];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
+        /** PortfolioAlertResponse */
+        PortfolioAlertResponse: {
+            id: string;
+            type: string;
+            severity: string;
+            title: string;
+            message: string;
+            route: string;
+            observedAt: string;
+        };
+        /** WebPushDispatchResponse */
+        WebPushDispatchResponse: {
+            subscriptionCount: number;
+            deliveredCount: number;
+            failedCount: number;
+            removedCount: number;
+            enabled: boolean;
+        };
+        /** PortfolioAlertDispatchResponse */
+        PortfolioAlertDispatchResponse: {
+            activeAlertCount: number;
+            newAlertCount: number;
+            push: components["schemas"]["WebPushDispatchResponse"];
+        };
         /** PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
@@ -1685,6 +1793,33 @@ export interface components {
             transactionCount: number;
             importProfileCount: number;
             safetyBackupFileName?: string | null;
+        };
+        /** PushConfigResponse */
+        PushConfigResponse: {
+            enabled: boolean;
+            vapidPublicKey?: string | null;
+        };
+        /** PushSubscriptionKeysRequest */
+        PushSubscriptionKeysRequest: {
+            p256dh: string;
+            auth: string;
+        };
+        /** PushSubscriptionRequest */
+        PushSubscriptionRequest: {
+            endpoint: string;
+            expirationTime?: number | null;
+            keys: components["schemas"]["PushSubscriptionKeysRequest"];
+            user_agent?: string | null;
+        };
+        /** PushSubscriptionResponse */
+        PushSubscriptionResponse: {
+            endpoint: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** PushSubscriptionDeleteRequest */
+        PushSubscriptionDeleteRequest: {
+            endpoint: string;
         };
         /** TransactionImportProfileResponse */
         TransactionImportProfileResponse: {
@@ -2243,6 +2378,44 @@ export interface operations {
             };
         };
     };
+    listPortfolioAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAlertResponse"][];
+                };
+            };
+        };
+    };
+    dispatchPortfolioAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAlertDispatchResponse"];
+                };
+            };
+        };
+    };
     listPortfolioTargets: {
         parameters: {
             query?: never;
@@ -2633,6 +2806,69 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PortfolioImportResultResponse"];
                 };
+            };
+        };
+    };
+    getPushConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushConfigResponse"];
+                };
+            };
+        };
+    };
+    createPushSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PushSubscriptionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushSubscriptionResponse"];
+                };
+            };
+        };
+    };
+    deletePushSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PushSubscriptionDeleteRequest"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -9,6 +9,7 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.dependency.appModule
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
+import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import org.koin.ktor.plugin.Koin
 
@@ -21,13 +22,15 @@ fun Application.configureDependencyInjection(
     val backupConfig = BackupConfig.from(environment.config)
     val readModelRefreshConfig = ReadModelRefreshConfig.from(environment.config)
     val authConfig = AuthConfig.from(environment.config)
+    val alertConfig = PortfolioAlertConfig.from(environment.config)
     validateStartupConfiguration(
         persistenceConfig = persistenceConfig,
         marketDataConfig = marketDataConfig,
         marketDataRecheckConfig = marketDataRecheckConfig,
         backupConfig = backupConfig,
         readModelRefreshConfig = readModelRefreshConfig,
-        authConfig = authConfig
+        authConfig = authConfig,
+        alertConfig = alertConfig
     )
 
     install(Koin) {
@@ -39,6 +42,7 @@ fun Application.configureDependencyInjection(
                 backupConfig = backupConfig,
                 readModelRefreshConfig = readModelRefreshConfig,
                 authConfig = authConfig,
+                alertConfig = alertConfig,
                 repositoryBindingMode = repositoryBindingMode
             )
         )

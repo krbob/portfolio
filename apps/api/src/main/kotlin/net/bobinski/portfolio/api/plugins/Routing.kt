@@ -15,8 +15,10 @@ import net.bobinski.portfolio.api.route.authRoute
 import net.bobinski.portfolio.api.route.accountRoute
 import net.bobinski.portfolio.api.route.instrumentRoute
 import net.bobinski.portfolio.api.route.portfolioOperationsRoute
+import net.bobinski.portfolio.api.route.portfolioAlertRoute
 import net.bobinski.portfolio.api.route.portfolioRoute
 import net.bobinski.portfolio.api.route.portfolioSettingsRoute
+import net.bobinski.portfolio.api.route.pushRoute
 import net.bobinski.portfolio.api.route.systemRoute
 import net.bobinski.portfolio.api.route.transactionImportRoute
 import net.bobinski.portfolio.api.route.transactionRoute
@@ -74,8 +76,10 @@ fun Application.configureRouting() {
             accountRoute()
             instrumentRoute()
             portfolioRoute()
+            portfolioAlertRoute()
             portfolioSettingsRoute()
             portfolioOperationsRoute()
+            pushRoute()
             transactionImportRoute()
             transactionRoute()
         }

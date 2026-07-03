@@ -2,22 +2,33 @@ package net.bobinski.portfolio.api.plugins
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.math.BigDecimal
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
+import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 
+@Suppress("LongMethod")
 internal fun validateStartupConfiguration(
     persistenceConfig: PersistenceConfig,
     marketDataConfig: MarketDataConfig,
     marketDataRecheckConfig: MarketDataRecheckConfig,
     backupConfig: BackupConfig,
     readModelRefreshConfig: ReadModelRefreshConfig,
-    authConfig: AuthConfig
+    authConfig: AuthConfig,
+    alertConfig: PortfolioAlertConfig = PortfolioAlertConfig(
+        enabled = true,
+        allocationDriftThresholdPctPoints = BigDecimal("5.00"),
+        benchmarkUnderperformanceThresholdPctPoints = BigDecimal("5.00"),
+        webPushVapidPublicKey = null,
+        webPushVapidPrivateKey = null,
+        webPushVapidSubject = null
+    )
 ) {
     require(persistenceConfig.databasePath.isNotBlank()) {
         "SQLite persistence requires a non-blank database path."
@@ -99,6 +110,24 @@ internal fun validateStartupConfiguration(
         require(readModelRefreshConfig.intervalMinutes > 0) {
             "Read-model refresh requires a positive interval."
         }
+    }
+
+    if (alertConfig.enabled) {
+        require(alertConfig.allocationDriftThresholdPctPoints.signum() > 0) {
+            "Portfolio allocation drift alert threshold must be positive."
+        }
+        require(alertConfig.benchmarkUnderperformanceThresholdPctPoints.signum() > 0) {
+            "Portfolio benchmark underperformance alert threshold must be positive."
+        }
+    }
+
+    val vapidValues = listOf(
+        alertConfig.webPushVapidPublicKey,
+        alertConfig.webPushVapidPrivateKey,
+        alertConfig.webPushVapidSubject
+    )
+    require(vapidValues.all { it.isNullOrBlank() } || vapidValues.all { !it.isNullOrBlank() }) {
+        "Web push requires public key, private key and subject to be configured together."
     }
 
     if (authConfig.enabled) {
