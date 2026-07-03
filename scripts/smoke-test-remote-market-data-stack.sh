@@ -2,15 +2,15 @@
 
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+PROJECT_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 
 : "${PORTFOLIO_STOCK_ANALYST_API_URL:?set PORTFOLIO_STOCK_ANALYST_API_URL before running the remote market-data smoke test}"
 : "${PORTFOLIO_EDO_CALCULATOR_API_URL:?set PORTFOLIO_EDO_CALCULATOR_API_URL before running the remote market-data smoke test}"
 
-export COMPOSE_PROJECT_NAME=${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_PROJECT_NAME:-portfolio-remote-market-data-smoke}
-export PORTFOLIO_API_PORT=${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_API_PORT:-28084}
-export PORTFOLIO_WEB_PORT=${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_WEB_PORT:-24175}
+export COMPOSE_PROJECT_NAME="${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_PROJECT_NAME:-portfolio-remote-market-data-smoke}"
+export PORTFOLIO_API_PORT="${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_API_PORT:-28084}"
+export PORTFOLIO_WEB_PORT="${PORTFOLIO_REMOTE_MARKET_DATA_SMOKE_WEB_PORT:-24175}"
 export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/remote-market-data-smoke.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/remote-market-data-smoke
 

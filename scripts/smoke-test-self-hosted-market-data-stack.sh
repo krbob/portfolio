@@ -2,12 +2,12 @@
 
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+PROJECT_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 
-export COMPOSE_PROJECT_NAME=${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_PROJECT_NAME:-portfolio-self-hosted-market-data-smoke}
-export PORTFOLIO_API_PORT=${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_API_PORT:-28085}
-export PORTFOLIO_WEB_PORT=${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_WEB_PORT:-24176}
+export COMPOSE_PROJECT_NAME="${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_PROJECT_NAME:-portfolio-self-hosted-market-data-smoke}"
+export PORTFOLIO_API_PORT="${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_API_PORT:-28085}"
+export PORTFOLIO_WEB_PORT="${PORTFOLIO_SELF_HOSTED_MARKET_DATA_SMOKE_WEB_PORT:-24176}"
 export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/self-hosted-market-data-smoke.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/self-hosted-market-data-smoke
 

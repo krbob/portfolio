@@ -2,12 +2,12 @@
 
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+PROJECT_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 
-export COMPOSE_PROJECT_NAME=${PORTFOLIO_BROWSER_SMOKE_PROJECT_NAME:-portfolio-browser-smoke}
-export PORTFOLIO_API_PORT=${PORTFOLIO_BROWSER_SMOKE_API_PORT:-28086}
-export PORTFOLIO_WEB_PORT=${PORTFOLIO_BROWSER_SMOKE_WEB_PORT:-24177}
+export COMPOSE_PROJECT_NAME="${PORTFOLIO_BROWSER_SMOKE_PROJECT_NAME:-portfolio-browser-smoke}"
+export PORTFOLIO_API_PORT="${PORTFOLIO_BROWSER_SMOKE_API_PORT:-28086}"
+export PORTFOLIO_WEB_PORT="${PORTFOLIO_BROWSER_SMOKE_WEB_PORT:-24177}"
 export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/browser-smoke.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/browser-smoke
 
