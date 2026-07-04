@@ -8,6 +8,8 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Clock
 import java.time.Instant
 import java.util.Base64
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,9 +17,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
+import nl.martijndwars.webpush.Encoding
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Utils
+import org.apache.http.client.config.RequestConfig
+import org.apache.http.impl.nio.client.HttpAsyncClients
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.LoggerFactory
 
@@ -53,10 +58,7 @@ class WebPushNotificationService(
 
         subscriptions.forEach { subscription ->
             val statusCode = runCatching {
-                val response = pushService.send(
-                    Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload)
-                )
-                response.statusLine.statusCode
+                sendWithTimeout(pushService, subscription, payload)
             }.getOrElse { error ->
                 if (error is CancellationException) {
                     throw error
@@ -87,6 +89,33 @@ class WebPushNotificationService(
             removedCount = removed,
             enabled = true
         )
+    }
+
+    private fun sendWithTimeout(
+        pushService: PushService,
+        subscription: WebPushSubscriptionRecord,
+        payload: String
+    ): Int {
+        val request = pushService.preparePost(
+            Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload),
+            Encoding.AESGCM
+        ).also { httpPost ->
+            httpPost.config = webPushRequestConfig
+        }
+
+        HttpAsyncClients.custom()
+            .setDefaultRequestConfig(webPushRequestConfig)
+            .build()
+            .use { client ->
+                client.start()
+                val future = client.execute(request, null)
+                return try {
+                    future.get(WEB_PUSH_TOTAL_TIMEOUT_SECONDS, TimeUnit.SECONDS).statusLine.statusCode
+                } catch (error: TimeoutException) {
+                    future.cancel(true)
+                    throw error
+                }
+            }
     }
 
     private fun buildPushService(): PushService {
@@ -164,6 +193,19 @@ class WebPushNotificationService(
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             Security.addProvider(BouncyCastleProvider())
         }
+    }
+
+    private companion object {
+        const val WEB_PUSH_CONNECT_TIMEOUT_MS = 5_000
+        const val WEB_PUSH_REQUEST_TIMEOUT_MS = 5_000
+        const val WEB_PUSH_SOCKET_TIMEOUT_MS = 10_000
+        const val WEB_PUSH_TOTAL_TIMEOUT_SECONDS = 12L
+
+        val webPushRequestConfig: RequestConfig = RequestConfig.custom()
+            .setConnectTimeout(WEB_PUSH_CONNECT_TIMEOUT_MS)
+            .setConnectionRequestTimeout(WEB_PUSH_REQUEST_TIMEOUT_MS)
+            .setSocketTimeout(WEB_PUSH_SOCKET_TIMEOUT_MS)
+            .build()
     }
 }
 

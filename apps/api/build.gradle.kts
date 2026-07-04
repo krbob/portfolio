@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.web.push)
     implementation(libs.bouncycastle.provider)
     implementation(libs.apache.httpcore)
+    implementation(libs.apache.httpclient)
+    implementation(libs.apache.httpasyncclient)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
