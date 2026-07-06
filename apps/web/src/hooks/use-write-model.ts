@@ -14,10 +14,12 @@ import {
   importTransactions,
   importPortfolioState,
   listAccounts,
+  getPortfolioAlertSettings,
   getPortfolioBenchmarkSettings,
   getPortfolioRebalancingSettings,
   listInstruments,
   listPortfolioBackups,
+  savePortfolioAlertSettings,
   savePortfolioBenchmarkSettings,
   savePortfolioRebalancingSettings,
   listPortfolioTargets,
@@ -39,12 +41,14 @@ import {
   type ImportPortfolioStatePayload,
   type ImportTransactionsPayload,
   type ImportTransactionsPreviewResult,
+  type PortfolioAlertSettings,
   type PortfolioBenchmarkSettings,
   type PortfolioBackupRecord,
   type PortfolioRebalancingSettings,
   type PortfolioTarget,
   type ReadModelCacheInvalidationResult,
   type SaveTransactionImportProfilePayload,
+  type SavePortfolioAlertSettingsPayload,
   type SavePortfolioBenchmarkSettingsPayload,
   type SavePortfolioRebalancingSettingsPayload,
   type PreviewPortfolioStateImportResult,
@@ -251,6 +255,13 @@ export function usePortfolioBenchmarkSettings() {
   })
 }
 
+export function usePortfolioAlertSettings() {
+  return useQuery({
+    queryKey: ['portfolio-alert-settings'],
+    queryFn: getPortfolioAlertSettings,
+  })
+}
+
 export function usePortfolioRebalancingSettings() {
   return useQuery({
     queryKey: ['portfolio-rebalancing-settings'],
@@ -276,6 +287,21 @@ export function useSavePortfolioBenchmarkSettings() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
+  })
+}
+
+export function useSavePortfolioAlertSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: SavePortfolioAlertSettingsPayload): Promise<PortfolioAlertSettings> =>
+      savePortfolioAlertSettings(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-alert-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-alerts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },

@@ -3,6 +3,7 @@ import { PageHeader } from '../components/layout'
 import { MarketDataSnapshotsSection } from '../components/MarketDataSnapshotsSection'
 import { MobileAppSection } from '../components/MobileAppSection'
 import { OperationalAuditPanel } from '../components/OperationalAuditPanel'
+import { PortfolioAlertSettingsSection } from '../components/PortfolioAlertSettingsSection'
 import { PortfolioDataQualitySection } from '../components/PortfolioDataQualitySection'
 import { ReadModelCacheSection } from '../components/ReadModelCacheSection'
 import { SystemReadinessSection } from '../components/SystemReadinessSection'
@@ -10,7 +11,7 @@ import { Card, SectionHeader, TabBar } from '../components/ui'
 import { t } from '../lib/messages'
 import { appRoutes } from '../lib/routes'
 
-type SystemTab = 'diagnostics' | 'market-data' | 'audit' | 'app'
+type SystemTab = 'diagnostics' | 'market-data' | 'notifications' | 'audit' | 'app'
 
 function resolveTab(pathname: string): SystemTab {
   return whenPathname(pathname)
@@ -25,6 +26,7 @@ export function SystemScreen() {
     const targetRoute = {
       diagnostics: appRoutes.system.diagnostics,
       'market-data': appRoutes.system.marketData,
+      notifications: appRoutes.system.notifications,
       audit: appRoutes.system.audit,
       app: appRoutes.system.app,
     }[tab]
@@ -40,6 +42,7 @@ export function SystemScreen() {
         tabs={[
           { value: 'diagnostics' as SystemTab, label: t('system.tabDiagnostics') },
           { value: 'market-data' as SystemTab, label: t('system.tabMarketData') },
+          { value: 'notifications' as SystemTab, label: t('system.tabNotifications') },
           { value: 'audit' as SystemTab, label: t('system.tabAudit') },
           { value: 'app' as SystemTab, label: t('system.tabApp') },
         ]}
@@ -47,6 +50,7 @@ export function SystemScreen() {
       <div key={activeTab} className="animate-fade-in">
         {activeTab === 'diagnostics' && <DiagnosticsContent />}
         {activeTab === 'market-data' && <MarketDataContent />}
+        {activeTab === 'notifications' && <PortfolioAlertSettingsSection />}
         {activeTab === 'audit' && <AuditContent />}
         {activeTab === 'app' && <MobileAppSection />}
       </div>
@@ -58,6 +62,8 @@ function whenPathname(pathname: string): SystemTab {
   switch (pathname) {
     case appRoutes.system.marketData:
       return 'market-data'
+    case appRoutes.system.notifications:
+      return 'notifications'
     case appRoutes.system.audit:
       return 'audit'
     case appRoutes.system.app:

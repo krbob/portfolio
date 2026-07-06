@@ -18,10 +18,9 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.ReturnPeriodKey
 import net.bobinski.portfolio.api.domain.service.ValuationState
-import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
 
 class PortfolioAlertService(
-    private val config: PortfolioAlertConfig,
+    private val alertSettingsService: PortfolioAlertSettingsService,
     private val portfolioReadModelService: PortfolioReadModelService,
     private val portfolioAllocationService: PortfolioAllocationService,
     private val portfolioReturnsService: PortfolioReturnsService,
@@ -32,19 +31,27 @@ class PortfolioAlertService(
     private val dispatchMutex = Mutex()
 
     suspend fun currentAlerts(): List<PortfolioAlert> {
-        if (!config.enabled) {
+        val settings = alertSettingsService.settings()
+        if (!settings.enabled) {
             return emptyList()
         }
 
         val observedAt = Instant.now(clock)
         return buildList {
-            addAll(staleMarketDataAlerts(observedAt))
-            addAll(allocationDriftAlerts(observedAt))
-            addAll(benchmarkUnderperformanceAlerts(observedAt))
+            if (settings.typeEnabled(PortfolioAlertType.MARKET_DATA_STALE)) {
+                addAll(staleMarketDataAlerts(observedAt))
+            }
+            if (settings.typeEnabled(PortfolioAlertType.ALLOCATION_DRIFT)) {
+                addAll(allocationDriftAlerts(settings, observedAt))
+            }
+            if (settings.typeEnabled(PortfolioAlertType.BENCHMARK_UNDERPERFORMANCE)) {
+                addAll(benchmarkUnderperformanceAlerts(settings, observedAt))
+            }
         }.sortedWith(compareByDescending<PortfolioAlert> { it.severity }.thenBy { it.id })
     }
 
     suspend fun dispatchNewAlerts(): PortfolioAlertDispatchResult = dispatchMutex.withLock {
+        val settings = alertSettingsService.settings()
         val alerts = currentAlerts()
         val previousState = appPreferenceService.get(
             key = ALERT_STATE_PREFERENCE_KEY,
@@ -54,10 +61,10 @@ class PortfolioAlertService(
         val previousIds = previousState.activeAlertIds.toSet()
         val newAlerts = alerts.filterNot { alert -> alert.id in previousIds }
 
-        val pushResult = if (newAlerts.isEmpty()) {
-            pushNotifier.send(emptyList())
-        } else {
-            pushNotifier.send(newAlerts)
+        val pushResult = when {
+            !settings.pushEnabled -> WebPushDispatchResult.empty()
+            newAlerts.isEmpty() -> pushNotifier.send(emptyList())
+            else -> pushNotifier.send(newAlerts)
         }
 
         if (shouldStoreActiveAlertState(newAlerts, pushResult)) {
@@ -91,31 +98,39 @@ class PortfolioAlertService(
             )
         }
 
-    private suspend fun allocationDriftAlerts(observedAt: Instant): List<PortfolioAlert> =
+    private suspend fun allocationDriftAlerts(
+        settings: PortfolioAlertSettings,
+        observedAt: Instant
+    ): List<PortfolioAlert> =
         alertSection {
             val summary = portfolioAllocationService.summary()
             summary.buckets
-                .filter { bucket -> bucket.driftPctPoints?.absGreaterOrEqual(config.allocationDriftThresholdPctPoints) == true }
+                .filter { bucket ->
+                    bucket.driftPctPoints?.absGreaterOrEqual(settings.allocationDriftThresholdPctPoints) == true
+                }
                 .map { bucket ->
                     PortfolioAlert(
                         id = "allocation:${bucket.assetClass.name}",
                         type = PortfolioAlertType.ALLOCATION_DRIFT,
                         severity = PortfolioAlertSeverity.WARNING,
                         title = "Dryf alokacji: ${bucket.assetClass.alertLabel()}",
-                        message = "Odchylenie wynosi ${bucket.driftPctPoints?.toPlainString()} pp przy progu ${config.allocationDriftThresholdPctPoints.toPlainString()} pp.",
+                        message = "Odchylenie wynosi ${bucket.driftPctPoints?.toPlainString()} pp przy progu ${settings.allocationDriftThresholdPctPoints.toPlainString()} pp.",
                         route = "/strategy/targets",
                         observedAt = observedAt
                     )
                 }
         }
 
-    private suspend fun benchmarkUnderperformanceAlerts(observedAt: Instant): List<PortfolioAlert> =
+    private suspend fun benchmarkUnderperformanceAlerts(
+        settings: PortfolioAlertSettings,
+        observedAt: Instant
+    ): List<PortfolioAlert> =
         alertSection {
             val returns = portfolioReturnsService.returns()
             val period = returns.periods.firstOrNull { it.key == ReturnPeriodKey.ONE_YEAR }
                 ?: returns.periods.firstOrNull { it.key == ReturnPeriodKey.MAX }
                 ?: return@alertSection emptyList()
-            val thresholdRate = config.benchmarkUnderperformanceThresholdPctPoints
+            val thresholdRate = settings.benchmarkUnderperformanceThresholdPctPoints
                 .divide(HUNDRED, 10, RoundingMode.HALF_UP)
                 .negate()
 

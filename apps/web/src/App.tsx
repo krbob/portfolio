@@ -78,6 +78,7 @@ export function App() {
               <Route path={appRoutes.system.base} element={<Navigate to={appRoutes.system.diagnostics} replace />} />
               <Route path={appRoutes.system.diagnostics} element={<SystemScreen />} />
               <Route path={appRoutes.system.marketData} element={<SystemScreen />} />
+              <Route path={appRoutes.system.notifications} element={<SystemScreen />} />
               <Route path={appRoutes.system.audit} element={<SystemScreen />} />
               <Route path={appRoutes.system.app} element={<SystemScreen />} />
               <Route path="*" element={<Navigate to="/" replace />} />

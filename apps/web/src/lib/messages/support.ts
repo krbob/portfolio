@@ -131,6 +131,7 @@ export const supportMessages = {
   'label.auditActionBackupCreateFailed': { pl: 'Nie udało się utworzyć kopii zapasowej', en: 'Backup creation failed' },
   'label.auditActionBackupPruned': { pl: 'Usunięto starą kopię zapasową', en: 'Backup pruned' },
   'label.auditActionBackupRestored': { pl: 'Przywrócono kopię zapasową', en: 'Backup restored' },
+  'label.auditActionAlertSettingsUpdated': { pl: 'Zapisano alerty', en: 'Alert settings updated' },
   'label.auditActionBenchmarkSettingsUpdated': { pl: 'Zapisano benchmarki', en: 'Benchmark settings updated' },
   'label.auditActionInstrumentCreated': { pl: 'Dodano instrument', en: 'Instrument created' },
   'label.auditActionMarketDataRequestFailed': { pl: 'Błąd pobierania danych rynkowych', en: 'Market-data request failed' },

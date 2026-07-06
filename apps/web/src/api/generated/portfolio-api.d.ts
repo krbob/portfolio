@@ -400,6 +400,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/alert-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get portfolio alert settings
+         * @description Returns enabled alert types, alert thresholds and global push delivery preference.
+         */
+        get: operations["getPortfolioAlertSettings"];
+        put?: never;
+        /**
+         * Save portfolio alert settings
+         * @description Saves enabled alert types, alert thresholds and global push delivery preference.
+         */
+        post: operations["savePortfolioAlertSettings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/targets": {
         parameters: {
             query?: never;
@@ -1437,6 +1461,22 @@ export interface components {
             newAlertCount: number;
             push: components["schemas"]["WebPushDispatchResponse"];
         };
+        /** PortfolioAlertSettingsResponse */
+        PortfolioAlertSettingsResponse: {
+            enabled: boolean;
+            pushEnabled: boolean;
+            enabledTypes: string[];
+            allocationDriftThresholdPctPoints: string;
+            benchmarkUnderperformanceThresholdPctPoints: string;
+        };
+        /** SavePortfolioAlertSettingsRequest */
+        SavePortfolioAlertSettingsRequest: {
+            enabled: boolean;
+            pushEnabled: boolean;
+            enabledTypes: string[];
+            allocationDriftThresholdPctPoints: string;
+            benchmarkUnderperformanceThresholdPctPoints: string;
+        };
         /** PortfolioTargetResponse */
         PortfolioTargetResponse: {
             id: string;
@@ -2413,6 +2453,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioAlertDispatchResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioAlertSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAlertSettingsResponse"];
+                };
+            };
+        };
+    };
+    savePortfolioAlertSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SavePortfolioAlertSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAlertSettingsResponse"];
                 };
             };
         };

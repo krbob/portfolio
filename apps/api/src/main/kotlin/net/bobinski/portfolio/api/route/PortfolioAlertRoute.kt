@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.route
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -9,11 +10,15 @@ import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.notification.PortfolioAlert
 import net.bobinski.portfolio.api.notification.PortfolioAlertDispatchResult
 import net.bobinski.portfolio.api.notification.PortfolioAlertService
+import net.bobinski.portfolio.api.notification.PortfolioAlertSettings
+import net.bobinski.portfolio.api.notification.PortfolioAlertSettingsService
+import net.bobinski.portfolio.api.notification.SavePortfolioAlertSettingsCommand
 import net.bobinski.portfolio.api.notification.WebPushDispatchResult
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioAlertRoute() {
     val alertService: PortfolioAlertService by inject()
+    val alertSettingsService: PortfolioAlertSettingsService by inject()
 
     get("/v1/portfolio/alerts") {
         call.respond(alertService.currentAlerts().map { it.toResponse() })
@@ -21,6 +26,25 @@ fun Route.portfolioAlertRoute() {
         operationId = "listPortfolioAlerts",
         summary = "List active portfolio alerts",
         description = "Returns current portfolio risk, allocation, benchmark and market-data alerts.",
+        tag = "Portfolio"
+    )
+
+    get("/v1/portfolio/alert-settings") {
+        call.respond(alertSettingsService.settings().toResponse())
+    }.documented(
+        operationId = "getPortfolioAlertSettings",
+        summary = "Get portfolio alert settings",
+        description = "Returns enabled alert types, alert thresholds and global push delivery preference.",
+        tag = "Portfolio"
+    )
+
+    post("/v1/portfolio/alert-settings") {
+        val request = call.receive<SavePortfolioAlertSettingsRequest>()
+        call.respond(alertSettingsService.update(request.toDomain()).toResponse())
+    }.documented(
+        operationId = "savePortfolioAlertSettings",
+        summary = "Save portfolio alert settings",
+        description = "Saves enabled alert types, alert thresholds and global push delivery preference.",
         tag = "Portfolio"
     )
 
@@ -43,6 +67,24 @@ internal fun PortfolioAlert.toResponse(): PortfolioAlertResponse = PortfolioAler
     route = route,
     observedAt = observedAt.toString()
 )
+
+private fun PortfolioAlertSettings.toResponse(): PortfolioAlertSettingsResponse =
+    PortfolioAlertSettingsResponse(
+        enabled = enabled,
+        pushEnabled = pushEnabled,
+        enabledTypes = enabledTypes.map { type -> type.name },
+        allocationDriftThresholdPctPoints = allocationDriftThresholdPctPoints.toPlainString(),
+        benchmarkUnderperformanceThresholdPctPoints = benchmarkUnderperformanceThresholdPctPoints.toPlainString()
+    )
+
+private fun SavePortfolioAlertSettingsRequest.toDomain(): SavePortfolioAlertSettingsCommand =
+    SavePortfolioAlertSettingsCommand(
+        enabled = enabled,
+        pushEnabled = pushEnabled,
+        enabledTypes = enabledTypes,
+        allocationDriftThresholdPctPoints = allocationDriftThresholdPctPoints.toBigDecimal(),
+        benchmarkUnderperformanceThresholdPctPoints = benchmarkUnderperformanceThresholdPctPoints.toBigDecimal()
+    )
 
 private fun PortfolioAlertDispatchResult.toResponse(): PortfolioAlertDispatchResponse =
     PortfolioAlertDispatchResponse(
@@ -68,6 +110,24 @@ data class PortfolioAlertResponse(
     val message: String,
     val route: String,
     val observedAt: String
+)
+
+@Serializable
+data class PortfolioAlertSettingsResponse(
+    val enabled: Boolean,
+    val pushEnabled: Boolean,
+    val enabledTypes: List<String>,
+    val allocationDriftThresholdPctPoints: String,
+    val benchmarkUnderperformanceThresholdPctPoints: String
+)
+
+@Serializable
+data class SavePortfolioAlertSettingsRequest(
+    val enabled: Boolean,
+    val pushEnabled: Boolean,
+    val enabledTypes: List<String>,
+    val allocationDriftThresholdPctPoints: String,
+    val benchmarkUnderperformanceThresholdPctPoints: String
 )
 
 @Serializable

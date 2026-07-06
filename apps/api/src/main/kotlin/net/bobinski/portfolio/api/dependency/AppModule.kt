@@ -54,6 +54,7 @@ import net.bobinski.portfolio.api.marketdata.service.RemoteReferenceSeriesProvid
 import net.bobinski.portfolio.api.marketdata.service.RemoteValuationProbeService
 import net.bobinski.portfolio.api.domain.service.ValuationProbeService
 import net.bobinski.portfolio.api.notification.PortfolioAlertService
+import net.bobinski.portfolio.api.notification.PortfolioAlertSettingsService
 import net.bobinski.portfolio.api.notification.PortfolioPushNotifier
 import net.bobinski.portfolio.api.notification.WebPushNotificationService
 import net.bobinski.portfolio.api.notification.WebPushSubscriptionRepository
@@ -340,8 +341,16 @@ fun appModule(
         )
     }
     single {
-        PortfolioAlertService(
+        PortfolioAlertSettingsService(
             config = get(),
+            appPreferenceService = get(),
+            auditLogService = get(),
+            clock = get()
+        )
+    }
+    single {
+        PortfolioAlertService(
+            alertSettingsService = get(),
             portfolioReadModelService = get(),
             portfolioAllocationService = get(),
             portfolioReturnsService = get(),

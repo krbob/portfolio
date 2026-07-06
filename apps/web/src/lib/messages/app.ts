@@ -100,13 +100,13 @@ export const appMessages = {
   },
   'mobile.notificationsOffTitle': { pl: 'Powiadomienia są gotowe do włączenia', en: 'Notifications are ready to enable' },
   'mobile.notificationsOffDescription': {
-    pl: 'Po włączeniu Portfolio wyśle push, gdy pojawi się nowy alert: dryf alokacji, stare dane albo słabszy wynik względem benchmarku.',
-    en: 'After enabling, Portfolio will send push alerts for allocation drift, stale data or benchmark underperformance.',
+    pl: 'Po włączeniu ta przeglądarka może odbierać pushe dla alertów aktywnych w konfiguracji powiadomień.',
+    en: 'After enabling, this browser can receive pushes for alerts active in notification settings.',
   },
   'mobile.notificationsOnTitle': { pl: 'Powiadomienia są włączone', en: 'Notifications are enabled' },
   'mobile.notificationsOnDescription': {
-    pl: 'Ta przeglądarka ma aktywną subskrypcję alertów portfela.',
-    en: 'This browser has an active portfolio alert subscription.',
+    pl: 'Ta przeglądarka ma aktywną subskrypcję. Typy alertów i globalna wysyłka są ustawiane osobno.',
+    en: 'This browser has an active subscription. Alert types and global delivery are configured separately.',
   },
   'mobile.notificationsPendingTitle': { pl: 'Konfigurowanie powiadomień', en: 'Configuring notifications' },
   'mobile.notificationsPendingDescription': {

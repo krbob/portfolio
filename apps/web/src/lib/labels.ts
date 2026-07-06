@@ -87,6 +87,7 @@ const auditActionLabels: Record<string, MessageKey> = {
   BACKUP_CREATE_FAILED: 'label.auditActionBackupCreateFailed',
   BACKUP_PRUNED: 'label.auditActionBackupPruned',
   BACKUP_RESTORED: 'label.auditActionBackupRestored',
+  ALERT_SETTINGS_UPDATED: 'label.auditActionAlertSettingsUpdated',
   BENCHMARK_SETTINGS_UPDATED: 'label.auditActionBenchmarkSettingsUpdated',
   INSTRUMENT_CREATED: 'label.auditActionInstrumentCreated',
   MARKET_DATA_REQUEST_FAILED: 'label.auditActionMarketDataRequestFailed',

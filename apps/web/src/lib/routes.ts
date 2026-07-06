@@ -24,6 +24,7 @@ export const appRoutes = {
     base: '/system',
     diagnostics: '/system/diagnostics',
     marketData: '/system/market-data',
+    notifications: '/system/notifications',
     audit: '/system/audit',
     app: '/system/app',
   },

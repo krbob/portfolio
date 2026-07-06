@@ -87,6 +87,63 @@ export const settingsMessages = {
   'marketDataSnapshots.coverage': { pl: 'Zakres źródłowy', en: 'Source window' },
   'marketDataSnapshots.asOf': { pl: 'Stan na', en: 'As of' },
   'marketDataSnapshots.points': { pl: 'Punkty', en: 'Points' },
+  'alertSettings.eyebrow': { pl: 'Alerty', en: 'Alerts' },
+  'alertSettings.title': { pl: 'Konfiguracja alertów portfela', en: 'Portfolio alert settings' },
+  'alertSettings.description': {
+    pl: 'Ustal, które sygnały mają pojawiać się w dashboardzie i czy nowe alerty mogą być wysyłane jako web push.',
+    en: 'Choose which signals appear on the dashboard and whether new alerts can be delivered through web push.',
+  },
+  'alertSettings.loading': { pl: 'Ładowanie konfiguracji alertów...', en: 'Loading alert settings...' },
+  'alertSettings.loadFailed': { pl: 'Nie udało się wczytać konfiguracji alertów.', en: 'Alert settings could not be loaded.' },
+  'alertSettings.save': { pl: 'Zapisz alerty', en: 'Save alerts' },
+  'alertSettings.saveFailed': { pl: 'Nie udało się zapisać konfiguracji alertów.', en: 'Saving alert settings failed.' },
+  'alertSettings.savedFeedback': {
+    pl: 'Zapisano konfigurację alertów. Aktywne typy: {types}.',
+    en: 'Saved alert settings. Active types: {types}.',
+  },
+  'alertSettings.thresholdInvalid': {
+    pl: 'Progi alertów muszą być dodatnimi wartościami w punktach procentowych.',
+    en: 'Alert thresholds must be positive percentage-point values.',
+  },
+  'alertSettings.globalAlerts': { pl: 'Alerty w aplikacji', en: 'In-app alerts' },
+  'alertSettings.globalAlertsDescription': {
+    pl: 'Steruje tym, czy aktywne alerty portfela pojawiają się w dashboardzie.',
+    en: 'Controls whether active portfolio alerts appear on the dashboard.',
+  },
+  'alertSettings.globalPush': { pl: 'Wysyłka push', en: 'Push delivery' },
+  'alertSettings.globalPushDescription': {
+    pl: 'Pozwala wysyłać nowe alerty do zapisanych przeglądarek, bez usuwania ich subskrypcji.',
+    en: 'Allows new alerts to be sent to saved browsers without removing their subscriptions.',
+  },
+  'alertSettings.typesTitle': { pl: 'Typy alertów', en: 'Alert types' },
+  'alertSettings.typesDescription': {
+    pl: 'Te same typy obowiązują dla dashboardu i dla wysyłki push.',
+    en: 'The same types apply to the dashboard and to push delivery.',
+  },
+  'alertSettings.enabledTypeCount': { pl: 'Aktywne: {count}', en: 'Active: {count}' },
+  'alertSettings.typeAllocation': { pl: 'Dryf alokacji', en: 'Allocation drift' },
+  'alertSettings.typeAllocationDescription': {
+    pl: 'Alert, gdy koszyk oddali się od celu o ustawiony próg.',
+    en: 'Alerts when a bucket drifts from target by the configured threshold.',
+  },
+  'alertSettings.typeMarketData': { pl: 'Stare dane rynkowe', en: 'Stale market data' },
+  'alertSettings.typeMarketDataDescription': {
+    pl: 'Alert, gdy wycena portfela opiera się na niepełnych albo starych danych.',
+    en: 'Alerts when portfolio valuation relies on incomplete or stale data.',
+  },
+  'alertSettings.typeBenchmark': { pl: 'Słabszy wynik benchmarku', en: 'Benchmark underperformance' },
+  'alertSettings.typeBenchmarkDescription': {
+    pl: 'Alert, gdy przypięty benchmark wyprzedza portfel o ustawiony próg.',
+    en: 'Alerts when a pinned benchmark leads the portfolio by the configured threshold.',
+  },
+  'alertSettings.thresholdsTitle': { pl: 'Progi', en: 'Thresholds' },
+  'alertSettings.thresholdsDescription': {
+    pl: 'Wartości są podawane w punktach procentowych.',
+    en: 'Values are expressed in percentage points.',
+  },
+  'alertSettings.allocationThreshold': { pl: 'Próg dryfu alokacji', en: 'Allocation drift threshold' },
+  'alertSettings.benchmarkThreshold': { pl: 'Próg wyniku względem benchmarku', en: 'Benchmark underperformance threshold' },
+  'alertSettings.thresholdPreview': { pl: 'Próg: {value}', en: 'Threshold: {value}' },
   'readiness.eyebrow': { pl: 'Stan systemu', en: 'Health' },
   'readiness.title': { pl: 'Gotowość środowiska', en: 'Runtime readiness' },
   'readiness.description': {
@@ -614,6 +671,7 @@ export const settingsMessages = {
   'system.title': { pl: 'System', en: 'System' },
   'system.tabDiagnostics': { pl: 'Diagnostyka', en: 'Diagnostics' },
   'system.tabMarketData': { pl: 'Dane rynkowe', en: 'Market data' },
+  'system.tabNotifications': { pl: 'Powiadomienia', en: 'Notifications' },
   'system.tabAudit': { pl: 'Audyt', en: 'Audit' },
   'system.tabApp': { pl: 'Aplikacja', en: 'App' },
 } satisfies MessageCatalog

@@ -102,6 +102,12 @@ export type PortfolioRebalancingSettings =
 export type SavePortfolioRebalancingSettingsPayload =
   components['schemas']['SavePortfolioRebalancingSettingsRequest']
 
+export type PortfolioAlertSettings =
+  components['schemas']['PortfolioAlertSettingsResponse']
+
+export type SavePortfolioAlertSettingsPayload =
+  components['schemas']['SavePortfolioAlertSettingsRequest']
+
 export type ReadModelRefreshStatus =
   components['schemas']['ReadModelRefreshStatusResponse']
 
@@ -265,6 +271,17 @@ export function getPortfolioRebalancingSettings() {
 
 export function savePortfolioRebalancingSettings(payload: SavePortfolioRebalancingSettingsPayload) {
   return requestJson<PortfolioRebalancingSettings>('/api/v1/portfolio/rebalancing-settings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getPortfolioAlertSettings() {
+  return requestJson<PortfolioAlertSettings>('/api/v1/portfolio/alert-settings')
+}
+
+export function savePortfolioAlertSettings(payload: SavePortfolioAlertSettingsPayload) {
+  return requestJson<PortfolioAlertSettings>('/api/v1/portfolio/alert-settings', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

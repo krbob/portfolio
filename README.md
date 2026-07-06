@@ -239,6 +239,8 @@ Web push is optional. Set the VAPID public key, one private-key variant and subj
 
 Push dispatch runs after a successful read-model refresh. Enable `PORTFOLIO_READ_MODEL_REFRESH_ENABLED=true` for automatic delivery, or call `POST /v1/portfolio/alerts/dispatch` after a manual data refresh.
 
+Alert types, alert thresholds and global push delivery can also be adjusted in `System -> Notifications`. The alert-related environment variables provide defaults before an in-app setting is saved.
+
 ### OpenAPI UI
 
 - `PORTFOLIO_OPENAPI_UI_ENABLED`
