@@ -27,7 +27,9 @@ export function TabBar<T extends string>({
     const activeButton = container.querySelector<HTMLButtonElement>('[aria-selected="true"]')
     if (!activeButton) return
 
-    activeButton.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (typeof activeButton.scrollIntoView === 'function') {
+      activeButton.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
     setIndicator({
       left: activeButton.offsetLeft,
       width: activeButton.offsetWidth,
