@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
+import net.bobinski.portfolio.api.domain.service.BenchmarkKey
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
@@ -136,7 +137,7 @@ class PortfolioAlertService(
 
             period.benchmarks
                 .asSequence()
-                .filter(BenchmarkComparison::pinned)
+                .filter { benchmark -> isBenchmarkUnderperformanceAlertBenchmark(benchmark.key) }
                 .filter { benchmark -> benchmark.excessTimeWeightedReturn?.let { it <= thresholdRate } == true }
                 .map { benchmark -> benchmark.toAlert(period, observedAt) }
                 .toList()
@@ -167,11 +168,16 @@ class PortfolioAlertService(
         id = "benchmark:${period.key.name}:$key",
         type = PortfolioAlertType.BENCHMARK_UNDERPERFORMANCE,
         severity = PortfolioAlertSeverity.WARNING,
-        title = "Portfel odstaje od benchmarku $label",
+        title = alertTitle(),
         message = "Nadwyżka TWR dla ${period.label} wynosi ${excessTimeWeightedReturn?.toPercentPointString()} pp.",
         route = "/performance",
         observedAt = observedAt
     )
+
+    private fun BenchmarkComparison.alertTitle(): String = when (key) {
+        BenchmarkKey.TARGET_MIX.name -> "Portfel odstaje od alokacji docelowej"
+        else -> "Portfel odstaje od benchmarku $label"
+    }
 
     private fun BigDecimal.absGreaterOrEqual(threshold: BigDecimal): Boolean = abs() >= threshold
 
@@ -233,3 +239,6 @@ enum class PortfolioAlertSeverity {
 private data class PortfolioAlertState(
     val activeAlertIds: List<String>
 )
+
+internal fun isBenchmarkUnderperformanceAlertBenchmark(key: String): Boolean =
+    key == BenchmarkKey.TARGET_MIX.name

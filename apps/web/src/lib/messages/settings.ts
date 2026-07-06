@@ -133,8 +133,8 @@ export const settingsMessages = {
   },
   'alertSettings.typeBenchmark': { pl: 'Słabszy wynik benchmarku', en: 'Benchmark underperformance' },
   'alertSettings.typeBenchmarkDescription': {
-    pl: 'Alert, gdy przypięty benchmark wyprzedza portfel o ustawiony próg.',
-    en: 'Alerts when a pinned benchmark leads the portfolio by the configured threshold.',
+    pl: 'Alert, gdy benchmark alokacji docelowej wyprzedza portfel o ustawiony próg.',
+    en: 'Alerts when the target-mix benchmark leads the portfolio by the configured threshold.',
   },
   'alertSettings.thresholdsTitle': { pl: 'Progi', en: 'Thresholds' },
   'alertSettings.thresholdsDescription': {
