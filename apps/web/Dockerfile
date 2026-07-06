@@ -12,6 +12,7 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 ENV PORTFOLIO_API_UPSTREAM=http://portfolio-api:18082
+ENV PORTFOLIO_SHOW_CHART_ATTRIBUTION=true
 ENV DOLLAR=$
 
 COPY --chown=101:101 docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template

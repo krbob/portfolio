@@ -29,6 +29,12 @@ server {
         proxy_set_header X-Forwarded-Host ${DOLLAR}host;
     }
 
+    location = /runtime-config.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+        return 200 'window.__PORTFOLIO_CONFIG__ = { showChartAttribution: "${PORTFOLIO_SHOW_CHART_ATTRIBUTION}" };';
+    }
+
     location /assets/ {
         try_files ${DOLLAR}uri =404;
     }

@@ -61,6 +61,7 @@ services:
         condition: service_healthy
     environment:
       PORTFOLIO_API_UPSTREAM: http://portfolio-api:18082
+      PORTFOLIO_SHOW_CHART_ATTRIBUTION: ${PORTFOLIO_SHOW_CHART_ATTRIBUTION:-true}
     ports:
       - "4174:4174"
     healthcheck:

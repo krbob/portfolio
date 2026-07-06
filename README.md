@@ -241,6 +241,12 @@ Push dispatch runs after a successful read-model refresh. Enable `PORTFOLIO_READ
 
 Alert types, alert thresholds and global push delivery can also be adjusted in `System -> Notifications`. The alert-related environment variables provide defaults before an in-app setting is saved.
 
+### Web UI
+
+- `PORTFOLIO_SHOW_CHART_ATTRIBUTION`
+
+Set `PORTFOLIO_SHOW_CHART_ATTRIBUTION=false` on a private local container to hide the TradingView attribution logo on Lightweight Charts without rebuilding the image. For local Vite development, use `VITE_SHOW_CHART_ATTRIBUTION=false` in `apps/web/.env.local`.
+
 ### OpenAPI UI
 
 - `PORTFOLIO_OPENAPI_UI_ENABLED`

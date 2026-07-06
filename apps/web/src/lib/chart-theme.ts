@@ -1,5 +1,7 @@
 import { ColorType } from 'lightweight-charts'
 
+type ChartAttributionRuntimeFlag = boolean | string | undefined
+
 export const chartPalette = {
   // Chrome
   text: '#a1a1aa',       // zinc-400
@@ -39,6 +41,7 @@ export function createPortfolioChartOptions(width: number, height: number) {
       background: { type: ColorType.Solid, color: 'transparent' },
       textColor: chartPalette.text,
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      attributionLogo: shouldShowChartAttribution(),
     },
     grid: {
       vertLines: { color: chartPalette.grid },
@@ -69,10 +72,34 @@ export function createPortfolioChartOptions(width: number, height: number) {
   }
 }
 
+export function resolveShowChartAttribution(
+  runtimeValue: ChartAttributionRuntimeFlag,
+  envValue: string | undefined,
+): boolean {
+  if (typeof runtimeValue === 'boolean') return runtimeValue
+  if (typeof runtimeValue === 'string' && runtimeValue.trim() !== '') {
+    return !isDisabledEnvFlag(runtimeValue)
+  }
+
+  return !isDisabledEnvFlag(envValue)
+}
+
 export function isInteractiveChartEnvironment() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return false
   }
 
   return !window.navigator.userAgent.toLowerCase().includes('jsdom')
+}
+
+function shouldShowChartAttribution(): boolean {
+  const runtimeValue = typeof window === 'undefined'
+    ? undefined
+    : window.__PORTFOLIO_CONFIG__?.showChartAttribution
+
+  return resolveShowChartAttribution(runtimeValue, import.meta.env.VITE_SHOW_CHART_ATTRIBUTION)
+}
+
+function isDisabledEnvFlag(value: string | undefined): boolean {
+  return ['false', '0', 'no', 'off'].includes(value?.trim().toLowerCase() ?? '')
 }
