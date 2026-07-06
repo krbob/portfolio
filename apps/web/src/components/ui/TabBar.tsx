@@ -27,17 +27,21 @@ export function TabBar<T extends string>({
     const activeButton = container.querySelector<HTMLButtonElement>('[aria-selected="true"]')
     if (!activeButton) return
 
-    const containerRect = container.getBoundingClientRect()
-    const buttonRect = activeButton.getBoundingClientRect()
+    activeButton.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     setIndicator({
-      left: buttonRect.left - containerRect.left,
-      width: buttonRect.width,
+      left: activeButton.offsetLeft,
+      width: activeButton.offsetWidth,
     })
     hasInitialized.current = true
   }, [value, tabs])
 
   return (
-    <div ref={containerRef} className="relative mb-6 flex gap-0 border-b border-zinc-800" role="tablist" aria-label={ariaLabel}>
+    <div
+      ref={containerRef}
+      className="relative mb-6 flex max-w-full gap-0 overflow-x-auto overscroll-x-contain border-b border-zinc-800 [-webkit-overflow-scrolling:touch]"
+      role="tablist"
+      aria-label={ariaLabel}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.value}
@@ -49,7 +53,7 @@ export function TabBar<T extends string>({
           tabIndex={value === tab.value ? 0 : -1}
           onClick={() => onChange(tab.value)}
           className={clsx(
-            'relative px-4 py-3 text-sm font-medium transition-colors',
+            'relative shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors',
             value === tab.value ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
           )}
         >
