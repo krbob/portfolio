@@ -6,6 +6,7 @@ import {
   type WebPushConfig,
   type WebPushSubscriptionPayload,
 } from '../api/push'
+import { useI18n, type UiLanguage } from '../lib/i18n'
 
 export type WebPushStatus =
   | 'checking'
@@ -101,7 +102,10 @@ function subscriptionUsesVapidKey(subscription: PushSubscription, vapidPublicKey
   return expectedKey.every((value, index) => actualKey[index] === value)
 }
 
-function toSubscriptionPayload(subscription: PushSubscription): WebPushSubscriptionPayload {
+function toSubscriptionPayload(
+  subscription: PushSubscription,
+  locale: UiLanguage,
+): WebPushSubscriptionPayload {
   const subscriptionJson = subscription.toJSON()
   const endpoint = subscriptionJson.endpoint ?? subscription.endpoint
   const p256dh = subscriptionJson.keys?.p256dh
@@ -119,10 +123,12 @@ function toSubscriptionPayload(subscription: PushSubscription): WebPushSubscript
       auth,
     },
     user_agent: navigator.userAgent,
+    locale,
   }
 }
 
 export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionOptions) {
+  const { language } = useI18n()
   const [state, setState] = useState<WebPushState>(CHECKING_STATE)
   const [config, setConfig] = useState<WebPushConfig | null>(null)
 
@@ -183,7 +189,7 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
           })
           return
         }
-        await saveWebPushSubscription(toSubscriptionPayload(subscription))
+        await saveWebPushSubscription(toSubscriptionPayload(subscription, language))
       }
 
       setState({
@@ -200,7 +206,7 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
         errorMessage: error instanceof Error ? error.message : 'Web push setup failed.',
       })
     }
-  }, [isStandalone])
+  }, [isStandalone, language])
 
   useEffect(() => {
     void sync()
@@ -262,7 +268,7 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
         applicationServerKey: urlBase64ToUint8Array(nextConfig.vapidPublicKey),
       })
 
-      await saveWebPushSubscription(toSubscriptionPayload(subscription))
+      await saveWebPushSubscription(toSubscriptionPayload(subscription, language))
       setState({
         status: 'on',
         enabled: true,
@@ -277,7 +283,7 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
         errorMessage: error instanceof Error ? error.message : 'Web push setup failed.',
       })
     }
-  }, [config, isStandalone])
+  }, [config, isStandalone, language])
 
   const disable = useCallback(async () => {
     const unsupportedStatus = detectUnsupportedStatus(isStandalone)

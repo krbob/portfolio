@@ -4,8 +4,12 @@ import { requestEmpty, requestJson } from './http'
 export type WebPushConfig =
   paths['/v1/push/config']['get']['responses'][200]['content']['application/json']
 
-export type WebPushSubscriptionPayload =
+type GeneratedWebPushSubscriptionPayload =
   NonNullable<paths['/v1/push/subscriptions']['post']['requestBody']>['content']['application/json']
+
+export type WebPushSubscriptionPayload = GeneratedWebPushSubscriptionPayload & {
+  locale?: 'pl' | 'en'
+}
 
 export type WebPushSubscriptionResponse =
   paths['/v1/push/subscriptions']['post']['responses'][201]['content']['application/json']
