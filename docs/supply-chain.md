@@ -10,7 +10,8 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 - Gradle 9.6.1 with a verified wrapper distribution SHA-256
 
 The API and web Dockerfiles retain readable version tags but also pin every base image to an immutable manifest
-digest. The API build and runtime use the same Java major version.
+digest. The API build and runtime use the same Java major version, and the runtime does not update packages from a
+moving operating-system repository during the build.
 
 ## Dependency locks
 
