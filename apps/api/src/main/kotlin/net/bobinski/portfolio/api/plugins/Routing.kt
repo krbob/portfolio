@@ -58,18 +58,6 @@ fun Application.configureRouting() {
             tag = "System"
         )
 
-        get("/metrics") {
-            call.respondText(
-                metricsRegistry.scrape(),
-                ContentType.parse("text/plain; version=0.0.4; charset=utf-8")
-            )
-        }.documented(
-            operationId = "getMetrics",
-            summary = "Get bounded request metrics",
-            description = "Returns bounded Prometheus request counters and duration summaries.",
-            tag = "System"
-        )
-
         if (this@configureRouting.openApiUiEnabled()) {
             openAPI("/openapi") {
                 info = OpenApiInfo(
@@ -87,6 +75,17 @@ fun Application.configureRouting() {
         systemRoute(this@configureRouting)
         authRoute(this@configureRouting)
         protectedRoute(this@configureRouting) {
+            get("/metrics") {
+                call.respondText(
+                    metricsRegistry.scrape(),
+                    ContentType.parse("text/plain; version=0.0.4; charset=utf-8")
+                )
+            }.documented(
+                operationId = "getMetrics",
+                summary = "Get bounded request metrics",
+                description = "Returns bounded Prometheus request counters and duration summaries.",
+                tag = "System"
+            )
             systemReadinessDetailsRoute()
             accountRoute()
             instrumentRoute()

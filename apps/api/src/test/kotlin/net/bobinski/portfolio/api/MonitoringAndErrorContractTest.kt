@@ -9,6 +9,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import net.bobinski.portfolio.api.plugins.RequestMetricsRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -93,6 +94,37 @@ class MonitoringAndErrorContractTest {
             body
         )
         assertTrue(body.contains("portfolio_http_request_duration_seconds_count"), body)
+    }
+
+    @Test
+    fun `metrics require an authenticated session when password auth is enabled`() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "portfolio.auth.enabled" to "true",
+                "portfolio.auth.password" to "secret-pass",
+                "portfolio.auth.sessionSecret" to "0123456789abcdef0123456789abcdef",
+                "portfolio.auth.sessionCookieName" to "portfolio_metrics_session",
+                "portfolio.auth.secureCookie" to "false"
+            )
+        }
+        application { module() }
+
+        val unauthorized = client.get("/metrics")
+        val login = client.post("/v1/auth/session") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"password":"secret-pass"}""")
+        }
+        val sessionCookie = login.headers[HttpHeaders.SetCookie]
+            ?.substringBefore(';')
+            ?: error("Expected auth session cookie in login response.")
+        val authorized = client.get("/metrics") {
+            header(HttpHeaders.Cookie, sessionCookie)
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, unauthorized.status)
+        assertEquals(HttpStatusCode.OK, login.status)
+        assertEquals(HttpStatusCode.OK, authorized.status)
+        assertTrue(authorized.bodyAsText().contains("# TYPE portfolio_http_requests_total counter"))
     }
 
     @Test
