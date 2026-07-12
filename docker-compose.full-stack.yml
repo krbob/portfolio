@@ -1,0 +1,113 @@
+x-ecosystem-compatibility:
+  manifest: deployment/compatibility/1.0.0.json
+
+services:
+  portfolio-api:
+    image: ghcr.io/krbob/portfolio-api@${PORTFOLIO_API_IMAGE_DIGEST:?Set PORTFOLIO_API_IMAGE_DIGEST to sha256:<64 hex>}
+    environment:
+      PORTFOLIO_DATABASE_PATH: /srv/portfolio/data/portfolio.db
+      PORTFOLIO_JOURNAL_MODE: WAL
+      PORTFOLIO_SYNCHRONOUS_MODE: FULL
+      PORTFOLIO_BUSY_TIMEOUT_MS: 5000
+      PORTFOLIO_MARKET_DATA_ENABLED: "true"
+      PORTFOLIO_STOCK_ANALYST_API_URL: http://stock-analyst:8080
+      PORTFOLIO_STOCK_ANALYST_UI_URL: ${PORTFOLIO_STOCK_ANALYST_UI_URL:-http://127.0.0.1:18083}
+      PORTFOLIO_EDO_CALCULATOR_API_URL: http://edo-calculator:8080
+      PORTFOLIO_GOLD_API_URL: https://api.gold-api.com
+      PORTFOLIO_GOLD_API_KEY: ${PORTFOLIO_GOLD_API_KEY:-}
+      PORTFOLIO_GOLD_API_KEY_FILE: ${PORTFOLIO_GOLD_API_KEY_FILE:-}
+      PORTFOLIO_BACKUPS_ENABLED: "true"
+      PORTFOLIO_BACKUPS_DIRECTORY: /srv/portfolio/backups
+      PORTFOLIO_BACKUPS_INTERVAL_MINUTES: 1440
+      PORTFOLIO_BACKUPS_RETENTION_COUNT: 30
+      PORTFOLIO_READ_MODEL_REFRESH_ENABLED: "true"
+      PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES: 720
+      PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START: "true"
+      PORTFOLIO_ALERTS_ENABLED: "true"
+      PORTFOLIO_ALERT_ALLOCATION_DRIFT_THRESHOLD_PCT_POINTS: ${PORTFOLIO_ALERT_ALLOCATION_DRIFT_THRESHOLD_PCT_POINTS:-5.00}
+      PORTFOLIO_ALERT_BENCHMARK_UNDERPERFORMANCE_THRESHOLD_PCT_POINTS: ${PORTFOLIO_ALERT_BENCHMARK_UNDERPERFORMANCE_THRESHOLD_PCT_POINTS:-5.00}
+      PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY: ${PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY_FILE: ${PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY_FILE:-}
+      PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64: ${PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64:-}
+      PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64_FILE: ${PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64_FILE:-}
+      PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY: ${PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_FILE: ${PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_FILE:-}
+      PORTFOLIO_WEB_PUSH_VAPID_SUBJECT: ${PORTFOLIO_WEB_PUSH_VAPID_SUBJECT:-}
+      PORTFOLIO_WEB_PUSH_VAPID_SUBJECT_FILE: ${PORTFOLIO_WEB_PUSH_VAPID_SUBJECT_FILE:-}
+      PORTFOLIO_OPENAPI_UI_ENABLED: "false"
+      PORTFOLIO_AUTH_ENABLED: ${PORTFOLIO_AUTH_ENABLED:-false}
+      PORTFOLIO_AUTH_PASSWORD: ${PORTFOLIO_AUTH_PASSWORD:-}
+      PORTFOLIO_AUTH_PASSWORD_FILE: ${PORTFOLIO_AUTH_PASSWORD_FILE:-}
+      PORTFOLIO_AUTH_SESSION_SECRET: ${PORTFOLIO_AUTH_SESSION_SECRET:-}
+      PORTFOLIO_AUTH_SESSION_SECRET_FILE: ${PORTFOLIO_AUTH_SESSION_SECRET_FILE:-}
+      PORTFOLIO_AUTH_SECURE_COOKIE: ${PORTFOLIO_AUTH_SECURE_COOKIE:-false}
+    depends_on:
+      - stock-analyst
+      - edo-calculator
+    ports:
+      - "18082:18082"
+    volumes:
+      - portfolio-sqlite-data:/srv/portfolio/data
+      - portfolio-backup-data:/srv/portfolio/backups
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:18082/v1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  portfolio-web:
+    image: ghcr.io/krbob/portfolio-web@${PORTFOLIO_WEB_IMAGE_DIGEST:?Set PORTFOLIO_WEB_IMAGE_DIGEST to sha256:<64 hex>}
+    depends_on:
+      portfolio-api:
+        condition: service_healthy
+    environment:
+      PORTFOLIO_API_UPSTREAM: http://portfolio-api:18082
+      PORTFOLIO_SHOW_CHART_ATTRIBUTION: ${PORTFOLIO_SHOW_CHART_ATTRIBUTION:-true}
+    ports:
+      - "4174:4174"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4174/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  stock-analyst:
+    image: ghcr.io/krbob/stock-analyst@${STOCK_ANALYST_IMAGE_DIGEST:?Set STOCK_ANALYST_IMAGE_DIGEST to sha256:<64 hex>}
+    depends_on:
+      - stock-analyst-backend-yfinance
+    environment:
+      BACKEND_URL: http://stock-analyst-backend-yfinance:8081
+    restart: unless-stopped
+
+  stock-analyst-backend-yfinance:
+    image: ghcr.io/krbob/stock-analyst-backend-yfinance@${STOCK_ANALYST_BACKEND_IMAGE_DIGEST:?Set STOCK_ANALYST_BACKEND_IMAGE_DIGEST to sha256:<64 hex>}
+    restart: unless-stopped
+
+  stock-analyst-ui:
+    image: ghcr.io/krbob/stock-analyst-ui@${STOCK_ANALYST_UI_IMAGE_DIGEST:?Set STOCK_ANALYST_UI_IMAGE_DIGEST to sha256:<64 hex>}
+    depends_on:
+      - stock-analyst
+    environment:
+      API_URL: http://stock-analyst:8080
+      PORTFOLIO_URL: ${PORTFOLIO_PUBLIC_URL:-http://127.0.0.1:4174}
+    ports:
+      - "${PORTFOLIO_STOCK_ANALYST_UI_PORT:-18083}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  edo-calculator:
+    image: ghcr.io/krbob/edo-calculator@${EDO_CALCULATOR_IMAGE_DIGEST:?Set EDO_CALCULATOR_IMAGE_DIGEST to sha256:<64 hex>}
+    restart: unless-stopped
+
+volumes:
+  portfolio-sqlite-data:
+  portfolio-backup-data:

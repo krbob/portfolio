@@ -12,7 +12,7 @@ services:
         condition: service_started
 
   stock-analyst:
-    image: ghcr.io/krbob/stock-analyst@${STOCK_ANALYST_IMAGE_DIGEST:?Set STOCK_ANALYST_IMAGE_DIGEST to sha256:<64 hex>}
+    image: ghcr.io/krbob/stock-analyst:main
     depends_on:
       stock-analyst-backend-yfinance:
         condition: service_healthy
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
   stock-analyst-backend-yfinance:
-    image: ghcr.io/krbob/stock-analyst-backend-yfinance@${STOCK_ANALYST_BACKEND_IMAGE_DIGEST:?Set STOCK_ANALYST_BACKEND_IMAGE_DIGEST to sha256:<64 hex>}
+    image: ghcr.io/krbob/stock-analyst-backend-yfinance:main
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
       interval: 10s
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
 
   stock-analyst-ui:
-    image: ghcr.io/krbob/stock-analyst-ui@${STOCK_ANALYST_UI_IMAGE_DIGEST:?Set STOCK_ANALYST_UI_IMAGE_DIGEST to sha256:<64 hex>}
+    image: ghcr.io/krbob/stock-analyst-ui:latest
     depends_on:
       stock-analyst:
         condition: service_healthy
@@ -55,5 +55,5 @@ services:
     restart: unless-stopped
 
   edo-calculator:
-    image: ghcr.io/krbob/edo-calculator@${EDO_CALCULATOR_IMAGE_DIGEST:?Set EDO_CALCULATOR_IMAGE_DIGEST to sha256:<64 hex>}
+    image: ghcr.io/krbob/edo-calculator:latest
     restart: unless-stopped

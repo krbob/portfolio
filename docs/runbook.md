@@ -3,9 +3,14 @@
 ## Update an existing deployment
 
 ```bash
-docker compose pull
-docker compose up -d
+python3 scripts/validate-compatibility-manifest.py
+docker compose -f docker-compose.full-stack.yml config
+docker compose -f docker-compose.full-stack.yml pull
+docker compose -f docker-compose.full-stack.yml up -d
 ```
+
+Before these commands, export all digest variables listed in `docs/deployment-compatibility.md`. Never copy a moving
+tag into the production file or invent a digest for an image that has not been published.
 
 If this deployment was created before the API image switched to UID/GID `10001:10001`, repair existing SQLite and backup volume ownership once before starting the updated API:
 

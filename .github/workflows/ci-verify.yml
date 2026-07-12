@@ -21,6 +21,35 @@ jobs:
       - name: Validate pinned supply-chain inputs
         run: python3 scripts/validate-supply-chain.py
 
+      - name: Validate compatibility manifest
+        run: python3 scripts/validate-compatibility-manifest.py
+
+      - name: Verify production Compose fails without image digests
+        run: |
+          if env \
+            -u PORTFOLIO_API_IMAGE_DIGEST \
+            -u PORTFOLIO_WEB_IMAGE_DIGEST \
+            -u STOCK_ANALYST_IMAGE_DIGEST \
+            -u STOCK_ANALYST_BACKEND_IMAGE_DIGEST \
+            -u STOCK_ANALYST_UI_IMAGE_DIGEST \
+            -u EDO_CALCULATOR_IMAGE_DIGEST \
+            docker compose -f docker-compose.full-stack.yml config >/dev/null 2>&1; then
+            echo "Production Compose accepted missing image digests." >&2
+            exit 1
+          fi
+
+      - name: Validate production Compose with digest-shaped release inputs
+        env:
+          PORTFOLIO_API_IMAGE_DIGEST: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PORTFOLIO_WEB_IMAGE_DIGEST: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          STOCK_ANALYST_IMAGE_DIGEST: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          STOCK_ANALYST_BACKEND_IMAGE_DIGEST: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          STOCK_ANALYST_UI_IMAGE_DIGEST: sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+          EDO_CALCULATOR_IMAGE_DIGEST: sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        run: |
+          docker compose -f docker-compose.full-stack.yml config >/dev/null
+          docker compose -f docker-compose.yml -f docker-compose.market-data.self-hosted.yml config >/dev/null
+
       - name: Lint GitHub Actions workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
 

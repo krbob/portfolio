@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "1.0.0",
+  "status": "candidate",
+  "reviewedAt": "2026-07-12",
+  "components": [
+    {
+      "id": "portfolio",
+      "repository": "https://github.com/krbob/portfolio",
+      "sourceCommit": "11ea30150447f35e99ae7c2b8914d18c34da00ad"
+    },
+    {
+      "id": "stock-analyst",
+      "repository": "https://github.com/krbob/stock-analyst",
+      "sourceCommit": "4e629768940b7d983458005da1537fb934787a46"
+    },
+    {
+      "id": "stock-analyst-ui",
+      "repository": "https://github.com/krbob/stock-analyst-ui",
+      "sourceCommit": "fbc854a4e335fde4143c983213be71cb8b4aa078"
+    },
+    {
+      "id": "edo-calculator",
+      "repository": "https://github.com/krbob/edo-calculator",
+      "sourceCommit": "8012437cca8cc944d7bd03b16aa739fd69b8fd9b"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "portfolio-api-client",
+      "kind": "generated-openapi-client",
+      "consumer": "portfolio-web",
+      "path": "apps/web/src/api/generated/portfolio-api.d.ts",
+      "sha256": "99ec1d72e85539509c25cb42266958602bb669f428c6c7aa0476e07b3211210c"
+    },
+    {
+      "id": "stock-analyst-v1",
+      "kind": "openapi",
+      "consumer": "portfolio-api",
+      "sourceCommit": "6a290a667adfd482c6a3eeba1382d69c1ed593a1",
+      "path": "apps/api/contracts/upstream/stock-analyst-v1.json",
+      "sha256": "0f248b9b402e705a71ba90b28a4555614a385e8161cca2aaa7d63a82dfc0f2fb"
+    },
+    {
+      "id": "edo-calculator-v1",
+      "kind": "openapi",
+      "consumer": "portfolio-api",
+      "sourceCommit": "20b098ec88212c3f9623d51d528405a6d51eb09c",
+      "path": "apps/api/contracts/upstream/edo-calculator-v1.yaml",
+      "sha256": "5dd2185351f5ed4a98cae9f8fb790969687ebf4d29f26ce2fb859f7590e0c936"
+    },
+    {
+      "id": "stock-ecosystem-ui",
+      "kind": "design-tokens",
+      "consumer": "portfolio-web",
+      "version": "1.0.1",
+      "sourceCommit": "708bb071ad693173585b05644ac553f102aeec50",
+      "files": [
+        {
+          "path": "apps/web/src/styles/vendor/stock-ecosystem-ui/tokens.css",
+          "sha256": "23bb71bec002264e161619d28a9822e70f488907694a32c5eca5ea02be297c50"
+        },
+        {
+          "path": "apps/web/src/styles/vendor/stock-ecosystem-ui/tokens.manifest.json",
+          "sha256": "7aa093a7f9020cbd28952f92ee6f260c08d5d7570ed764eb006beec977adf2ad"
+        }
+      ]
+    }
+  ],
+  "imagePolicy": {
+    "requiredDigestFormat": "sha256:<64 lowercase hexadecimal characters>",
+    "unpublishedDigest": null
+  },
+  "images": [
+    {
+      "id": "portfolio-api",
+      "repository": "ghcr.io/krbob/portfolio-api",
+      "digestEnvironment": "PORTFOLIO_API_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    },
+    {
+      "id": "portfolio-web",
+      "repository": "ghcr.io/krbob/portfolio-web",
+      "digestEnvironment": "PORTFOLIO_WEB_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    },
+    {
+      "id": "stock-analyst",
+      "repository": "ghcr.io/krbob/stock-analyst",
+      "digestEnvironment": "STOCK_ANALYST_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    },
+    {
+      "id": "stock-analyst-backend-yfinance",
+      "repository": "ghcr.io/krbob/stock-analyst-backend-yfinance",
+      "digestEnvironment": "STOCK_ANALYST_BACKEND_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    },
+    {
+      "id": "stock-analyst-ui",
+      "repository": "ghcr.io/krbob/stock-analyst-ui",
+      "digestEnvironment": "STOCK_ANALYST_UI_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    },
+    {
+      "id": "edo-calculator",
+      "repository": "ghcr.io/krbob/edo-calculator",
+      "digestEnvironment": "EDO_CALCULATOR_IMAGE_DIGEST",
+      "digest": null,
+      "status": "unpublished"
+    }
+  ]
+}

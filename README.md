@@ -45,6 +45,8 @@ portfolio/
 ├── docker-compose.yml
 ├── docker-compose.market-data.remote.yml
 ├── docker-compose.market-data.self-hosted.yml
+├── docker-compose.market-data.self-hosted.dev.example.yml
+├── docker-compose.full-stack.yml
 ├── docker-compose.full-stack.example.yml
 ├── docs/
 ├── apps/
@@ -56,6 +58,8 @@ portfolio/
 
 Build inputs, dependency locks, reproducible SBOMs, vulnerability gates, and image attestations are documented in
 [`docs/supply-chain.md`](docs/supply-chain.md).
+Versioned source/contract/token compatibility evidence and production image-digest hand-off are documented in
+[`docs/deployment-compatibility.md`](docs/deployment-compatibility.md).
 
 ## Quick start
 
@@ -110,7 +114,7 @@ docker compose \
 ```bash
 docker compose \
   -f docker-compose.yml \
-  -f docker-compose.market-data.self-hosted.yml \
+  -f docker-compose.market-data.self-hosted.dev.example.yml \
   --profile app up -d --build
 ```
 
@@ -121,16 +125,19 @@ This adds:
 - `stock-analyst-ui` at `http://127.0.0.1:18083`
 - `edo-calculator`
 
-On ARM hosts, the override currently pins upstream market-data services to `linux/amd64`. If those images become multi-arch later, remove or override `PORTFOLIO_MARKET_DATA_PLATFORM`.
+The development example uses moving tags and lets Docker select the native architecture. For a release-like local run,
+use `docker-compose.market-data.self-hosted.yml` after exporting the four real upstream image digests.
 
 ### 4. Full self-hosted stack from published images
 
 ```bash
-cp docker-compose.full-stack.example.yml docker-compose.full-stack.yml
+# Export the six *_IMAGE_DIGEST values from a real published release first.
+python3 scripts/validate-compatibility-manifest.py
 docker compose -f docker-compose.full-stack.yml up -d
 ```
 
-Use this path when you want a published-image deployment rather than a repo build.
+The production file fails before pulling when any digest is absent. The tag-based
+`docker-compose.full-stack.example.yml` remains available only for disposable development.
 
 ## Runtime model
 
