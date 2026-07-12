@@ -58,5 +58,6 @@ PORTFOLIO_API_BASE_URL="$API_BASE_URL" sh "$PROJECT_ROOT/scripts/import-demo-por
 
 cd "$PROJECT_ROOT/apps/web"
 PORTFOLIO_E2E_BASE_URL="$WEB_BASE_URL" npm run test:e2e -- --grep @smoke
+PORTFOLIO_E2E_BASE_URL="$WEB_BASE_URL" npm run test:e2e:quality
 
-printf 'Browser smoke test passed on %s\n' "$WEB_BASE_URL"
+printf 'Browser smoke, accessibility and offline tests passed on %s\n' "$WEB_BASE_URL"

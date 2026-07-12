@@ -11,10 +11,11 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run validate:tokens && tsc -b && vite build",
-    "generate:api": "../api/gradlew -p ../api exportOpenApiSpec && npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript ../api/build/openapi/portfolio-api.json -o src/api/generated/portfolio-api.d.ts",
+    "generate:api": "../api/gradlew -p ../api exportOpenApiSpec && npm exec --no -- openapi-typescript ../api/build/openapi/portfolio-api.json -o src/api/generated/portfolio-api.d.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:quality": "playwright test e2e/accessibility.spec.ts e2e/axe-accessibility.spec.ts e2e/offline-navigation.spec.ts",
     "lint": "eslint src scripts",
     "validate:tokens": "node scripts/validate-design-tokens.mjs",
     "sbom": "mkdir -p build/reports/sbom && npm sbom --package-lock-only --sbom-format=cyclonedx --sbom-type=application > build/reports/sbom/portfolio-web.raw.cdx.json && python3 ../../scripts/normalize-cyclonedx.py build/reports/sbom/portfolio-web.raw.cdx.json build/reports/sbom/portfolio-web.cdx.json && rm build/reports/sbom/portfolio-web.raw.cdx.json"
@@ -28,6 +29,7 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@eslint/js": "^10.0.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.2",
@@ -41,8 +43,9 @@
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "jsdom": "^29.0.0",
+    "openapi-typescript": "7.13.0",
     "tailwindcss": "^4.2.2",
-    "typescript": "~6.0.0",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.57.2",
     "vite": "^8.0.0",
     "vitest": "^4.0.18"

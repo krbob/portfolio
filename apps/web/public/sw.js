@@ -48,9 +48,10 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((response) => {
+        .then(async (response) => {
           if (response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', response.clone()))
+            const cache = await caches.open(CACHE_NAME)
+            await cache.put('/', response.clone())
           }
           return response
         })
@@ -76,9 +77,10 @@ self.addEventListener('fetch', (event) => {
         return cached
       }
 
-      return fetch(request).then((response) => {
+      return fetch(request).then(async (response) => {
         if (shouldCacheResponse(url, response)) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
+          const cache = await caches.open(CACHE_NAME)
+          await cache.put(request, response.clone())
         }
         return response
       })

@@ -3,6 +3,7 @@
 .env
 
 apps/api/.gradle/
+**/.kotlin/
 apps/api/build/
 apps/api/**/build/
 apps/api/out/
