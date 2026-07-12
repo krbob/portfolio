@@ -1,6 +1,5 @@
 package net.bobinski.portfolio.api.domain.service
 
-import kotlin.math.abs
 import kotlin.math.pow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -9,7 +8,6 @@ import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.InflationAdjustmentProvider
-import net.bobinski.portfolio.api.marketdata.service.InflationSeriesResult
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesProvider
 import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import java.math.BigDecimal
@@ -90,14 +88,18 @@ class PortfolioReturnsService(
                         val requestedFrom = definition.requestedFrom(today = history.until)
                         val effectiveFrom = maxOf(requestedFrom, inception)
                         buildPeriod(
-                            definition = definition,
-                            requestedFrom = requestedFrom,
-                            effectiveFrom = effectiveFrom,
-                            history = history,
-                            transactions = transactions,
-                            fxLookups = fxLookups,
-                            externalCashFlows = externalCashFlows,
-                            benchmarkSettings = benchmarkSettings
+                            PeriodBuildInput(
+                                window = ReturnPeriodWindow(
+                                    definition = definition,
+                                    requestedFrom = requestedFrom,
+                                    effectiveFrom = effectiveFrom
+                                ),
+                                history = history,
+                                transactions = transactions,
+                                fxLookups = fxLookups,
+                                externalCashFlows = externalCashFlows,
+                                benchmarkSettings = benchmarkSettings
+                            )
                         )
                     }
                 }
@@ -112,39 +114,64 @@ class PortfolioReturnsService(
         )
     }
 
-    private suspend fun buildPeriod(
-        definition: ReturnPeriodDefinition,
-        requestedFrom: LocalDate,
-        effectiveFrom: LocalDate,
-        history: PortfolioDailyHistory,
-        transactions: List<Transaction>,
-        fxLookups: TransactionFxLookups,
-        externalCashFlows: List<ExternalCashFlow>,
-        benchmarkSettings: PortfolioBenchmarkSettings
-    ): PortfolioReturnPeriod {
-        val nominalPln = calculateMetric(
-            start = effectiveFrom,
-            end = history.until,
-            values = history.points.map { ValuationPoint(date = it.date, value = it.totalCurrentValuePln) },
-            cashFlows = externalCashFlows.mapNotNull { cashFlow ->
-                cashFlow.plnAmount?.let { amount -> MoneyWeightedCashFlow(date = cashFlow.date, amount = amount) }
-            }
+    private suspend fun buildPeriod(input: PeriodBuildInput): PortfolioReturnPeriod {
+        val plnValues = input.history.points.map { point ->
+            ValuationPoint(date = point.date, value = point.totalCurrentValuePln)
+        }
+        val plnCashFlows = input.externalCashFlows.mapNotNull { cashFlow ->
+            cashFlow.plnAmount?.let { amount -> MoneyWeightedCashFlow(date = cashFlow.date, amount = amount) }
+        }
+        val nominalPln = PortfolioReturnCalculator.calculateMetric(
+            start = input.window.effectiveFrom,
+            end = input.history.until,
+            values = plnValues,
+            cashFlows = plnCashFlows
         )
-        val nominalUsd = calculateMetric(
-            start = effectiveFrom,
-            end = history.until,
-            values = history.points.mapNotNull { point ->
-                point.totalCurrentValueUsd?.let { value ->
-                    ValuationPoint(date = point.date, value = value)
-                }
+        val nominalUsd = PortfolioReturnCalculator.calculateMetric(
+            start = input.window.effectiveFrom,
+            end = input.history.until,
+            values = input.history.points.mapNotNull { point ->
+                point.totalCurrentValueUsd?.let { value -> ValuationPoint(date = point.date, value = value) }
             },
-            cashFlows = externalCashFlows.mapNotNull { cashFlow ->
+            cashFlows = input.externalCashFlows.mapNotNull { cashFlow ->
                 cashFlow.usdAmount?.let { amount -> MoneyWeightedCashFlow(date = cashFlow.date, amount = amount) }
             }
         )
+        val realPlnAdjustment = loadRealPlnAdjustment(
+            effectiveFrom = input.window.effectiveFrom,
+            end = input.history.until,
+            values = plnValues,
+            cashFlows = plnCashFlows
+        )
 
+        return PortfolioReturnPeriod(
+            key = input.window.definition.key,
+            label = input.window.definition.label,
+            requestedFrom = input.window.requestedFrom,
+            from = input.window.effectiveFrom,
+            until = input.history.until,
+            clippedToInception = input.window.effectiveFrom != input.window.requestedFrom,
+            dayCount = ChronoUnit.DAYS.between(input.window.effectiveFrom, input.history.until),
+            nominalPln = nominalPln,
+            nominalUsd = nominalUsd,
+            realPln = realPlnAdjustment?.metric,
+            inflation = realPlnAdjustment?.inflationWindow,
+            breakdown = PortfolioReturnBreakdownCalculator.calculate(
+                start = input.window.effectiveFrom,
+                end = input.history.until,
+                values = plnValues,
+                transactions = input.transactions,
+                fxLookups = input.fxLookups
+            ),
+            benchmarks = input.buildBenchmarkComparisons(nominalPln)
+        )
+    }
+
+    private fun PeriodBuildInput.buildBenchmarkComparisons(
+        nominalPln: ReturnMetric?
+    ): List<BenchmarkComparison> {
         val healthByKey = history.benchmarkStatuses.associateBy(BenchmarkSeriesHealth::key)
-        val benchmarkComparisons = benchmarkSettings.options
+        return benchmarkSettings.options
             .asSequence()
             .filter { option -> benchmarkSettings.isEnabled(option.key) }
             .mapNotNull { option ->
@@ -159,7 +186,7 @@ class PortfolioReturnsService(
                 }
                 buildBenchmarkComparison(
                     option = option,
-                    start = effectiveFrom,
+                    start = window.effectiveFrom,
                     end = history.until,
                     portfolioMetric = nominalPln,
                     pinned = benchmarkSettings.isPinned(option.key),
@@ -169,36 +196,6 @@ class PortfolioReturnsService(
             }
             .toList()
             .sortedWith(compareByDescending<BenchmarkComparison> { it.pinned }.thenBy(BenchmarkComparison::label))
-        val realPlnAdjustment = loadRealPlnAdjustment(
-            effectiveFrom = effectiveFrom,
-            end = history.until,
-            values = history.points.map { ValuationPoint(date = it.date, value = it.totalCurrentValuePln) },
-            cashFlows = externalCashFlows.mapNotNull { cashFlow ->
-                cashFlow.plnAmount?.let { amount -> MoneyWeightedCashFlow(date = cashFlow.date, amount = amount) }
-            }
-        )
-
-        return PortfolioReturnPeriod(
-            key = definition.key,
-            label = definition.label,
-            requestedFrom = requestedFrom,
-            from = effectiveFrom,
-            until = history.until,
-            clippedToInception = effectiveFrom != requestedFrom,
-            dayCount = ChronoUnit.DAYS.between(effectiveFrom, history.until),
-            nominalPln = nominalPln,
-            nominalUsd = nominalUsd,
-            realPln = realPlnAdjustment?.metric,
-            inflation = realPlnAdjustment?.inflationWindow,
-            breakdown = calculateBreakdown(
-                start = effectiveFrom,
-                end = history.until,
-                values = history.points.map { ValuationPoint(date = it.date, value = it.totalCurrentValuePln) },
-                transactions = transactions,
-                fxLookups = fxLookups
-            ),
-            benchmarks = benchmarkComparisons
-        )
     }
 
     private fun buildBenchmarkComparison(
@@ -210,7 +207,7 @@ class PortfolioReturnsService(
         values: List<ValuationPoint>,
         health: BenchmarkSeriesHealth?
     ): BenchmarkComparison {
-        val metric = calculateBenchmarkMetric(start = start, end = end, values = values)
+        val metric = PortfolioReturnCalculator.calculateBenchmarkMetric(start = start, end = end, values = values)
         val status = health?.status ?: BenchmarkSeriesStatus.HEALTHY
         val resolvedStatus = when {
             metric != null -> status
@@ -238,43 +235,6 @@ class PortfolioReturnsService(
             ),
             status = resolvedStatus,
             issue = resolvedIssue
-        )
-    }
-
-    private fun calculateBenchmarkMetric(
-        start: LocalDate,
-        end: LocalDate,
-        values: List<ValuationPoint>
-    ): ReturnMetric? {
-        if (values.isEmpty()) {
-            return null
-        }
-
-        val startValue = values.valueOnOrBefore(start) ?: return null
-        val endValue = values.valueOnOrBefore(end) ?: return null
-        val benchmarkCashFlows = listOf(
-            MoneyWeightedCashFlow(date = start, amount = startValue.negate()),
-            MoneyWeightedCashFlow(date = end, amount = endValue)
-        )
-        val annualizedReturn = calculateXirr(benchmarkCashFlows) ?: return null
-        val dayCount = ChronoUnit.DAYS.between(start, end)
-        val moneyWeightedReturn = if (dayCount <= 0) {
-            annualizedReturn
-        } else {
-            (1.0 + annualizedReturn).pow(dayCount.toDouble() / 365.0) - 1.0
-        }
-        val timeWeighted = calculateTimeWeightedMetric(
-            start = start,
-            end = end,
-            values = values,
-            cashFlows = emptyList()
-        )
-
-        return ReturnMetric(
-            moneyWeightedReturn = moneyWeightedReturn.toRate(),
-            annualizedMoneyWeightedReturn = annualizedReturn.toRate(),
-            timeWeightedReturn = timeWeighted?.totalReturn,
-            annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
         )
     }
 
@@ -460,7 +420,7 @@ class PortfolioReturnsService(
         if (!realFrom.isBefore(realUntil)) {
             return null
         }
-        val nominalMetric = calculateMetric(
+        val nominalMetric = PortfolioReturnCalculator.calculateMetric(
             start = realFrom,
             end = realUntil,
             values = values,
@@ -473,318 +433,12 @@ class PortfolioReturnsService(
         )
 
         return RealPlnAdjustment(
-            metric = nominalMetric.adjustForInflation(
+            metric = PortfolioReturnCalculator.adjustForInflation(
+                metric = nominalMetric,
                 inflation = inflationWindow,
                 periodDayCount = ChronoUnit.DAYS.between(realFrom, realUntil)
             ) ?: return null,
             inflationWindow = inflationWindow
-        )
-    }
-
-    private fun calculateMetric(
-        start: LocalDate,
-        end: LocalDate,
-        values: List<ValuationPoint>,
-        cashFlows: List<MoneyWeightedCashFlow>
-    ): ReturnMetric? {
-        if (values.isEmpty()) {
-            return null
-        }
-
-        val endValue = values.valueOnOrBefore(end) ?: return null
-        val sinceInception = values.none { it.date < start }
-        val periodCashFlows = mutableListOf<MoneyWeightedCashFlow>()
-
-        if (!sinceInception) {
-            val startValue = values.valueOnOrBefore(start) ?: return null
-            periodCashFlows += MoneyWeightedCashFlow(
-                date = start,
-                amount = startValue.negate()
-            )
-        }
-
-        periodCashFlows += cashFlows.filter { cashFlow ->
-            if (sinceInception) {
-                !cashFlow.date.isBefore(start) && !cashFlow.date.isAfter(end)
-            } else {
-                cashFlow.date.isAfter(start) && !cashFlow.date.isAfter(end)
-            }
-        }
-        periodCashFlows += MoneyWeightedCashFlow(
-            date = end,
-            amount = endValue
-        )
-        periodCashFlows.sortBy(MoneyWeightedCashFlow::date)
-
-        val annualizedReturn = calculateXirr(periodCashFlows) ?: return null
-        val dayCount = ChronoUnit.DAYS.between(periodCashFlows.first().date, periodCashFlows.last().date)
-        val moneyWeightedReturn = if (dayCount <= 0) {
-            annualizedReturn
-        } else {
-            (1.0 + annualizedReturn).pow(dayCount.toDouble() / 365.0) - 1.0
-        }
-        val timeWeighted = calculateTimeWeightedMetric(
-            start = start,
-            end = end,
-            values = values,
-            cashFlows = cashFlows
-        )
-
-        return ReturnMetric(
-            moneyWeightedReturn = moneyWeightedReturn.toRate(),
-            annualizedMoneyWeightedReturn = annualizedReturn.toRate(),
-            timeWeightedReturn = timeWeighted?.totalReturn,
-            annualizedTimeWeightedReturn = timeWeighted?.annualizedReturn
-        )
-    }
-
-    private fun calculateBreakdown(
-        start: LocalDate,
-        end: LocalDate,
-        values: List<ValuationPoint>,
-        transactions: List<Transaction>,
-        fxLookups: TransactionFxLookups
-    ): ReturnBreakdown? {
-        if (values.isEmpty()) {
-            return null
-        }
-
-        val closingValue = values.valueOnOrBefore(end)?.scaleMoney(2) ?: return null
-        val sinceInception = values.none { it.date < start }
-        val openingValue = if (sinceInception) {
-            BigDecimal.ZERO.scaleMoney(2)
-        } else {
-            values.valueOnOrBefore(start)?.scaleMoney(2) ?: return null
-        }
-
-        val periodTransactions = transactions.filter { transaction ->
-            if (sinceInception) {
-                !transaction.tradeDate.isBefore(start) && !transaction.tradeDate.isAfter(end)
-            } else {
-                transaction.tradeDate.isAfter(start) && !transaction.tradeDate.isAfter(end)
-            }
-        }
-
-        var netExternalFlows = BigDecimal.ZERO.scaleMoney(2)
-        var interestAndCoupons = BigDecimal.ZERO.scaleMoney(2)
-        var fees = BigDecimal.ZERO.scaleMoney(2)
-        var taxes = BigDecimal.ZERO.scaleMoney(2)
-        var skippedFxTransactionCount = 0
-
-        for (transaction in periodTransactions) {
-            val converted = fxLookups.convertedAmountsOrNull(transaction)
-            if (converted == null) {
-                skippedFxTransactionCount += 1
-                continue
-            }
-
-            when (transaction.type) {
-                TransactionType.DEPOSIT -> netExternalFlows = netExternalFlows.add(converted.grossPln).scaleMoney(2)
-                TransactionType.WITHDRAWAL -> netExternalFlows = netExternalFlows.subtract(converted.grossPln).scaleMoney(2)
-                TransactionType.INTEREST -> interestAndCoupons = interestAndCoupons.add(converted.grossPln).scaleMoney(2)
-                TransactionType.FEE -> fees = fees.subtract(converted.grossPln).scaleMoney(2)
-                TransactionType.TAX -> taxes = taxes.subtract(converted.grossPln).scaleMoney(2)
-                else -> Unit
-            }
-
-            if (converted.feePln.signum() > 0) {
-                fees = fees.subtract(converted.feePln).scaleMoney(2)
-            }
-            if (converted.taxPln.signum() > 0) {
-                taxes = taxes.subtract(converted.taxPln).scaleMoney(2)
-            }
-        }
-
-        val netChange = closingValue.subtract(openingValue).scaleMoney(2)
-        val marketAndFx = netChange
-            .subtract(netExternalFlows)
-            .subtract(interestAndCoupons)
-            .subtract(fees)
-            .subtract(taxes)
-            .scaleMoney(2)
-
-        return ReturnBreakdown(
-            openingValuePln = openingValue,
-            closingValuePln = closingValue,
-            netChangePln = netChange,
-            netExternalFlowsPln = netExternalFlows,
-            interestAndCouponsPln = interestAndCoupons,
-            feesPln = fees,
-            taxesPln = taxes,
-            marketAndFxPln = marketAndFx,
-            netInvestmentResultPln = netChange.subtract(netExternalFlows).scaleMoney(2),
-            skippedFxTransactionCount = skippedFxTransactionCount
-        )
-    }
-
-    private fun calculateTimeWeightedMetric(
-        start: LocalDate,
-        end: LocalDate,
-        values: List<ValuationPoint>,
-        cashFlows: List<MoneyWeightedCashFlow>
-    ): TimeWeightedMetric? {
-        val orderedValues = values.sortedBy(ValuationPoint::date)
-        val startValue = orderedValues.valueOnOrBefore(start) ?: return null
-        val periodValuations = orderedValues.filter { valuation ->
-            valuation.date.isAfter(start) && !valuation.date.isAfter(end)
-        }
-        val dayCount = ChronoUnit.DAYS.between(start, end)
-        if (periodValuations.isEmpty()) {
-            return TimeWeightedMetric(
-                totalReturn = 0.0.toRate(),
-                annualizedReturn = 0.0.toRate()
-            )
-        }
-
-        val cashFlowsByDate = cashFlows.groupBy(MoneyWeightedCashFlow::date)
-            .mapValues { (_, items) ->
-                items.fold(BigDecimal.ZERO) { total, item -> total.add(item.amount) }
-            }
-        val totalFactor = TimeWeightedReturnCalculator.totalFactor(
-            listOf(TimeWeightedReturnCalculator.Point(date = start, value = startValue)) +
-                periodValuations.map { valuation ->
-                    TimeWeightedReturnCalculator.Point(
-                        date = valuation.date,
-                        value = valuation.value,
-                        externalFlowIntoPortfolio = cashFlowsByDate[valuation.date]?.negate() ?: BigDecimal.ZERO
-                    )
-                }
-        ) ?: return null
-
-        val totalReturn = totalFactor - 1.0
-        val annualizedReturn = when {
-            dayCount <= 0 -> totalReturn
-            totalFactor <= 0.0 -> -1.0
-            else -> totalFactor.pow(365.0 / dayCount.toDouble()) - 1.0
-        }
-
-        return TimeWeightedMetric(
-            totalReturn = totalReturn.toRate(),
-            annualizedReturn = annualizedReturn.toRate()
-        )
-    }
-
-    private fun calculateXirr(cashFlows: List<MoneyWeightedCashFlow>): Double? {
-        if (cashFlows.size < 2) {
-            return null
-        }
-
-        val ordered = cashFlows.sortedBy(MoneyWeightedCashFlow::date)
-        val amounts = ordered.map { it.amount.toDouble() }
-        if (amounts.none { it > 0.0 } || amounts.none { it < 0.0 }) {
-            return null
-        }
-
-        val t0 = ordered.first().date
-        val days = ordered.map { ChronoUnit.DAYS.between(t0, it.date).toDouble() }
-
-        fun safeRate(rate: Double): Double = maxOf(rate, -0.9999999)
-
-        fun npv(rate: Double): Double {
-            val normalizedRate = safeRate(rate)
-            return amounts.indices.sumOf { index ->
-                amounts[index] / (1.0 + normalizedRate).pow(days[index] / 365.0)
-            }
-        }
-
-        fun dnpv(rate: Double): Double {
-            val normalizedRate = safeRate(rate)
-            return amounts.indices.sumOf { index ->
-                val exponent = days[index] / 365.0
-                -(exponent * amounts[index]) / (1.0 + normalizedRate).pow(exponent + 1.0)
-            }
-        }
-
-        var guess = if (amounts.filter { it > 0.0 }.sum() / -amounts.filter { it < 0.0 }.sum() - 1.0 < 0.0) {
-            -0.5
-        } else {
-            0.1
-        }
-
-        repeat(50) {
-            val value = npv(guess)
-            val derivative = dnpv(guess)
-            if (!value.isFinite() || !derivative.isFinite() || abs(derivative) < 1e-20) {
-                return@repeat
-            }
-            val next = guess - value / derivative
-            if (!next.isFinite()) {
-                return@repeat
-            }
-            if (abs(next - guess) < 1e-10) {
-                return next
-            }
-            guess = next
-        }
-
-        var low = -0.9999
-        var high = 10.0
-        var lowValue = npv(low)
-        var highValue = npv(high)
-        repeat(20) {
-            if (lowValue * highValue <= 0.0) {
-                return@repeat
-            }
-            high *= 2.0
-            highValue = npv(high)
-        }
-        if (lowValue * highValue > 0.0) {
-            return null
-        }
-
-        repeat(100) {
-            val mid = (low + high) / 2.0
-            val midValue = npv(mid)
-            if (!midValue.isFinite() || abs(midValue) < 1e-10) {
-                return mid
-            }
-            if (lowValue * midValue < 0.0) {
-                high = mid
-                highValue = midValue
-            } else {
-                low = mid
-                lowValue = midValue
-            }
-        }
-
-        return (low + high) / 2.0
-    }
-
-    private fun ReturnMetric.adjustForInflation(
-        inflation: InflationWindow?,
-        periodDayCount: Long
-    ): ReturnMetric? {
-        if (inflation == null || inflation.multiplier.signum() <= 0) {
-            return null
-        }
-
-        val nominalTotal = 1.0 + moneyWeightedReturn.toDouble()
-        val realTotal = nominalTotal / inflation.multiplier.toDouble() - 1.0
-        val realAnnualized = annualizedMoneyWeightedReturn?.let {
-            if (periodDayCount <= 0) {
-                realTotal
-            } else {
-                (1.0 + realTotal).pow(365.0 / periodDayCount.toDouble()) - 1.0
-            }
-        }
-        val realTimeWeighted = timeWeightedReturn?.let { value ->
-            (1.0 + value.toDouble()) / inflation.multiplier.toDouble() - 1.0
-        }
-        val realAnnualizedTimeWeighted = annualizedTimeWeightedReturn?.let {
-            if (periodDayCount <= 0) {
-                realTimeWeighted
-            } else {
-                realTimeWeighted?.let { value ->
-                    (1.0 + value).pow(365.0 / periodDayCount.toDouble()) - 1.0
-                }
-            }
-        }
-
-        return ReturnMetric(
-            moneyWeightedReturn = realTotal.toRate(),
-            annualizedMoneyWeightedReturn = realAnnualized?.toRate(),
-            timeWeightedReturn = realTimeWeighted?.toRate(),
-            annualizedTimeWeightedReturn = realAnnualizedTimeWeighted?.toRate()
         )
     }
 
@@ -815,9 +469,6 @@ class PortfolioReturnsService(
             else -> null
         }
     }
-
-    private fun List<ValuationPoint>.valueOnOrBefore(date: LocalDate): BigDecimal? =
-        lastOrNull { it.date <= date }?.value
 
     private fun BigDecimal.divideBy(
         lookup: TreeMap<LocalDate, BigDecimal>,
@@ -856,19 +507,19 @@ class PortfolioReturnsService(
         val usdAmount: BigDecimal?
     )
 
-    private data class MoneyWeightedCashFlow(
-        val date: LocalDate,
-        val amount: BigDecimal
+    private data class PeriodBuildInput(
+        val window: ReturnPeriodWindow,
+        val history: PortfolioDailyHistory,
+        val transactions: List<Transaction>,
+        val fxLookups: TransactionFxLookups,
+        val externalCashFlows: List<ExternalCashFlow>,
+        val benchmarkSettings: PortfolioBenchmarkSettings
     )
 
-    private data class ValuationPoint(
-        val date: LocalDate,
-        val value: BigDecimal
-    )
-
-    private data class TimeWeightedMetric(
-        val totalReturn: BigDecimal,
-        val annualizedReturn: BigDecimal?
+    private data class ReturnPeriodWindow(
+        val definition: ReturnPeriodDefinition,
+        val requestedFrom: LocalDate,
+        val effectiveFrom: LocalDate
     )
 
     private data class RealPlnAdjustment(
