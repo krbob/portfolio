@@ -6,6 +6,8 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
@@ -165,8 +167,31 @@ class MarketDataSnapshotCacheService(
             return
         }
 
+        putSeriesSnapshot(identity = identity, prices = prices, coveredRange = null)
+    }
+
+    suspend fun putSeries(
+        identity: String,
+        from: LocalDate,
+        to: LocalDate,
+        prices: List<HistoricalPricePoint>
+    ) {
+        require(!to.isBefore(from)) { "Series coverage end must not be before its start." }
+        putSeriesSnapshot(
+            identity = identity,
+            prices = prices,
+            coveredRange = MarketDataCoverageRange(from = from, to = to)
+        )
+    }
+
+    private suspend fun putSeriesSnapshot(
+        identity: String,
+        prices: List<HistoricalPricePoint>,
+        coveredRange: MarketDataCoverageRange?
+    ) = seriesMutationMutex(identity).withLock {
+        val existing = getStoredSeries(identity)
         val mergedPoints = mergeSeriesPoints(
-            existing = getStoredSeries(identity)?.points.orEmpty(),
+            existing = existing?.points.orEmpty(),
             incoming = prices.map { point ->
                 StoredPricePoint(
                     date = point.date.toString(),
@@ -176,9 +201,12 @@ class MarketDataSnapshotCacheService(
         )
         val stored = StoredSeriesSnapshot(
             identity = identity,
-            points = mergedPoints
+            points = mergedPoints,
+            coverageRanges = mergeStoredCoverageRanges(
+                existing = existing?.coverageRanges.orEmpty(),
+                incoming = listOfNotNull(coveredRange?.toStored())
+            )
         )
-        val existing = getStoredSeries(identity)
 
         appPreferenceService.put(
             key = preferenceKey(SnapshotPreferenceType.SERIES.preferenceType, identity),
@@ -196,7 +224,7 @@ class MarketDataSnapshotCacheService(
         )
     }
 
-    suspend fun recordSeriesFailure(identity: String, reason: String?) {
+    suspend fun recordSeriesFailure(identity: String, reason: String?) = seriesMutationMutex(identity).withLock {
         val stored = getStoredSeries(identity)
         updateFailureMetadata(
             snapshotType = SnapshotPreferenceType.SERIES,
@@ -214,7 +242,23 @@ class MarketDataSnapshotCacheService(
         from: LocalDate,
         to: LocalDate
     ): List<HistoricalPricePoint>? {
-        val stored = getStoredSeries(identity) ?: return null
+        val lookup = lookupSeries(identity = identity, from = from, to = to)
+        return lookup.prices.takeIf { lookup.coverage == MarketDataSnapshotCoverage.FULL }
+    }
+
+    internal suspend fun lookupSeries(
+        identity: String,
+        from: LocalDate,
+        to: LocalDate
+    ): MarketDataSeriesSnapshotLookup {
+        require(!to.isBefore(from)) { "Series lookup end must not be before its start." }
+        val requestedRange = MarketDataCoverageRange(from = from, to = to)
+        val stored = getStoredSeries(identity) ?: return MarketDataSeriesSnapshotLookup(
+            coverage = MarketDataSnapshotCoverage.MISS,
+            prices = emptyList(),
+            coveredRanges = emptyList(),
+            missingRanges = listOf(requestedRange)
+        )
         val points = stored.points
             .map { point ->
                 HistoricalPricePoint(
@@ -223,8 +267,23 @@ class MarketDataSnapshotCacheService(
                 )
             }
             .filter { point -> !point.date.isBefore(from) && !point.date.isAfter(to) }
+            .sortedBy(HistoricalPricePoint::date)
+        val coveredRanges = normalizeCoverageRanges(
+            stored.coverageRanges.mapNotNull(StoredCoverageRange::toDomainOrNull)
+        ).mapNotNull { range -> range.intersection(requestedRange) }
+        val missingRanges = missingCoverageRanges(requested = requestedRange, covered = coveredRanges)
+        val coverage = when {
+            missingRanges.isEmpty() -> MarketDataSnapshotCoverage.FULL
+            coveredRanges.isNotEmpty() || points.isNotEmpty() -> MarketDataSnapshotCoverage.PARTIAL
+            else -> MarketDataSnapshotCoverage.MISS
+        }
 
-        return points.takeIf { it.isNotEmpty() }
+        return MarketDataSeriesSnapshotLookup(
+            coverage = coverage,
+            prices = points,
+            coveredRanges = coveredRanges,
+            missingRanges = missingRanges
+        )
     }
 
     suspend fun putMonthlyInflation(points: List<MonthlyInflationPoint>) {
@@ -494,6 +553,13 @@ class MarketDataSnapshotCacheService(
         .values
         .toList()
 
+    private fun mergeStoredCoverageRanges(
+        existing: List<StoredCoverageRange>,
+        incoming: List<StoredCoverageRange>
+    ): List<StoredCoverageRange> = normalizeCoverageRanges(
+        (existing + incoming).mapNotNull(StoredCoverageRange::toDomainOrNull)
+    ).map(MarketDataCoverageRange::toStored)
+
     private fun mergeMonthlyInflationPoints(
         existing: List<StoredMonthlyInflationPoint>,
         incoming: List<StoredMonthlyInflationPoint>
@@ -509,10 +575,18 @@ class MarketDataSnapshotCacheService(
     private fun metadataPreferenceKey(type: String, identity: String): String =
         "${MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX}$type.${identity.sha256Hex()}"
 
+    private fun seriesMutationMutex(identity: String): Mutex =
+        seriesMutationMutexes[Math.floorMod(identity.hashCode(), seriesMutationMutexes.size)]
+
     private fun String.sha256Hex(): String =
         MessageDigest.getInstance("SHA-256")
             .digest(toByteArray(Charsets.UTF_8))
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
+
+    private companion object {
+        const val SERIES_MUTATION_MUTEX_COUNT = 64
+        val seriesMutationMutexes = List(SERIES_MUTATION_MUTEX_COUNT) { Mutex() }
+    }
 }
 
 data class MarketDataSnapshotSummary(
@@ -538,6 +612,24 @@ enum class MarketDataSnapshotStatus {
     STALE,
     FAILED
 }
+
+internal enum class MarketDataSnapshotCoverage {
+    FULL,
+    PARTIAL,
+    MISS
+}
+
+internal data class MarketDataCoverageRange(
+    val from: LocalDate,
+    val to: LocalDate
+)
+
+internal data class MarketDataSeriesSnapshotLookup(
+    val coverage: MarketDataSnapshotCoverage,
+    val prices: List<HistoricalPricePoint>,
+    val coveredRanges: List<MarketDataCoverageRange>,
+    val missingRanges: List<MarketDataCoverageRange>
+)
 
 private data class SnapshotIdentity(
     val snapshotType: SnapshotPreferenceType,
@@ -629,7 +721,14 @@ internal data class StoredQuoteSnapshot(
 @Serializable
 internal data class StoredSeriesSnapshot(
     val identity: String,
-    val points: List<StoredPricePoint>
+    val points: List<StoredPricePoint>,
+    val coverageRanges: List<StoredCoverageRange> = emptyList()
+)
+
+@Serializable
+internal data class StoredCoverageRange(
+    val from: String,
+    val to: String
 )
 
 @Serializable
@@ -656,3 +755,73 @@ internal data class StoredInflationWindow(
     val until: String,
     val multiplier: String
 )
+
+private fun StoredCoverageRange.toDomainOrNull(): MarketDataCoverageRange? = runCatching {
+    MarketDataCoverageRange(from = LocalDate.parse(from), to = LocalDate.parse(to))
+}.getOrNull()?.takeIf { range -> !range.to.isBefore(range.from) }
+
+private fun MarketDataCoverageRange.toStored(): StoredCoverageRange = StoredCoverageRange(
+    from = from.toString(),
+    to = to.toString()
+)
+
+private fun MarketDataCoverageRange.intersection(other: MarketDataCoverageRange): MarketDataCoverageRange? {
+    val intersectionFrom = maxOf(from, other.from)
+    val intersectionTo = minOf(to, other.to)
+    return MarketDataCoverageRange(from = intersectionFrom, to = intersectionTo)
+        .takeIf { range -> !range.to.isBefore(range.from) }
+}
+
+private fun normalizeCoverageRanges(ranges: List<MarketDataCoverageRange>): List<MarketDataCoverageRange> {
+    val sorted = ranges
+        .filter { range -> !range.to.isBefore(range.from) }
+        .sortedWith(compareBy(MarketDataCoverageRange::from).thenBy(MarketDataCoverageRange::to))
+    if (sorted.isEmpty()) {
+        return emptyList()
+    }
+
+    val normalized = mutableListOf<MarketDataCoverageRange>()
+    var current = sorted.first()
+    for (next in sorted.drop(1)) {
+        if (next.from.toEpochDay() <= current.to.toEpochDay() + 1L) {
+            current = MarketDataCoverageRange(from = current.from, to = maxOf(current.to, next.to))
+        } else {
+            normalized += current
+            current = next
+        }
+    }
+    normalized += current
+    return normalized
+}
+
+private fun missingCoverageRanges(
+    requested: MarketDataCoverageRange,
+    covered: List<MarketDataCoverageRange>
+): List<MarketDataCoverageRange> {
+    val requestedToEpochDay = requested.to.toEpochDay()
+    var cursor = requested.from.toEpochDay()
+    val missing = mutableListOf<MarketDataCoverageRange>()
+
+    for (range in normalizeCoverageRanges(covered)) {
+        val coveredFrom = range.from.toEpochDay()
+        val coveredTo = range.to.toEpochDay()
+        if (coveredFrom > cursor) {
+            missing += MarketDataCoverageRange(
+                from = LocalDate.ofEpochDay(cursor),
+                to = LocalDate.ofEpochDay(minOf(coveredFrom - 1L, requestedToEpochDay))
+            )
+        }
+        cursor = maxOf(cursor, coveredTo + 1L)
+        if (cursor > requestedToEpochDay) {
+            break
+        }
+    }
+
+    if (cursor <= requestedToEpochDay) {
+        missing += MarketDataCoverageRange(
+            from = LocalDate.ofEpochDay(cursor),
+            to = requested.to
+        )
+    }
+    return missing
+}

@@ -65,6 +65,11 @@ Those snapshots are not treated as fresh truth. They exist so the product can de
 - `STALE` when fallback data is usable but old
 - partial or missing coverage statuses when full valuation is impossible
 
+Historical snapshots persist successful inclusive query ranges separately from their sparse price points. A cached
+fallback is usable only when the union of those ranges fully covers the request; partial overlap is never promoted to
+success. This preserves valid trading-calendar gaps while making pre-instrument history and old point-only snapshots
+explicit and safe.
+
 This is why readiness, data-quality panels, and market-data snapshot views are part of the operational UI surface under `System` and the dashboard.
 
 ## Runtime modes

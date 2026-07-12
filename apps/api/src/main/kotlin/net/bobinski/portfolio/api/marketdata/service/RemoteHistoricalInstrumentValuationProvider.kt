@@ -6,6 +6,7 @@ import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 import java.time.LocalDate
 
@@ -73,6 +74,8 @@ class RemoteHistoricalInstrumentValuationProvider(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             instrument.symbol?.let { symbol ->
                 snapshotCacheService.recordSeriesFailure(
@@ -122,7 +125,12 @@ class RemoteHistoricalInstrumentValuationProvider(
             )
         val history = stockAnalystClient.historyInPln(symbol, from = from, to = to)
             .map { HistoricalPricePoint(date = it.date, closePricePln = it.closePricePln) }
-        snapshotCacheService.putSeries(identity = stockHistoryIdentity(symbol), prices = history)
+        snapshotCacheService.putSeries(
+            identity = stockHistoryIdentity(symbol),
+            from = from,
+            to = to,
+            prices = history
+        )
 
         return HistoricalInstrumentValuationResult.Success(prices = history)
     }
@@ -133,9 +141,11 @@ class RemoteHistoricalInstrumentValuationProvider(
         to: LocalDate
     ): HistoricalInstrumentValuationResult.Success? {
         val symbol = instrument.symbol ?: return null
-        val cached = snapshotCacheService.getSeries(identity = stockHistoryIdentity(symbol), from = from, to = to)
-            ?: return null
-        return HistoricalInstrumentValuationResult.Success(prices = cached, fromCache = true)
+        val cached = snapshotCacheService.lookupSeries(identity = stockHistoryIdentity(symbol), from = from, to = to)
+        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+            return null
+        }
+        return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)
     }
 
     private fun stockHistoryIdentity(symbol: String): String = "stock-history:$symbol"

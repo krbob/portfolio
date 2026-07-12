@@ -11,6 +11,7 @@ import java.time.Clock
 import java.time.Instant
 import java.math.RoundingMode
 import java.util.TreeMap
+import kotlinx.coroutines.CancellationException
 
 class RemoteReferenceSeriesProvider(
     private val config: MarketDataConfig,
@@ -74,7 +75,7 @@ class RemoteReferenceSeriesProvider(
         to: LocalDate
     ): ReferenceSeriesResult = try {
         val prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
-        snapshotCacheService.putSeries(identity = identity, prices = prices)
+        snapshotCacheService.putSeries(identity = identity, from = from, to = to, prices = prices)
         ReferenceSeriesResult.Success(prices = prices)
     } catch (exception: MarketDataClientException) {
         snapshotCacheService.recordSeriesFailure(identity = identity, reason = exception.message)
@@ -97,6 +98,8 @@ class RemoteReferenceSeriesProvider(
         )
         cachedSeries(identity = identity, from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
+    } catch (exception: CancellationException) {
+        throw exception
     } catch (exception: Exception) {
         snapshotCacheService.recordSeriesFailure(identity = identity, reason = exception.message)
         logger.warn(
@@ -152,7 +155,12 @@ class RemoteReferenceSeriesProvider(
             logger.warn("Gold spot series returned no usable PLN points in {}..{}", from, to)
             ReferenceSeriesResult.Failure("gold-api returned no usable gold history in PLN.")
         } else {
-            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = prices)
+            snapshotCacheService.putSeries(
+                identity = REFERENCE_GOLD_PLN,
+                from = from,
+                to = to,
+                prices = prices
+            )
             ReferenceSeriesResult.Success(prices = prices)
         }
     } catch (exception: MarketDataClientException) {
@@ -169,6 +177,8 @@ class RemoteReferenceSeriesProvider(
         )
         cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
+    } catch (exception: CancellationException) {
+        throw exception
     } catch (exception: Exception) {
         snapshotCacheService.recordSeriesFailure(identity = REFERENCE_GOLD_PLN, reason = exception.message)
         logger.warn("Unexpected gold spot series error in {}..{}", from, to, exception)
@@ -191,7 +201,12 @@ class RemoteReferenceSeriesProvider(
     ): ReferenceSeriesResult {
         val spotResult = loadGoldSpotSeriesInPln(from = from, to = to)
         if (spotResult is ReferenceSeriesResult.Success) {
-            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = spotResult.prices)
+            snapshotCacheService.putSeries(
+                identity = REFERENCE_GOLD_PLN,
+                from = from,
+                to = to,
+                prices = spotResult.prices
+            )
             return spotResult
         }
 
@@ -201,7 +216,12 @@ class RemoteReferenceSeriesProvider(
             to = to
         )
         if (fallbackResult is ReferenceSeriesResult.Success) {
-            snapshotCacheService.putSeries(identity = "reference:gold-pln", prices = fallbackResult.prices)
+            snapshotCacheService.putSeries(
+                identity = REFERENCE_GOLD_PLN,
+                from = from,
+                to = to,
+                prices = fallbackResult.prices
+            )
             return fallbackResult
         }
 
@@ -227,8 +247,11 @@ class RemoteReferenceSeriesProvider(
         from: LocalDate,
         to: LocalDate
     ): ReferenceSeriesResult.Success? {
-        val cached = snapshotCacheService.getSeries(identity = identity, from = from, to = to) ?: return null
-        return ReferenceSeriesResult.Success(prices = cached, fromCache = true)
+        val cached = snapshotCacheService.lookupSeries(identity = identity, from = from, to = to)
+        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+            return null
+        }
+        return ReferenceSeriesResult.Success(prices = cached.prices, fromCache = true)
     }
 
     private fun benchmarkIdentity(symbol: String, currency: String?): String =

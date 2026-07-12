@@ -6,15 +6,239 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
+import net.bobinski.portfolio.api.domain.model.AppPreference
+import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class MarketDataSnapshotCacheServiceTest {
+
+    @Test
+    fun `series lookup distinguishes full partial and missing coverage without treating market gaps as missing`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        snapshotCache.putSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-10"),
+            prices = listOf(
+                price("2026-03-03", "101.10"),
+                price("2026-03-06", "102.45")
+            )
+        )
+
+        val contained = snapshotCache.lookupSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-03-02"),
+            to = LocalDate.parse("2026-03-09")
+        )
+        val overlapping = snapshotCache.lookupSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-02-28"),
+            to = LocalDate.parse("2026-03-05")
+        )
+        val missing = snapshotCache.lookupSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-04-01"),
+            to = LocalDate.parse("2026-04-02")
+        )
+
+        assertEquals(MarketDataSnapshotCoverage.FULL, contained.coverage)
+        assertEquals(listOf(LocalDate.parse("2026-03-03"), LocalDate.parse("2026-03-06")), contained.prices.map { it.date })
+        assertEquals(MarketDataSnapshotCoverage.PARTIAL, overlapping.coverage)
+        assertEquals(
+            listOf(MarketDataCoverageRange(LocalDate.parse("2026-02-28"), LocalDate.parse("2026-02-28"))),
+            overlapping.missingRanges
+        )
+        assertEquals(MarketDataSnapshotCoverage.MISS, missing.coverage)
+    }
+
+    @Test
+    fun `successful empty prehistory range is a full cache hit`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val from = LocalDate.parse("1900-01-01")
+        val to = LocalDate.parse("1900-01-31")
+
+        snapshotCache.putSeries(
+            identity = "stock-history:VWRA.L",
+            from = from,
+            to = to,
+            prices = emptyList()
+        )
+
+        val lookup = snapshotCache.lookupSeries(identity = "stock-history:VWRA.L", from = from, to = to)
+        val legacyView = snapshotCache.getSeries(identity = "stock-history:VWRA.L", from = from, to = to)
+
+        assertEquals(MarketDataSnapshotCoverage.FULL, lookup.coverage)
+        assertEquals(emptyList<HistoricalPricePoint>(), lookup.prices)
+        assertNotNull(legacyView)
+        assertEquals(emptyList<HistoricalPricePoint>(), legacyView)
+    }
+
+    @Test
+    fun `separate successful ranges stay partial across a gap until the gap is covered`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "reference:VWRA.L:PLN"
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-03"),
+            prices = listOf(price("2026-03-03", "101.10"))
+        )
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-05"),
+            to = LocalDate.parse("2026-03-07"),
+            prices = listOf(price("2026-03-06", "102.45"))
+        )
+
+        val partial = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-07")
+        )
+
+        assertEquals(MarketDataSnapshotCoverage.PARTIAL, partial.coverage)
+        assertEquals(
+            listOf(MarketDataCoverageRange(LocalDate.parse("2026-03-04"), LocalDate.parse("2026-03-04"))),
+            partial.missingRanges
+        )
+        assertNull(
+            snapshotCache.getSeries(
+                identity = identity,
+                from = LocalDate.parse("2026-03-01"),
+                to = LocalDate.parse("2026-03-07")
+            )
+        )
+
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-04"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = emptyList()
+        )
+
+        val full = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-07")
+        )
+        assertEquals(MarketDataSnapshotCoverage.FULL, full.coverage)
+        assertEquals(emptyList<MarketDataCoverageRange>(), full.missingRanges)
+        assertEquals(2, full.prices.size)
+    }
+
+    @Test
+    fun `legacy point-only snapshot is partial until requested coverage is recorded`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "stock-history:legacy"
+        snapshotCache.putSeries(
+            identity = identity,
+            prices = listOf(price("2026-03-03", "101.10"), price("2026-03-06", "102.45"))
+        )
+
+        val lookup = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-03"),
+            to = LocalDate.parse("2026-03-06")
+        )
+
+        assertEquals(MarketDataSnapshotCoverage.PARTIAL, lookup.coverage)
+        assertNull(
+            snapshotCache.getSeries(
+                identity = identity,
+                from = LocalDate.parse("2026-03-03"),
+                to = LocalDate.parse("2026-03-06")
+            )
+        )
+    }
+
+    @Test
+    fun `concurrent range updates preserve the union of points and coverage`() = runBlocking {
+        val repository = DelayedAppPreferenceRepository(InMemoryAppPreferenceRepository())
+        val firstSnapshotCache = snapshotCache(repository)
+        val secondSnapshotCache = snapshotCache(repository)
+        val identity = "fx-history:USD"
+
+        coroutineScope {
+            listOf(
+                async(Dispatchers.Default) {
+                    firstSnapshotCache.putSeries(
+                        identity = identity,
+                        from = LocalDate.parse("2026-03-01"),
+                        to = LocalDate.parse("2026-03-03"),
+                        prices = listOf(price("2026-03-02", "3.80"))
+                    )
+                },
+                async(Dispatchers.Default) {
+                    secondSnapshotCache.putSeries(
+                        identity = identity,
+                        from = LocalDate.parse("2026-03-04"),
+                        to = LocalDate.parse("2026-03-06"),
+                        prices = listOf(price("2026-03-05", "3.85"))
+                    )
+                }
+            ).awaitAll()
+        }
+
+        val lookup = firstSnapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-06")
+        )
+        assertEquals(MarketDataSnapshotCoverage.FULL, lookup.coverage)
+        assertEquals(listOf(LocalDate.parse("2026-03-02"), LocalDate.parse("2026-03-05")), lookup.prices.map { it.date })
+    }
+
+    @Test
+    fun `backfilling older coverage does not regress the newest source date`() = runBlocking {
+        val repository = InMemoryAppPreferenceRepository()
+
+        fun snapshotCacheAt(instant: String): MarketDataSnapshotCacheService {
+            val clock = fixedClock(instant)
+            return MarketDataSnapshotCacheService(
+                appPreferenceService = AppPreferenceService(
+                    repository = repository,
+                    json = AppJsonFactory.create(),
+                    clock = clock
+                ),
+                clock = clock
+            )
+        }
+
+        snapshotCacheAt("2026-03-27T12:00:00Z").putSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-03-19"),
+            to = LocalDate.parse("2026-03-20"),
+            prices = listOf(price("2026-03-20", "102.45"))
+        )
+        snapshotCacheAt("2026-03-27T12:30:00Z").putSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("1900-01-01"),
+            to = LocalDate.parse("1900-01-31"),
+            prices = emptyList()
+        )
+
+        val summary = snapshotCacheAt("2026-03-27T13:00:00Z")
+            .getSeriesSnapshotSummary("stock-history:VWRA.L")
+
+        assertNotNull(summary)
+        assertEquals("2026-03-20", summary?.sourceAsOf)
+        assertEquals(1, summary?.pointCount)
+        assertEquals(Instant.parse("2026-03-27T12:30:00Z"), summary?.lastSuccessfulCheckAt)
+        assertEquals(Instant.parse("2026-03-27T12:30:00Z"), summary?.canonicalUpdatedAt)
+    }
 
     @Test
     fun `list snapshots summarizes cached quote series and inflation coverage with freshness metadata`() = runBlocking {
@@ -159,4 +383,39 @@ class MarketDataSnapshotCacheServiceTest {
     }
 
     private fun fixedClock(instant: String): Clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)
+
+    private fun snapshotCache(
+        repository: AppPreferenceRepository = InMemoryAppPreferenceRepository()
+    ): MarketDataSnapshotCacheService {
+        val clock = fixedClock("2026-03-27T12:00:00Z")
+        return MarketDataSnapshotCacheService(
+            appPreferenceService = AppPreferenceService(
+                repository = repository,
+                json = AppJsonFactory.create(),
+                clock = clock
+            ),
+            clock = clock
+        )
+    }
+
+    private fun price(date: String, close: String): HistoricalPricePoint = HistoricalPricePoint(
+        date = LocalDate.parse(date),
+        closePricePln = BigDecimal(close)
+    )
+}
+
+private class DelayedAppPreferenceRepository(
+    private val delegate: AppPreferenceRepository
+) : AppPreferenceRepository {
+    override suspend fun get(key: String): AppPreference? = delegate.get(key).also { delay(25) }
+
+    override suspend fun list(): List<AppPreference> = delegate.list()
+
+    override suspend fun listByPrefix(prefix: String): List<AppPreference> = delegate.listByPrefix(prefix)
+
+    override suspend fun save(preference: AppPreference): AppPreference = delegate.save(preference)
+
+    override suspend fun delete(key: String): Boolean = delegate.delete(key)
+
+    override suspend fun deleteAll() = delegate.deleteAll()
 }

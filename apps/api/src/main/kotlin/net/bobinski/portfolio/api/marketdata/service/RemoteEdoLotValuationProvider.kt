@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.marketdata.service
 
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import net.bobinski.portfolio.api.domain.model.EdoLotTerms
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
@@ -91,7 +92,12 @@ class RemoteEdoLotValuationProvider(
 
         return try {
             val history = edoCalculatorClient.historyInPln(terms = lotTerms, from = start, to = to)
-            snapshotCacheService.putSeries(identity = edoHistoryIdentity(lotTerms), prices = history)
+            snapshotCacheService.putSeries(
+                identity = edoHistoryIdentity(lotTerms),
+                from = start,
+                to = to,
+                prices = history
+            )
             HistoricalInstrumentValuationResult.Success(prices = history)
         } catch (exception: MarketDataClientException) {
             snapshotCacheService.recordSeriesFailure(
@@ -112,6 +118,8 @@ class RemoteEdoLotValuationProvider(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordSeriesFailure(
                 identity = edoHistoryIdentity(lotTerms),
@@ -144,9 +152,11 @@ class RemoteEdoLotValuationProvider(
         from: LocalDate,
         to: LocalDate
     ): HistoricalInstrumentValuationResult.Success? {
-        val cached = snapshotCacheService.getSeries(identity = edoHistoryIdentity(lotTerms), from = from, to = to)
-            ?: return null
-        return HistoricalInstrumentValuationResult.Success(prices = cached, fromCache = true)
+        val cached = snapshotCacheService.lookupSeries(identity = edoHistoryIdentity(lotTerms), from = from, to = to)
+        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+            return null
+        }
+        return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)
     }
 
     private fun edoQuoteIdentity(lotTerms: EdoLotTerms): String =

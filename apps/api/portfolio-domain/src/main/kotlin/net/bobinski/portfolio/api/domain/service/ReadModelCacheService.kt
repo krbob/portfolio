@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.domain.service
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
@@ -21,6 +22,8 @@ class ReadModelCacheService(
         if (cached != null && cached.matches(descriptor)) {
             try {
                 return json.decodeFromString(serializer, cached.payloadJson)
+            } catch (exception: CancellationException) {
+                throw exception
             } catch (_: Exception) {
                 return rebuild(
                     descriptor = descriptor,

@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.marketdata.service
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 import java.time.LocalDate
 
@@ -26,7 +27,12 @@ class RemoteFxRateHistoryProvider(
 
         return try {
             val prices = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to)
-            snapshotCacheService.putSeries(identity = fxHistoryIdentity(currency), prices = prices)
+            snapshotCacheService.putSeries(
+                identity = fxHistoryIdentity(currency),
+                from = from,
+                to = to,
+                prices = prices
+            )
             FxRateHistoryResult.Success(prices = prices)
         } catch (exception: MarketDataClientException) {
             snapshotCacheService.recordSeriesFailure(identity = fxHistoryIdentity(currency), reason = exception.message)
@@ -36,6 +42,8 @@ class RemoteFxRateHistoryProvider(
             )
             cachedFxResult(currency, from, to)
                 ?: FxRateHistoryResult.Failure(exception.message ?: "FX history request failed.")
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordSeriesFailure(identity = fxHistoryIdentity(currency), reason = exception.message)
             logger.warn(
@@ -52,9 +60,11 @@ class RemoteFxRateHistoryProvider(
         from: LocalDate,
         to: LocalDate
     ): FxRateHistoryResult.Success? {
-        val cached = snapshotCacheService.getSeries(identity = fxHistoryIdentity(currency), from = from, to = to)
-            ?: return null
-        return FxRateHistoryResult.Success(prices = cached, fromCache = true)
+        val cached = snapshotCacheService.lookupSeries(identity = fxHistoryIdentity(currency), from = from, to = to)
+        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+            return null
+        }
+        return FxRateHistoryResult.Success(prices = cached.prices, fromCache = true)
     }
 
     private fun fxHistoryIdentity(currency: String): String = "fx-history:$currency"
