@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.route
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.plugins.origin
@@ -50,61 +51,7 @@ fun Route.authRoute(application: Application) {
         )
 
         post("/session") {
-            if (!authConfig.enabled) {
-                call.respond(
-                    AuthSessionResponse(
-                        authEnabled = false,
-                        authenticated = true,
-                        mode = authConfig.modeName()
-                    )
-                )
-                return@post
-            }
-
-            // Deliberately key by the transport peer instead of trusting spoofable forwarding headers.
-            // Behind the bundled reverse proxy this becomes a shared, bounded single-user login budget.
-            val transportPeerKey = call.request.origin.remoteHost.take(MAX_TRANSPORT_PEER_KEY_LENGTH)
-            loginAttemptLimiter.retryAfterSeconds(transportPeerKey)?.let { retryAfterSeconds ->
-                call.response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
-                call.respondError(
-                    HttpStatusCode.TooManyRequests,
-                    "Too many login attempts. Retry later.",
-                    ApiErrorCode.RATE_LIMITED,
-                    retryable = true
-                )
-                return@post
-            }
-
-            val payload = call.receive<CreateAuthSessionRequest>()
-            if (!authConfig.matchesPassword(payload.password)) {
-                val retryAfterSeconds = loginAttemptLimiter.recordFailure(transportPeerKey)
-                if (retryAfterSeconds != null) {
-                    call.response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
-                    call.respondError(
-                        HttpStatusCode.TooManyRequests,
-                        "Too many login attempts. Retry later.",
-                        ApiErrorCode.RATE_LIMITED,
-                        retryable = true
-                    )
-                    return@post
-                }
-                call.respondError(
-                    HttpStatusCode.Unauthorized,
-                    "Invalid password.",
-                    ApiErrorCode.INVALID_CREDENTIALS
-                )
-                return@post
-            }
-
-            loginAttemptLimiter.recordSuccess(transportPeerKey)
-            call.sessions.set(PortfolioSession(passwordFingerprint = passwordFingerprint))
-            call.respond(
-                AuthSessionResponse(
-                    authEnabled = true,
-                    authenticated = true,
-                    mode = authConfig.modeName()
-                )
-            )
+            call.createAuthSession(authConfig, passwordFingerprint, loginAttemptLimiter)
         }.documented(
             operationId = "createAuthSession",
             summary = "Create an authentication session",
@@ -128,6 +75,75 @@ fun Route.authRoute(application: Application) {
             tag = "Authentication"
         )
     }
+}
+
+private suspend fun ApplicationCall.createAuthSession(
+    authConfig: AuthConfig,
+    passwordFingerprint: String,
+    loginAttemptLimiter: LoginAttemptLimiter
+) {
+    if (!authConfig.enabled) {
+        respond(
+            AuthSessionResponse(
+                authEnabled = false,
+                authenticated = true,
+                mode = authConfig.modeName()
+            )
+        )
+        return
+    }
+
+    // Deliberately key by the transport peer instead of trusting spoofable forwarding headers.
+    // Behind the bundled reverse proxy this becomes a shared, bounded single-user login budget.
+    val transportPeerKey = request.origin.remoteHost.take(MAX_TRANSPORT_PEER_KEY_LENGTH)
+    loginAttemptLimiter.retryAfterSeconds(transportPeerKey)?.let { retryAfterSeconds ->
+        response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
+        respondError(
+            HttpStatusCode.TooManyRequests,
+            "Too many login attempts. Retry later.",
+            ApiErrorCode.RATE_LIMITED,
+            retryable = true
+        )
+        return
+    }
+
+    val payload = receive<CreateAuthSessionRequest>()
+    if (!authConfig.matchesPassword(payload.password)) {
+        respondToFailedLogin(loginAttemptLimiter, transportPeerKey)
+        return
+    }
+
+    loginAttemptLimiter.recordSuccess(transportPeerKey)
+    sessions.set(PortfolioSession(passwordFingerprint = passwordFingerprint))
+    respond(
+        AuthSessionResponse(
+            authEnabled = true,
+            authenticated = true,
+            mode = authConfig.modeName()
+        )
+    )
+}
+
+private suspend fun ApplicationCall.respondToFailedLogin(
+    loginAttemptLimiter: LoginAttemptLimiter,
+    transportPeerKey: String
+) {
+    val retryAfterSeconds = loginAttemptLimiter.recordFailure(transportPeerKey)
+    if (retryAfterSeconds != null) {
+        response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
+        respondError(
+            HttpStatusCode.TooManyRequests,
+            "Too many login attempts. Retry later.",
+            ApiErrorCode.RATE_LIMITED,
+            retryable = true
+        )
+        return
+    }
+    respondError(
+        HttpStatusCode.Unauthorized,
+        "Invalid password.",
+        ApiErrorCode.INVALID_CREDENTIALS
+    )
 }
 
 @Serializable

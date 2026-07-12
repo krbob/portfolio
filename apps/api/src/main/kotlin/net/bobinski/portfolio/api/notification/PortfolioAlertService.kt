@@ -226,6 +226,7 @@ class PortfolioAlertService(
     }
 }
 
+@Suppress("TooGenericExceptionCaught") // This boundary normalizes all section failures into one domain error.
 internal suspend fun alertSection(
     type: PortfolioAlertType,
     block: suspend () -> List<PortfolioAlert>

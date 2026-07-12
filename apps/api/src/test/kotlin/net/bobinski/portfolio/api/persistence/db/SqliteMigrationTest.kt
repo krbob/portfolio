@@ -71,38 +71,10 @@ class SqliteMigrationTest {
 
         try {
             migrateToVersion11(dataSource)
-            dataSource.connection.use { connection ->
-                connection.prepareStatement(
-                    """
-                    insert into web_push_subscriptions (
-                        endpoint, p256dh, auth, user_agent, created_at, updated_at
-                    ) values (?, ?, ?, ?, ?, ?)
-                    """.trimIndent()
-                ).use { statement ->
-                    statement.setString(1, "https://push.example.test/legacy")
-                    statement.setString(2, "p256dh")
-                    statement.setString(3, "auth")
-                    statement.setString(4, "legacy-agent")
-                    statement.setString(5, "2026-07-12T10:00:00Z")
-                    statement.setString(6, "2026-07-12T10:00:00Z")
-                    statement.executeUpdate()
-                }
-            }
+            seedLegacyWebPushSubscription(dataSource)
 
             DatabaseMigrator.migrate(dataSource)
-
-            dataSource.connection.use { connection ->
-                assertEquals(12, appliedMigrationCount(connection))
-                connection.prepareStatement(
-                    "select locale from web_push_subscriptions where endpoint = ?"
-                ).use { statement ->
-                    statement.setString(1, "https://push.example.test/legacy")
-                    statement.executeQuery().use { resultSet ->
-                        assertTrue(resultSet.next())
-                        assertEquals("pl", resultSet.getString("locale"))
-                    }
-                }
-            }
+            assertLegacyWebPushLocale(dataSource)
         } finally {
             (dataSource as? AutoCloseable)?.close()
             (directory / "portfolio.db").deleteIfExists()
@@ -128,6 +100,41 @@ class SqliteMigrationTest {
             .target("11")
             .load()
             .migrate()
+    }
+
+    private fun seedLegacyWebPushSubscription(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                insert into web_push_subscriptions (
+                    endpoint, p256dh, auth, user_agent, created_at, updated_at
+                ) values (?, ?, ?, ?, ?, ?)
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, LEGACY_PUSH_ENDPOINT)
+                statement.setString(2, "p256dh")
+                statement.setString(3, "auth")
+                statement.setString(4, "legacy-agent")
+                statement.setString(5, "2026-07-12T10:00:00Z")
+                statement.setString(6, "2026-07-12T10:00:00Z")
+                statement.executeUpdate()
+            }
+        }
+    }
+
+    private fun assertLegacyWebPushLocale(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            assertEquals(12, appliedMigrationCount(connection))
+            connection.prepareStatement(
+                "select locale from web_push_subscriptions where endpoint = ?"
+            ).use { statement ->
+                statement.setString(1, LEGACY_PUSH_ENDPOINT)
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    assertEquals("pl", resultSet.getString("locale"))
+                }
+            }
+        }
     }
 
     private fun seedLegacyPreferences(dataSource: javax.sql.DataSource) {
@@ -215,4 +222,8 @@ class SqliteMigrationTest {
         synchronousMode = SynchronousMode.FULL,
         busyTimeoutMs = 5_000
     )
+
+    private companion object {
+        const val LEGACY_PUSH_ENDPOINT = "https://push.example.test/legacy"
+    }
 }
