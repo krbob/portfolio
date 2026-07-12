@@ -92,10 +92,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get system readiness checks
-         * @description Returns the latest readiness evaluation for storage, market data, backups and authentication.
+         * Get public system readiness
+         * @description Returns a current readiness status without exposing dependency or infrastructure details.
          */
         get: operations["getReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/readiness/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get authenticated readiness details
+         * @description Returns current storage, market-data, backup and authentication checks for diagnostics.
+         */
+        get: operations["getReadinessDetails"];
         put?: never;
         post?: never;
         delete?: never;
@@ -976,6 +996,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get bounded request metrics
+         * @description Returns bounded Prometheus request counters and duration summaries.
+         */
+        get: operations["getMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1011,6 +1051,11 @@ export interface components {
             stockAnalystUiUrl?: string | null;
             capabilities: string[];
         };
+        /** ReadinessSummaryResponse */
+        ReadinessSummaryResponse: {
+            status: string;
+            checkedAt: string;
+        };
         /** ReadinessCheckResponse */
         ReadinessCheckResponse: {
             key: string;
@@ -1036,10 +1081,6 @@ export interface components {
         /** CreateAuthSessionRequest */
         CreateAuthSessionRequest: {
             password: string;
-        };
-        /** ErrorResponse */
-        ErrorResponse: {
-            message: string;
         };
         /** AccountResponse */
         AccountResponse: {
@@ -1776,7 +1817,7 @@ export interface components {
             accounts: components["schemas"]["AccountSnapshotResponse"][];
             appPreferences?: components["schemas"]["AppPreferenceSnapshotResponse"][];
             instruments: components["schemas"]["InstrumentSnapshotResponse"][];
-            targets?: components["schemas"]["PortfolioTargetSnapshotResponse"][];
+            targets?: components["schemas"]["PortfolioTargetSnapshotResponse"][] | null;
             importProfiles?: components["schemas"]["TransactionImportProfileSnapshotResponse"][];
             transactions: components["schemas"]["TransactionSnapshotResponse"][];
         };
@@ -1865,10 +1906,12 @@ export interface components {
             expirationTime?: number | null;
             keys: components["schemas"]["PushSubscriptionKeysRequest"];
             user_agent?: string | null;
+            locale?: string | null;
         };
         /** PushSubscriptionResponse */
         PushSubscriptionResponse: {
             endpoint: string;
+            locale: string;
             createdAt: string;
             updatedAt: string;
         };
@@ -2091,6 +2134,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["ReadinessSummaryResponse"];
+                };
+            };
+        };
+    };
+    getReadinessDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
                 };
             };
@@ -2130,18 +2192,13 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    "Retry-After"?: {
+                        "text/plain": unknown;
+                    };
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AuthSessionResponse"];
-                };
-            };
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3230,6 +3287,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain; version=0.0.4; charset=utf-8": unknown;
+                };
             };
         };
     };
