@@ -1,4 +1,6 @@
 const CACHE_NAME = 'portfolio-shell-v2'
+const PREFERENCES_CACHE_NAME = 'portfolio-preferences-v1'
+const PUSH_LOCALE_CACHE_KEY = '/__portfolio/ui-locale'
 const APP_SHELL_PATHS = ['/', '/manifest.webmanifest', '/favicon.svg', '/apple-touch-icon.svg']
 
 function shouldCacheResponse(url, response) {
@@ -27,7 +29,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys
+        .filter((key) => key !== CACHE_NAME && key !== PREFERENCES_CACHE_NAME)
+        .map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   )
 })
@@ -190,6 +194,10 @@ async function fetchPushConfig() {
 async function savePushSubscription(subscription) {
   const payload = subscription.toJSON()
   payload.user_agent = self.navigator && self.navigator.userAgent ? self.navigator.userAgent : 'service-worker'
+  const locale = await readStoredPushLocale()
+  if (locale) {
+    payload.locale = locale
+  }
   const response = await fetch('/api/v1/push/subscriptions', {
     method: 'POST',
     credentials: 'include',
@@ -199,6 +207,17 @@ async function savePushSubscription(subscription) {
   if (!response.ok) {
     throw new Error(`Push subscription save failed with ${response.status}`)
   }
+}
+
+async function readStoredPushLocale() {
+  const cache = await caches.open(PREFERENCES_CACHE_NAME)
+  const response = await cache.match(PUSH_LOCALE_CACHE_KEY)
+  if (!response) {
+    return null
+  }
+
+  const locale = await response.text()
+  return locale === 'pl' || locale === 'en' ? locale : null
 }
 
 async function deleteStoredPushSubscription(endpoint) {

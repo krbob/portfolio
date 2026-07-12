@@ -30,6 +30,9 @@ interface WebPushState {
   errorMessage: string | null
 }
 
+const PREFERENCES_CACHE_NAME = 'portfolio-preferences-v1'
+const PUSH_LOCALE_CACHE_KEY = '/__portfolio/ui-locale'
+
 const CHECKING_STATE: WebPushState = {
   status: 'checking',
   enabled: false,
@@ -72,6 +75,21 @@ async function ensureServiceWorkerRegistration() {
   }
 
   return navigator.serviceWorker.register('/sw.js', { scope: '/' })
+}
+
+export async function rememberPushLocaleForServiceWorker(locale: UiLanguage) {
+  if (typeof window === 'undefined' || !('caches' in window)) {
+    return
+  }
+
+  try {
+    const cache = await window.caches.open(PREFERENCES_CACHE_NAME)
+    await cache.put(PUSH_LOCALE_CACHE_KEY, new Response(locale, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    }))
+  } catch {
+    // The foreground API sync still carries locale when persistent browser storage is unavailable.
+  }
 }
 
 function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
@@ -175,6 +193,7 @@ export function useWebPushSubscription({ isStandalone }: UseWebPushSubscriptionO
       }
 
       const registration = await ensureServiceWorkerRegistration()
+      await rememberPushLocaleForServiceWorker(language)
       const subscription = await registration.pushManager.getSubscription()
       if (subscription) {
         if (nextConfig.vapidPublicKey && !subscriptionUsesVapidKey(subscription, nextConfig.vapidPublicKey)) {
