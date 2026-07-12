@@ -1555,6 +1555,19 @@ export interface components {
         ReadModelCacheInvalidationResponse: {
             clearedSnapshotCount: number;
         };
+        /** MarketDataProvenanceResponse */
+        MarketDataProvenanceResponse: {
+            source: string;
+            retrievedAt: string;
+            marketTimestamp?: string | null;
+            marketDate?: string | null;
+            currency?: string | null;
+            unitScale: number;
+            adjustment: string;
+            coverageFrom?: string | null;
+            coverageTo?: string | null;
+            status: string;
+        };
         /** MarketDataSnapshotResponse */
         MarketDataSnapshotResponse: {
             snapshotType: string;
@@ -1564,6 +1577,7 @@ export interface components {
             sourceTo?: string | null;
             sourceAsOf?: string | null;
             pointCount?: number | null;
+            provenance?: components["schemas"]["MarketDataProvenanceResponse"] | null;
             status: string;
             lastCheckedAt: string;
             lastSuccessfulCheckAt?: string | null;

@@ -244,6 +244,7 @@ data class MarketDataSnapshotResponse(
     val sourceTo: String? = null,
     val sourceAsOf: String? = null,
     val pointCount: Int? = null,
+    val provenance: MarketDataProvenanceResponse? = null,
     val status: String,
     val lastCheckedAt: String,
     val lastSuccessfulCheckAt: String? = null,
@@ -251,6 +252,20 @@ data class MarketDataSnapshotResponse(
     val failureCount: Int,
     val lastFailureAt: String? = null,
     val lastFailureReason: String? = null
+)
+
+@Serializable
+data class MarketDataProvenanceResponse(
+    val source: String,
+    val retrievedAt: String,
+    val marketTimestamp: String? = null,
+    val marketDate: String? = null,
+    val currency: String? = null,
+    val unitScale: Double,
+    val adjustment: String,
+    val coverageFrom: String? = null,
+    val coverageTo: String? = null,
+    val status: String
 )
 
 @Serializable
@@ -346,6 +361,20 @@ internal fun MarketDataSnapshotSummary.toResponse(): MarketDataSnapshotResponse 
     sourceTo = sourceTo,
     sourceAsOf = sourceAsOf,
     pointCount = pointCount,
+    provenance = provenance?.let { upstream ->
+        MarketDataProvenanceResponse(
+            source = upstream.source,
+            retrievedAt = upstream.retrievedAt,
+            marketTimestamp = upstream.marketTimestamp,
+            marketDate = upstream.marketDate,
+            currency = upstream.currency,
+            unitScale = upstream.unitScale,
+            adjustment = upstream.adjustment,
+            coverageFrom = upstream.coverageFrom,
+            coverageTo = upstream.coverageTo,
+            status = upstream.status
+        )
+    },
     status = status.name,
     lastCheckedAt = lastCheckedAt.toString(),
     lastSuccessfulCheckAt = lastSuccessfulCheckAt?.toString(),

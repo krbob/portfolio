@@ -14,7 +14,22 @@ data class MarketDataSnapshotMetadata(
     val sourceTo: String? = null,
     val sourceAsOf: String? = null,
     val pointCount: Int? = null,
+    val provenance: MarketDataProvenanceMetadata? = null,
     val failureCount: Int = 0,
     val lastFailureAt: String? = null,
     val lastFailureReason: String? = null
+)
+
+@Serializable
+data class MarketDataProvenanceMetadata(
+    val source: String,
+    val retrievedAt: String,
+    val marketTimestamp: String? = null,
+    val marketDate: String? = null,
+    val currency: String? = null,
+    val unitScale: Double,
+    val adjustment: String,
+    val coverageFrom: String? = null,
+    val coverageTo: String? = null,
+    val status: String
 )

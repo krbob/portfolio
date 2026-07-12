@@ -222,10 +222,10 @@ SHA-256 hashes are locked in `upstream-contracts.properties`, so an isolated Por
 sibling repositories. The build parses those snapshots and generates only the response fields and paths consumed by
 Portfolio; it does not check in a full generated client runtime.
 
-The Stock Analyst adapter also keeps the upstream provenance object (`source`, retrieval and market timestamps,
-currency/unit scale, adjustment, coverage, and freshness status) beside quote/history values. Persisting that object
-in Portfolio's snapshot metadata is intentionally a separate storage migration; the client contract does not silently
-flatten it into price points.
+The Stock Analyst adapter keeps the upstream provenance object (`source`, retrieval and market timestamps,
+currency/unit scale, adjustment, coverage, and freshness status) beside quote/history values. Portfolio persists it
+in snapshot metadata, exposes it through the generated Portfolio API contract, and renders a shared Market data status
+bar without flattening provenance into individual price points.
 
 ```bash
 cd apps/api

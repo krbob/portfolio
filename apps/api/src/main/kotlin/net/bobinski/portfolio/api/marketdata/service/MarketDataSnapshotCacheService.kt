@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
+import net.bobinski.portfolio.api.marketdata.client.StockAnalystDataProvenance
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 
 class MarketDataSnapshotCacheService(
@@ -37,6 +38,7 @@ class MarketDataSnapshotCacheService(
             sourceTo = sourceTo,
             sourceAsOf = sourceAsOf,
             pointCount = pointCount,
+            provenance = metadata?.provenance,
             status = metadata?.status?.let(MarketDataSnapshotStatus::valueOf) ?: MarketDataSnapshotStatus.FRESH,
             lastCheckedAt = lastCheckedAt,
             lastSuccessfulCheckAt = metadata?.lastSuccessfulCheckAt?.let(Instant::parse),
@@ -94,6 +96,7 @@ class MarketDataSnapshotCacheService(
                     sourceTo = meta?.sourceTo ?: payload?.sourceTo,
                     sourceAsOf = meta?.sourceAsOf ?: payload?.sourceAsOf,
                     pointCount = meta?.pointCount ?: payload?.pointCount,
+                    provenance = meta?.provenance,
                     status = meta?.status?.let(MarketDataSnapshotStatus::valueOf) ?: MarketDataSnapshotStatus.FRESH,
                     lastCheckedAt = lastCheckedAt,
                     lastSuccessfulCheckAt = meta?.lastSuccessfulCheckAt?.let(Instant::parse) ?: payload?.storedAt,
@@ -110,7 +113,11 @@ class MarketDataSnapshotCacheService(
             )
     }
 
-    suspend fun putQuote(identity: String, valuation: InstrumentValuation) {
+    suspend fun putQuote(
+        identity: String,
+        valuation: InstrumentValuation,
+        provenance: StockAnalystDataProvenance? = null
+    ) {
         val stored = StoredQuoteSnapshot(
             identity = identity,
             valuedAt = valuation.valuedAt.toString(),
@@ -133,7 +140,8 @@ class MarketDataSnapshotCacheService(
             sourceFrom = stored.valuedAt,
             sourceTo = stored.valuedAt,
             sourceAsOf = stored.valuedAt,
-            pointCount = 1
+            pointCount = 1,
+            provenance = provenance?.toMetadata()
         )
     }
 
@@ -162,32 +170,44 @@ class MarketDataSnapshotCacheService(
         )
     }
 
-    suspend fun putSeries(identity: String, prices: List<HistoricalPricePoint>) {
+    suspend fun putSeries(
+        identity: String,
+        prices: List<HistoricalPricePoint>,
+        provenance: StockAnalystDataProvenance? = null
+    ) {
         if (prices.isEmpty()) {
             return
         }
 
-        putSeriesSnapshot(identity = identity, prices = prices, coveredRange = null)
+        putSeriesSnapshot(
+            identity = identity,
+            prices = prices,
+            coveredRange = null,
+            provenance = provenance
+        )
     }
 
     suspend fun putSeries(
         identity: String,
         from: LocalDate,
         to: LocalDate,
-        prices: List<HistoricalPricePoint>
+        prices: List<HistoricalPricePoint>,
+        provenance: StockAnalystDataProvenance? = null
     ) {
         require(!to.isBefore(from)) { "Series coverage end must not be before its start." }
         putSeriesSnapshot(
             identity = identity,
             prices = prices,
-            coveredRange = MarketDataCoverageRange(from = from, to = to)
+            coveredRange = MarketDataCoverageRange(from = from, to = to),
+            provenance = provenance
         )
     }
 
     private suspend fun putSeriesSnapshot(
         identity: String,
         prices: List<HistoricalPricePoint>,
-        coveredRange: MarketDataCoverageRange?
+        coveredRange: MarketDataCoverageRange?,
+        provenance: StockAnalystDataProvenance?
     ) = seriesMutationMutex(identity).withLock {
         val existing = getStoredSeries(identity)
         val mergedPoints = mergeSeriesPoints(
@@ -220,7 +240,8 @@ class MarketDataSnapshotCacheService(
             sourceFrom = mergedPoints.minByOrNull(StoredPricePoint::date)?.date,
             sourceTo = mergedPoints.maxByOrNull(StoredPricePoint::date)?.date,
             sourceAsOf = mergedPoints.maxByOrNull(StoredPricePoint::date)?.date,
-            pointCount = mergedPoints.size
+            pointCount = mergedPoints.size,
+            provenance = provenance?.toMetadata()
         )
     }
 
@@ -480,7 +501,8 @@ class MarketDataSnapshotCacheService(
         sourceFrom: String?,
         sourceTo: String?,
         sourceAsOf: String?,
-        pointCount: Int?
+        pointCount: Int?,
+        provenance: MarketDataProvenanceMetadata? = null
     ) {
         val now = Instant.now(clock)
         val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
@@ -500,6 +522,7 @@ class MarketDataSnapshotCacheService(
             sourceTo = sourceTo,
             sourceAsOf = sourceAsOf,
             pointCount = pointCount,
+            provenance = provenance ?: previous?.provenance,
             failureCount = 0,
             lastFailureAt = null,
             lastFailureReason = null
@@ -533,6 +556,7 @@ class MarketDataSnapshotCacheService(
             sourceTo = sourceTo ?: previous?.sourceTo,
             sourceAsOf = sourceAsOf ?: previous?.sourceAsOf,
             pointCount = pointCount ?: previous?.pointCount,
+            provenance = previous?.provenance,
             failureCount = (previous?.failureCount ?: 0) + 1,
             lastFailureAt = now.toString(),
             lastFailureReason = reason?.takeIf { it.isNotBlank() } ?: previous?.lastFailureReason
@@ -597,6 +621,7 @@ data class MarketDataSnapshotSummary(
     val sourceTo: String?,
     val sourceAsOf: String?,
     val pointCount: Int?,
+    val provenance: MarketDataProvenanceMetadata?,
     val status: MarketDataSnapshotStatus,
     val lastCheckedAt: Instant,
     val lastSuccessfulCheckAt: Instant?,
@@ -604,6 +629,19 @@ data class MarketDataSnapshotSummary(
     val failureCount: Int,
     val lastFailureAt: Instant?,
     val lastFailureReason: String?
+)
+
+private fun StockAnalystDataProvenance.toMetadata() = MarketDataProvenanceMetadata(
+    source = source,
+    retrievedAt = retrievedAt.toString(),
+    marketTimestamp = marketTimestamp?.toString(),
+    marketDate = marketDate?.toString(),
+    currency = currency,
+    unitScale = unitScale,
+    adjustment = adjustment,
+    coverageFrom = coverageFrom?.toString(),
+    coverageTo = coverageTo?.toString(),
+    status = status
 )
 
 enum class MarketDataSnapshotStatus {

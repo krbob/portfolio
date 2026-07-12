@@ -100,7 +100,11 @@ class RemoteCurrentInstrumentValuationProvider(
             valuedAt = plnQuote.date,
             previousClosePln = trustedPreviousClosePln(symbol = symbol, plnQuote = plnQuote)
         )
-        snapshotCacheService.putQuote(identity = stockQuoteIdentity(symbol), valuation = valuation)
+        snapshotCacheService.putQuote(
+            identity = stockQuoteIdentity(symbol),
+            valuation = valuation,
+            provenance = plnQuote.provenance
+        )
         return InstrumentValuationResult.Success(valuation = valuation)
     }
 

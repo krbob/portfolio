@@ -74,8 +74,15 @@ class RemoteReferenceSeriesProvider(
         from: LocalDate,
         to: LocalDate
     ): ReferenceSeriesResult = try {
-        val prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to).prices
-        snapshotCacheService.putSeries(identity = identity, from = from, to = to, prices = prices)
+        val stockHistory = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
+        val prices = stockHistory.prices
+        snapshotCacheService.putSeries(
+            identity = identity,
+            from = from,
+            to = to,
+            prices = prices,
+            provenance = stockHistory.provenance
+        )
         ReferenceSeriesResult.Success(prices = prices)
     } catch (exception: MarketDataClientException) {
         snapshotCacheService.recordSeriesFailure(identity = identity, reason = exception.message)

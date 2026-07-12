@@ -6,6 +6,7 @@ import { t } from '../../lib/messages'
 import { IconClose, IconMenu } from '../ui/icons'
 import { useDialogFocus } from '../ui/use-dialog-focus'
 import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
+import { MarketDataStatusBar } from '../MarketDataStatusBar'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
 
@@ -167,6 +168,8 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+
+        <MarketDataStatusBar />
 
         <main ref={mainRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
           <div

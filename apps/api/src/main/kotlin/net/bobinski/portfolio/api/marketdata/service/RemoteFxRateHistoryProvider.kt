@@ -26,12 +26,14 @@ class RemoteFxRateHistoryProvider(
         }
 
         return try {
-            val prices = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to).prices
+            val stockHistory = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to)
+            val prices = stockHistory.prices
             snapshotCacheService.putSeries(
                 identity = fxHistoryIdentity(currency),
                 from = from,
                 to = to,
-                prices = prices
+                prices = prices,
+                provenance = stockHistory.provenance
             )
             FxRateHistoryResult.Success(prices = prices)
         } catch (exception: MarketDataClientException) {

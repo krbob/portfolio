@@ -16,6 +16,7 @@ import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.OperationalStateEntry
 import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
+import net.bobinski.portfolio.api.marketdata.client.StockAnalystDataProvenance
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,6 +25,37 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class MarketDataSnapshotCacheServiceTest {
+
+    @Test
+    fun `stock provenance survives snapshot persistence and a later failed refresh`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val provenance = stockProvenance()
+        snapshotCache.putSeries(
+            identity = "stock-history:VWRA.L",
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-20"),
+            prices = listOf(price("2026-03-20", "102.45")),
+            provenance = provenance
+        )
+        snapshotCache.recordSeriesFailure(
+            identity = "stock-history:VWRA.L",
+            reason = "Rate limit exceeded."
+        )
+
+        val stored = snapshotCache.listSnapshots().single().provenance
+
+        assertNotNull(stored)
+        assertEquals("YAHOO_FINANCE", stored?.source)
+        assertEquals("2026-03-20T20:01:02Z", stored?.retrievedAt)
+        assertEquals("2026-03-20T20:00:00Z", stored?.marketTimestamp)
+        assertEquals("2026-03-20", stored?.marketDate)
+        assertEquals("USD", stored?.currency)
+        assertEquals(1.0, stored?.unitScale)
+        assertEquals("SPLIT_ADJUSTED", stored?.adjustment)
+        assertEquals("2026-03-01", stored?.coverageFrom)
+        assertEquals("2026-03-20", stored?.coverageTo)
+        assertEquals("FRESH", stored?.status)
+    }
 
     @Test
     fun `series lookup distinguishes full partial and missing coverage without treating market gaps as missing`() = runBlocking {
@@ -401,6 +433,19 @@ class MarketDataSnapshotCacheServiceTest {
     private fun price(date: String, close: String): HistoricalPricePoint = HistoricalPricePoint(
         date = LocalDate.parse(date),
         closePricePln = BigDecimal(close)
+    )
+
+    private fun stockProvenance() = StockAnalystDataProvenance(
+        source = "YAHOO_FINANCE",
+        retrievedAt = Instant.parse("2026-03-20T20:01:02Z"),
+        marketTimestamp = Instant.parse("2026-03-20T20:00:00Z"),
+        marketDate = LocalDate.parse("2026-03-20"),
+        currency = "USD",
+        unitScale = 1.0,
+        adjustment = "SPLIT_ADJUSTED",
+        coverageFrom = LocalDate.parse("2026-03-01"),
+        coverageTo = LocalDate.parse("2026-03-20"),
+        status = "FRESH"
     )
 }
 
