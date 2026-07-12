@@ -65,10 +65,24 @@ class ApplicationTest {
     }
 
     @Test
-    fun `readiness endpoint returns structured checks`() = testApplication {
+    fun `public readiness endpoint does not expose operational checks`() = testApplication {
         configurePortfolioTestApplication()
 
         val response = client.get("/v1/readiness")
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(body.contains("\"status\": \"READY\""), body)
+        assertTrue(body.contains("\"checkedAt\":"), body)
+        assertTrue(!body.contains("\"checks\""), body)
+        assertTrue(!body.contains("sqlite"), body)
+    }
+
+    @Test
+    fun `readiness details endpoint returns current structured checks`() = testApplication {
+        configurePortfolioTestApplication()
+
+        val response = client.get("/v1/readiness/details")
         val body = response.bodyAsText()
 
         assertEquals(HttpStatusCode.OK, response.status)

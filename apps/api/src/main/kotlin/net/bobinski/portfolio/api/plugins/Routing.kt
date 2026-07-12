@@ -20,6 +20,7 @@ import net.bobinski.portfolio.api.route.portfolioRoute
 import net.bobinski.portfolio.api.route.portfolioSettingsRoute
 import net.bobinski.portfolio.api.route.pushRoute
 import net.bobinski.portfolio.api.route.systemRoute
+import net.bobinski.portfolio.api.route.systemReadinessDetailsRoute
 import net.bobinski.portfolio.api.route.transactionImportRoute
 import net.bobinski.portfolio.api.route.transactionRoute
 
@@ -86,6 +87,7 @@ fun Application.configureRouting() {
         systemRoute(this@configureRouting)
         authRoute(this@configureRouting)
         protectedRoute(this@configureRouting) {
+            systemReadinessDetailsRoute()
             accountRoute()
             instrumentRoute()
             portfolioRoute()

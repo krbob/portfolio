@@ -93,9 +93,16 @@ class AuthRouteTest {
         }
 
         val metaResponse = client.get("/v1/meta")
+        val readinessResponse = client.get("/v1/readiness")
+        val readinessDetailsResponse = client.get("/v1/readiness/details")
+        val readinessBody = readinessResponse.bodyAsText()
 
         assertEquals(HttpStatusCode.OK, metaResponse.status)
         assertTrue(metaResponse.bodyAsText().contains("\"enabled\": true"))
         assertTrue(metaResponse.bodyAsText().contains("\"mode\": \"PASSWORD\""))
+        assertEquals(HttpStatusCode.OK, readinessResponse.status)
+        assertTrue(readinessBody.contains("\"status\": \"READY\""), readinessBody)
+        assertTrue(!readinessBody.contains("\"checks\""), readinessBody)
+        assertEquals(HttpStatusCode.Unauthorized, readinessDetailsResponse.status)
     }
 }

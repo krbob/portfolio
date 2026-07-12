@@ -59,7 +59,7 @@ class SqliteApplicationTest {
                 val auditResponse = client.get("/v1/portfolio/audit/events")
                 val cacheResponse = client.get("/v1/portfolio/read-model-cache")
                 val metaResponse = client.get("/v1/meta")
-                val readinessResponse = client.get("/v1/readiness")
+                val readinessResponse = client.get("/v1/readiness/details")
 
                 assertEquals(HttpStatusCode.Created, createAccountResponse.status)
                 assertEquals(HttpStatusCode.OK, accountsResponse.status)

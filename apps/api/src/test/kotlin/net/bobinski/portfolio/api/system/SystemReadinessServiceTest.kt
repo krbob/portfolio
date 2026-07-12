@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.auth.config.AuthConfig
@@ -109,6 +110,33 @@ class SystemReadinessServiceTest {
         }
     }
 
+    @Test
+    fun `readiness probes dependencies on every evaluation`() = runBlocking {
+        val server = FakeMarketDataServer()
+        server.start()
+
+        try {
+            val service = SystemReadinessService(
+                persistenceConfig = persistenceConfig(),
+                backupConfig = backupConfig(),
+                marketDataConfig = marketDataConfig(baseUrl = server.baseUrl),
+                authConfig = authConfig(),
+                clock = fixedClock(),
+                stockAnalystClient = stockAnalystClient(server.baseUrl),
+                edoCalculatorClient = edoCalculatorClient(server.baseUrl),
+                goldApiClient = goldApiClient(server.baseUrl)
+            )
+
+            service.current()
+            service.current()
+
+            assertEquals(2, server.stockAnalystRequestCount)
+            assertEquals(2, server.edoCalculatorRequestCount)
+        } finally {
+            server.close()
+        }
+    }
+
     private fun persistenceConfig() = PersistenceConfig(
         databasePath = "./data/test.db",
         journalMode = JournalMode.WAL,
@@ -171,14 +199,22 @@ class SystemReadinessServiceTest {
 private class FakeMarketDataServer(
     private val stockAnalystDelayMs: Long = 0
 ) : AutoCloseable {
+    private val stockAnalystRequests = AtomicInteger()
+    private val edoCalculatorRequests = AtomicInteger()
     private val server = HttpServer.create(InetSocketAddress(0), 0).apply {
-        createContext("/v1/history", HistoryHandler(stockAnalystDelayMs))
-        createContext("/v1/inflation/monthly", InflationHandler)
+        createContext("/v1/history", HistoryHandler(stockAnalystDelayMs, stockAnalystRequests))
+        createContext("/v1/inflation/monthly", InflationHandler(edoCalculatorRequests))
         executor = null
     }
 
     val baseUrl: String
         get() = "http://127.0.0.1:${server.address.port}"
+
+    val stockAnalystRequestCount: Int
+        get() = stockAnalystRequests.get()
+
+    val edoCalculatorRequestCount: Int
+        get() = edoCalculatorRequests.get()
 
     fun start() {
         server.start()
@@ -189,9 +225,11 @@ private class FakeMarketDataServer(
     }
 
     private class HistoryHandler(
-        private val stockAnalystDelayMs: Long
+        private val stockAnalystDelayMs: Long,
+        private val requestCount: AtomicInteger
     ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
+            requestCount.incrementAndGet()
             val path = exchange.requestURI.path
             if (stockAnalystDelayMs > 0 && (path.contains("/v1/history/PLN%3DX") || path.contains("/v1/history/PLN=X"))) {
                 Thread.sleep(stockAnalystDelayMs)
@@ -207,8 +245,11 @@ private class FakeMarketDataServer(
         }
     }
 
-    private object InflationHandler : HttpHandler {
+    private class InflationHandler(
+        private val requestCount: AtomicInteger
+    ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
+            requestCount.incrementAndGet()
             val body =
                 """{"from":"2025-01","until":"2025-03","points":[{"month":"2025-01","multiplier":"1.0120"},{"month":"2025-02","multiplier":"1.0080"}]}"""
             respond(exchange, 200, body)

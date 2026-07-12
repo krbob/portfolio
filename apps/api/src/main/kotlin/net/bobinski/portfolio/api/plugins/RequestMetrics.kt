@@ -133,6 +133,7 @@ private val IMPORT_PROFILE_ID_ROUTE = Regex("^/v1/transactions/import/profiles/[
 private val STATIC_ROUTES = setOf(
     "/",
     "/v1/meta",
+    "/v1/readiness/details",
     "/v1/auth/session",
     "/v1/accounts",
     "/v1/instruments",

@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.route
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.config.propertyOrNull
 import io.ktor.server.response.respond
@@ -12,6 +13,7 @@ import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.system.SystemReadiness
 import net.bobinski.portfolio.api.system.SystemReadinessCheck
 import net.bobinski.portfolio.api.system.SystemReadinessService
+import net.bobinski.portfolio.api.system.SystemReadinessStatus
 import org.koin.ktor.ext.inject
 
 fun Route.systemRoute(application: Application) {
@@ -72,14 +74,28 @@ fun Route.systemRoute(application: Application) {
         )
 
         get("/readiness") {
-            call.respond(readinessService.current().toResponse())
+            val readiness = readinessService.current()
+            call.respond(readiness.publicStatus(), readiness.toSummaryResponse())
         }.documented(
             operationId = "getReadiness",
-            summary = "Get system readiness checks",
-            description = "Returns the latest readiness evaluation for storage, market data, backups and authentication.",
+            summary = "Get public system readiness",
+            description = "Returns a current readiness status without exposing dependency or infrastructure details.",
             tag = "System"
         )
     }
+}
+
+fun Route.systemReadinessDetailsRoute() {
+    val readinessService: SystemReadinessService by inject()
+
+    get("/v1/readiness/details") {
+        call.respond(readinessService.current().toResponse())
+    }.documented(
+        operationId = "getReadinessDetails",
+        summary = "Get authenticated readiness details",
+        description = "Returns current storage, market-data, backup and authentication checks for diagnostics.",
+        tag = "System"
+    )
 }
 
 private fun Application.appName(): String =
@@ -116,6 +132,12 @@ data class AppMetaResponse(
 )
 
 @Serializable
+data class ReadinessSummaryResponse(
+    val status: String,
+    val checkedAt: String
+)
+
+@Serializable
 data class ReadinessResponse(
     val status: String,
     val checkedAt: String,
@@ -149,6 +171,18 @@ private fun SystemReadiness.toResponse(): ReadinessResponse = ReadinessResponse(
     checkedAt = checkedAt.toString(),
     checks = checks.map(SystemReadinessCheck::toResponse)
 )
+
+private fun SystemReadiness.toSummaryResponse(): ReadinessSummaryResponse = ReadinessSummaryResponse(
+    status = status.name,
+    checkedAt = checkedAt.toString()
+)
+
+private fun SystemReadiness.publicStatus(): HttpStatusCode =
+    if (status == SystemReadinessStatus.NOT_READY) {
+        HttpStatusCode.ServiceUnavailable
+    } else {
+        HttpStatusCode.OK
+    }
 
 private fun SystemReadinessCheck.toResponse(): ReadinessCheckResponse = ReadinessCheckResponse(
     key = key,
