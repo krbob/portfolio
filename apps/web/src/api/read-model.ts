@@ -1,5 +1,6 @@
 import type { components, paths } from './generated/portfolio-api'
 import { requestJson } from './http'
+import type { UiLanguage } from '../lib/i18n'
 
 export type PortfolioOverview =
   paths['/v1/portfolio/overview']['get']['responses'][200]['content']['application/json']
@@ -97,8 +98,10 @@ export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
 }
 
-export function fetchPortfolioAlerts() {
-  return requestJson<PortfolioAlert[]>('/api/v1/portfolio/alerts')
+export function fetchPortfolioAlerts(language: UiLanguage) {
+  return requestJson<PortfolioAlert[]>('/api/v1/portfolio/alerts', {
+    headers: { 'Accept-Language': language },
+  })
 }
 
 export function fetchPortfolioContributionPlan(

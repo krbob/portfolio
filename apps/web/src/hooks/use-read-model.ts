@@ -14,6 +14,7 @@ import {
   fetchPortfolioReturns,
   type ManualContributionPreviewPayload,
 } from '../api/read-model'
+import { useI18n } from '../lib/i18n'
 
 export function usePortfolioOverview() {
   return useQuery({
@@ -58,9 +59,10 @@ export function usePortfolioAllocation() {
 }
 
 export function usePortfolioAlerts() {
+  const { language } = useI18n()
   return useQuery({
-    queryKey: ['portfolio-alerts'],
-    queryFn: fetchPortfolioAlerts,
+    queryKey: ['portfolio-alerts', language],
+    queryFn: () => fetchPortfolioAlerts(language),
   })
 }
 
