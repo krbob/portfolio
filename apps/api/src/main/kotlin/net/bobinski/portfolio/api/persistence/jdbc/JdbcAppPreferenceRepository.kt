@@ -103,6 +103,23 @@ class JdbcAppPreferenceRepository(
             }
         }
 
+    override suspend fun deleteIfUnchanged(preference: AppPreference): Boolean =
+        connectionManager.withConnection { connection ->
+            connection.prepareStatement(
+                """
+                delete from app_preferences
+                where preference_key = ?
+                  and value_json = ?
+                  and updated_at = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, preference.key)
+                statement.setString(2, preference.valueJson)
+                statement.setInstant(3, preference.updatedAt)
+                statement.executeUpdate() > 0
+            }
+        }
+
     override suspend fun deleteAll() {
         connectionManager.withConnection { connection ->
             connection.prepareStatement("delete from app_preferences").use { statement ->

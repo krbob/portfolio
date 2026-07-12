@@ -7,4 +7,5 @@ interface OperationalStateRepository {
     suspend fun listByPrefix(prefix: String): List<OperationalStateEntry>
     suspend fun save(entry: OperationalStateEntry): OperationalStateEntry
     suspend fun saveIfAbsent(entry: OperationalStateEntry): OperationalStateEntry
+    suspend fun saveIfNewer(entry: OperationalStateEntry): OperationalStateEntry
 }

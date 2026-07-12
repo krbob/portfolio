@@ -81,6 +81,41 @@ class JdbcOperationalStateRepository(
         return requireNotNull(get(entry.key)) { "Operational state ${entry.key} was not stored." }
     }
 
+    override suspend fun saveIfNewer(entry: OperationalStateEntry): OperationalStateEntry {
+        var current = saveIfAbsent(entry)
+        while (entry.updatedAt > current.updatedAt) {
+            if (replaceIfUnchanged(current = current, replacement = entry)) {
+                return entry
+            }
+            current = requireNotNull(get(entry.key)) {
+                "Operational state ${entry.key} disappeared during reconciliation."
+            }
+        }
+        return current
+    }
+
+    private suspend fun replaceIfUnchanged(
+        current: OperationalStateEntry,
+        replacement: OperationalStateEntry
+    ): Boolean = connectionManager.withConnection { connection ->
+        connection.prepareStatement(
+            """
+            update operational_state
+            set value_json = ?, updated_at = ?
+            where state_key = ?
+              and value_json = ?
+              and updated_at = ?
+            """.trimIndent()
+        ).use { statement ->
+            statement.setString(1, replacement.valueJson)
+            statement.setInstant(2, replacement.updatedAt)
+            statement.setString(3, current.key)
+            statement.setString(4, current.valueJson)
+            statement.setInstant(5, current.updatedAt)
+            statement.executeUpdate() > 0
+        }
+    }
+
     private fun java.sql.ResultSet.toOperationalStateEntry(): OperationalStateEntry = OperationalStateEntry(
         key = getString("state_key"),
         valueJson = getString("value_json"),

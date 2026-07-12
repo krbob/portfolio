@@ -39,7 +39,8 @@ Transactions remain canonical. Everything analytical must be rebuildable from ca
 Runtime-only JSON state has a separate typed repository and SQLite table. Market-data payloads and metadata, plus the
 active alert-dispatch set, live there rather than in user preferences. Migration V11 moves historical runtime keys out
 of `app_preferences`; read-through migration remains as a compatibility path and never overwrites a newer operational
-entry.
+entry. Late legacy writers are reconciled by `updatedAt`, and the observed legacy row is removed only with a
+compare-and-delete so a concurrent replacement remains available for the next reconciliation.
 
 Analytics computations use a key made from the model identity and version, canonical source revision, input range, and
 normalized parameters. Concurrent callers for the same key share one supervised computation. Daily history and returns

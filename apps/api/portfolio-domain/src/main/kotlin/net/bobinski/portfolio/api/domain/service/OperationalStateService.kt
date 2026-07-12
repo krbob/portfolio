@@ -48,10 +48,9 @@ class OperationalStateService(
             ?.listByPrefix(prefix)
             .orEmpty()
             .forEach { preference ->
-                val migrated = entriesByKey[preference.key]
-                    ?: repository.saveIfAbsent(preference.toOperationalStateEntry())
+                val migrated = repository.saveIfNewer(preference.toOperationalStateEntry())
                 entriesByKey[migrated.key] = migrated
-                legacyPreferenceRepository?.delete(preference.key)
+                legacyPreferenceRepository?.deleteIfUnchanged(preference)
             }
         return entriesByKey.values.sortedBy(OperationalStateEntry::key)
     }
@@ -64,10 +63,10 @@ class OperationalStateService(
     }.getOrNull()
 
     private suspend fun stateEntry(key: String): OperationalStateEntry? {
-        repository.get(key)?.let { return it }
-        val legacy = legacyPreferenceRepository?.get(key) ?: return null
-        val migrated = repository.saveIfAbsent(legacy.toOperationalStateEntry())
-        legacyPreferenceRepository.delete(key)
+        val current = repository.get(key)
+        val legacy = legacyPreferenceRepository?.get(key) ?: return current
+        val migrated = repository.saveIfNewer(legacy.toOperationalStateEntry())
+        legacyPreferenceRepository.deleteIfUnchanged(legacy)
         return migrated
     }
 

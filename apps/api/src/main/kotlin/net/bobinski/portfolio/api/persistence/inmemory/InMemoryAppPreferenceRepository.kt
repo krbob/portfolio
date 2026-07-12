@@ -36,6 +36,18 @@ class InMemoryAppPreferenceRepository : AppPreferenceRepository {
         return deleted
     }
 
+    override suspend fun deleteIfUnchanged(preference: AppPreference): Boolean {
+        while (true) {
+            val current = state.get()
+            if (current[preference.key] != preference) {
+                return false
+            }
+            if (state.compareAndSet(current, current - preference.key)) {
+                return true
+            }
+        }
+    }
+
     override suspend fun deleteAll() {
         state.set(emptyMap())
     }

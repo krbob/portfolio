@@ -415,4 +415,7 @@ private class DelayedOperationalStateRepository(
 
     override suspend fun saveIfAbsent(entry: OperationalStateEntry): OperationalStateEntry =
         delegate.saveIfAbsent(entry)
+
+    override suspend fun saveIfNewer(entry: OperationalStateEntry): OperationalStateEntry =
+        delegate.saveIfNewer(entry)
 }

@@ -20,13 +20,25 @@ class InMemoryOperationalStateRepository : OperationalStateRepository {
     }
 
     override suspend fun saveIfAbsent(entry: OperationalStateEntry): OperationalStateEntry {
-        var stored = entry
-        state.updateAndGet { current ->
-            current[entry.key]?.let { existing ->
-                stored = existing
-                current
-            } ?: (current + (entry.key to entry))
+        while (true) {
+            val current = state.get()
+            current[entry.key]?.let { return it }
+            if (state.compareAndSet(current, current + (entry.key to entry))) {
+                return entry
+            }
         }
-        return stored
+    }
+
+    override suspend fun saveIfNewer(entry: OperationalStateEntry): OperationalStateEntry {
+        while (true) {
+            val current = state.get()
+            val existing = current[entry.key]
+            if (existing != null && existing.updatedAt >= entry.updatedAt) {
+                return existing
+            }
+            if (state.compareAndSet(current, current + (entry.key to entry))) {
+                return entry
+            }
+        }
     }
 }

@@ -8,5 +8,6 @@ interface AppPreferenceRepository {
     suspend fun listByPrefix(prefix: String): List<AppPreference>
     suspend fun save(preference: AppPreference): AppPreference
     suspend fun delete(key: String): Boolean
+    suspend fun deleteIfUnchanged(preference: AppPreference): Boolean
     suspend fun deleteAll()
 }
