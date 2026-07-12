@@ -236,6 +236,24 @@ class WriteModelRouteTest {
         val accountId = createAccount()
         val instrumentId = createEdoInstrument()
 
+        val buyResponse = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "instrumentId": "$instrumentId",
+                  "type": "BUY",
+                  "tradeDate": "2026-03-01",
+                  "settlementDate": "2026-03-01",
+                  "quantity": "10",
+                  "unitPrice": "100.00",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
         val redeemResponse = client.post("/v1/transactions") {
             contentType(ContentType.Application.Json)
             setBody(
@@ -276,6 +294,7 @@ class WriteModelRouteTest {
             )
         }
 
+        assertEquals(HttpStatusCode.Created, buyResponse.status)
         assertEquals(HttpStatusCode.Created, redeemResponse.status)
         assertTrue(redeemResponse.bodyAsText().contains("\"type\": \"REDEEM\""))
         assertEquals(HttpStatusCode.BadRequest, sellResponse.status)

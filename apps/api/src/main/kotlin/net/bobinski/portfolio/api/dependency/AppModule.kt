@@ -245,6 +245,7 @@ fun appModule(
             transactionRepository = get(),
             accountRepository = get(),
             instrumentRepository = get(),
+            transactionRunner = get(),
             auditLogService = get(),
             clock = get()
         )

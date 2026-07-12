@@ -18,14 +18,20 @@ class TransactionService(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val instrumentRepository: InstrumentRepository,
+    private val transactionRunner: PersistenceTransactionRunner,
     private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
     suspend fun list(): List<Transaction> = transactionRepository.list()
+        .sortedWith(TransactionLedger.order.reversed())
 
     suspend fun create(command: CreateTransactionCommand): Transaction {
-        validateReferences(command)
-        val transaction = saveNew(command, Instant.now(clock))
+        val transaction = transactionRunner.inTransaction {
+            validateReferences(command)
+            val candidate = newTransaction(command, Instant.now(clock))
+            TransactionLedger.requireLongOnly(transactionRepository.list() + candidate)
+            transactionRepository.save(candidate)
+        }
         auditLogService.record(
             category = AuditEventCategory.TRANSACTIONS,
             action = "TRANSACTION_CREATED",
@@ -38,35 +44,34 @@ class TransactionService(
     }
 
     suspend fun previewImport(commands: List<CreateTransactionCommand>): TransactionImportPreview =
-        analyzeImport(commands)
+        transactionRunner.inTransaction {
+            prepareImport(commands, Instant.now(clock)).preview
+        }
 
     suspend fun importAll(
         commands: List<CreateTransactionCommand>,
         skipDuplicates: Boolean,
         context: TransactionImportContext? = null
     ): TransactionImportResult {
-        val preview = analyzeImport(commands)
-        require(preview.invalidRowCount == 0) {
-            preview.rows.firstOrNull { it.status == TransactionImportRowStatus.INVALID }?.message
-                ?: "Import contains invalid rows."
-        }
-        require(skipDuplicates || preview.duplicateRowCount == 0) {
-            "Import contains duplicate rows. Preview the batch or enable skipDuplicates."
-        }
-
-        val baseTimestamp = Instant.now(clock)
-        val transactions = preview.rows.mapIndexedNotNull { index, row ->
-            if (row.status != TransactionImportRowStatus.IMPORTABLE) {
-                return@mapIndexedNotNull null
+        val prepared = transactionRunner.inTransaction {
+            val import = prepareImport(commands, Instant.now(clock))
+            require(import.preview.invalidRowCount == 0) {
+                import.preview.rows.firstOrNull { it.status == TransactionImportRowStatus.INVALID }?.message
+                    ?: "Import contains invalid rows."
+            }
+            require(skipDuplicates || import.preview.duplicateRowCount == 0) {
+                "Import contains duplicate rows. Preview the batch or enable skipDuplicates."
             }
 
-            saveNew(commands[index], baseTimestamp.plusMillis(index.toLong()))
+            TransactionLedger.requireLongOnly(transactionRepository.list() + import.transactions)
+            import.transactions.forEach { transaction -> transactionRepository.save(transaction) }
+            import
         }
 
         val result = TransactionImportResult(
-            createdCount = transactions.size,
-            skippedDuplicateCount = preview.duplicateRowCount,
-            transactions = transactions
+            createdCount = prepared.transactions.size,
+            skippedDuplicateCount = prepared.preview.duplicateRowCount,
+            transactions = prepared.transactions
         )
         auditLogService.record(
             category = AuditEventCategory.IMPORTS,
@@ -74,26 +79,23 @@ class TransactionService(
             entityType = "TRANSACTION_BATCH",
             message = buildImportMessage(result, context),
             metadata = mapOf(
-                "rowCount" to preview.totalRowCount.toString(),
+                "rowCount" to prepared.preview.totalRowCount.toString(),
                 "createdCount" to result.createdCount.toString(),
                 "skippedDuplicateCount" to result.skippedDuplicateCount.toString(),
-                "invalidRowCount" to preview.invalidRowCount.toString(),
-                "duplicateExistingCount" to preview.duplicateExistingCount.toString(),
-                "duplicateBatchCount" to preview.duplicateBatchCount.toString()
+                "invalidRowCount" to prepared.preview.invalidRowCount.toString(),
+                "duplicateExistingCount" to prepared.preview.duplicateExistingCount.toString(),
+                "duplicateBatchCount" to prepared.preview.duplicateBatchCount.toString()
             ) + (context?.auditMetadata() ?: emptyMap())
         )
         return result
     }
 
     suspend fun update(id: UUID, command: CreateTransactionCommand): Transaction {
-        val existing = transactionRepository.get(id)
-            ?: throw ResourceNotFoundException("Transaction $id was not found.")
-        validateReferences(command)
-        val currency = command.currency.uppercase()
-        val fxRateToPln = canonicalFxRateToPln(currency, command.fxRateToPln)
-
-        val transaction = transactionRepository.save(
-            Transaction(
+        val transaction = transactionRunner.inTransaction {
+            val existing = transactionRepository.get(id)
+                ?: throw ResourceNotFoundException("Transaction $id was not found.")
+            validateReferences(command)
+            val candidate = Transaction(
                 id = existing.id,
                 accountId = command.accountId,
                 instrumentId = command.instrumentId,
@@ -105,13 +107,18 @@ class TransactionService(
                 grossAmount = command.grossAmount,
                 feeAmount = command.feeAmount,
                 taxAmount = command.taxAmount,
-                currency = currency,
-                fxRateToPln = fxRateToPln,
+                currency = command.currency.uppercase(),
+                fxRateToPln = canonicalFxRateToPln(command.currency, command.fxRateToPln),
                 notes = command.notes.trim(),
                 createdAt = existing.createdAt,
                 updatedAt = Instant.now(clock)
             )
-        )
+            val finalTransactions = transactionRepository.list().map { persisted ->
+                if (persisted.id == id) candidate else persisted
+            }
+            TransactionLedger.requireLongOnly(finalTransactions)
+            transactionRepository.save(candidate)
+        }
         auditLogService.record(
             category = AuditEventCategory.TRANSACTIONS,
             action = "TRANSACTION_UPDATED",
@@ -124,8 +131,12 @@ class TransactionService(
     }
 
     suspend fun delete(id: UUID) {
-        if (!transactionRepository.delete(id)) {
-            throw ResourceNotFoundException("Transaction $id was not found.")
+        transactionRunner.inTransaction {
+            transactionRepository.get(id)
+                ?: throw ResourceNotFoundException("Transaction $id was not found.")
+            val finalTransactions = transactionRepository.list().filterNot { transaction -> transaction.id == id }
+            TransactionLedger.requireLongOnly(finalTransactions)
+            check(transactionRepository.delete(id)) { "Transaction $id disappeared during deletion." }
         }
         auditLogService.record(
             category = AuditEventCategory.TRANSACTIONS,
@@ -160,72 +171,7 @@ class TransactionService(
         }
     }
 
-    private suspend fun saveNew(command: CreateTransactionCommand, timestamp: Instant): Transaction =
-        transactionRepository.save(
-            Transaction(
-                id = UUID.randomUUID(),
-                accountId = command.accountId,
-                instrumentId = command.instrumentId,
-                type = command.type,
-                tradeDate = command.tradeDate,
-                settlementDate = command.settlementDate,
-                quantity = command.quantity,
-                unitPrice = command.unitPrice,
-                grossAmount = command.grossAmount,
-                feeAmount = command.feeAmount,
-                taxAmount = command.taxAmount,
-                currency = command.currency.uppercase(),
-                fxRateToPln = canonicalFxRateToPln(command.currency, command.fxRateToPln),
-                notes = command.notes.trim(),
-                createdAt = timestamp,
-                updatedAt = timestamp
-            )
-        )
-
-    private suspend fun analyzeImport(commands: List<CreateTransactionCommand>): TransactionImportPreview {
-        require(commands.isNotEmpty()) { "Import requires at least one transaction row." }
-
-        val existingKeys = transactionRepository.list()
-            .map { transaction -> transaction.toFingerprint() }
-            .toSet()
-        val seenBatchKeys = linkedSetOf<TransactionFingerprint>()
-        val rows = commands.mapIndexed { index, command ->
-            val validationError = validateImportRow(command)
-            val statusAndMessage = when {
-                validationError != null -> TransactionImportRowStatus.INVALID to validationError
-                command.toFingerprint() in existingKeys ->
-                    TransactionImportRowStatus.DUPLICATE_EXISTING to "Already present in the transaction journal."
-
-                !seenBatchKeys.add(command.toFingerprint()) ->
-                    TransactionImportRowStatus.DUPLICATE_BATCH to "Duplicate of an earlier row in the same batch."
-
-                else -> TransactionImportRowStatus.IMPORTABLE to "Ready to import."
-            }
-
-            TransactionImportPreviewRow(
-                rowNumber = index + 1,
-                status = statusAndMessage.first,
-                message = statusAndMessage.second
-            )
-        }
-
-        return TransactionImportPreview(
-            totalRowCount = rows.size,
-            importableRowCount = rows.count { it.status == TransactionImportRowStatus.IMPORTABLE },
-            duplicateRowCount = rows.count {
-                it.status == TransactionImportRowStatus.DUPLICATE_EXISTING ||
-                    it.status == TransactionImportRowStatus.DUPLICATE_BATCH
-            },
-            duplicateExistingCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_EXISTING },
-            duplicateBatchCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_BATCH },
-            invalidRowCount = rows.count { it.status == TransactionImportRowStatus.INVALID },
-            rows = rows
-        )
-    }
-
-    private suspend fun validateImportRow(command: CreateTransactionCommand): String? = try {
-        validateReferences(command)
-        val currency = command.currency.uppercase()
+    private fun newTransaction(command: CreateTransactionCommand, timestamp: Instant): Transaction =
         Transaction(
             id = UUID.randomUUID(),
             accountId = command.accountId,
@@ -238,12 +184,78 @@ class TransactionService(
             grossAmount = command.grossAmount,
             feeAmount = command.feeAmount,
             taxAmount = command.taxAmount,
-            currency = currency,
-            fxRateToPln = canonicalFxRateToPln(currency, command.fxRateToPln),
+            currency = command.currency.uppercase(),
+            fxRateToPln = canonicalFxRateToPln(command.currency, command.fxRateToPln),
             notes = command.notes.trim(),
-            createdAt = Instant.EPOCH,
-            updatedAt = Instant.EPOCH
+            createdAt = timestamp,
+            updatedAt = timestamp
         )
+
+    private suspend fun prepareImport(
+        commands: List<CreateTransactionCommand>,
+        baseTimestamp: Instant
+    ): PreparedTransactionImport {
+        require(commands.isNotEmpty()) { "Import requires at least one transaction row." }
+
+        val existingTransactions = transactionRepository.list()
+        val existingKeys = existingTransactions
+            .map { transaction -> transaction.toFingerprint() }
+            .toSet()
+        val seenBatchKeys = linkedSetOf<TransactionFingerprint>()
+        val candidateLedger = existingTransactions.toMutableList()
+        val importableTransactions = mutableListOf<Transaction>()
+        val rows = commands.mapIndexed { index, command ->
+            val validationError = validateImportRow(command)
+            val fingerprint = command.toFingerprint()
+            val statusAndMessage = when {
+                validationError != null -> TransactionImportRowStatus.INVALID to validationError
+                fingerprint in existingKeys ->
+                    TransactionImportRowStatus.DUPLICATE_EXISTING to "Already present in the transaction journal."
+
+                !seenBatchKeys.add(fingerprint) ->
+                    TransactionImportRowStatus.DUPLICATE_BATCH to "Duplicate of an earlier row in the same batch."
+
+                else -> {
+                    val candidate = newTransaction(command, baseTimestamp.plusMillis(index.toLong()))
+                    val violation = TransactionLedger.firstLongOnlyViolation(candidateLedger + candidate)
+                    if (violation == null) {
+                        candidateLedger += candidate
+                        importableTransactions += candidate
+                        TransactionImportRowStatus.IMPORTABLE to "Ready to import."
+                    } else {
+                        TransactionImportRowStatus.INVALID to
+                            "Adding this row would violate the transaction ledger. ${violation.message}"
+                    }
+                }
+            }
+
+            TransactionImportPreviewRow(
+                rowNumber = index + 1,
+                status = statusAndMessage.first,
+                message = statusAndMessage.second
+            )
+        }
+
+        return PreparedTransactionImport(
+            transactions = importableTransactions,
+            preview = TransactionImportPreview(
+                totalRowCount = rows.size,
+                importableRowCount = rows.count { it.status == TransactionImportRowStatus.IMPORTABLE },
+                duplicateRowCount = rows.count {
+                    it.status == TransactionImportRowStatus.DUPLICATE_EXISTING ||
+                        it.status == TransactionImportRowStatus.DUPLICATE_BATCH
+                },
+                duplicateExistingCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_EXISTING },
+                duplicateBatchCount = rows.count { it.status == TransactionImportRowStatus.DUPLICATE_BATCH },
+                invalidRowCount = rows.count { it.status == TransactionImportRowStatus.INVALID },
+                rows = rows
+            )
+        )
+    }
+
+    private suspend fun validateImportRow(command: CreateTransactionCommand): String? = try {
+        validateReferences(command)
+        newTransaction(command, Instant.EPOCH)
         null
     } catch (exception: IllegalArgumentException) {
         exception.message ?: "Row validation failed."
@@ -314,6 +326,11 @@ class TransactionService(
             fxRateToPln
         }
 }
+
+private data class PreparedTransactionImport(
+    val transactions: List<Transaction>,
+    val preview: TransactionImportPreview
+)
 
 data class CreateTransactionCommand(
     val accountId: UUID,

@@ -56,7 +56,7 @@ class PortfolioHistoryService(
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
         val transactions = transactionRepository.list()
-            .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+            .sortedWith(TransactionLedger.order)
 
         if (transactions.isEmpty()) {
             val today = LocalDate.now(clock)

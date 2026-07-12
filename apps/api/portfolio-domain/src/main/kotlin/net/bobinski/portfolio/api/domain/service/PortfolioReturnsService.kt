@@ -50,7 +50,7 @@ class PortfolioReturnsService(
         }
 
         val transactions = transactionRepository.list()
-            .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+            .sortedWith(TransactionLedger.order)
         val externalTransactions = transactions.filter { it.type == TransactionType.DEPOSIT || it.type == TransactionType.WITHDRAWAL }
         val fxLookups = transactionFxConversionService.loadLookups(transactions)
         val usdPlnLookup = loadUsdPlnLookup(from = history.from, to = history.until)

@@ -34,6 +34,11 @@ Represents a canonical portfolio event.
 
 Transactions are the source of truth for holdings, contributions, daily history, and return calculations.
 
+The canonical journal is long-only. Replaying transactions in `tradeDate`, `createdAt`, then `id` order must never
+produce a negative instrument quantity for any account and instrument pair. This invariant is checked against the
+resulting journal for individual writes, batch imports, and state imports, including backdated edits and deletion of
+earlier purchases.
+
 ### Portfolio target
 
 Represents the desired strategic allocation.
@@ -91,6 +96,7 @@ These support observability and recovery, not portfolio accounting itself.
 ## Invariants
 
 - transactions remain canonical
+- instrument quantities never become negative during canonical transaction replay
 - analytical snapshots must stay rebuildable
 - ambiguous import lookup must fail explicitly
 - target weights must form one valid allocation

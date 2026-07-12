@@ -46,7 +46,7 @@ class PortfolioTransferService(
         val targets = portfolioTargetRepository.list()
             .sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
         val transactions = transactionRepository.list()
-            .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+            .sortedWith(TransactionLedger.order)
         val importProfiles = transactionImportProfileRepository.list()
             .sortedWith(compareBy<TransactionImportProfile>({ it.name.lowercase() }, { it.createdAt }))
 
@@ -63,25 +63,27 @@ class PortfolioTransferService(
     }
 
     suspend fun previewImport(request: PortfolioImportRequest): PortfolioImportPreview =
-        prepareImport(request).preview
-
-    suspend fun importState(request: PortfolioImportRequest): PortfolioImportResult {
-        val prepared = prepareImport(request)
-        val preview = prepared.preview
-        require(preview.isValid) {
-            buildString {
-                append("Snapshot import validation failed.")
-                preview.issues
-                    .filter { issue -> issue.severity == ImportIssueSeverity.ERROR }
-                    .take(3)
-                    .forEach { issue ->
-                        append(' ')
-                        append(issue.message)
-                    }
-            }
+        transactionRunner.inTransaction {
+            prepareImport(request).preview
         }
 
+    suspend fun importState(request: PortfolioImportRequest): PortfolioImportResult {
         val result = transactionRunner.inTransaction {
+            val prepared = prepareImport(request)
+            val preview = prepared.preview
+            require(preview.isValid) {
+                buildString {
+                    append("Snapshot import validation failed.")
+                    preview.issues
+                        .filter { issue -> issue.severity == ImportIssueSeverity.ERROR }
+                        .take(3)
+                        .forEach { issue ->
+                            append(' ')
+                            append(issue.message)
+                        }
+                }
+            }
+
             if (request.mode == ImportMode.REPLACE) {
                 transactionRepository.deleteAll()
                 transactionImportProfileRepository.deleteAll()
@@ -111,7 +113,7 @@ class PortfolioTransferService(
             }
 
             val transactions = prepared.transactions
-                .sortedWith(compareBy<Transaction>({ it.tradeDate }, { it.createdAt }))
+                .sortedWith(TransactionLedger.order)
                 .map { transaction -> transactionRepository.save(transaction) }
 
             when (val importProfilesPlan = prepared.importProfilesPlan) {
@@ -260,6 +262,25 @@ class PortfolioTransferService(
                     referenceId = transaction.instrumentId.toString()
                 )
             }
+        }
+
+        val finalTransactions = when (request.mode) {
+            ImportMode.REPLACE -> snapshotTransactions
+            ImportMode.MERGE -> existingTransactions
+                .associateBy(Transaction::id)
+                .toMutableMap()
+                .apply {
+                    snapshotTransactions.forEach { transaction -> put(transaction.id, transaction) }
+                }
+                .values
+                .toList()
+        }
+        TransactionLedger.firstLongOnlyViolation(finalTransactions)?.let { violation ->
+            issues += PortfolioImportIssue(
+                severity = ImportIssueSeverity.ERROR,
+                code = "TRANSACTION_POSITION_NEGATIVE",
+                message = violation.message
+            )
         }
 
         snapshotImportProfiles.forEach { profile ->
