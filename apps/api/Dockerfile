@@ -11,7 +11,8 @@ COPY portfolio-domain portfolio-domain
 COPY contracts contracts
 COPY src src
 
-RUN gradle --no-daemon installDist
+RUN --mount=type=cache,target=/home/gradle/.gradle,uid=1000,gid=1000 \
+    gradle --no-daemon installDist
 
 FROM eclipse-temurin:21.0.11_10-jre@sha256:d2b9f8f12212cadcfdf889461531784e8fd097feade954d65b31ee7a71c473ec
 
