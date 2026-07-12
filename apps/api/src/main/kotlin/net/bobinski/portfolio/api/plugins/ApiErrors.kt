@@ -29,7 +29,7 @@ data class ErrorResponse(
     val errorCode: ApiErrorCode,
     val retryable: Boolean,
     val requestId: String,
-    val message: String = error
+    val message: String
 )
 
 @Serializable
