@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import { getActiveUiLanguage } from '../../lib/i18n'
 import { t } from '../../lib/messages'
 import { IconClose, IconMenu } from '../ui/icons'
+import { useDialogFocus } from '../ui/use-dialog-focus'
 import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
@@ -11,15 +12,14 @@ import { resolveRouteTitle } from './navigation'
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const mainRef = useRef<HTMLElement | null>(null)
+  const mobileNavRef = useRef<HTMLElement | null>(null)
   const [isMobileNavMounted, setIsMobileNavMounted] = useState(false)
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false)
-  const isMobileNavMountedRef = useRef(false)
   const openAnimationFrameRef = useRef<number | null>(null)
   const previousRouteRef = useRef(`${location.pathname}${location.search}`)
   const currentTitle = resolveRouteTitle(location.pathname, getActiveUiLanguage())
 
   function openMobileNav() {
-    isMobileNavMountedRef.current = true
     setIsMobileNavMounted(true)
   }
 
@@ -98,22 +98,7 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }, [location.pathname, location.search, location.hash])
 
-  useEffect(() => {
-    isMobileNavMountedRef.current = isMobileNavMounted
-  }, [isMobileNavMounted])
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && isMobileNavMountedRef.current) {
-        closeMobileNav()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
+  useDialogFocus(mobileNavRef, isMobileNavVisible, closeMobileNav)
 
   useEffect(() => {
     if (!isMobileNavMounted) {
@@ -141,7 +126,6 @@ export function Layout({ children }: { children: ReactNode }) {
     }
 
     const timeoutId = window.setTimeout(() => {
-      isMobileNavMountedRef.current = false
       setIsMobileNavMounted(false)
     }, 200)
 
@@ -178,7 +162,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </button>
 
             <div className="min-w-0 flex-1 px-3">
-              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">{t('layout.appName')}</p>
+              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">{t('layout.appName')}</p>
               <p className="truncate text-sm font-semibold text-zinc-100">{currentTitle}</p>
             </div>
           </div>
@@ -210,6 +194,7 @@ export function Layout({ children }: { children: ReactNode }) {
           />
 
           <aside
+            ref={mobileNavRef}
             id="mobile-navigation"
             className={clsx(
               'fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden',
@@ -222,8 +207,11 @@ export function Layout({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label={t('layout.navigation')}
+            aria-hidden={isMobileNavVisible ? undefined : true}
+            tabIndex={-1}
           >
             <button
+              type="button"
               onClick={closeMobileNav}
               className="absolute right-3 top-3 rounded-lg p-2 text-zinc-400 hover:text-zinc-200"
               aria-label={t('layout.closeNavigation')}

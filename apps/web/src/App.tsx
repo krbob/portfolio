@@ -94,13 +94,13 @@ export function App() {
 function RouteLoadingState() {
   return (
     <div className="space-y-3 py-16 text-center">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
         {t('common.loading')}
       </p>
       <h2 className="text-lg font-semibold text-zinc-300">
         {t('app.loadingTitle')}
       </h2>
-      <p className="text-sm text-zinc-500">
+      <p className="text-sm text-zinc-400">
         {t('app.loadingDescription')}
       </p>
     </div>

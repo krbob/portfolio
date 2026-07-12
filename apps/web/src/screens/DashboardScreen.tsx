@@ -139,7 +139,7 @@ export function DashboardScreen() {
     <>
       <PageHeader title={t('dashboard.title')}>
         <RefreshIndicator active={isRefreshing} />
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-zinc-400">
           {t('dashboard.asOf')} {overview.asOf} · {labelPortfolioValuationBasis(valuationState, language)}
         </span>
       </PageHeader>

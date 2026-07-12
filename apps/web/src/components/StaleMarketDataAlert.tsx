@@ -58,7 +58,7 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <article className="rounded-lg border border-sky-500/10 bg-zinc-950/40 p-3">
-      <span className="text-xs text-zinc-500">{label}</span>
+      <span className="text-xs text-zinc-400">{label}</span>
       <strong className="mt-1 block text-sm text-zinc-100">{value}</strong>
     </article>
   )

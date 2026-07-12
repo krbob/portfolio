@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import { AreaSeries, LineSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
+import { formatDate, formatNumber } from '../../lib/format'
 import { formatMessage, t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
+import { ChartDataTable } from './ChartDataTable'
 
 interface PortfolioValueChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -22,6 +24,7 @@ export function PortfolioValueChart({
   height = 320,
   title = 'Portfolio Value',
 }: PortfolioValueChartProps) {
+  const resolvedTitle = title === 'Portfolio Value' ? t('portfolioValue.title') : title
   const chartRef = useRef<IChartApi | null>(null)
   const hasMountedRef = useRef(false)
   const valueSeriesRef = useRef<ISeriesApi<'Area'> | null>(null)
@@ -100,13 +103,31 @@ export function PortfolioValueChart({
   return (
     <ChartContainer
       height={height}
-      title={title === 'Portfolio Value' ? t('portfolioValue.title') : title}
+      title={resolvedTitle}
       subtitle={formatMessage(t('portfolioValue.subtitle'), { unit })}
       legend={
         <>
           <ChartLegendItem color={chartPalette.portfolio} label={formatMessage(t('portfolioValue.valueLegend'), { unit })} />
           <ChartLegendItem color={chartPalette.contributions} label={t('portfolioValue.contributions')} dashed />
         </>
+      }
+      dataTable={
+        <ChartDataTable
+          caption={resolvedTitle}
+          columns={[
+            t('chart.date'),
+            formatMessage(t('portfolioValue.valueLegend'), { unit }),
+            `${t('portfolioValue.contributions')} (${unit})`,
+          ]}
+          rows={points.map((point) => ({
+            key: point.date,
+            cells: [
+              formatDate(point.date),
+              formatNumber(point[valueKey], { maximumFractionDigits: unit === 'AU' ? 2 : 0 }),
+              formatNumber(point[contributionsKey], { maximumFractionDigits: unit === 'AU' ? 2 : 0 }),
+            ],
+          }))}
+        />
       }
       onChartReady={onChartReady}
     />

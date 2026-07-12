@@ -66,7 +66,7 @@ export function CsvTransactionImportForm({
         <span className={`${badge} bg-zinc-800 text-zinc-400`}>
           {selectedImportProfile ? selectedImportProfile.name : t('import.noProfileSelected')}
         </span>
-        {importProfileBlockingReason && <p className="mt-1 text-sm text-zinc-500">{importProfileBlockingReason}</p>}
+        {importProfileBlockingReason && <p className="mt-1 text-sm text-zinc-400">{importProfileBlockingReason}</p>}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -91,7 +91,7 @@ export function CsvTransactionImportForm({
       </div>
 
       <textarea
-        className="min-h-[200px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+        className="min-h-[200px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
         value={importCsv}
         onChange={(event) => onImportCsvChange(event.target.value)}
         placeholder={importProfileTemplate}
@@ -136,7 +136,7 @@ export function CsvTransactionImportForm({
         />
       )}
 
-      {importFeedback && <p className="text-sm text-zinc-500">{importFeedback}</p>}
+      {importFeedback && <p className="text-sm text-zinc-400">{importFeedback}</p>}
       {importErrorMessage && <p className="text-sm text-red-400">{importErrorMessage}</p>}
     </form>
   )

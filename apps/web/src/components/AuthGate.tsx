@@ -87,7 +87,7 @@ function LoginCard({ stage }: { stage: string }) {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-zinc-100">Portfolio</h1>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-zinc-400">
               {stage}
             </p>
           </div>
@@ -125,7 +125,7 @@ function LoginCard({ stage }: { stage: string }) {
             </button>
           </form>
         </div>
-        <p className="mt-4 text-center text-xs text-zinc-600">{t('auth.selfHosted')}</p>
+        <p className="mt-4 text-center text-xs text-zinc-400">{t('auth.selfHosted')}</p>
       </div>
     </div>
   )

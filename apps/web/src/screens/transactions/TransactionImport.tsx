@@ -239,9 +239,9 @@ export function TransactionImport({
         aria-labelledby="transactions-workspace-tab-import"
       >
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('import.batchImportEyebrow')}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('import.batchImportEyebrow')}</p>
           <h4 className="mt-1 text-lg font-semibold text-zinc-100">{t('import.batchImportTitle')}</h4>
-          <p className="mt-1 text-sm text-zinc-500">{t('import.batchImportDescription')}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t('import.batchImportDescription')}</p>
         </div>
 
         <div className="mb-4 flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label={t('import.batchModeLabel')}>
@@ -260,7 +260,7 @@ export function TransactionImport({
               aria-controls={`transactions-import-mode-panel-${mode}`}
               tabIndex={mode === importBatchMode ? 0 : -1}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                mode === importBatchMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'
+                mode === importBatchMode ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'
               }`}
               onClick={() => setImportBatchMode(mode)}
             >

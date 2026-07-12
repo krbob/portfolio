@@ -138,13 +138,13 @@ export function TransactionImportProfileEditor({
         />
         <div>
           <span className={labelClass}>{t('importProfiles.skipDuplicatesByDefault')}</span>
-          <p className="text-sm text-zinc-500">{t('importProfiles.skipDuplicatesHint')}</p>
+          <p className="text-sm text-zinc-400">{t('importProfiles.skipDuplicatesHint')}</p>
         </div>
       </label>
 
       <div className="col-span-full">
         <div className="mb-3">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.headerMappingsEyebrow')}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('importProfiles.headerMappingsEyebrow')}</p>
           <h5 className="mt-1 text-sm font-semibold text-zinc-100">{t('importProfiles.headerMappingsTitle')}</h5>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -157,7 +157,7 @@ export function TransactionImportProfileEditor({
                 onChange={(event) => onUpdateImportProfileMapping(field.key, event.target.value)}
                 placeholder={field.placeholder}
               />
-              {field.required && <small className="text-xs text-zinc-600">{t('importProfiles.requiredByParser')}</small>}
+              {field.required && <small className="text-xs text-zinc-400">{t('importProfiles.requiredByParser')}</small>}
             </label>
           ))}
         </div>
@@ -165,8 +165,8 @@ export function TransactionImportProfileEditor({
 
       <div className="col-span-full">
         <div className="mb-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.templateEyebrow')}</p>
-          <p className="mt-1 text-sm text-zinc-500">{t('importProfiles.templateDescription')}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('importProfiles.templateEyebrow')}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t('importProfiles.templateDescription')}</p>
         </div>
         <pre className="mt-2 overflow-x-auto rounded-lg bg-zinc-800 p-3 font-mono text-xs text-zinc-400">
           {importProfileTemplate}
@@ -187,7 +187,7 @@ export function TransactionImportProfileEditor({
         </button>
       </div>
 
-      {importProfileFeedback && <p className="col-span-full text-sm text-zinc-500">{importProfileFeedback}</p>}
+      {importProfileFeedback && <p className="col-span-full text-sm text-zinc-400">{importProfileFeedback}</p>}
       {importProfileErrorMessage && <p className="col-span-full text-sm text-red-400">{importProfileErrorMessage}</p>}
     </form>
   )

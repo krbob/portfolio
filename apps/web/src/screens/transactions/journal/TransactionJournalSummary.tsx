@@ -27,9 +27,9 @@ function JournalSummaryTile({
 }) {
   return (
     <article className="rounded-lg border border-zinc-800/70 bg-zinc-950/30 p-4">
-      <span className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">{label}</span>
       <strong className="mt-2 block text-2xl font-semibold text-zinc-100">{value}</strong>
-      <p className="mt-1 text-sm text-zinc-500">{hint}</p>
+      <p className="mt-1 text-sm text-zinc-400">{hint}</p>
     </article>
   )
 }

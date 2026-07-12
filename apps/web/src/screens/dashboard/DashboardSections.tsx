@@ -150,12 +150,12 @@ export function DashboardHistoryCard({
             <h3 className="text-sm font-medium text-zinc-400">{labelPrimaryPortfolioValueMetric(historyValuationState, language)}</h3>
             {hoverInfo && (
               <span className="text-sm font-semibold tabular-nums text-zinc-100">
-                {formatCurrencyPln(hoverInfo.value)} <span className="text-xs font-normal text-zinc-500">{hoverInfo.date}</span>
+                {formatCurrencyPln(hoverInfo.value)} <span className="text-xs font-normal text-zinc-400">{hoverInfo.date}</span>
               </span>
             )}
           </div>
           {historyValuationState !== 'MARK_TO_MARKET' ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-400">
               {historyValuationState === 'BOOK_ONLY'
                 ? t('dashboardSections.chartBookBasis')
                 : historyValuationState === 'STALE'
@@ -173,7 +173,7 @@ export function DashboardHistoryCard({
                 type="button"
                 className={clsx(
                   'rounded-md px-3 py-1.5 sm:px-2.5 sm:py-1 text-xs font-medium transition-colors',
-                  value === range ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+                  value === range ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-300',
                 )}
                 onClick={() => onRangeChange(value)}
               >
@@ -233,7 +233,7 @@ export function DashboardTargetDriftCard({
         <div>
           <h3 className="text-sm font-medium text-zinc-400">{t('dashboardSections.targetAllocation')}</h3>
           {allocation?.valuationState && allocation.valuationState !== 'MARK_TO_MARKET' ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-400">
               {allocation.valuationState === 'BOOK_ONLY'
                 ? t('dashboardSections.allocationBookBasis')
                 : allocation.valuationState === 'STALE'
@@ -289,7 +289,7 @@ export function DashboardTargetDriftCard({
 
           {/* Meta + link */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-400">
               ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })} {t('dashboardSections.toleranceMeta')} · {allocation.breachedBucketCount} {t('dashboardSections.outsideBand')}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -351,7 +351,7 @@ function RecommendationHero({ allocation }: { allocation: PortfolioAllocationSum
   return (
     <div>
       <p className="text-sm font-medium text-zinc-100">{hero}</p>
-      {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
+      {subtitle && <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>}
     </div>
   )
 }
@@ -404,7 +404,7 @@ function AllocationBucketBar({
 }
 
 const adjustmentToneColor = {
-  neutral: 'text-zinc-500',
+  neutral: 'text-zinc-400',
   over: 'text-amber-400',
   under: 'text-emerald-400',
 } as const
@@ -607,14 +607,14 @@ export function DashboardContributorsCard({ holdings }: { holdings: PortfolioHol
       <div className="grid grid-cols-2 gap-4">
         {topGainer && (
           <div>
-            <p className="text-xs font-medium text-zinc-500">{t('dashboard.topGainer')}</p>
+            <p className="text-xs font-medium text-zinc-400">{t('dashboard.topGainer')}</p>
             <p className="mt-1 truncate text-sm font-medium text-zinc-100">{topGainer.instrumentName}</p>
             <p className="mt-0.5 text-sm font-medium text-emerald-400">{formatSignedCurrencyPln(topGainer.gain)}</p>
           </div>
         )}
         {topLoser && (
           <div>
-            <p className="text-xs font-medium text-zinc-500">{t('dashboard.topLoser')}</p>
+            <p className="text-xs font-medium text-zinc-400">{t('dashboard.topLoser')}</p>
             <p className="mt-1 truncate text-sm font-medium text-zinc-100">{topLoser.instrumentName}</p>
             <p className={`mt-0.5 text-sm font-medium ${topLoser.gain >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedCurrencyPln(topLoser.gain)}</p>
           </div>

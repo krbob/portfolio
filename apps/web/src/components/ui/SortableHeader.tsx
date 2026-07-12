@@ -25,7 +25,10 @@ export function SortableHeader<F extends string>({
   const base = align === 'right' ? thRight : th
 
   return (
-    <th className={base}>
+    <th
+      className={base}
+      aria-sort={isActive ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+    >
       <button
         type="button"
         className={`inline-flex items-center gap-1 ${isActive ? 'text-zinc-300' : ''}`}
@@ -34,7 +37,7 @@ export function SortableHeader<F extends string>({
         }
       >
         {label}
-        <span className="text-[10px]">{arrow}</span>
+        <span className="text-[10px]" aria-hidden="true">{arrow}</span>
       </button>
     </th>
   )

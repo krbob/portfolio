@@ -84,7 +84,7 @@ export function ReadModelCacheSection() {
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('cache.scheduler')}</span>
+          <span className="text-xs text-zinc-400">{t('cache.scheduler')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
             {refreshStatusQuery.data
               ? refreshStatusQuery.data.schedulerEnabled
@@ -94,21 +94,21 @@ export function ReadModelCacheSection() {
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('cache.interval')}</span>
+          <span className="text-xs text-zinc-400">{t('cache.interval')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
             {refreshStatusQuery.data ? `${refreshStatusQuery.data.intervalMinutes} min` : '...'}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('cache.snapshots')}</span>
+          <span className="text-xs text-zinc-400">{t('cache.snapshots')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? snapshots.length : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('cache.totalPayload')}</span>
+          <span className="text-xs text-zinc-400">{t('cache.totalPayload')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{cacheQuery.data ? formatBytes(totalPayloadBytes) : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('cache.lastRefresh')}</span>
+          <span className="text-xs text-zinc-400">{t('cache.lastRefresh')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
             {refreshStatusQuery.data?.lastSuccessAt ? formatDateTime(refreshStatusQuery.data.lastSuccessAt) : notApplicableLabel(language)}
           </strong>
@@ -116,11 +116,11 @@ export function ReadModelCacheSection() {
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('cache.models')}:{' '}
           {refreshStatusQuery.data?.modelNames.join(', ') ?? t('common.loading')}
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('cache.lastTrigger')}:{' '}
           {refreshStatusQuery.data?.lastTrigger ?? t('common.none')}
           {refreshStatusQuery.data?.lastDurationMs != null ? ` · ${refreshStatusQuery.data.lastDurationMs} ms` : ''}
@@ -134,11 +134,11 @@ export function ReadModelCacheSection() {
         )}
       </div>
 
-      {cacheQuery.isLoading && <p className="text-sm text-zinc-500">{t('cache.loadingSnapshots')}</p>}
-      {refreshStatusQuery.isLoading && <p className="text-sm text-zinc-500">{t('cache.loadingRefreshStatus')}</p>}
+      {cacheQuery.isLoading && <p className="text-sm text-zinc-400">{t('cache.loadingSnapshots')}</p>}
+      {refreshStatusQuery.isLoading && <p className="text-sm text-zinc-400">{t('cache.loadingRefreshStatus')}</p>}
       {cacheQuery.isError && <p className="text-sm text-red-400">{cacheQuery.error.message}</p>}
       {refreshStatusQuery.isError && <p className="text-sm text-red-400">{refreshStatusQuery.error.message}</p>}
-      {feedback && <p className="mb-4 text-sm text-zinc-500">{feedback}</p>}
+      {feedback && <p className="mb-4 text-sm text-zinc-400">{feedback}</p>}
       {invalidateCacheMutation.error && (
         <p className="mb-4 text-sm text-red-400">{invalidateCacheMutation.error.message}</p>
       )}
@@ -146,7 +146,7 @@ export function ReadModelCacheSection() {
         <p className="mb-4 text-sm text-red-400">{runRefreshMutation.error.message}</p>
       )}
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length === 0 && (
-        <p className="text-sm text-zinc-500">{t('cache.emptySnapshots')}</p>
+        <p className="text-sm text-zinc-400">{t('cache.emptySnapshots')}</p>
       )}
 
       {!cacheQuery.isLoading && !cacheQuery.isError && snapshots.length > 0 && (
@@ -156,7 +156,7 @@ export function ReadModelCacheSection() {
               <div className="flex items-start justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-zinc-100">{snapshot.modelName}</h4>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-zinc-400">
                     {snapshot.cacheKey} · {t('cache.generated')} {formatDateTime(snapshot.generatedAt)}
                   </p>
                 </div>
@@ -166,19 +166,19 @@ export function ReadModelCacheSection() {
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-4">
                 <div>
-                  <dt className="text-zinc-500">{t('cache.modelVersion')}</dt>
+                  <dt className="text-zinc-400">{t('cache.modelVersion')}</dt>
                   <dd className="text-zinc-100">{snapshot.modelVersion}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('cache.inputWindow')}</dt>
+                  <dt className="text-zinc-400">{t('cache.inputWindow')}</dt>
                   <dd className="text-zinc-100">{formatWindow(snapshot.inputsFrom, snapshot.inputsTo)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('cache.sourceUpdated')}</dt>
+                  <dt className="text-zinc-400">{t('cache.sourceUpdated')}</dt>
                   <dd className="text-zinc-100">{snapshot.sourceUpdatedAt ? formatDateTime(snapshot.sourceUpdatedAt) : notApplicableLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('cache.payload')}</dt>
+                  <dt className="text-zinc-400">{t('cache.payload')}</dt>
                   <dd className="text-zinc-100">{formatBytes(snapshot.payloadSizeBytes)}</dd>
                 </div>
               </dl>

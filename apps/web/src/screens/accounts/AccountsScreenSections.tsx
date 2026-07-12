@@ -28,13 +28,13 @@ export function AccountSummaryTile({
 }) {
   return (
     <Card>
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{label}</p>
       <p className={`mt-3 text-3xl font-semibold tracking-tight ${
         tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
       }`}>
         {value}
       </p>
-      {detail && <p className="mt-2 text-sm text-zinc-500">{detail}</p>}
+      {detail && <p className="mt-2 text-sm text-zinc-400">{detail}</p>}
     </Card>
   )
 }
@@ -56,11 +56,11 @@ export function AccountDetailsCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
             {t('accountDetails.selectedAccount')}
           </p>
           <h3 className="mt-2 text-xl font-semibold text-zinc-50">{account.accountName}</h3>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-400">
             {account.institution} · {labelAccountType(account.type)} · {account.baseCurrency}
           </p>
         </div>
@@ -92,7 +92,7 @@ export function AccountDetailsCard({
         <h4 className="text-sm font-medium text-zinc-100">{t('accountDetails.topPositions')}</h4>
 
         {holdings.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-zinc-400">
             {t('accountDetails.noPositions')}
           </p>
         ) : (
@@ -108,13 +108,13 @@ export function AccountDetailsCard({
                 >
                   <div>
                     <p className="font-medium text-zinc-100">{holding.instrumentName}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-400">
                       {labelAssetClass(holding.assetClass)} · {formatHoldingQuantity(holding.quantity)} {t('accountDetails.units')}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-400">
                       {isMarketValuedStatus(holding.valuationStatus)
                         ? `${formatPercent(weightPct)} · ${formatHoldingGainPreview(holding.unrealizedGainPln, language)}`
                         : `${formatPercent(weightPct)} · ${t('accountDetails.bookBasis')}`}
@@ -143,13 +143,13 @@ function AccountDetailMetric({
 }) {
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{label}</p>
       <p className={`mt-2 text-xl font-semibold ${
         tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
       }`}>
         {value}
       </p>
-      {detail && <p className="mt-1 text-xs text-zinc-500">{detail}</p>}
+      {detail && <p className="mt-1 text-xs text-zinc-400">{detail}</p>}
     </div>
   )
 }

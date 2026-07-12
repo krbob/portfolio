@@ -21,7 +21,7 @@ export function FilterBar({ children, activeCount, onClear, summary }: FilterBar
         )}
       </div>
       {summary && activeCount > 0 && (
-        <p className="mt-2 text-xs text-zinc-500">{summary}</p>
+        <p className="mt-2 text-xs text-zinc-400">{summary}</p>
       )}
     </div>
   )

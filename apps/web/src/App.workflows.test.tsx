@@ -1067,17 +1067,25 @@ describe('App', () => {
     expect(screen.queryByRole('dialog', { name: /navigation/i })).not.toBeInTheDocument()
 
     const openNavigationButtons = await screen.findAllByRole('button', { name: /open navigation/i })
-    fireEvent.click(openNavigationButtons[0])
+    const navigationOpener = openNavigationButtons[0]
+    navigationOpener.focus()
+    fireEvent.click(navigationOpener)
 
-    expect(await screen.findByRole('dialog', { name: /navigation/i })).toBeInTheDocument()
+    const navigationDialog = await screen.findByRole('dialog', { name: /navigation/i })
+    const closeNavigationButton = screen.getByRole('button', { name: /close navigation/i })
+    await waitFor(() => expect(closeNavigationButton).toHaveFocus())
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(navigationDialog).toContainElement(document.activeElement as HTMLElement)
+    expect(closeNavigationButton).not.toHaveFocus()
     await waitFor(() => {
       expect(document.body.style.overflow).toBe('hidden')
     })
 
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(navigationOpener).toHaveFocus()
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /navigation/i })).toHaveClass('-translate-x-full')
+      expect(document.getElementById('mobile-navigation')).toHaveClass('-translate-x-full')
     })
 
     await waitFor(() => {

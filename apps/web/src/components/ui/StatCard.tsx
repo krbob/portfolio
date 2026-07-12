@@ -43,7 +43,7 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
             ? [isLong ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl', 'text-zinc-50']
             : isLong ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl',
           isZero
-            ? 'text-zinc-600'
+            ? 'text-zinc-400'
             : change === 'positive'
               ? 'text-emerald-400'
               : change === 'negative'
@@ -54,7 +54,7 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
         {value}
       </div>
       {subtitle && (
-        <p className="mt-1 text-xs text-zinc-500 sm:text-sm sm:tabular-nums">{subtitle}</p>
+        <p className="mt-1 text-xs text-zinc-400 sm:text-sm sm:tabular-nums">{subtitle}</p>
       )}
     </div>
   )

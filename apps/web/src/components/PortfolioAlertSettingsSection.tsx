@@ -151,7 +151,7 @@ export function PortfolioAlertSettingsSection() {
       />
 
       {settingsQuery.isLoading ? (
-        <p className="mt-5 text-sm text-zinc-500">{t('alertSettings.loading')}</p>
+        <p className="mt-5 text-sm text-zinc-400">{t('alertSettings.loading')}</p>
       ) : settingsQuery.isError ? (
         <div className="mt-5 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
           <p className="text-sm font-medium text-red-200">{t('alertSettings.loadFailed')}</p>
@@ -186,7 +186,7 @@ export function PortfolioAlertSettingsSection() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">{t('alertSettings.typesTitle')}</h3>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">{t('alertSettings.typesDescription')}</p>
+                <p className="mt-1 text-sm leading-6 text-zinc-400">{t('alertSettings.typesDescription')}</p>
               </div>
               <span className={`${badge} ${enabledTypeCount === 0 ? badgeVariants.warning : badgeVariants.info}`}>
                 {formatMessage(t('alertSettings.enabledTypeCount'), { count: String(enabledTypeCount) })}
@@ -209,7 +209,7 @@ export function PortfolioAlertSettingsSection() {
 
           <section className="rounded-lg border border-zinc-800/50 p-4">
             <h3 className="text-sm font-semibold text-zinc-100">{t('alertSettings.thresholdsTitle')}</h3>
-            <p className="mt-1 text-sm leading-6 text-zinc-500">{t('alertSettings.thresholdsDescription')}</p>
+            <p className="mt-1 text-sm leading-6 text-zinc-400">{t('alertSettings.thresholdsDescription')}</p>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label>
@@ -224,7 +224,7 @@ export function PortfolioAlertSettingsSection() {
                   className={input}
                   disabled={isSaving}
                 />
-                <span className="mt-1 block text-xs text-zinc-500">
+                <span className="mt-1 block text-xs text-zinc-400">
                   {formatMessage(t('alertSettings.thresholdPreview'), {
                     value: formatPercent(form.allocationDriftThresholdPctPoints || '0', {
                       maximumFractionDigits: 2,
@@ -246,7 +246,7 @@ export function PortfolioAlertSettingsSection() {
                   className={input}
                   disabled={isSaving}
                 />
-                <span className="mt-1 block text-xs text-zinc-500">
+                <span className="mt-1 block text-xs text-zinc-400">
                   {formatMessage(t('alertSettings.thresholdPreview'), {
                     value: formatPercent(form.benchmarkUnderperformanceThresholdPctPoints || '0', {
                       maximumFractionDigits: 2,
@@ -296,7 +296,7 @@ function TogglePanel({
       />
       <span>
         <span className="block text-sm font-medium text-zinc-100">{title}</span>
-        <span className="mt-1 block text-sm leading-6 text-zinc-500">{description}</span>
+        <span className="mt-1 block text-sm leading-6 text-zinc-400">{description}</span>
       </span>
     </label>
   )

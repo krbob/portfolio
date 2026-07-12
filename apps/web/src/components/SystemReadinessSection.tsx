@@ -19,28 +19,28 @@ export function SystemReadinessSection() {
         description={t('readiness.description')}
       />
 
-      {readinessQuery.isLoading && <p className="text-sm text-zinc-500">{t('readiness.loading')}</p>}
+      {readinessQuery.isLoading && <p className="text-sm text-zinc-400">{t('readiness.loading')}</p>}
       {readinessQuery.isError && <p className="text-sm text-red-400">{readinessQuery.error.message}</p>}
 
       {readiness && (
         <div className="animate-fade-in">
           <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{t('readiness.overallStatus')}</span>
+              <span className="text-xs text-zinc-400">{t('readiness.overallStatus')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{formatOverallStatus(readiness.status)}</strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{t('readiness.blockingIssues')}</span>
+              <span className="text-xs text-zinc-400">{t('readiness.blockingIssues')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{countChecks(readiness.checks, 'FAIL')}</strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{t('readiness.advisoryNotices')}</span>
+              <span className="text-xs text-zinc-400">{t('readiness.advisoryNotices')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">
                 {countChecks(readiness.checks, 'WARN') + countChecks(readiness.checks, 'INFO')}
               </strong>
             </article>
             <article className="rounded-lg border border-zinc-800/50 p-4">
-              <span className="text-xs text-zinc-500">{t('readiness.checkedAt')}</span>
+              <span className="text-xs text-zinc-400">{t('readiness.checkedAt')}</span>
               <strong className="mt-1 block text-sm text-zinc-100">{formatDateTime(readiness.checkedAt)}</strong>
             </article>
           </div>
@@ -51,7 +51,7 @@ export function SystemReadinessSection() {
                 <div className="flex items-start justify-between">
                   <div>
                     <strong className="text-sm text-zinc-100">{formatCheckLabel(check.key, check.label, language)}</strong>
-                    <p className="text-sm text-zinc-500">{check.key}</p>
+                    <p className="text-sm text-zinc-400">{check.key}</p>
                   </div>
                   <span className={`${badge} ${readinessBadgeVariant(check.status)}`}>
                     {labelCheckStatus(check.status)}
@@ -66,7 +66,7 @@ export function SystemReadinessSection() {
                     <dl className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
                       {Object.entries(check.details).map(([key, value]) => (
                         <div className="contents" key={key}>
-                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-600">
+                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                             {labelDetailKey(key)}
                           </dt>
                           <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>

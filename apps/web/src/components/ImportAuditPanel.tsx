@@ -35,7 +35,7 @@ export function ImportAuditPanel({
       <SectionHeader eyebrow={t('importAudit.eyebrow')} title={title} description={description} />
 
       {latestEvent && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('importAudit.latestEvent')} {formatAuditEventMessage(latestEvent, language)} ·{' '}
           {formatDateTime(latestEvent.occurredAt)}
         </p>
@@ -59,13 +59,13 @@ export function ImportAuditPanel({
       </div>
 
       {eventsQuery.isLoading && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('importAudit.loadingActivity')}
         </p>
       )}
       {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('importAudit.noEvents')}
         </p>
       )}
@@ -78,7 +78,7 @@ export function ImportAuditPanel({
                 <div className="flex items-center justify-between">
                   <div>
                     <strong className="text-sm font-medium text-zinc-200">{formatAuditEventTitle(event.action)}</strong>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-400">
                       {formatAuditEventMessage(event, language)} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
@@ -88,8 +88,8 @@ export function ImportAuditPanel({
                     {labelAuditOutcome(event.outcome)}
                   </span>
                 </div>
-                {metadataSummary && <p className="text-sm text-zinc-500">{metadataSummary}</p>}
-                {event.entityId && <p className="text-xs text-zinc-600 font-mono mt-1">{event.entityId}</p>}
+                {metadataSummary && <p className="text-sm text-zinc-400">{metadataSummary}</p>}
+                {event.entityId && <p className="text-xs text-zinc-400 font-mono mt-1">{event.entityId}</p>}
               </article>
             )
           })}

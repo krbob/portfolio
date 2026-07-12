@@ -177,15 +177,22 @@ export function AccountsContent() {
                       const isSelected = selectedAccount?.accountId === account.accountId
                       return (
                         <tr
-                          className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                          className={`${tr} cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400 ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
                           key={account.accountId}
                           aria-selected={isSelected}
                           onClick={() => setSelectedAccountId(account.accountId)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setSelectedAccountId(account.accountId)
+                            }
+                          }}
+                          tabIndex={0}
                         >
                           <td className={td}>
                             <div>
                               <p className="font-medium text-zinc-100">{account.accountName}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {account.institution} · {account.baseCurrency}
                               </p>
                             </div>
@@ -193,7 +200,7 @@ export function AccountsContent() {
                           <td className={td}>
                             <div>
                               <p className="text-zinc-200">{labelAccountType(account.type)}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {formatPercent(account.portfolioWeightPct)} {t('accountsScreen.ofPortfolio')}
                               </p>
                             </div>
@@ -201,7 +208,7 @@ export function AccountsContent() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{account.activeHoldingCount}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {account.valuedHoldingCount}/{account.activeHoldingCount} {t('accountsScreen.marketBacked')}
                               </p>
                             </div>
@@ -209,7 +216,7 @@ export function AccountsContent() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.cashBalancePln)}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {t('accountsScreen.netContributions')} {formatCurrencyPln(account.netContributionsPln)}
                               </p>
                             </div>
@@ -217,7 +224,7 @@ export function AccountsContent() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(account.totalCurrentValuePln)}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {t('accountsScreen.invested')} {formatCurrencyPln(account.investedCurrentValuePln)}
                               </p>
                             </div>
@@ -226,14 +233,14 @@ export function AccountsContent() {
                             <div>
                               <p className={`tabular-nums ${
                                 account.valuedHoldingCount === 0
-                                  ? 'text-zinc-500'
+                                  ? 'text-zinc-400'
                                   : parsePortfolioNumber(account.totalUnrealizedGainPln) >= 0
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
                                 {formatPortfolioGainDisplay(parsePortfolioNumber(account.totalUnrealizedGainPln), account.valuedHoldingCount, language)}
                               </p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {describeHoldingGainRate(account.activeHoldingCount, account.valuedHoldingCount, gainPct, language)}
                               </p>
                             </div>

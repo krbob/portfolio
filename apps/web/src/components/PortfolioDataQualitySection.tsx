@@ -67,7 +67,7 @@ export function PortfolioDataQualitySection() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <strong className="text-sm text-zinc-100">{check.label}</strong>
-                    <p className="mt-1 text-sm text-zinc-500">{check.message}</p>
+                    <p className="mt-1 text-sm text-zinc-400">{check.message}</p>
                   </div>
                   <span className={`${badge} ${qualityBadgeVariant(check.status)}`}>
                     {overallStatusLabel(check.status)}
@@ -78,7 +78,7 @@ export function PortfolioDataQualitySection() {
           </div>
 
           {summary.checks.some((check) => check.status === 'WARN') ? (
-            <p className="mt-4 text-sm text-zinc-500">
+            <p className="mt-4 text-sm text-zinc-400">
               {t('dataQuality.upstreamHint')}
             </p>
           ) : null}
@@ -91,7 +91,7 @@ export function PortfolioDataQualitySection() {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <article className="rounded-lg border border-zinc-800/50 p-4">
-      <span className="text-xs text-zinc-500">{label}</span>
+      <span className="text-xs text-zinc-400">{label}</span>
       <strong className="mt-1 block text-sm text-zinc-100">{value}</strong>
     </article>
   )

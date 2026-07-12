@@ -43,7 +43,7 @@ export function PerformanceContributors({ holdings }: Props) {
           {t('performance.contributorsTitle')}
         </h2>
         <Card>
-          <p className="text-sm text-zinc-500">{t('performance.noContributors')}</p>
+          <p className="text-sm text-zinc-400">{t('performance.noContributors')}</p>
         </Card>
       </div>
     )
@@ -59,7 +59,7 @@ export function PerformanceContributors({ holdings }: Props) {
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
             {t('performance.topContributors')}
           </h3>
           <ul>
@@ -69,7 +69,7 @@ export function PerformanceContributors({ holdings }: Props) {
           </ul>
         </Card>
         <Card>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
             {t('performance.bottomContributors')}
           </h3>
           <ul>

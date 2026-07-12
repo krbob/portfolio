@@ -28,7 +28,7 @@ function NavSection({
 
   return (
     <div className="mb-6">
-      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
+      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
         {label}
       </span>
       <ul className="flex flex-col gap-0.5">
@@ -100,9 +100,9 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
               {t('layout.runtimeHealth')}
             </span>
           </div>
-          <span className="text-xs text-zinc-500">{systemStatus.label}</span>
+          <span className="text-xs text-zinc-400">{systemStatus.label}</span>
         </div>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-zinc-400">
           {readinessQuery.isLoading
             ? t('layout.checkingDeps')
             : readinessQuery.isError

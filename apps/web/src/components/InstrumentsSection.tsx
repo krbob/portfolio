@@ -319,9 +319,9 @@ export function InstrumentsSection() {
       </form>
 
       <div className="space-y-3 mt-4">
-        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-500">{t('instruments.loading')}</p>}
+        {instrumentsQuery.isLoading && <p className="text-sm text-zinc-400">{t('instruments.loading')}</p>}
         {instrumentsQuery.isError && <p className="text-sm text-red-400">{instrumentsQuery.error.message}</p>}
-        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-500">{t('instruments.empty')}</p>}
+        {instrumentsQuery.data?.length === 0 && <p className="text-sm text-zinc-400">{t('instruments.empty')}</p>}
         {instrumentsQuery.data?.map((instrument) => (
           <article
             className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between cursor-pointer hover:border-zinc-700 transition-colors"
@@ -330,7 +330,7 @@ export function InstrumentsSection() {
           >
             <div>
               <strong className="text-sm text-zinc-100">{instrument.name}</strong>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-zinc-400">
                 {labelInstrumentKind(instrument.kind)} · {labelAssetClass(instrument.assetClass)}
                 {instrument.symbol ? ` · ${instrument.symbol}` : ''}
               </p>

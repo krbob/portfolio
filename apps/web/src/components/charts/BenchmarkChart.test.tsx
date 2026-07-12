@@ -62,8 +62,8 @@ describe('BenchmarkChart', () => {
       </I18nProvider>,
     )
 
-    expect(screen.getByText('Porównanie z benchmarkiem')).toBeInTheDocument()
-    expect(screen.getByText('Portfel')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Porównanie z benchmarkiem' })).toBeInTheDocument()
+    expect(screen.getAllByText('Portfel').length).toBeGreaterThan(0)
     expect(screen.getByLabelText('Wybierz benchmark')).toBeInTheDocument()
     expect(screen.queryByText(/^Portfolio$/)).not.toBeInTheDocument()
   })

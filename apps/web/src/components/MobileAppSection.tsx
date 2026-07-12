@@ -117,7 +117,7 @@ export function MobileAppSection() {
           <p className="text-sm font-semibold text-zinc-100">{status.title}</p>
           <p className="mt-2 text-sm leading-6 text-zinc-400">{status.description}</p>
           {installResult === 'dismissed' && (
-            <p className="mt-3 text-xs text-zinc-500">
+            <p className="mt-3 text-xs text-zinc-400">
               {t('mobile.dismissed')}
             </p>
           )}

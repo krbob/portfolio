@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { LineSeries, type IChartApi, type ISeriesApi, LineStyle } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
+import { formatDate, formatNumber } from '../../lib/format'
+import { t } from '../../lib/messages'
 import { ChartContainer } from './ChartContainer'
+import { ChartDataTable } from './ChartDataTable'
 
 export interface PerformanceIndexSeriesConfig {
   id: string
+  label?: string
   color: string
   lineWidth?: 1 | 2 | 3 | 4
   lineStyle?: LineStyle
@@ -35,6 +39,22 @@ export function PerformanceIndexChart({
   const seriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map())
   const stateRef = useRef({ points, series })
   stateRef.current = { points, series }
+  const accessibleRows = useMemo(() => {
+    const valuesBySeries = series.map((config) => new Map(
+      seriesDataFor(points, config).map((item) => [String(item.time), item.value]),
+    ))
+
+    return points.map((point) => ({
+      key: point.date,
+      cells: [
+        formatDate(point.date),
+        ...valuesBySeries.map((values) => formatNumber(values.get(point.date), {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })),
+      ],
+    }))
+  }, [points, series])
 
   const updateSeriesData = useCallback(() => {
     const { points: currentPoints, series: currentSeries } = stateRef.current
@@ -98,6 +118,13 @@ export function PerformanceIndexChart({
       title={title}
       subtitle={subtitle}
       legend={legend}
+      dataTable={
+        <ChartDataTable
+          caption={title ?? t('chart.data')}
+          columns={[t('chart.date'), ...series.map((config) => config.label ?? config.id)]}
+          rows={accessibleRows}
+        />
+      }
       onChartReady={onChartReady}
     />
   )

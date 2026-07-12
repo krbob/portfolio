@@ -201,7 +201,7 @@ export function TransactionJournalComposer({
                 ))}
               </select>
               {form.type === 'SELL' && form.accountId !== '' && form.tradeDate !== '' && selectableInstrumentOptions.length === 0 && (
-                <span className="mt-1 block text-xs text-zinc-500">{t('journal.noSellableInstruments')}</span>
+                <span className="mt-1 block text-xs text-zinc-400">{t('journal.noSellableInstruments')}</span>
               )}
             </label>
           )}
@@ -219,7 +219,7 @@ export function TransactionJournalComposer({
                   required
                 />
               </label>
-              <p className="mt-1 text-xs text-zinc-500">{t('journal.wholeUnitsOnly')}</p>
+              <p className="mt-1 text-xs text-zinc-400">{t('journal.wholeUnitsOnly')}</p>
               {form.type === 'SELL' && selectedSellAvailableQuantity != null && (
                 <p
                   className={`mt-1 text-xs ${sellQuantityExceedsAvailable ? 'text-red-400' : 'text-zinc-400'}`}
@@ -241,7 +241,7 @@ export function TransactionJournalComposer({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-sm font-medium text-zinc-200">{t('journal.activeEdoLots')}</p>
-                  <p className="mt-1 text-sm text-zinc-500">{t('journal.redeemFifoHint')}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{t('journal.redeemFifoHint')}</p>
                 </div>
 
                 {selectedRedeemLots.length > 0 && (
@@ -256,34 +256,34 @@ export function TransactionJournalComposer({
               </div>
 
               {isHoldingsLoading ? (
-                <p className="mt-4 text-sm text-zinc-500">{t('journal.loadingEdoLots')}</p>
+                <p className="mt-4 text-sm text-zinc-400">{t('journal.loadingEdoLots')}</p>
               ) : holdingsErrorMessage ? (
                 <p className="mt-4 text-sm text-amber-300">
                   {formatMessage(t('journal.edoLotsError'), { message: holdingsErrorMessage })}
                 </p>
               ) : form.accountId === '' ? (
-                <p className="mt-4 text-sm text-zinc-500">{t('journal.selectAccountForLots')}</p>
+                <p className="mt-4 text-sm text-zinc-400">{t('journal.selectAccountForLots')}</p>
               ) : redeemableEdoHoldingsCount === 0 ? (
-                <p className="mt-4 text-sm text-zinc-500">{t('journal.noEdoLots')}</p>
+                <p className="mt-4 text-sm text-zinc-400">{t('journal.noEdoLots')}</p>
               ) : !hasSelectedRedeemHolding ? (
-                <p className="mt-4 text-sm text-zinc-500">{t('journal.selectEdoSeries')}</p>
+                <p className="mt-4 text-sm text-zinc-400">{t('journal.selectEdoSeries')}</p>
               ) : (
                 <div className="mt-4 space-y-4">
                   <div className="grid gap-3 lg:grid-cols-3">
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-                      <p className="text-xs uppercase tracking-wider text-zinc-500">{t('journal.availableUnits')}</p>
+                      <p className="text-xs uppercase tracking-wider text-zinc-400">{t('journal.availableUnits')}</p>
                       <p className="mt-2 text-lg font-semibold text-zinc-100">
                         {formatNumber(redeemPreview.totalAvailableQuantity, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-                      <p className="text-xs uppercase tracking-wider text-zinc-500">{t('journal.selectedForRedemption')}</p>
+                      <p className="text-xs uppercase tracking-wider text-zinc-400">{t('journal.selectedForRedemption')}</p>
                       <p className="mt-2 text-lg font-semibold text-zinc-100">
                         {formatNumber(redeemPreview.requestedQuantity, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-                      <p className="text-xs uppercase tracking-wider text-zinc-500">{t('journal.previewShortfall')}</p>
+                      <p className="text-xs uppercase tracking-wider text-zinc-400">{t('journal.previewShortfall')}</p>
                       <p className="mt-2 text-lg font-semibold text-zinc-100">
                         {formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 })}
                       </p>
@@ -303,10 +303,10 @@ export function TransactionJournalComposer({
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div>
                               <p className="text-sm font-medium text-zinc-100">{formatDate(lot.purchaseDate)}</p>
-                              <p className="mt-1 text-sm text-zinc-500">
+                              <p className="mt-1 text-sm text-zinc-400">
                                 {`${formatNumber(lot.quantity, { maximumFractionDigits: 0 })} ${t('journal.lotUnits')} · ${t('journal.lotCost')} ${formatCurrency(lot.costBasisPln, 'PLN')}`}
                               </p>
-                              <p className="mt-1 text-sm text-zinc-500">
+                              <p className="mt-1 text-sm text-zinc-400">
                                 {lot.currentValuePln != null
                                   ? `${t('journal.lotCurrentValue')} ${formatCurrency(lot.currentValuePln, 'PLN')} · ${t('journal.lotPL')} ${formatCurrency(lot.unrealizedGainPln, 'PLN')}`
                                   : lot.valuationIssue ?? t('journal.lotValuationUnavailable')}
@@ -369,7 +369,7 @@ export function TransactionJournalComposer({
             <label className={labelClass} htmlFor="transaction-gross-amount">
               {t('journal.grossAmount')}
             </label>
-            <div className="mb-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
+            <div className="mb-1 flex items-center justify-between gap-2 text-xs text-zinc-400">
               <span>
                 {requiresInstrument
                   ? grossAmountMode === 'auto'
@@ -440,7 +440,7 @@ export function TransactionJournalComposer({
                 onChange={(event) => onFxRateChange(event.target.value)}
                 placeholder={decimalSeparator === ',' ? '4,0321' : '4.0321'}
               />
-              <p className="mt-1 text-xs text-zinc-500">{t('journal.fxRateHint')}</p>
+              <p className="mt-1 text-xs text-zinc-400">{t('journal.fxRateHint')}</p>
             </div>
           )}
 
@@ -458,7 +458,7 @@ export function TransactionJournalComposer({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-medium text-zinc-200">{t('journal.settlementDate')}</p>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-zinc-400">
                   {showSettlementDateField ? t('journal.settlementCustomHint') : t('journal.settlementDefaultHint')}
                 </p>
               </div>

@@ -42,7 +42,7 @@ export function PortfolioSetupGuideSection({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">{item.title}</h3>
-                <p className="mt-1 text-sm text-zinc-500">{item.description}</p>
+                <p className="mt-1 text-sm text-zinc-400">{item.description}</p>
               </div>
               <span className={`${badge} ${guideBadgeVariant(item.status)}`}>
                 {guideStatusLabel(item.status)}

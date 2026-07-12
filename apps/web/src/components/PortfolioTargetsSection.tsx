@@ -219,7 +219,7 @@ export function PortfolioTargetsSection() {
                     setInputs((current) => ({ ...current, [assetClass]: sanitizePercentInput(event.target.value) }))
                   }
                 />
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
                   %
                 </span>
               </div>
@@ -231,9 +231,9 @@ export function PortfolioTargetsSection() {
           <span className={`${badge} ${totalIsValid ? badgeVariants.success : badgeVariants.warning}`}>
             {t('targets.sum')} {formatPercent(totalPct, { maximumFractionDigits: 2 })}
           </span>
-          <span className="text-sm text-zinc-500">{t('targets.editedMix')}: {editedMixLabel}</span>
+          <span className="text-sm text-zinc-400">{t('targets.editedMix')}: {editedMixLabel}</span>
           {savedMixLabel ? (
-            <span className="text-sm text-zinc-500">{t('targets.savedMix')}: {savedMixLabel}</span>
+            <span className="text-sm text-zinc-400">{t('targets.savedMix')}: {savedMixLabel}</span>
           ) : null}
         </div>
 
@@ -251,7 +251,7 @@ export function PortfolioTargetsSection() {
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h4 className="text-sm font-semibold text-zinc-100">{t('targets.rebalancingPolicy')}</h4>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-400">
               {t('targets.rebalancingPolicyDescription')}
             </p>
           </div>
@@ -277,7 +277,7 @@ export function PortfolioTargetsSection() {
                 value={toleranceBandInput}
                 onChange={(event) => setToleranceBandInput(sanitizePercentInput(event.target.value))}
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
                 pp
               </span>
             </div>
@@ -310,16 +310,16 @@ export function PortfolioTargetsSection() {
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h4 className="text-sm font-semibold text-zinc-100">{t('targets.historyTitle')}</h4>
-            <p className="mt-1 text-sm text-zinc-500">{t('targets.historyDescription')}</p>
+            <p className="mt-1 text-sm text-zinc-400">{t('targets.historyDescription')}</p>
           </div>
           <Badge variant="default">{targetEventsQuery.data?.length ?? 0}</Badge>
         </div>
 
-        {targetEventsQuery.isLoading ? <p className="mt-4 text-sm text-zinc-500">{t('targets.loadingHistory')}</p> : null}
+        {targetEventsQuery.isLoading ? <p className="mt-4 text-sm text-zinc-400">{t('targets.loadingHistory')}</p> : null}
         {targetEventsQuery.isError ? <p className="mt-4 text-sm text-red-400">{targetEventsQuery.error.message}</p> : null}
 
         {!targetEventsQuery.isLoading && !targetEventsQuery.isError && (targetEventsQuery.data?.length ?? 0) === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">{t('targets.noHistory')}</p>
+          <p className="mt-4 text-sm text-zinc-400">{t('targets.noHistory')}</p>
         ) : null}
 
         {!targetEventsQuery.isLoading && !targetEventsQuery.isError && (targetEventsQuery.data?.length ?? 0) > 0 ? (
@@ -329,18 +329,18 @@ export function PortfolioTargetsSection() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
-                    <p className="mt-1 text-sm text-zinc-500">{formatAuditEventMessage(event, language)}</p>
+                    <p className="mt-1 text-sm text-zinc-400">{formatAuditEventMessage(event, language)}</p>
                   </div>
-                  <span className="text-xs text-zinc-500">{formatDateTime(event.occurredAt)}</span>
+                  <span className="text-xs text-zinc-400">{formatDateTime(event.occurredAt)}</span>
                 </div>
 
                 <dl className="mt-3 grid gap-3 text-sm md:grid-cols-2">
                   <div>
-                    <dt className="text-zinc-500">{t('targets.previousMix')}</dt>
+                    <dt className="text-zinc-400">{t('targets.previousMix')}</dt>
                     <dd className="mt-1 text-zinc-100">{formatMixSummary(event.metadata.previousMix)}</dd>
                   </div>
                   <div>
-                    <dt className="text-zinc-500">{t('targets.newMix')}</dt>
+                    <dt className="text-zinc-400">{t('targets.newMix')}</dt>
                     <dd className="mt-1 text-zinc-100">{formatMixSummary(event.metadata.newMix)}</dd>
                   </div>
                 </dl>
@@ -351,7 +351,7 @@ export function PortfolioTargetsSection() {
       </section>
 
       {targetsQuery.isLoading || allocationQuery.isLoading || rebalancingSettingsQuery.isLoading ? (
-        <p className="mt-5 text-sm text-zinc-500">{t('targets.loading')}</p>
+        <p className="mt-5 text-sm text-zinc-400">{t('targets.loading')}</p>
       ) : null}
       {targetsQuery.isError ? <p className="mt-5 text-sm text-red-400">{targetsQuery.error.message}</p> : null}
       {allocationQuery.isError ? <p className="mt-5 text-sm text-red-400">{allocationQuery.error.message}</p> : null}
@@ -369,30 +369,30 @@ export function PortfolioTargetsSection() {
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.targetSum')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.targetSum')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {formatPercent(allocation.targetWeightSumPct, { maximumFractionDigits: 2 })}
                   </strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.toleranceBand')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.toleranceBand')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     ±{formatPercent(allocation.toleranceBandPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })}
                   </strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.strategyAction')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.strategyAction')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">{labelAllocationAction(allocation.recommendedAction)}</strong>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-zinc-400">
                     {labelRebalancingMode(allocation.rebalancingMode)}
                   </p>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.outsideBand')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.outsideBand')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {allocation.breachedBucketCount}
                   </strong>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-zinc-400">
                     {allocation.largestBandBreachPctPoints
                       ? `${t('targets.largestBreach')} ${formatPercent(allocation.largestBandBreachPctPoints, { maximumFractionDigits: 2, suffix: ' pp' })}`
                       : t('targets.allWithinBand')}
@@ -402,28 +402,28 @@ export function PortfolioTargetsSection() {
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.availableCash')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.availableCash')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">{formatCurrencyPln(allocation.availableCashPln)}</strong>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.nextContribution')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.nextContribution')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {allocation.recommendedAssetClass
                       ? `${formatCurrencyPln(allocation.recommendedContributionPln)} -> ${labelAssetClass(allocation.recommendedAssetClass)}`
                       : t('targets.noPriority')}
                   </strong>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-zinc-400">
                     {allocation.remainingContributionGapPln !== '0.00'
                       ? `${t('targets.remainingGap')}: ${formatCurrencyPln(allocation.remainingContributionGapPln)}`
                       : t('targets.cashCoversGap')}
                   </p>
                 </article>
                 <article className="rounded-lg border border-zinc-800/50 p-4">
-                  <span className="text-xs text-zinc-500">{t('targets.fullRebalance')}</span>
+                  <span className="text-xs text-zinc-400">{t('targets.fullRebalance')}</span>
                   <strong className="mt-1 block text-sm text-zinc-100">
                     {formatCurrencyPln(allocation.fullRebalanceBuyAmountPln)} / {formatCurrencyPln(allocation.fullRebalanceSellAmountPln)}
                   </strong>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-zinc-400">
                     {allocation.requiresSelling
                       ? t('targets.requiresSelling')
                       : t('targets.noBuysNeeded')}
@@ -437,11 +437,11 @@ export function PortfolioTargetsSection() {
                     <div className="flex items-start justify-between gap-3">
                     <div>
                         <h4 className="text-sm font-semibold text-zinc-100">{labelAssetClass(bucket.assetClass)}</h4>
-                        <p className="mt-1 text-sm text-zinc-500">
+                        <p className="mt-1 text-sm text-zinc-400">
                           {t('targets.current')} {formatPercent(bucket.currentWeightPct, { maximumFractionDigits: 2 })} · {t('targets.target')} {formatPercent(bucket.targetWeightPct, { maximumFractionDigits: 2 })}
                         </p>
                         {bucket.targetWeightPct && (
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-zinc-400">
                             {t('targets.band')} {formatPercent(bucket.toleranceLowerPct, { maximumFractionDigits: 2 })} - {formatPercent(bucket.toleranceUpperPct, { maximumFractionDigits: 2 })}
                           </p>
                         )}
@@ -451,31 +451,31 @@ export function PortfolioTargetsSection() {
 
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
                       <div>
-                        <dt className="text-zinc-500">{t('targets.currentValue')}</dt>
+                        <dt className="text-zinc-400">{t('targets.currentValue')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.currentValuePln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{t('targets.targetValue')}</dt>
+                        <dt className="text-zinc-400">{t('targets.targetValue')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.targetValuePln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{t('targets.drift')}</dt>
+                        <dt className="text-zinc-400">{t('targets.drift')}</dt>
                         <dd className={driftColor(bucket.driftPctPoints)}>
                           {formatPercent(bucket.driftPctPoints, { signed: true, maximumFractionDigits: 2, suffix: ' pp' })}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{t('targets.gapToTarget')}</dt>
+                        <dt className="text-zinc-400">{t('targets.gapToTarget')}</dt>
                         <dd className={gapColor(bucket.gapValuePln)}>
                           {formatSignedCurrencyPln(bucket.gapValuePln)}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{t('targets.suggestContribution')}</dt>
+                        <dt className="text-zinc-400">{t('targets.suggestContribution')}</dt>
                         <dd className="text-zinc-100">{formatCurrencyPln(bucket.suggestedContributionPln)}</dd>
                       </div>
                       <div>
-                        <dt className="text-zinc-500">{t('targets.action')}</dt>
+                        <dt className="text-zinc-400">{t('targets.action')}</dt>
                         <dd className="text-zinc-100">{labelBucketAction(bucket.rebalanceAction)}</dd>
                       </div>
                     </dl>
@@ -501,12 +501,12 @@ function toNumber(value: string) {
 
 function driftColor(value: string | null | undefined) {
   if (value == null) {
-    return 'text-zinc-500'
+    return 'text-zinc-400'
   }
 
   const numeric = Number(value)
   if (Number.isNaN(numeric)) {
-    return 'text-zinc-500'
+    return 'text-zinc-400'
   }
   if (numeric > 0) {
     return 'text-emerald-400'
@@ -519,12 +519,12 @@ function driftColor(value: string | null | undefined) {
 
 function gapColor(value: string | null | undefined) {
   if (value == null) {
-    return 'text-zinc-500'
+    return 'text-zinc-400'
   }
 
   const numeric = Number(value)
   if (Number.isNaN(numeric)) {
-    return 'text-zinc-500'
+    return 'text-zinc-400'
   }
   if (numeric > 0) {
     return 'text-amber-400'

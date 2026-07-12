@@ -230,9 +230,9 @@ export function TransactionImportProfiles({
       aria-labelledby="transactions-workspace-tab-profiles"
     >
       <div className="mb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('importProfiles.eyebrow')}</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('importProfiles.eyebrow')}</p>
         <h4 className="mt-1 text-lg font-semibold text-zinc-100">{t('importProfiles.title')}</h4>
-        <p className="mt-1 text-sm text-zinc-500">{t('importProfiles.description')}</p>
+        <p className="mt-1 text-sm text-zinc-400">{t('importProfiles.description')}</p>
       </div>
 
       <TransactionImportProfileSelector

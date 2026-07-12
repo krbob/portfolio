@@ -94,6 +94,7 @@ export function BenchmarkChart({
   const chartSeries = useMemo<PerformanceIndexSeriesConfig[]>(() => {
     const benchmarkSeries = desiredKeys.map((key, index) => ({
       id: `benchmark:${key}`,
+      label: labelForBenchmarkKey(key, language, customBenchmarkLabels),
       color: mode === 'compare'
         ? BENCHMARK_COMPARE_COLORS[index % BENCHMARK_COMPARE_COLORS.length]
         : BENCHMARK_LINE_COLOR,
@@ -105,6 +106,7 @@ export function BenchmarkChart({
     return [
       {
         id: 'portfolio',
+        label: t('benchmark.portfolio'),
         color: chartPalette.portfolio,
         lineWidth: 3,
         lineStyle: LineStyle.Solid,
@@ -112,7 +114,7 @@ export function BenchmarkChart({
       },
       ...benchmarkSeries,
     ]
-  }, [desiredKeys, mode])
+  }, [customBenchmarkLabels, desiredKeys, language, mode])
 
   const compareLegendItems = resolvedCompareKeys.map((key, index) => ({
     key,

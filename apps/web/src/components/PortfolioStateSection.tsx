@@ -157,23 +157,23 @@ export function PortfolioStateSection() {
 
       <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('state.accounts')}</span>
+          <span className="text-xs text-zinc-400">{t('state.accounts')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{accountsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('state.instruments')}</span>
+          <span className="text-xs text-zinc-400">{t('state.instruments')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{instrumentsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('state.targets')}</span>
+          <span className="text-xs text-zinc-400">{t('state.targets')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{targetsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('state.transactions')}</span>
+          <span className="text-xs text-zinc-400">{t('state.transactions')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{transactionsQuery.data?.length ?? '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('state.importProfiles')}</span>
+          <span className="text-xs text-zinc-400">{t('state.importProfiles')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{importProfilesQuery.data?.length ?? '...'}</strong>
         </article>
       </div>
@@ -181,9 +181,9 @@ export function PortfolioStateSection() {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-zinc-800/50 p-4">
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('state.exportLabel')}</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('state.exportLabel')}</p>
             <h4 className="mt-1 text-base font-semibold text-zinc-100">{t('state.exportTitle')}</h4>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-400">
               {t('state.exportDescription')}
             </p>
           </div>
@@ -199,12 +199,12 @@ export function PortfolioStateSection() {
 
         <form className="rounded-lg border border-zinc-800/50 p-4" onSubmit={handleImportSubmit}>
           <div className="mb-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t('state.importLabel')}</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{t('state.importLabel')}</p>
             <h4 className="mt-1 text-base font-semibold text-zinc-100">{t('state.importTitle')}</h4>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-400">
               {t('state.importDescriptionMerge')}
             </p>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-400">
               {t('state.importDescriptionReplace')}
             </p>
           </div>
@@ -252,7 +252,7 @@ export function PortfolioStateSection() {
             </div>
           </div>
 
-          <p className="text-sm text-zinc-500 mt-2">
+          <p className="text-sm text-zinc-400 mt-2">
             {selectedFileName !== ''
               ? formatMessage(t('state.selectedFile'), { fileName: selectedFileName })
               : t('state.noFileSelected')}
@@ -317,11 +317,11 @@ export function PortfolioStateSection() {
                 <PreviewChangeCard label={t('state.importProfiles')} diff={previewResult.diff.importProfiles} />
               </div>
 
-              <p className="text-sm text-zinc-500 mt-3">
+              <p className="text-sm text-zinc-400 mt-3">
                 {describePreviewMode(previewResult)}
               </p>
 
-              <p className="text-sm text-zinc-500 mt-2">
+              <p className="text-sm text-zinc-400 mt-2">
                 {describeTargetDiff(previewResult)}
               </p>
 
@@ -369,7 +369,7 @@ export function PortfolioStateSection() {
 
       {(importFeedback || importError || exportMutation.error || previewMutation.error || importMutation.error) && (
         <div className="mt-4 space-y-1">
-          {importFeedback && <p className="text-sm text-zinc-500">{importFeedback}</p>}
+          {importFeedback && <p className="text-sm text-zinc-400">{importFeedback}</p>}
           {(importError || exportMutation.error || previewMutation.error || importMutation.error) && (
             <p className="text-sm text-red-400">
               {importError ?? exportMutation.error?.message ?? previewMutation.error?.message ?? importMutation.error?.message}
@@ -397,15 +397,15 @@ function PreviewMetricCard({
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       <dl className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{t('state.snapshot')}</dt>
+          <dt className="text-zinc-400">{t('state.snapshot')}</dt>
           <dd className="text-zinc-100 tabular-nums">{snapshotCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{t('state.current')}</dt>
+          <dt className="text-zinc-400">{t('state.current')}</dt>
           <dd className="text-zinc-100 tabular-nums">{existingCount}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-zinc-500">{t('state.matchingIds')}</dt>
+          <dt className="text-zinc-400">{t('state.matchingIds')}</dt>
           <dd className="text-zinc-100 tabular-nums">{matchingCount}</dd>
         </div>
       </dl>
@@ -442,7 +442,7 @@ function PreviewChangeCard({
 function PreviewDiffRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-zinc-500">{label}</dt>
+      <dt className="text-zinc-400">{label}</dt>
       <dd className="text-zinc-100 tabular-nums">{value}</dd>
     </div>
   )

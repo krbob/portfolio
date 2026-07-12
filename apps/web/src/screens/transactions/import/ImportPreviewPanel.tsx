@@ -23,34 +23,34 @@ export function ImportPreviewPanel({
     <div className="mt-6">
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('import.totalRows')}</span>
+          <span className="text-xs text-zinc-400">{t('import.totalRows')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.totalRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('import.importable')}</span>
+          <span className="text-xs text-zinc-400">{t('import.importable')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
             {preview.importableRowCount}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('import.existingDuplicates')}</span>
+          <span className="text-xs text-zinc-400">{t('import.existingDuplicates')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
             {preview.duplicateExistingCount}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('import.batchDuplicates')}</span>
+          <span className="text-xs text-zinc-400">{t('import.batchDuplicates')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">
             {preview.duplicateBatchCount}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('import.invalid')}</span>
+          <span className="text-xs text-zinc-400">{t('import.invalid')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{preview.invalidRowCount}</strong>
         </article>
       </div>
 
-      <p className="mb-4 text-sm text-zinc-500">{buildImportPreviewSummary(preview, skipDuplicates)}</p>
+      <p className="mb-4 text-sm text-zinc-400">{buildImportPreviewSummary(preview, skipDuplicates)}</p>
 
       <div className="mb-4 flex items-center gap-3">
         <div
@@ -72,7 +72,7 @@ export function ImportPreviewPanel({
               type="button"
               aria-pressed={status === statusFilter}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                status === statusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500'
+                status === statusFilter ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'
               }`}
               onClick={() => onStatusFilterChange(status)}
             >
@@ -92,14 +92,14 @@ export function ImportPreviewPanel({
               <strong className="text-sm font-medium text-zinc-100">
                 {t('import.row')} {row.rowNumber}
               </strong>
-              <p className="text-sm text-zinc-500">{row.message}</p>
+              <p className="text-sm text-zinc-400">{row.message}</p>
             </div>
             <span className={`${badge} ${importPreviewBadgeVariant(row.status)}`}>
               {labelImportRowStatus(row.status)}
             </span>
           </article>
         ))}
-        {rows.length === 0 && <p className="text-sm text-zinc-500">{t('import.noPreviewRows')}</p>}
+        {rows.length === 0 && <p className="text-sm text-zinc-400">{t('import.noPreviewRows')}</p>}
       </div>
     </div>
   )

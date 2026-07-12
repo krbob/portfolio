@@ -56,7 +56,7 @@ export function TabBar<T extends string>({
           onClick={() => onChange(tab.value)}
           className={clsx(
             'relative shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors',
-            value === tab.value ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300',
+            value === tab.value ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-300',
           )}
         >
           {tab.label}

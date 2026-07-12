@@ -23,13 +23,13 @@ const toneClasses: Record<StateTone, string> = {
 }
 
 const descriptionToneClasses: Record<StateTone, string> = {
-  default: 'text-zinc-500',
+  default: 'text-zinc-400',
   warning: 'text-amber-200/70',
   error: 'text-red-200/70',
 }
 
 const eyebrowToneClasses: Record<StateTone, string> = {
-  default: 'text-zinc-500',
+  default: 'text-zinc-400',
   warning: 'text-amber-300/80',
   error: 'text-red-300/80',
 }

@@ -5,6 +5,7 @@ import { chartPalette } from '../../lib/chart-theme'
 import { formatDate, formatPercent } from '../../lib/format'
 import { t } from '../../lib/messages'
 import { ChartContainer, ChartLegendItem } from './ChartContainer'
+import { ChartDataTable } from './ChartDataTable'
 
 interface AllocationTimeChartProps {
   points: PortfolioDailyHistoryPoint[]
@@ -90,7 +91,7 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
           <h3 className="text-sm font-semibold text-zinc-200">
             {t('allocation.title')}
           </h3>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-zinc-400">
             {t('allocation.subtitle')}
           </p>
         </div>
@@ -98,7 +99,7 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
         <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 px-3 py-2 lg:min-w-[22rem]">
           <div className="grid gap-3 sm:grid-cols-[minmax(8rem,1fr)_auto] sm:items-center">
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 whitespace-nowrap">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400 whitespace-nowrap">
                 {hoveredPoint ? t('allocation.selectedDate') : t('allocation.latestDate')}
               </p>
               <p className="mt-1 text-sm font-semibold text-zinc-100 whitespace-nowrap">
@@ -136,6 +137,26 @@ export function AllocationTimeChart({ points, height = 280 }: AllocationTimeChar
             <ChartLegendItem color={chartPalette.cash} label={t('allocation.cash')} />
           </>
         }
+        dataTable={
+          <ChartDataTable
+            caption={t('allocation.title')}
+            columns={[
+              t('chart.date'),
+              t('allocation.equities'),
+              t('allocation.bonds'),
+              t('allocation.cash'),
+            ]}
+            rows={points.map((point) => ({
+              key: point.date,
+              cells: [
+                formatDate(point.date),
+                formatPercent(point.equityAllocationPct, { maximumFractionDigits: 2 }),
+                formatPercent(point.bondAllocationPct, { maximumFractionDigits: 2 }),
+                formatPercent(point.cashAllocationPct, { maximumFractionDigits: 2 }),
+              ],
+            }))}
+          />
+        }
         onChartReady={onChartReady}
       />
     </div>
@@ -153,7 +174,7 @@ function AllocationMetric({
 }) {
   return (
     <div className="min-w-0">
-      <p className="flex items-center justify-start gap-1 text-[10px] uppercase tracking-[0.08em] text-zinc-500 whitespace-nowrap sm:justify-end sm:gap-1.5 sm:text-[11px] sm:tracking-[0.12em]">
+      <p className="flex items-center justify-start gap-1 text-[10px] uppercase tracking-[0.08em] text-zinc-400 whitespace-nowrap sm:justify-end sm:gap-1.5 sm:text-[11px] sm:tracking-[0.12em]">
         <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         {label}
       </p>

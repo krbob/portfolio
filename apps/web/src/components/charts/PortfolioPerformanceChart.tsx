@@ -16,6 +16,7 @@ export function PortfolioPerformanceChart({ points, height = 320 }: PortfolioPer
     () => [
       {
         id: 'portfolio-performance',
+        label: t('portfolioPerformance.legend'),
         color: chartPalette.performance,
         lineWidth: 3,
         lineStyle: LineStyle.Solid,

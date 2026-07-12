@@ -184,7 +184,9 @@ describe('App', () => {
     expect((await screen.findAllByText(/\+.*195/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/top positions/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/top positions/i)).length).toBeGreaterThan(0)
-    fireEvent.click(await screen.findByText(/^reserve$/i))
+    const reserveRow = (await screen.findByText(/^reserve$/i)).closest('tr')
+    expect(reserveRow).toHaveAttribute('tabindex', '0')
+    fireEvent.keyDown(reserveRow!, { key: 'Enter' })
 
     expect(await screen.findByText(/has no active positions yet/i)).toBeInTheDocument()
   })
@@ -397,7 +399,9 @@ describe('App', () => {
     expect((await screen.findAllByText(/\+.*273.40/i)).length).toBeGreaterThan(0)
     expect(await screen.findByText(/edo lots/i)).toBeInTheDocument()
 
-    fireEvent.click((await screen.findAllByText(/^vwra$/i))[0]!)
+    const vwraRow = (await screen.findAllByText(/^vwra$/i))[0]!.closest('tr')
+    expect(vwraRow).toHaveAttribute('tabindex', '0')
+    fireEvent.keyDown(vwraRow!, { key: ' ' })
 
     expect(await screen.findByText(/account split/i)).toBeInTheDocument()
     expect((await screen.findAllByText(/reserve/i)).length).toBeGreaterThan(0)

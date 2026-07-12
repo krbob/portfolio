@@ -49,12 +49,12 @@ export function StructuredTransactionImportForm({
       aria-labelledby="transactions-import-mode-tab-structured"
     >
       <div className="space-y-1">
-        <p className="text-sm text-zinc-500">{t('import.structuredJsonHint')}</p>
-        <p className="text-sm text-zinc-500">{t('import.structuredJsonBypass')}</p>
+        <p className="text-sm text-zinc-400">{t('import.structuredJsonHint')}</p>
+        <p className="text-sm text-zinc-400">{t('import.structuredJsonBypass')}</p>
       </div>
 
       <textarea
-        className="min-h-[220px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+        className="min-h-[220px] w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
         value={structuredImportJson}
         onChange={(event) => onStructuredImportJsonChange(event.target.value)}
         placeholder={STRUCTURED_IMPORT_TEMPLATE}
@@ -98,7 +98,7 @@ export function StructuredTransactionImportForm({
         />
       )}
 
-      {structuredImportFeedback && <p className="text-sm text-zinc-500">{structuredImportFeedback}</p>}
+      {structuredImportFeedback && <p className="text-sm text-zinc-400">{structuredImportFeedback}</p>}
       {structuredImportErrorMessage && <p className="text-sm text-red-400">{structuredImportErrorMessage}</p>}
     </form>
   )

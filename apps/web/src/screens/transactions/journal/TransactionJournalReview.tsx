@@ -181,7 +181,7 @@ export function TransactionJournalReview({
           )}
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-400">
           <span>
             {formatMessage(t('journal.showingRows'), { paged: pagedRows.length, sorted: sortedRows.length, total: journalRowsCount })}
           </span>
@@ -266,9 +266,9 @@ export function TransactionJournalReview({
                   : ''}
               </p>
 
-              {transaction.notes ? <p className="text-sm italic text-zinc-500">{transaction.notes}</p> : null}
+              {transaction.notes ? <p className="text-sm italic text-zinc-400">{transaction.notes}</p> : null}
 
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-zinc-400">
                 {t('journal.created')} {formatDate(transaction.createdAt)}
               </p>
 

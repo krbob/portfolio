@@ -233,7 +233,7 @@ export function ReturnsTab({
           onChange={(v) => setReturnsMode(v as 'nominal' | 'real')}
         />
         {isReal && realCoverageUntil ? (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             {formatMessage(t('performanceSections.cpiCoverageNote'), { coverageUntil: realCoverageUntil })}
           </p>
         ) : null}
@@ -263,12 +263,12 @@ export function ReturnsTab({
                   <td className={`${td} font-medium text-zinc-200`}>
                     {p.label}
                     {isReal && p.inflationFrom && p.inflationUntil && (
-                      <span className="ml-1.5 text-xs text-zinc-600">
+                      <span className="ml-1.5 text-xs text-zinc-400">
                         ({formatYearMonth(p.inflationFrom)} – {formatYearMonth(p.inflationUntil)})
                       </span>
                     )}
                     {p.clippedToInception && (
-                      <span className="ml-1.5 text-xs text-zinc-600">
+                      <span className="ml-1.5 text-xs text-zinc-400">
                         {t('performanceSections.clipped')}
                       </span>
                     )}
@@ -287,7 +287,7 @@ export function ReturnsTab({
                   <td className={tdRight}>
                     <ReturnValue value={pln?.annualizedMoneyWeightedReturn} available={returnsDisplayAvailable} />
                   </td>
-                  <td className={`${tdRight} text-zinc-500`}>{p.dayCount}</td>
+                  <td className={`${tdRight} text-zinc-400`}>{p.dayCount}</td>
                 </tr>
               )
             })}
@@ -303,7 +303,7 @@ export function ReturnsTab({
               <h3 className="text-sm font-semibold text-zinc-200">
                 {t('performanceSections.benchmarks')}
               </h3>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-zinc-400">
                 {formatMessage(t('performanceSections.benchmarkExcessDetail'), { label: selectedBenchmarkPeriod.label })}
               </p>
             </div>
@@ -415,7 +415,7 @@ function BenchmarkCard({
   return (
     <div className={`rounded-lg border p-3 ${statusTone}`}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <p className="text-xs font-medium text-zinc-500">{translateBenchmarkLabel(benchmark.label)}</p>
+        <p className="text-xs font-medium text-zinc-400">{translateBenchmarkLabel(benchmark.label)}</p>
         {benchmark.pinned ? (
           <span className="shrink-0 whitespace-nowrap rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-300">
             {t('performanceSections.pinned')}
@@ -436,11 +436,11 @@ function BenchmarkCard({
       <p className={`mt-1 text-lg font-bold tabular-nums ${returnColor(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable)}`}>
         {formatReturn(benchmark.excessTimeWeightedReturn, returnsDisplayAvailable, language)}
       </p>
-      <p className="mt-0.5 text-xs text-zinc-600">
+      <p className="mt-0.5 text-xs text-zinc-400">
         {t('performanceSections.benchTwr')} {formatReturn(benchmark.nominalPln?.timeWeightedReturn, returnsDisplayAvailable, language)}
       </p>
       {benchmark.status !== 'HEALTHY' ? (
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-zinc-400">
           {benchmark.status === 'STALE'
             ? t('performanceSections.benchmarkStatusStale')
             : t('performanceSections.benchmarkStatusUnavailable')}
@@ -475,7 +475,7 @@ function ReturnsBreakdownCard({
     <div className={card}>
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.valueBridge')}</h3>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-400">
           {returnsDisplayAvailable
             ? formatMessage(t('performanceSections.bridgeAvailableDetail'), { label: period.label })
             : formatMessage(t('performanceSections.bridgeUnavailableDetail'), { label: period.label })}
@@ -484,7 +484,7 @@ function ReturnsBreakdownCard({
 
       {breakdown ? (
         <>
-          <div className="mb-4 flex flex-wrap gap-3 text-xs text-zinc-500 sm:text-sm">
+          <div className="mb-4 flex flex-wrap gap-3 text-xs text-zinc-400 sm:text-sm">
             <span>{t('performanceSections.from')} {period.from}</span>
             <span>{t('performanceSections.until')} {period.until}</span>
             <span>{t('performanceSections.netChange')} {formatSignedCurrencyPln(breakdown.netChangePln)}</span>
@@ -583,9 +583,9 @@ function RollingReturnsAndDrawdownsCard({
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-zinc-200">{t('performanceSections.riskTitle')}</h3>
-          <p className="mt-1 text-sm text-zinc-500">{t('performanceSections.riskDescription')}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t('performanceSections.riskDescription')}</p>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-400">
           {formatMessage(t('performanceSections.riskAsOf'), { date: formatDate(returns.asOf) })}
         </p>
       </div>
@@ -636,8 +636,8 @@ function RollingReturnWindowView({
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{window.label}</p>
-        <span className="text-xs text-zinc-600">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{window.label}</p>
+        <span className="text-xs text-zinc-400">
           {formatMessage(t('performanceSections.observations'), {
             count: formatNumber(window.observationCount, { maximumFractionDigits: 0 }),
           })}
@@ -673,7 +673,7 @@ function DrawdownSummary({
 }) {
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdowns')}</h4>
+      <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">{t('performanceSections.drawdowns')}</h4>
       <div className="grid grid-cols-2 gap-3">
         <MetricBlock
           label={t('performanceSections.currentDrawdown')}
@@ -704,8 +704,8 @@ function DrawdownEpisodes({
   if (episodes.length === 0) {
     return (
       <div>
-        <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdownEpisodes')}</h4>
-        <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3 text-sm text-zinc-500">
+        <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-400">{t('performanceSections.drawdownEpisodes')}</h4>
+        <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3 text-sm text-zinc-400">
           {t('performanceSections.noDrawdownEpisodes')}
         </div>
       </div>
@@ -714,7 +714,7 @@ function DrawdownEpisodes({
 
   return (
     <div className="overflow-x-auto">
-      <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">{t('performanceSections.drawdownEpisodes')}</h4>
+      <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-400">{t('performanceSections.drawdownEpisodes')}</h4>
       <table className="w-full min-w-[520px]">
         <thead>
           <tr className="border-b border-zinc-800">
@@ -729,7 +729,7 @@ function DrawdownEpisodes({
             <tr key={`${episode.peakDate}:${episode.troughDate}:${episode.status}`} className={tr}>
               <td className={td}>
                 <div className="font-medium text-zinc-200">{formatDate(episode.troughDate)}</div>
-                <div className="text-xs text-zinc-600">
+                <div className="text-xs text-zinc-400">
                   {formatMessage(t('performanceSections.peakDate'), { date: formatDate(episode.peakDate) })}
                 </div>
               </td>
@@ -773,9 +773,9 @@ function MetricBlock({
 }) {
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{label}</p>
       <p className={`mt-2 text-xl font-semibold tabular-nums ${tone}`}>{value}</p>
-      {subtitle ? <p className="mt-1 text-xs text-zinc-600">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-1 text-xs text-zinc-400">{subtitle}</p> : null}
     </div>
   )
 }
@@ -791,7 +791,7 @@ function MetricLine({
 }) {
   return (
     <div>
-      <p className="text-zinc-600">{label}</p>
+      <p className="text-zinc-400">{label}</p>
       <p className={`font-medium tabular-nums ${tone}`}>{value}</p>
     </div>
   )
@@ -810,7 +810,7 @@ function BreakdownMetric({
 }) {
   return (
     <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{label}</p>
       <p
         className={`mt-2 text-lg font-semibold tabular-nums ${
           tone === 'positive' ? 'text-emerald-400' : tone === 'negative' ? 'text-red-400' : 'text-zinc-100'
@@ -818,7 +818,7 @@ function BreakdownMetric({
       >
         {value}
       </p>
-      {subtitle ? <p className="mt-1 text-xs text-zinc-600">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-1 text-xs text-zinc-400">{subtitle}</p> : null}
     </div>
   )
 }
@@ -856,7 +856,7 @@ function numericTone(value: string | null | undefined): 'positive' | 'negative' 
 }
 
 function returnColor(value: string | null | undefined, available = true) {
-  if (!available || value == null) return 'text-zinc-500'
+  if (!available || value == null) return 'text-zinc-400'
   const n = Number(value)
   if (n > 0) return 'text-emerald-400'
   if (n < 0) return 'text-red-400'

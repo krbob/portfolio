@@ -107,19 +107,19 @@ export function PortfolioBackupsSection() {
 
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('backups.scheduler')}</span>
+          <span className="text-xs text-zinc-400">{t('backups.scheduler')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data?.schedulerEnabled ? t('backups.schedulerEnabled') : t('backups.schedulerManual')}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('backups.interval')}</span>
+          <span className="text-xs text-zinc-400">{t('backups.interval')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.intervalMinutes} min` : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('backups.retention')}</span>
+          <span className="text-xs text-zinc-400">{t('backups.retention')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} ${t('backups.files')}` : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('backups.storedBackups')}</span>
+          <span className="text-xs text-zinc-400">{t('backups.storedBackups')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? backups.length : '...'}</strong>
         </article>
       </div>
@@ -159,11 +159,11 @@ export function PortfolioBackupsSection() {
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="text-sm text-zinc-500">{t('backups.directory')}: {backupsQuery.data?.directory ?? `${t('common.loading')}...`}</p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">{t('backups.directory')}: {backupsQuery.data?.directory ?? `${t('common.loading')}...`}</p>
+        <p className="text-sm text-zinc-400">
           {t('backups.replaceNotice')}
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-400">
           {t('backups.lastSuccess')}:{' '}
           {backupsQuery.data?.lastSuccessAt
             ? formatDateTime(backupsQuery.data.lastSuccessAt)
@@ -178,19 +178,19 @@ export function PortfolioBackupsSection() {
         )}
       </div>
 
-      {backupsQuery.isLoading && <p className="text-sm text-zinc-500">{t('backups.loadingBackups')}</p>}
+      {backupsQuery.isLoading && <p className="text-sm text-zinc-400">{t('backups.loadingBackups')}</p>}
       {backupsQuery.isError && <p className="text-sm text-red-400">{backupsQuery.error.message}</p>}
 
       {!backupsQuery.isLoading && !backupsQuery.isError && (
         <div className="space-y-3 mb-4">
-          {backups.length === 0 && <p className="text-sm text-zinc-500">{t('backups.noBackupsYet')}</p>}
+          {backups.length === 0 && <p className="text-sm text-zinc-400">{t('backups.noBackupsYet')}</p>}
 
           {backups.map((backup) => (
             <article key={backup.fileName} className="rounded-lg border border-zinc-800/50 p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-zinc-100">{backup.fileName}</h4>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-zinc-400">
                     {t('backups.exported')} {backup.exportedAt ? formatDateTime(backup.exportedAt) : t('backups.unknown')} · {formatBytes(backup.sizeBytes)}
                   </p>
                 </div>
@@ -202,35 +202,35 @@ export function PortfolioBackupsSection() {
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
                 <div>
-                  <dt className="text-zinc-500">{t('backups.accounts')}</dt>
+                  <dt className="text-zinc-400">{t('backups.accounts')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.accountCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.appSettings')}</dt>
+                  <dt className="text-zinc-400">{t('backups.appSettings')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.appPreferenceCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.instruments')}</dt>
+                  <dt className="text-zinc-400">{t('backups.instruments')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.instrumentCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.targets')}</dt>
+                  <dt className="text-zinc-400">{t('backups.targets')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.targetCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.transactions')}</dt>
+                  <dt className="text-zinc-400">{t('backups.transactions')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.transactionCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.importProfilesLabel')}</dt>
+                  <dt className="text-zinc-400">{t('backups.importProfilesLabel')}</dt>
                   <dd className="text-zinc-100 tabular-nums">{backup.importProfileCount ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.schema')}</dt>
+                  <dt className="text-zinc-400">{t('backups.schema')}</dt>
                   <dd className="text-zinc-100">{backup.schemaVersion ?? missingDataLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('backups.created')}</dt>
+                  <dt className="text-zinc-400">{t('backups.created')}</dt>
                   <dd className="text-zinc-100">{formatDateTime(backup.createdAt)}</dd>
                 </div>
               </dl>
@@ -286,10 +286,10 @@ export function PortfolioBackupsSection() {
         </div>
       </div>
 
-      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-500">{t('backups.loadingActivity')}</p>}
+      {backupEventsQuery.isLoading && <p className="text-sm text-zinc-400">{t('backups.loadingActivity')}</p>}
       {backupEventsQuery.isError && <p className="text-sm text-red-400">{backupEventsQuery.error.message}</p>}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">{t('backups.noAuditEvents')}</p>
+        <p className="text-sm text-zinc-400">{t('backups.noAuditEvents')}</p>
       )}
       {!backupEventsQuery.isLoading && !backupEventsQuery.isError && visibleBackupEvents.length > 0 && (
         <div className="space-y-3">
@@ -298,7 +298,7 @@ export function PortfolioBackupsSection() {
               <div className="flex items-start justify-between">
                     <div>
                       <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-zinc-400">
                         {formatAuditEventMessage(event, language)} · {formatDateTime(event.occurredAt)}
                       </p>
                     </div>
@@ -306,7 +306,7 @@ export function PortfolioBackupsSection() {
                       {labelAuditOutcome(event.outcome)}
                     </span>
               </div>
-              {event.entityId && <p className="mt-1 text-xs font-mono text-zinc-600">{event.entityId}</p>}
+              {event.entityId && <p className="mt-1 text-xs font-mono text-zinc-400">{event.entityId}</p>}
             </article>
           ))}
         </div>
@@ -314,7 +314,7 @@ export function PortfolioBackupsSection() {
 
       {(feedback || actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
         <div className="mt-4 space-y-1">
-          {feedback && <p className="text-sm text-zinc-500">{feedback}</p>}
+          {feedback && <p className="text-sm text-zinc-400">{feedback}</p>}
           {(actionError || downloadBackupMutation.error || runBackupMutation.error || restoreBackupMutation.error) && (
             <p className="text-sm text-red-400">
               {actionError ??

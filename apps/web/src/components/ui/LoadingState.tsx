@@ -30,13 +30,13 @@ export function LoadingState({
   return (
     <Card className={`${surfaceClassName} ${className}`}>
       <div className="mx-auto max-w-lg text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
           {t('ui.loadingEyebrow')}
         </p>
         <h3 className="mt-2 text-lg font-semibold text-zinc-100">
           {title ?? t('ui.loadingTitle')}
         </h3>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-zinc-400">
           {description ?? t('ui.loadingDescription')}
         </p>
       </div>

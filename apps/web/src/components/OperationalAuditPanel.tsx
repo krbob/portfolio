@@ -62,7 +62,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
     <>
       <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-zinc-400">
             {categoryFilter === 'ALL'
               ? t('audit.eventsInWindow')
               : formatMessage(t('audit.categoryEvents'), { category: labelAuditCategory(categoryFilter) })}
@@ -70,15 +70,15 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
           <strong className="mt-1 block text-sm text-zinc-100">{events.length}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('audit.failures')}</span>
+          <span className="text-xs text-zinc-400">{t('audit.failures')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{failureCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('audit.highImpact')}</span>
+          <span className="text-xs text-zinc-400">{t('audit.highImpact')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{highImpactCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('audit.latestFailure')}</span>
+          <span className="text-xs text-zinc-400">{t('audit.latestFailure')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{latestFailure ? formatDateTime(latestFailure.occurredAt) : t('audit.noneLabel')}</strong>
         </article>
       </div>
@@ -130,11 +130,11 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
         </div>
       </div>
 
-      {eventsQuery.isLoading && <p className="text-sm text-zinc-500">{t('audit.loadingActivity')}</p>}
+      {eventsQuery.isLoading && <p className="text-sm text-zinc-400">{t('audit.loadingActivity')}</p>}
       {eventsQuery.isError && <p className="text-sm text-red-400">{eventsQuery.error.message}</p>}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length === 0 && (
-        <p className="text-sm text-zinc-500">{t('audit.noMatchingEvents')}</p>
+        <p className="text-sm text-zinc-400">{t('audit.noMatchingEvents')}</p>
       )}
 
       {!eventsQuery.isLoading && !eventsQuery.isError && visibleEvents.length > 0 && (
@@ -148,7 +148,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                 <div className="flex items-start justify-between">
                   <div>
                     <strong className="text-sm text-zinc-100">{formatAuditEventTitle(event.action)}</strong>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-zinc-400">
                       {labelAuditCategory(event.category)} · {formatDateTime(event.occurredAt)}
                     </p>
                   </div>
@@ -163,7 +163,7 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                 </div>
 
                 <p className="mt-2 text-sm text-zinc-300">{formatAuditEventMessage(event, language)}</p>
-                {metadataSummary ? <p className="text-sm text-zinc-500">{metadataSummary}</p> : null}
+                {metadataSummary ? <p className="text-sm text-zinc-400">{metadataSummary}</p> : null}
                 {metadataEntries.length > 0 ? (
                   <details className="mt-3 rounded-md border border-zinc-800/50 bg-zinc-950/50 p-3">
                     <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -172,14 +172,14 @@ export function OperationalAuditPanel({ limit = 30 }: OperationalAuditPanelProps
                     <dl className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
                       {metadataEntries.map(([label, value]) => (
                         <div className="contents" key={label}>
-                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-600">{label}</dt>
+                          <dt className="text-xs uppercase tracking-[0.2em] text-zinc-400">{label}</dt>
                           <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>
                         </div>
                       ))}
                     </dl>
                   </details>
                 ) : null}
-                {event.entityId ? <p className="mt-1 text-xs font-mono text-zinc-600">{event.entityId}</p> : null}
+                {event.entityId ? <p className="mt-1 text-xs font-mono text-zinc-400">{event.entityId}</p> : null}
               </article>
             )
           })}

@@ -173,7 +173,7 @@ export function PortfolioBenchmarkSettingsSection() {
       />
 
       {settingsQuery.isLoading ? (
-        <p className="text-sm text-zinc-500">{t('benchmarks.loading')}</p>
+        <p className="text-sm text-zinc-400">{t('benchmarks.loading')}</p>
       ) : settingsQuery.isError ? (
         <p className="text-sm text-red-400">{settingsQuery.error.message}</p>
       ) : (
@@ -220,7 +220,7 @@ export function PortfolioBenchmarkSettingsSection() {
             onRemoveCustomBenchmark={removeCustomBenchmark}
           />
 
-          <div className="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-4 text-xs text-zinc-500">
+          <div className="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-4 text-xs text-zinc-400">
             {t('benchmarks.pinnedHint')}
           </div>
 
@@ -266,7 +266,7 @@ function BenchmarkGroup({
     <div className="rounded-lg border border-zinc-800/50 p-4">
       <div className="mb-4">
         <h4 className="text-sm font-semibold text-zinc-100">{title}</h4>
-        <p className="mt-1 text-sm text-zinc-500">{description}</p>
+        <p className="mt-1 text-sm text-zinc-400">{description}</p>
       </div>
 
       <div className="space-y-3">
@@ -280,7 +280,7 @@ function BenchmarkGroup({
             onRemoveCustomBenchmark={onRemoveCustomBenchmark}
           />
         )) : emptyCopy ? (
-          <p className="text-sm text-zinc-500">{emptyCopy}</p>
+          <p className="text-sm text-zinc-400">{emptyCopy}</p>
         ) : null}
       </div>
 
@@ -317,7 +317,7 @@ function BenchmarkRowCard({
               {row.enabled ? t('benchmarks.enabled') : t('benchmarks.off')}
             </span>
           </div>
-          {row.symbol ? <p className="mt-1 text-xs text-zinc-500">{row.symbol}</p> : null}
+          {row.symbol ? <p className="mt-1 text-xs text-zinc-400">{row.symbol}</p> : null}
         </div>
 
         {row.removable ? (
@@ -404,7 +404,7 @@ function ToggleField({
 }) {
   return (
     <label
-      className={`flex items-center gap-2 text-sm ${disabled ? 'text-zinc-600' : 'text-zinc-300'}`}
+      className={`flex items-center gap-2 text-sm ${disabled ? 'text-zinc-400' : 'text-zinc-300'}`}
       title={title}
     >
       <input
@@ -491,7 +491,7 @@ function customRowState(row: BenchmarkFormRow): CustomRowState {
   if (label.length === 0 && symbol.length === 0) {
     return {
       kind: 'empty',
-      colorClass: 'text-zinc-500',
+      colorClass: 'text-zinc-400',
       message: t('benchmarks.symbolFormatHint'),
     }
   }

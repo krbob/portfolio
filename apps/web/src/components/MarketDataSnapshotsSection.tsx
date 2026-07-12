@@ -25,30 +25,30 @@ export function MarketDataSnapshotsSection() {
 
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('marketDataSnapshots.snapshots')}</span>
+          <span className="text-xs text-zinc-400">{t('marketDataSnapshots.snapshots')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{snapshotsQuery.data ? snapshots.length : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('marketDataSnapshots.latest')}</span>
+          <span className="text-xs text-zinc-400">{t('marketDataSnapshots.latest')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">
             {latestCachedAt ? formatDateTime(latestCachedAt) : notApplicableLabel(language)}
           </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('marketDataSnapshots.quotes')}</span>
+          <span className="text-xs text-zinc-400">{t('marketDataSnapshots.quotes')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{snapshotsQuery.data ? quoteCount : '...'}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-500">{t('marketDataSnapshots.series')}</span>
+          <span className="text-xs text-zinc-400">{t('marketDataSnapshots.series')}</span>
           <strong className="mt-1 block text-sm text-zinc-100">{snapshotsQuery.data ? seriesCount : '...'}</strong>
         </article>
       </div>
 
-      {snapshotsQuery.isLoading && <p className="text-sm text-zinc-500">{t('marketDataSnapshots.loading')}</p>}
+      {snapshotsQuery.isLoading && <p className="text-sm text-zinc-400">{t('marketDataSnapshots.loading')}</p>}
       {snapshotsQuery.isError && <p className="text-sm text-red-400">{snapshotsQuery.error.message}</p>}
 
       {!snapshotsQuery.isLoading && !snapshotsQuery.isError && snapshots.length === 0 && (
-        <p className="text-sm text-zinc-500">{t('marketDataSnapshots.empty')}</p>
+        <p className="text-sm text-zinc-400">{t('marketDataSnapshots.empty')}</p>
       )}
 
       {!snapshotsQuery.isLoading && !snapshotsQuery.isError && snapshots.length > 0 && (
@@ -58,7 +58,7 @@ export function MarketDataSnapshotsSection() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-semibold text-zinc-100">{snapshot.identity}</h4>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-zinc-400">
                     {t('marketDataSnapshots.cachedAt')} {formatDateTime(snapshot.cachedAt)}
                   </p>
                 </div>
@@ -67,15 +67,15 @@ export function MarketDataSnapshotsSection() {
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-3">
                 <div>
-                  <dt className="text-zinc-500">{t('marketDataSnapshots.coverage')}</dt>
+                  <dt className="text-zinc-400">{t('marketDataSnapshots.coverage')}</dt>
                   <dd className="text-zinc-100">{formatCoverage(snapshot.sourceFrom, snapshot.sourceTo, language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('marketDataSnapshots.asOf')}</dt>
+                  <dt className="text-zinc-400">{t('marketDataSnapshots.asOf')}</dt>
                   <dd className="text-zinc-100">{snapshot.sourceAsOf ?? notApplicableLabel(language)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t('marketDataSnapshots.points')}</dt>
+                  <dt className="text-zinc-400">{t('marketDataSnapshots.points')}</dt>
                   <dd className="text-zinc-100">{snapshot.pointCount ?? notApplicableLabel(language)}</dd>
                 </div>
               </dl>

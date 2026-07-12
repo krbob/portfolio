@@ -144,7 +144,7 @@ export function ContributionPlannerPanel({
         <div>
           <h4 className="text-sm font-semibold text-zinc-100">{t('targets.contributionSuggestedTitle')}</h4>
           <p className="mt-1 text-sm text-zinc-400">{t('targets.contributionPlannerDescription')}</p>
-          <p className="mt-2 text-xs text-zinc-500">{t('targets.contributionPlannerAssumption')}</p>
+          <p className="mt-2 text-xs text-zinc-400">{t('targets.contributionPlannerAssumption')}</p>
         </div>
 
         <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleContributionPlanSubmit}>
@@ -159,7 +159,7 @@ export function ContributionPlannerPanel({
                 autoFocus={autoFocus}
                 onChange={(event) => setContributionAmountInput(sanitizeMoneyInput(event.target.value))}
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
                 {t('targets.contributionCurrency')}
               </span>
             </div>
@@ -177,7 +177,7 @@ export function ContributionPlannerPanel({
         {contributionPlanQuery.isError ? <p className="text-sm text-red-400">{contributionPlanQuery.error.message}</p> : null}
 
         {contributionPlanQuery.isLoading ? (
-          <p className="text-sm text-zinc-500">{t('targets.calculatingContributionPlan')}</p>
+          <p className="text-sm text-zinc-400">{t('targets.calculatingContributionPlan')}</p>
         ) : contributionPlanQuery.data ? (
           <div className="space-y-4">
             <ContributionResultCard
@@ -275,7 +275,7 @@ export function ContributionPlannerPanel({
             ) : null}
 
             {manualContributionPreviewMutation.isPending ? (
-              <p className="text-sm text-zinc-500">{t('targets.manualContributionCalculating')}</p>
+              <p className="text-sm text-zinc-400">{t('targets.manualContributionCalculating')}</p>
             ) : manualContributionPreviewMutation.data ? (
               <ContributionResultCard
                 mode="manual"
@@ -318,7 +318,7 @@ function ContributionResultCard({
         <p className="text-sm text-zinc-400">
           {t('targets.resultProjectedMix')} {formatMixSentence(projectedMix)}
         </p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-400">
           {t('targets.contributionAmount')}: {formatCurrencyPln(amountPln)}
         </p>
       </div>
@@ -337,7 +337,7 @@ function MixComparisonCard({
 }) {
   return (
     <div className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-900/60 p-4">
-      <h5 className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+      <h5 className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-400">
         {t('targets.currentVsProjected')}
       </h5>
       <MixRow label={t('targets.current')} mix={currentMix} />
@@ -384,7 +384,7 @@ function MixRow({
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">{label}</span>
         <span className="text-xs text-zinc-400">{formatMixSentence(mix)}</span>
       </div>
       <div className="flex h-3 overflow-hidden rounded-full bg-zinc-800">
@@ -423,7 +423,7 @@ function MoneyField({
           value={value}
           onChange={(event) => onChange(sanitizeMoneyInput(event.target.value))}
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-500">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-zinc-400">
           {t('targets.contributionCurrency')}
         </span>
       </div>
@@ -526,5 +526,5 @@ function diffColor(value: number) {
   if (value < 0) {
     return 'text-red-400'
   }
-  return 'text-zinc-500'
+  return 'text-zinc-400'
 }

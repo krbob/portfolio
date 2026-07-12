@@ -64,25 +64,25 @@ describe('StatCard', () => {
     it('detects zero via numericValue prop', () => {
       render(<StatCard label="Value" value="0,00 PLN" numericValue={0} />)
       const valueEl = screen.getByText('0,00 PLN')
-      expect(valueEl.className).toContain('text-zinc-600')
+      expect(valueEl.className).toContain('text-zinc-400')
     })
 
     it('does not treat non-zero numericValue as zero', () => {
       render(<StatCard label="Value" value="0,01 zł" numericValue={0.01} />)
       const valueEl = screen.getByText('0,01 zł')
-      expect(valueEl.className).not.toContain('text-zinc-600')
+      expect(valueEl.className).not.toContain('text-zinc-400')
     })
 
     it('falls back to string matching when numericValue is omitted', () => {
       render(<StatCard label="Value" value="0,00 zł" />)
       const valueEl = screen.getByText('0,00 zł')
-      expect(valueEl.className).toContain('text-zinc-600')
+      expect(valueEl.className).toContain('text-zinc-400')
     })
 
     it('does not false-positive on formatted strings not in allowlist', () => {
       render(<StatCard label="Value" value="0,00 EUR" />)
       const valueEl = screen.getByText('0,00 EUR')
-      expect(valueEl.className).not.toContain('text-zinc-600')
+      expect(valueEl.className).not.toContain('text-zinc-400')
     })
   })
 })

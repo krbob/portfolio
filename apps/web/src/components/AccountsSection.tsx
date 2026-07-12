@@ -93,14 +93,14 @@ export function AccountsSection() {
       </form>
 
       <div className="space-y-3 mt-4">
-        {accountsQuery.isLoading && <p className="text-sm text-zinc-500">{t('accounts.loading')}</p>}
+        {accountsQuery.isLoading && <p className="text-sm text-zinc-400">{t('accounts.loading')}</p>}
         {accountsQuery.isError && <p className="text-sm text-red-400">{accountsQuery.error.message}</p>}
-        {sortedAccounts.length === 0 && !accountsQuery.isLoading && <p className="text-sm text-zinc-500">{t('accounts.empty')}</p>}
+        {sortedAccounts.length === 0 && !accountsQuery.isLoading && <p className="text-sm text-zinc-400">{t('accounts.empty')}</p>}
         {sortedAccounts.map((account) => (
           <article className="rounded-lg border border-zinc-800/50 p-4 flex items-center justify-between" key={account.id}>
             <div>
               <strong className="text-sm text-zinc-100">{account.name}</strong>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-zinc-400">
                 {account.institution} · {labelAccountType(account.type)}
               </p>
             </div>

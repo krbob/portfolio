@@ -7,10 +7,11 @@ interface ChartContainerProps {
   title?: string
   subtitle?: string
   legend?: ReactNode
+  dataTable?: ReactNode
   onChartReady: (chart: IChartApi) => void | (() => void)
 }
 
-export function ChartContainer({ height = 320, title, subtitle, legend, onChartReady }: ChartContainerProps) {
+export function ChartContainer({ height = 320, title, subtitle, legend, dataTable, onChartReady }: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const onChartReadyRef = useRef(onChartReady)
@@ -64,7 +65,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChartR
           {title && (
             <div>
               <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
-              {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
+              {subtitle && <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>}
             </div>
           )}
           {legend && <div className="flex items-center gap-4">{legend}</div>}
@@ -73,7 +74,9 @@ export function ChartContainer({ height = 320, title, subtitle, legend, onChartR
       <div
         ref={containerRef}
         className={`transition-opacity duration-300 ${chartReady ? 'opacity-100' : 'opacity-0'}`}
+        aria-hidden="true"
       />
+      {dataTable}
     </div>
   )
 }

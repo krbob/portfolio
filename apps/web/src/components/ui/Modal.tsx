@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { t } from '../../lib/messages'
 import { IconClose } from './icons'
+import { useDialogFocus } from './use-dialog-focus'
 
 interface ModalProps {
   open: boolean
@@ -45,18 +46,15 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   }
 
   useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    if (!open || !mounted) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
     }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [mounted, open])
 
-  useEffect(() => {
-    if (!open) return
-    panelRef.current?.focus()
-  }, [open])
+  useDialogFocus(panelRef, open && mounted, onClose)
 
   if (!mounted) return null
 
@@ -80,6 +78,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-hidden={open ? undefined : true}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
         onTransitionEnd={handleTransitionEnd}
@@ -89,7 +88,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
             aria-label={t('common.close')}
           >
             <IconClose />

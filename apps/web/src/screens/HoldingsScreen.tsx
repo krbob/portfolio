@@ -319,9 +319,10 @@ export function HoldingsContent() {
                   return (
                     <tr
                       key={key}
-                      className={`${tr} cursor-pointer transition-colors ${
+                      className={`${tr} cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400 ${
                         isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : 'hover:bg-zinc-800/30'
                       }`}
+                      aria-selected={isSelected}
                       onClick={() => setSelectedHoldingKey(key)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -333,7 +334,7 @@ export function HoldingsContent() {
                     >
                       <td className={td}>
                         <span className="block max-w-[16rem] truncate font-medium text-zinc-100" title={holding.instrumentName}>{holding.instrumentName}</span>
-                        <div className="text-xs text-zinc-500">
+                        <div className="text-xs text-zinc-400">
                           {labelInstrumentKind(holding.kind)} · {holding.currency}
                         </div>
                       </td>
@@ -349,7 +350,7 @@ export function HoldingsContent() {
                       <td className={`${tdRight} font-medium ${gainColor(gainPln)}`}>
                         <div>{gainPln == null ? missingDataLabel(language) : formatSignedCurrencyPln(gainPln)}</div>
                         {gainPct != null ? (
-                          <div className="mt-0.5 text-xs font-normal text-zinc-500">
+                          <div className="mt-0.5 text-xs font-normal text-zinc-400">
                             {formatPercent(gainPct, { signed: true, scale: 100, maximumFractionDigits: 2 })}
                           </div>
                         ) : null}
@@ -385,7 +386,7 @@ export function HoldingsContent() {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-zinc-100">{selectedHolding.instrumentName}</h3>
-              <p className="mt-0.5 text-sm text-zinc-500">
+              <p className="mt-0.5 text-sm text-zinc-400">
                 {selectedHolding.accountName} · {labelInstrumentKind(selectedHolding.kind)} · {labelAssetClass(selectedHolding.assetClass)}
               </p>
             </div>
@@ -434,7 +435,7 @@ export function HoldingsContent() {
               />
             </div>
           )}
-          <div className="mt-3 text-xs text-zinc-500">
+          <div className="mt-3 text-xs text-zinc-400">
             {`${formatMessage(t('holdings.transactionDetail'), { count: selectedHolding.transactionCount })} · ${selectedHolding.currency}`}
             {selectedHolding.valuedAt
               ? ` · ${t('holdings.valuedAtDetail')} ${formatDate(selectedHolding.valuedAt)}`
@@ -471,7 +472,7 @@ export function HoldingsContent() {
                     <p className="text-sm font-medium text-zinc-200">
                       {t('holdings.redeemEdo')}
                     </p>
-                    <p className="mt-1 text-sm text-zinc-500">
+                    <p className="mt-1 text-sm text-zinc-400">
                       {formatMessage(t('holdings.redeemDetail'), {
                         count: selectedHolding.edoLots?.length ?? 0,
                         suffix: selectedHolding.edoLots?.[0]?.purchaseDate ? formatMessage(t('holdings.redeemLotSuffix'), { date: formatDate(selectedHolding.edoLots[0].purchaseDate) }) : '',
@@ -536,9 +537,9 @@ function DetailStat({
 }) {
   return (
     <div>
-      <p className="text-xs font-medium text-zinc-500">{label}</p>
+      <p className="text-xs font-medium text-zinc-400">{label}</p>
       <p className={`mt-0.5 text-sm font-medium tabular-nums ${className ?? 'text-zinc-100'}`}>{value}</p>
-      {detail ? <p className="mt-0.5 text-xs text-zinc-500">{detail}</p> : null}
+      {detail ? <p className="mt-0.5 text-xs text-zinc-400">{detail}</p> : null}
     </div>
   )
 }
@@ -562,9 +563,9 @@ function HoldingSummaryTile({
 
   return (
     <div className={card}>
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">{label}</p>
       <p className={`mt-2 text-3xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
-      {detail ? <p className="mt-1 text-sm text-zinc-500">{detail}</p> : null}
+      {detail ? <p className="mt-1 text-sm text-zinc-400">{detail}</p> : null}
     </div>
   )
 }
@@ -749,7 +750,7 @@ function assetClassDot(c: string) {
 }
 
 function gainColor(v: string | null | undefined) {
-  if (v == null) return 'text-zinc-500'
+  if (v == null) return 'text-zinc-400'
   const n = Number(v)
   if (n > 0) return 'text-emerald-400'
   if (n < 0) return 'text-red-400'
@@ -820,6 +821,6 @@ function issueToneClass(value: string | null | undefined) {
     case 'BOOK_ONLY':
       return 'text-amber-300'
     default:
-      return 'text-zinc-500'
+      return 'text-zinc-400'
   }
 }

@@ -27,13 +27,13 @@ export function InstrumentSummaryTile({
 }) {
   return (
     <Card>
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{label}</p>
       <p className={`mt-3 text-3xl font-semibold tracking-tight ${
         tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
       }`}>
         {value}
       </p>
-      {detail && <p className="mt-2 text-sm text-zinc-500">{detail}</p>}
+      {detail && <p className="mt-2 text-sm text-zinc-400">{detail}</p>}
     </Card>
   )
 }
@@ -60,11 +60,11 @@ export function InstrumentDetailsCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
             {t('instrumentDetails.selectedInstrument')}
           </p>
           <h3 className="mt-2 text-xl font-semibold text-zinc-50">{row.instrument.name}</h3>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-400">
             {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)} · {row.instrument.currency}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function InstrumentDetailsCard({
       {row.instrument.edoTerms && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
               {t('instrumentDetails.firstPeriodRate')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
@@ -122,7 +122,7 @@ export function InstrumentDetailsCard({
             </p>
           </div>
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
               {t('instrumentDetails.margin')}
             </p>
             <p className="mt-2 text-xl font-semibold text-zinc-50">
@@ -135,11 +135,11 @@ export function InstrumentDetailsCard({
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
           <h4 className="text-sm font-medium text-zinc-100">{t('instrumentDetails.accountSplit')}</h4>
-          <p className="text-xs text-zinc-500">{labelValuationSource(row.instrument.valuationSource)}</p>
+          <p className="text-xs text-zinc-400">{labelValuationSource(row.instrument.valuationSource)}</p>
         </div>
 
         {holdings.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-zinc-400">
             {t('instrumentDetails.noCatalogHoldings')}
           </p>
         ) : (
@@ -151,13 +151,13 @@ export function InstrumentDetailsCard({
               >
                 <div>
                   <p className="font-medium text-zinc-100">{holding.accountName}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-400">
                     {formatHoldingQuantity(holding.quantity)} {t('instrumentDetails.units')} · {holding.transactionCount} {t('instrumentDetails.transactions')}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(holding.currentValuePln ?? holding.bookValuePln)}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-400">
                     {isMarketValuedStatus(holding.valuationStatus)
                       ? formatHoldingGainPreview(holding.unrealizedGainPln, language)
                       : t('instrumentDetails.bookBasis')}
@@ -185,13 +185,13 @@ export function InstrumentDetailsCard({
               >
                 <div>
                   <p className="font-medium text-zinc-100">{lot.accountName}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-400">
                     {formatDate(lot.purchaseDate)} · {formatHoldingQuantity(lot.quantity)} {t('instrumentDetails.units')}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="tabular-nums text-zinc-100">{formatCurrencyPln(lot.currentValuePln ?? lot.costBasisPln)}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-400">
                     {isMarketValuedStatus(lot.valuationStatus)
                       ? formatHoldingGainPreview(lot.unrealizedGainPln, language)
                       : t('instrumentDetails.bookBasis')}
@@ -244,13 +244,13 @@ function InstrumentDetailMetric({
 }) {
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">{label}</p>
       <p className={`mt-2 text-xl font-semibold ${
         tone === 'success' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-300' : 'text-zinc-50'
       }`}>
         {value}
       </p>
-      {detail && <p className="mt-1 text-xs text-zinc-500">{detail}</p>}
+      {detail && <p className="mt-1 text-xs text-zinc-400">{detail}</p>}
     </div>
   )
 }

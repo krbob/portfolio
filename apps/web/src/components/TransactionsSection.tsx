@@ -102,11 +102,11 @@ export function TransactionsSection() {
       <FadeIn>
       <div className="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('transactionsOrch.transactions')}</span>
+          <span className="text-xs text-zinc-400">{t('transactionsOrch.transactions')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{journalRowCount}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <span className="text-xs text-zinc-500">{t('transactionsOrch.journalRowsInView')}</span>
+          <span className="text-xs text-zinc-400">{t('transactionsOrch.journalRowsInView')}</span>
           <strong className="mt-1 block text-xl font-bold tabular-nums text-zinc-100">{sortedRowCount}</strong>
         </article>
       </div>

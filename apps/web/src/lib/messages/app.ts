@@ -146,6 +146,13 @@ export const appMessages = {
   'allocation.cash': { pl: 'Gotówka', en: 'Cash' },
   'portfolioValue.title': { pl: 'Wartość portfela', en: 'Portfolio Value' },
   'portfolioValue.contributions': { pl: 'Wpłaty', en: 'Contributions' },
+  'chart.showData': { pl: 'Pokaż dane wykresu', en: 'Show chart data' },
+  'chart.data': { pl: 'Dane wykresu', en: 'Chart data' },
+  'chart.sampledRows': {
+    pl: 'Pokazano reprezentatywną próbkę: {shown} z {total} obserwacji.',
+    en: 'Showing a representative sample: {shown} of {total} observations.',
+  },
+  'chart.date': { pl: 'Data', en: 'Date' },
   'transactions.title': { pl: 'Transakcje', en: 'Transactions' },
   'performance.title': { pl: 'Wyniki', en: 'Performance' },
   'performance.loadingTitle': { pl: 'Ładowanie wyników', en: 'Loading performance' },

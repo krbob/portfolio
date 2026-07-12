@@ -6,7 +6,7 @@ export function SetupGuideScreen() {
   return (
     <>
       <PageHeader title={t('setup.pageTitle')}>
-        <span className="text-sm text-zinc-500">
+        <span className="text-sm text-zinc-400">
           {t('setup.pageDescription')}
         </span>
       </PageHeader>

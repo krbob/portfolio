@@ -27,7 +27,7 @@ export function InlineRefreshIndicator({ active, delayMs = 400 }: InlineRefreshI
   return (
     <span
       aria-live="polite"
-      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-[11px] font-medium text-zinc-500"
+      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-[11px] font-medium text-zinc-400"
     >
       <StatusDot status="healthy" pulse />
       {t('common.refreshing')}

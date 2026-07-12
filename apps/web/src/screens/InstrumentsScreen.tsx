@@ -211,15 +211,23 @@ export function InstrumentsManagement() {
                       const isSelected = selectedRow?.instrument.id === row.instrument.id
                       return (
                         <tr
-                          className={`${tr} cursor-pointer ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                          className={`${tr} cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400 ${isSelected ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
                           key={row.instrument.id}
                           aria-selected={isSelected}
                           onClick={() => { userSelectedRef.current = true; setSelectedInstrumentId(row.instrument.id) }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              userSelectedRef.current = true
+                              setSelectedInstrumentId(row.instrument.id)
+                            }
+                          }}
+                          tabIndex={0}
                         >
                           <td className={td}>
                             <div>
                               <p className="font-medium text-zinc-100">{row.instrument.name}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {row.instrument.symbol ? `${row.instrument.symbol} · ` : ''}
                                 {row.instrument.currency}
                               </p>
@@ -230,7 +238,7 @@ export function InstrumentsManagement() {
                               <p className="text-zinc-200">
                                 {labelInstrumentKind(row.instrument.kind)} · {labelAssetClass(row.instrument.assetClass)}
                               </p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {labelValuationSource(row.instrument.valuationSource)}
                               </p>
                             </div>
@@ -238,7 +246,7 @@ export function InstrumentsManagement() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{row.accountCount}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {row.accountCount === 0
                                   ? t('instrumentsScreen.catalogOnly')
                                   : t('instrumentsScreen.activeAccounts')}
@@ -248,7 +256,7 @@ export function InstrumentsManagement() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{row.accountCount === 0 ? '0' : formatHoldingQuantity(row.quantity)}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {row.transactionCount} {t('instrumentsScreen.transactions')}
                               </p>
                             </div>
@@ -256,7 +264,7 @@ export function InstrumentsManagement() {
                           <td className={tdRight}>
                             <div>
                               <p className="tabular-nums text-zinc-100">{formatCurrencyPln(row.totalCurrentValuePln)}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {t('instrumentsScreen.costBasis')} {formatCurrencyPln(row.totalBookValuePln)}
                               </p>
                             </div>
@@ -265,14 +273,14 @@ export function InstrumentsManagement() {
                             <div>
                               <p className={`tabular-nums ${
                                 row.valuedHoldingCount === 0
-                                  ? 'text-zinc-500'
+                                  ? 'text-zinc-400'
                                   : row.totalUnrealizedGainPln >= 0
                                     ? 'text-emerald-400'
                                     : 'text-red-400'
                               }`}>
                                 {formatPortfolioGainDisplay(row.totalUnrealizedGainPln, row.valuedHoldingCount, language)}
                               </p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-zinc-400">
                                 {describeHoldingGainRate(row.holdingCount, row.valuedHoldingCount, row.gainPct, language)}
                               </p>
                             </div>
