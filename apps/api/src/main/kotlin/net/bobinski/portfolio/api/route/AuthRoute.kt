@@ -19,8 +19,9 @@ import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.auth.config.matchesPassword
 import net.bobinski.portfolio.api.auth.config.modeName
 import net.bobinski.portfolio.api.auth.config.passwordFingerprint
-import net.bobinski.portfolio.api.plugins.ErrorResponse
+import net.bobinski.portfolio.api.plugins.ApiErrorCode
 import net.bobinski.portfolio.api.plugins.PortfolioSession
+import net.bobinski.portfolio.api.plugins.respondError
 
 fun Route.authRoute(application: Application) {
     val authConfig = AuthConfig.from(application.environment.config)
@@ -57,7 +58,11 @@ fun Route.authRoute(application: Application) {
 
             val payload = call.receive<CreateAuthSessionRequest>()
             if (!authConfig.matchesPassword(payload.password)) {
-                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid password."))
+                call.respondError(
+                    HttpStatusCode.Unauthorized,
+                    "Invalid password.",
+                    ApiErrorCode.INVALID_CREDENTIALS
+                )
                 return@post
             }
 

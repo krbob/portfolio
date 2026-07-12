@@ -24,6 +24,7 @@ import net.bobinski.portfolio.api.route.transactionImportRoute
 import net.bobinski.portfolio.api.route.transactionRoute
 
 fun Application.configureRouting() {
+    val metricsRegistry = requestMetricsRegistry()
     routing {
         get("/") {
             call.respondText("Portfolio API")
@@ -53,6 +54,18 @@ fun Application.configureRouting() {
             operationId = "getOpenApiDocument",
             summary = "Export the OpenAPI document",
             description = "Returns the generated OpenAPI specification for the Portfolio API as JSON.",
+            tag = "System"
+        )
+
+        get("/metrics") {
+            call.respondText(
+                metricsRegistry.scrape(),
+                ContentType.parse("text/plain; version=0.0.4; charset=utf-8")
+            )
+        }.documented(
+            operationId = "getMetrics",
+            summary = "Get bounded request metrics",
+            description = "Returns bounded Prometheus request counters and duration summaries.",
             tag = "System"
         )
 
