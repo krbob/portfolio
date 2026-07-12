@@ -11,7 +11,6 @@ import { formatMessage, t, tFor, type MessageKey } from '../../lib/messages'
 export type { ImportTransactionsPayload, ImportTransactionsPreviewResult, SaveTransactionImportProfilePayload }
 export type { Transaction, TransactionImportProfile } from '../../api/write-model'
 
-export const today = new Date().toISOString().slice(0, 10)
 export const transactionTypes = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'REDEEM', 'FEE', 'TAX', 'INTEREST', 'CORRECTION'] as const
 export const NEW_IMPORT_PROFILE_ID = '__new_import_profile__'
 export const STRUCTURED_IMPORT_TEMPLATE = `[
@@ -32,23 +31,33 @@ export const STRUCTURED_IMPORT_TEMPLATE = `[
   }
 ]`
 
-export const initialForm = {
-  accountId: '',
-  instrumentId: '',
-  type: 'DEPOSIT',
-  tradeDate: today,
-  settlementDate: today,
-  quantity: '',
-  unitPrice: '',
-  grossAmount: '',
-  feeAmount: '0',
-  taxAmount: '0',
-  currency: 'PLN',
-  fxRateToPln: '',
-  notes: '',
+export function localDateInputValue(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-export type TransactionFormState = typeof initialForm
+export function createInitialTransactionForm(date = new Date()) {
+  const today = localDateInputValue(date)
+  return {
+    accountId: '',
+    instrumentId: '',
+    type: 'DEPOSIT',
+    tradeDate: today,
+    settlementDate: today,
+    quantity: '',
+    unitPrice: '',
+    grossAmount: '',
+    feeAmount: '0',
+    taxAmount: '0',
+    currency: 'PLN',
+    fxRateToPln: '',
+    notes: '',
+  }
+}
+
+export type TransactionFormState = ReturnType<typeof createInitialTransactionForm>
 
 export const initialJournalFilters = {
   search: '',

@@ -238,7 +238,7 @@ export const portfolioMessages = {
   'dashboardSections.cashBalance': { pl: 'Saldo gotówki', en: 'Cash Balance' },
   'dashboardSections.valuationBasis': { pl: 'Podstawa wyceny', en: 'Valuation basis' },
   'dashboardSections.withinTolerance': { pl: 'W tolerancji', en: 'Within tolerance' },
-  'dashboardSections.deployCash': { pl: 'Wykorzystaj gotówkę', en: 'Deploy cash' },
+  'dashboardSections.deployCash': { pl: 'Zainwestuj dostępną gotówkę', en: 'Invest available cash' },
   'dashboardSections.waitForContribution': { pl: 'Poczekaj na kolejną wpłatę', en: 'Wait for contribution' },
   'dashboardSections.fullRebalanceAction': { pl: 'Pełny rebalancing', en: 'Full rebalance' },
   'dashboardSections.notConfiguredAction': { pl: 'Brak konfiguracji', en: 'Not configured' },

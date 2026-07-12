@@ -245,9 +245,17 @@ export function ReturnsTab({
           <thead>
             <tr className="border-b border-zinc-800">
               <th className={th}>{t('performanceSections.period')}</th>
-              <th className={thRight}>PLN MWRR</th>
-              <th className={thRight}>PLN TWR</th>
-              {!isReal && <th className={thRight}>USD MWRR</th>}
+              <th className={thRight}>
+                <abbr className="cursor-help no-underline" title={t('performance.mwrrDefinition')}>PLN MWRR</abbr>
+              </th>
+              <th className={thRight}>
+                <abbr className="cursor-help no-underline" title={t('performance.twrDefinition')}>PLN TWR</abbr>
+              </th>
+              {!isReal && (
+                <th className={thRight}>
+                  <abbr className="cursor-help no-underline" title={t('performance.mwrrDefinition')}>USD MWRR</abbr>
+                </th>
+              )}
               <th className={thRight}>{t('performanceSections.annualized')}</th>
               <th className={thRight}>{t('performanceSections.days')}</th>
             </tr>

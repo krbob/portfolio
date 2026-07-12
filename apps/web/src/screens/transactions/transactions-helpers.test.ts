@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../../api/write-model'
 import {
   buildInstrumentAvailabilityAsOf,
+  createInitialTransactionForm,
   formatTransactionSubmitError,
+  localDateInputValue,
   quantityExceedsAvailability,
 } from './transactions-helpers'
 
@@ -61,6 +63,24 @@ describe('transaction disposal availability', () => {
 
     expect(message).toContain(serverMessage)
     expect(message).not.toBe(serverMessage)
+  })
+})
+
+describe('transaction date defaults', () => {
+  it('uses local calendar fields rather than converting the instant to UTC', () => {
+    const localLateEvening = new Date(2026, 0, 2, 23, 30, 0)
+
+    expect(localDateInputValue(localLateEvening)).toBe('2026-01-02')
+  })
+
+  it('evaluates today whenever a fresh composer form is created', () => {
+    const beforeMidnight = createInitialTransactionForm(new Date(2026, 4, 9, 23, 59))
+    const afterMidnight = createInitialTransactionForm(new Date(2026, 4, 10, 0, 1))
+
+    expect(beforeMidnight.tradeDate).toBe('2026-05-09')
+    expect(beforeMidnight.settlementDate).toBe('2026-05-09')
+    expect(afterMidnight.tradeDate).toBe('2026-05-10')
+    expect(afterMidnight.settlementDate).toBe('2026-05-10')
   })
 })
 

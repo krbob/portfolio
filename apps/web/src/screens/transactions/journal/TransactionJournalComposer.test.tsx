@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../../../lib/i18n'
-import { initialForm } from '../transactions-helpers'
+import { createInitialTransactionForm } from '../transactions-helpers'
 import { TransactionJournalComposer } from './TransactionJournalComposer'
 
 describe('TransactionJournalComposer disposal guards', () => {
@@ -14,6 +14,7 @@ describe('TransactionJournalComposer disposal guards', () => {
   })
 
   it('shows sell availability and disables submit for an oversell', async () => {
+    const initialForm = createInitialTransactionForm()
     renderComposer({
       form: {
         ...initialForm,
@@ -38,6 +39,7 @@ describe('TransactionJournalComposer disposal guards', () => {
   })
 
   it('turns the existing redeem shortfall warning into a submit blocker', async () => {
+    const initialForm = createInitialTransactionForm()
     renderComposer({
       form: {
         ...initialForm,
@@ -122,6 +124,7 @@ const edoInstrument = {
 type ComposerProps = ComponentProps<typeof TransactionJournalComposer>
 
 function renderComposer(overrides: Partial<ComposerProps> = {}) {
+  const initialForm = createInitialTransactionForm()
   const props: ComposerProps = {
     open: true,
     editingTransactionId: null,

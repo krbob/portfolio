@@ -113,6 +113,9 @@ export function PerformanceScreen() {
       </PageHeader>
 
       <FadeIn>
+      <p className="mb-4 max-w-4xl text-sm leading-6 text-ui-text-muted">
+        {t('performance.returnMethodHint')}
+      </p>
       {/* Top stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

@@ -174,6 +174,18 @@ export const appMessages = {
   'performance.latestValue': { pl: 'Ostatnia wartość', en: 'Latest Value' },
   'performance.noDataSubtitle': { pl: 'Brak danych za wybrany okres', en: 'No data for selected period' },
   'performance.inceptionMwrr': { pl: 'MWRR od początku', en: 'Inception MWRR' },
+  'performance.returnMethodHint': {
+    pl: 'MWRR pokazuje Twój wynik z uwzględnieniem momentu wpłat i wypłat. TWR pokazuje wynik samej strategii, bez wpływu przepływów.',
+    en: 'MWRR reflects your result including the timing of deposits and withdrawals. TWR isolates the strategy result from those cash flows.',
+  },
+  'performance.mwrrDefinition': {
+    pl: 'Zwrot ważony przepływami: zależy od czasu i wielkości wpłat oraz wypłat.',
+    en: 'Money-weighted return: affected by the timing and size of deposits and withdrawals.',
+  },
+  'performance.twrDefinition': {
+    pl: 'Zwrot ważony czasem: mierzy strategię bez wpływu wpłat i wypłat.',
+    en: 'Time-weighted return: measures the strategy without the impact of deposits and withdrawals.',
+  },
   'performance.tabCharts': { pl: 'Wykresy', en: 'Charts' },
   'performance.tabReturns': { pl: 'Zwroty', en: 'Returns' },
   'performance.contributorsTitle': { pl: 'Największy wpływ na portfel', en: 'Top portfolio contributors' },

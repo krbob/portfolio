@@ -13,7 +13,7 @@ import {
   compareEdoLotsByPurchaseDate,
   compareInstrumentsByName,
   compareJournalRows,
-  initialForm,
+  createInitialTransactionForm,
   initialJournalFilters,
   formatTransactionSubmitError,
   multiplyDecimalInputs,
@@ -53,7 +53,7 @@ export function TransactionJournal({
   const location = useLocation()
   const navigate = useNavigate()
 
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState(() => createInitialTransactionForm())
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
   const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null)
   const [journalFilters, setJournalFilters] = useState(initialJournalFilters)
@@ -328,6 +328,7 @@ export function TransactionJournal({
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
     setGrossAmountMode(draft?.grossAmount ? 'manual' : 'auto')
+    const initialForm = createInitialTransactionForm()
     const draftInstrument = draft?.instrumentId ? instrumentOptions.find((i) => i.id === draft.instrumentId) : null
     const defaultUnitPrice = draft?.unitPrice ?? (draftInstrument?.kind === 'BOND_EDO' ? '100' : initialForm.unitPrice)
     setForm({
@@ -503,7 +504,7 @@ export function TransactionJournal({
     setShowSettlementDateField(false)
     setHasCustomSettlementDate(false)
     setGrossAmountMode('auto')
-    setForm(initialForm)
+    setForm(createInitialTransactionForm())
   }
 
   function openComposerForCreate() {
