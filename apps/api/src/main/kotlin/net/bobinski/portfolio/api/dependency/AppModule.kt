@@ -37,6 +37,7 @@ import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.UpstreamTimeoutBudgets
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
@@ -114,7 +115,11 @@ fun appModule(
     single { authConfig }
     single { alertConfig }
     single<Json> { AppJsonFactory.create() }
-    single<HttpClient> { HttpClient.newBuilder().build() }
+    single<HttpClient> {
+        HttpClient.newBuilder()
+            .connectTimeout(UpstreamTimeoutBudgets.CONNECT)
+            .build()
+    }
     single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl) }
     single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiUrl) }
     single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl) }

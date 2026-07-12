@@ -204,7 +204,7 @@ class SystemReadinessService(
             symbol = marketDataConfig.usdPlnSymbol,
             from = MARKET_DATA_PROBE_FROM,
             to = MARKET_DATA_PROBE_TO
-        )
+        ).prices
         require(history.isNotEmpty()) {
             "Stock Analyst returned no history points for ${marketDataConfig.usdPlnSymbol}."
         }
@@ -378,5 +378,10 @@ private fun MarketDataClientException.toReadinessDetails(): Map<String, String> 
     operation?.let { put("operation", it) }
     symbol?.let { put("symbol", it) }
     statusCode?.let { put("statusCode", it.toString()) }
+    upstreamError?.let { put("upstreamError", it) }
+    errorCode?.let { put("errorCode", it) }
+    retryable?.let { put("retryable", it.toString()) }
+    requestId?.let { put("requestId", it) }
+    retryAfter?.let { put("retryAfter", it) }
     responseBodyPreview?.let { put("responseBodyPreview", it) }
 }

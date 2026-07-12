@@ -74,7 +74,7 @@ class RemoteReferenceSeriesProvider(
         from: LocalDate,
         to: LocalDate
     ): ReferenceSeriesResult = try {
-        val prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to)
+        val prices = stockAnalystClient.history(symbol = symbol, currency = currency, from = from, to = to).prices
         snapshotCacheService.putSeries(identity = identity, from = from, to = to, prices = prices)
         ReferenceSeriesResult.Success(prices = prices)
     } catch (exception: MarketDataClientException) {
@@ -137,7 +137,7 @@ class RemoteReferenceSeriesProvider(
             currency = null,
             from = from,
             to = to
-        ).associateTo(TreeMap()) { it.date to it.closePricePln }
+        ).prices.associateTo(TreeMap()) { it.date to it.closePricePln }
 
         val prices = goldUsdHistory.mapNotNull { point ->
             val usdPln = usdPlnLookup.floorEntry(point.date)?.value ?: usdPlnLookup.ceilingEntry(point.date)?.value

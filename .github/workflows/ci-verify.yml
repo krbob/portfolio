@@ -49,6 +49,10 @@ jobs:
           build-scan-terms-of-use-url: 'https://gradle.com/help/legal-terms-of-use'
           build-scan-terms-of-use-agree: 'yes'
 
+      - name: Verify pinned upstream API contracts
+        working-directory: apps/api
+        run: ./gradlew checkUpstreamContracts
+
       - name: Run API tests
         working-directory: apps/api
         run: ./gradlew test

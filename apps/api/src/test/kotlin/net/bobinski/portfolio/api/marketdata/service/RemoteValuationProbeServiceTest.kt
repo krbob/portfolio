@@ -6,6 +6,7 @@ import java.net.http.HttpClient
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -18,6 +19,7 @@ class RemoteValuationProbeServiceTest {
     fun `valid symbol passes verification`() = runBlocking {
         val server = startFakeStockAnalyst { exchange ->
             val response = """{"symbol":"VWRA.L","currency":"PLN","date":"2026-03-20","lastPrice":420.5}"""
+                .withStockAnalystProvenance()
             exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
             exchange.responseBody.use { it.write(response.toByteArray()) }
         }

@@ -26,6 +26,7 @@ import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -272,7 +273,7 @@ private class FakeFxServer(
     private val fail: Boolean = false
 ) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-        createContext("/history", FxHistoryHandler(fail))
+        createContext("/v1/history", FxHistoryHandler(fail))
         executor = null
     }
 
@@ -299,6 +300,7 @@ private class FakeFxServer(
             }
 
             val body = """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}"""
+                .withStockAnalystProvenance()
             val bytes = body.toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
             exchange.sendResponseHeaders(200, bytes.size.toLong())

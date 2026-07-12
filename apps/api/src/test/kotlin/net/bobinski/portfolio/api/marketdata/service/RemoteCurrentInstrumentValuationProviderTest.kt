@@ -18,6 +18,7 @@ import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
@@ -108,13 +109,13 @@ class RemoteCurrentInstrumentValuationProviderTest {
             val path = exchange.requestURI.path
             val query = exchange.requestURI.rawQuery.orEmpty()
             when {
-                path == "/quote/VWRA.L" && query.isBlank() -> exchange.respondJson(NATIVE_QUOTE)
-                path == "/quote/VWRA.L" && query == "currency=PLN" -> exchange.respondJson(PLN_QUOTE)
-                path == "/history/VWRA.L" &&
+                path == "/v1/quote/VWRA.L" && query.isBlank() -> exchange.respondJson(NATIVE_QUOTE)
+                path == "/v1/quote/VWRA.L" && query == "currency=PLN" -> exchange.respondJson(PLN_QUOTE)
+                path == "/v1/history/VWRA.L" &&
                     query.contains("currency=PLN") &&
                     query.contains("from=2026-05-04") &&
                     query.contains("to=2026-05-04") ->
-                    exchange.respondJson("""{"prices":$historyPricesJson}""")
+                    exchange.respondJson("""{"prices":$historyPricesJson}""".withStockAnalystProvenance())
 
                 else -> exchange.respondJson("""{"error":"unexpected request $path?$query"}""", status = 404)
             }
@@ -144,9 +145,11 @@ class RemoteCurrentInstrumentValuationProviderTest {
     )
 
     private companion object {
-        const val NATIVE_QUOTE =
+        val NATIVE_QUOTE =
             """{"symbol":"VWRA.L","currency":"USD","date":"2026-05-04","lastPrice":181.97,"previousClose":180.59}"""
-        const val PLN_QUOTE =
+                .withStockAnalystProvenance()
+        val PLN_QUOTE =
             """{"symbol":"VWRA.L","currency":"PLN","date":"2026-05-04","lastPrice":661.95,"previousClose":657.06}"""
+                .withStockAnalystProvenance()
     }
 }

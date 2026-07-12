@@ -43,6 +43,11 @@ class MarketDataFailureAuditService(
             to?.let { put("to", it.toString()) }
             put("reason", reason)
             clientException?.statusCode?.let { put("statusCode", it.toString()) }
+            clientException?.upstreamError?.let { put("upstreamError", it) }
+            clientException?.errorCode?.let { put("errorCode", it) }
+            clientException?.retryable?.let { put("retryable", it.toString()) }
+            clientException?.requestId?.let { put("requestId", it) }
+            clientException?.retryAfter?.let { put("retryAfter", it) }
             clientException?.responseBodyPreview?.let { put("responseBodyPreview", it) }
             exception?.javaClass?.simpleName?.takeIf { it.isNotBlank() }?.let { put("exceptionType", it) }
         }

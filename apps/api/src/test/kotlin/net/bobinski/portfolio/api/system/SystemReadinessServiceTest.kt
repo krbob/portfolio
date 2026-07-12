@@ -16,6 +16,7 @@ import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
@@ -171,8 +172,8 @@ private class FakeMarketDataServer(
     private val stockAnalystDelayMs: Long = 0
 ) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress(0), 0).apply {
-        createContext("/history", HistoryHandler(stockAnalystDelayMs))
-        createContext("/inflation/monthly", InflationHandler)
+        createContext("/v1/history", HistoryHandler(stockAnalystDelayMs))
+        createContext("/v1/inflation/monthly", InflationHandler)
         executor = null
     }
 
@@ -192,14 +193,15 @@ private class FakeMarketDataServer(
     ) : HttpHandler {
         override fun handle(exchange: HttpExchange) {
             val path = exchange.requestURI.path
-            if (stockAnalystDelayMs > 0 && (path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X"))) {
+            if (stockAnalystDelayMs > 0 && (path.contains("/v1/history/PLN%3DX") || path.contains("/v1/history/PLN=X"))) {
                 Thread.sleep(stockAnalystDelayMs)
             }
             val body = when {
-                path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
+                path.contains("/v1/history/PLN%3DX") || path.contains("/v1/history/PLN=X") ->
                     """{"prices":[{"date":"2025-01-02","close":4.0123},{"date":"2025-01-03","close":4.0088}]}"""
+                        .withStockAnalystProvenance()
 
-                else -> """{"prices":[]}"""
+                else -> """{"prices":[]}""".withStockAnalystProvenance()
             }
             respond(exchange, 200, body)
         }

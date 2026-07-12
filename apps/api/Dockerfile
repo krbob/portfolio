@@ -8,6 +8,7 @@ COPY settings.gradle.kts settings.gradle.kts
 COPY build.gradle.kts build.gradle.kts
 COPY gradle gradle
 COPY portfolio-domain portfolio-domain
+COPY contracts contracts
 COPY src src
 
 RUN ./gradlew --no-daemon installDist

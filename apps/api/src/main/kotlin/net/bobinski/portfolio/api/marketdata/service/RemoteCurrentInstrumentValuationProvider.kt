@@ -113,6 +113,7 @@ class RemoteCurrentInstrumentValuationProvider(
     private suspend fun hasTradingDayPrice(symbol: String, date: LocalDate): Boolean =
         runCatching {
             stockAnalystClient.historyInPln(symbol = symbol, from = date, to = date)
+                .prices
                 .any { it.date == date }
         }.getOrDefault(false)
 

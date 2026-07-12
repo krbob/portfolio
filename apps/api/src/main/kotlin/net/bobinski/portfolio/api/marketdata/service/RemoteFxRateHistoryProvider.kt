@@ -26,7 +26,7 @@ class RemoteFxRateHistoryProvider(
         }
 
         return try {
-            val prices = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to)
+            val prices = stockAnalystClient.history(symbol = symbolFor(currency), from = from, to = to).prices
             snapshotCacheService.putSeries(
                 identity = fxHistoryIdentity(currency),
                 from = from,

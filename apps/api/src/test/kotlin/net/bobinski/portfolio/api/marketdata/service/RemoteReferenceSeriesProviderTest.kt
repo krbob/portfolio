@@ -18,6 +18,7 @@ import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
@@ -360,6 +361,10 @@ class RemoteReferenceSeriesProviderTest {
             assertEquals("reference-history", event.metadata["operation"])
             assertEquals("PLN=X", event.metadata["symbol"])
             assertEquals("429", event.metadata["statusCode"])
+            assertEquals("UPSTREAM_RATE_LIMITED", event.metadata["errorCode"])
+            assertEquals("true", event.metadata["retryable"])
+            assertEquals("stock-rate-limit", event.metadata["requestId"])
+            assertEquals("60", event.metadata["retryAfter"])
             assertTrue(event.metadata["responseBodyPreview"]!!.contains("Too many requests"))
         } finally {
             server.close()
@@ -485,7 +490,9 @@ private class FakeReferenceSeriesServer(
     var goldBenchmarkHistoryRequestCount: Int = 0
 
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-        createContext("/history", HistoryHandler(owner = this@FakeReferenceSeriesServer, failUsdHistory = failUsdHistory))
+        val handler = HistoryHandler(owner = this@FakeReferenceSeriesServer, failUsdHistory = failUsdHistory)
+        createContext("/history", handler)
+        createContext("/v1/history", handler)
         executor = null
     }
 
@@ -513,21 +520,42 @@ private class FakeReferenceSeriesServer(
                     return
                 }
 
-                failUsdHistory && (path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X")) -> {
-                    respond(exchange, """{"error":"Too many requests","retryAfterSeconds":60}""", status = 429)
+                failUsdHistory && (path.contains("/v1/history/PLN%3DX") || path.contains("/v1/history/PLN=X")) -> {
+                    exchange.responseHeaders.add("X-Request-ID", "stock-rate-limit")
+                    exchange.responseHeaders.add("Retry-After", "60")
+                    respond(
+                        exchange,
+                        """
+                            {
+                              "error": "Too many requests",
+                              "errorCode": "UPSTREAM_RATE_LIMITED",
+                              "retryable": true,
+                              "requestId": "stock-rate-limit"
+                            }
+                        """.trimIndent(),
+                        status = 429
+                    )
                     return
                 }
 
-                path.contains("/history/GC%3DF") || path.contains("/history/GC=F") ->
+                path.contains("/v1/history/GC%3DF") || path.contains("/v1/history/GC=F") ->
                     run {
                         owner.goldBenchmarkHistoryRequestCount += 1
-                        respond(exchange, """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}""")
+                        respond(
+                            exchange,
+                            """{"prices":[{"date":"2026-03-19","close":12000.0},{"date":"2026-03-20","close":12100.0}]}"""
+                                .withStockAnalystProvenance()
+                        )
                     }
 
-                path.contains("/history/PLN%3DX") || path.contains("/history/PLN=X") ->
-                    respond(exchange, """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}""")
+                path.contains("/v1/history/PLN%3DX") || path.contains("/v1/history/PLN=X") ->
+                    respond(
+                        exchange,
+                        """{"prices":[{"date":"2026-03-19","close":3.85},{"date":"2026-03-20","close":3.86}]}"""
+                            .withStockAnalystProvenance()
+                    )
 
-                else -> respond(exchange, """{"prices":[]}""")
+                else -> respond(exchange, """{"prices":[]}""".withStockAnalystProvenance())
             }
         }
     }

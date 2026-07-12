@@ -124,6 +124,7 @@ class RemoteHistoricalInstrumentValuationProvider(
                 reason = "Instrument does not define a market symbol."
             )
         val history = stockAnalystClient.historyInPln(symbol, from = from, to = to)
+            .prices
             .map { HistoricalPricePoint(date = it.date, closePricePln = it.closePricePln) }
         snapshotCacheService.putSeries(
             identity = stockHistoryIdentity(symbol),

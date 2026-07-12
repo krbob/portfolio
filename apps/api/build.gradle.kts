@@ -1,5 +1,7 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+import java.security.MessageDigest
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -13,6 +15,13 @@ version = "0.1.0"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
+}
+
+val contractGeneratorSourceSet = sourceSets.create("contractGenerator")
+val upstreamContractsDirectory = layout.projectDirectory.dir("contracts/upstream")
+val generatedContractsDirectory = layout.buildDirectory.dir("generated/sources/upstreamContracts/kotlin")
+val generatedContractsFile = generatedContractsDirectory.map {
+    it.file("net/bobinski/portfolio/api/marketdata/contract/generated/UpstreamContracts.kt")
 }
 
 dependencies {
@@ -43,7 +52,76 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.swagger.parser)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    add(contractGeneratorSourceSet.implementationConfigurationName, libs.swagger.parser)
+}
+
+val checkUpstreamContracts = tasks.register("checkUpstreamContracts") {
+    group = "verification"
+    description = "Verifies the hashes of vendored upstream OpenAPI snapshots."
+    val lockFile = upstreamContractsDirectory.file("upstream-contracts.properties")
+    inputs.file(lockFile)
+    inputs.files(
+        upstreamContractsDirectory.file("stock-analyst-v1.json"),
+        upstreamContractsDirectory.file("edo-calculator-v1.yaml")
+    )
+
+    doLast {
+        val properties = Properties().apply {
+            lockFile.asFile.inputStream().use(::load)
+        }
+        check(properties.getProperty("generatorVersion") == "1") {
+            "Unsupported upstream contract generator version in ${lockFile.asFile}."
+        }
+        listOf("stockAnalyst", "edoCalculator").forEach { contract ->
+            val fileName = properties.getProperty("$contract.file")
+                ?: error("Missing $contract.file in ${lockFile.asFile}")
+            val expectedHash = properties.getProperty("$contract.sha256")
+                ?: error("Missing $contract.sha256 in ${lockFile.asFile}")
+            val snapshot = upstreamContractsDirectory.file(fileName).asFile
+            val digest = MessageDigest.getInstance("SHA-256").digest(snapshot.readBytes())
+            val actualHash = digest.joinToString("") { byte ->
+                (byte.toInt() and 0xff).toString(16).padStart(2, '0')
+            }
+            check(actualHash == expectedHash) {
+                "Hash mismatch for $fileName: expected $expectedHash, got $actualHash. " +
+                    "Update the vendored snapshot and lock together."
+            }
+        }
+    }
+}
+
+val generateUpstreamContracts = tasks.register<JavaExec>("generateUpstreamContracts") {
+    group = "build"
+    description = "Generates compact Kotlin response projections and paths from vendored OpenAPI snapshots."
+    dependsOn(checkUpstreamContracts, contractGeneratorSourceSet.classesTaskName)
+    classpath = contractGeneratorSourceSet.runtimeClasspath
+    mainClass.set("net.bobinski.portfolio.contract.UpstreamContractGenerator")
+    args(
+        upstreamContractsDirectory.file("stock-analyst-v1.json").asFile.absolutePath,
+        upstreamContractsDirectory.file("edo-calculator-v1.yaml").asFile.absolutePath,
+        generatedContractsFile.get().asFile.absolutePath
+    )
+    inputs.files(
+        upstreamContractsDirectory.file("stock-analyst-v1.json"),
+        upstreamContractsDirectory.file("edo-calculator-v1.yaml")
+    )
+    inputs.files(contractGeneratorSourceSet.allSource)
+    outputs.file(generatedContractsFile)
+}
+
+kotlin.sourceSets.named("main") {
+    kotlin.srcDir(generatedContractsDirectory)
+}
+
+tasks.named("compileKotlin") {
+    dependsOn(generateUpstreamContracts)
+}
+
+tasks.named("check") {
+    dependsOn(checkUpstreamContracts)
 }
 
 configure<DetektExtension> {

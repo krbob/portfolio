@@ -212,6 +212,38 @@ docker compose up -d
 
 `PORTFOLIO_STOCK_ANALYST_UI_URL` is optional. Set it only when you want the UI to open an external stock-analyst page for instruments backed by that upstream.
 
+#### Upstream API contracts and timeout budgets
+
+Portfolio calls only the versioned `stock-analyst` and `edo-calculator` `/v1` routes. The configured base URL may
+include a deployment prefix such as `/api`, but it must not include the operation path itself.
+
+The reviewed upstream OpenAPI documents are vendored under `apps/api/contracts/upstream`. Their source commits and
+SHA-256 hashes are locked in `upstream-contracts.properties`, so an isolated Portfolio checkout does not depend on
+sibling repositories. The build parses those snapshots and generates only the response fields and paths consumed by
+Portfolio; it does not check in a full generated client runtime.
+
+The Stock Analyst adapter also keeps the upstream provenance object (`source`, retrieval and market timestamps,
+currency/unit scale, adjustment, coverage, and freshness status) beside quote/history values. Persisting that object
+in Portfolio's snapshot metadata is intentionally a separate storage migration; the client contract does not silently
+flatten it into price points.
+
+```bash
+cd apps/api
+./gradlew checkUpstreamContracts generateUpstreamContracts
+```
+
+Timeouts form an explicit outer budget:
+
+| Call | Upstream internal budget | Portfolio request timeout | Spare |
+| --- | ---: | ---: | ---: |
+| `stock-analyst` quote/history | 15 s | 20 s | 5 s |
+| `edo-calculator` value/history/inflation | 8 s | 10 s | 2 s |
+
+The shared transport issues one HTTP request and does not retry HTTP responses. On failure it preserves HTTP status,
+`error`, `errorCode`, `retryable`, `requestId`, `Retry-After`, and a bounded response preview in readiness and audit
+metadata. Retry policy therefore remains with the explicit upstream budgets instead of multiplying attempts across
+services.
+
 ### Backups
 
 - `PORTFOLIO_BACKUPS_ENABLED`

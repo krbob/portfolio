@@ -1,54 +1,48 @@
 package net.bobinski.portfolio.api.marketdata.client
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystApiErrorPayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystContractPaths
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystDataProvenancePayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystQuotePayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystStockHistoryPayload
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import java.math.BigDecimal
-import java.net.URI
-import java.net.URLEncoder
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.nio.charset.StandardCharsets
-import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 
 class StockAnalystClient(
-    private val httpClient: HttpClient,
+    httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String
 ) {
-    suspend fun quote(symbol: String, currency: String? = null): StockAnalystQuote = withContext(Dispatchers.IO) {
-        val encodedSymbol = URLEncoder.encode(symbol, StandardCharsets.UTF_8).replace("+", "%20")
-        val currencyQuery = currency?.let { "?currency=$it" } ?: ""
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("${baseUrl.trimEnd('/')}/quote/$encodedSymbol$currencyQuery"))
-            .timeout(Duration.ofSeconds(10))
-            .GET()
-            .build()
+    private val transport = UpstreamHttpTransport(httpClient)
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() !in 200..299) {
-            throw MarketDataClientException(
-                message = "stock-analyst returned HTTP ${response.statusCode()} for symbol $symbol.",
-                upstream = "stock-analyst",
+    suspend fun quote(symbol: String, currency: String? = null): StockAnalystQuote {
+        val payload = transport.get(
+            uri = buildUpstreamUri(
+                baseUrl = baseUrl,
+                pathTemplate = StockAnalystContractPaths.QUOTE,
+                pathParameters = mapOf("stock" to symbol),
+                queryParameters = listOf("currency" to currency)
+            ),
+            timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
+            context = UpstreamRequestContext(
+                upstream = STOCK_ANALYST,
                 operation = "quote",
-                symbol = symbol,
-                statusCode = response.statusCode(),
-                responseBodyPreview = responseBodyPreview(response.body())
-            )
-        }
-
-        val payload = json.decodeFromString<StockAnalystQuoteResponse>(response.body())
-        StockAnalystQuote(
+                subject = symbol
+            ),
+            decodeSuccess = { body -> json.decodeFromString<StockAnalystQuotePayload>(body) },
+            decodeError = ::decodeError
+        )
+        return StockAnalystQuote(
             symbol = payload.symbol,
             currency = payload.currency,
             date = LocalDate.parse(payload.date),
             lastPrice = payload.lastPrice,
-            previousClose = payload.previousClose
+            previousClose = payload.previousClose,
+            provenance = payload.provenance.toDomain()
         )
     }
 
@@ -59,43 +53,73 @@ class StockAnalystClient(
         currency: String? = null,
         from: LocalDate? = null,
         to: LocalDate? = null
-    ): List<HistoricalPricePoint> = withContext(Dispatchers.IO) {
-        val encodedSymbol = URLEncoder.encode(symbol, StandardCharsets.UTF_8).replace("+", "%20")
-        val currencyQuery = currency?.let { "&currency=$it" } ?: ""
-        val fromQuery = from?.let { "&from=$it" } ?: ""
-        val toQuery = to?.let { "&to=$it" } ?: ""
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("${baseUrl.trimEnd('/')}/history/$encodedSymbol?period=max&interval=1d$currencyQuery$fromQuery$toQuery"))
-            .timeout(Duration.ofSeconds(20))
-            .GET()
-            .build()
-
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() !in 200..299) {
-            throw MarketDataClientException(
-                message = "stock-analyst history returned HTTP ${response.statusCode()} for symbol $symbol.",
-                upstream = "stock-analyst",
+    ): StockAnalystHistory {
+        val payload = transport.get(
+            uri = buildUpstreamUri(
+                baseUrl = baseUrl,
+                pathTemplate = StockAnalystContractPaths.HISTORY,
+                pathParameters = mapOf("stock" to symbol),
+                queryParameters = listOf(
+                    "period" to "max",
+                    "interval" to "1d",
+                    "currency" to currency,
+                    "from" to from?.toString(),
+                    "to" to to?.toString()
+                )
+            ),
+            timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
+            context = UpstreamRequestContext(
+                upstream = STOCK_ANALYST,
                 operation = "history",
-                symbol = symbol,
-                statusCode = response.statusCode(),
-                responseBodyPreview = responseBodyPreview(response.body())
-            )
-        }
-
-        val payload = json.decodeFromString<StockAnalystHistoryResponse>(response.body())
-        payload.prices.map { price ->
-            HistoricalPricePoint(
-                date = LocalDate.parse(price.date),
-                closePricePln = BigDecimal.valueOf(price.close)
-            )
-        }
+                subject = symbol
+            ),
+            decodeSuccess = { body -> json.decodeFromString<StockAnalystStockHistoryPayload>(body) },
+            decodeError = ::decodeError
+        )
+        return StockAnalystHistory(
+            prices = payload.prices.map { price ->
+                HistoricalPricePoint(
+                    date = LocalDate.parse(price.date),
+                    closePricePln = BigDecimal.valueOf(price.close)
+                )
+            },
+            provenance = payload.provenance.toDomain()
+        )
     }
 
     suspend fun historyInPln(
         symbol: String,
         from: LocalDate? = null,
         to: LocalDate? = null
-    ): List<HistoricalPricePoint> = history(symbol = symbol, currency = "PLN", from = from, to = to)
+    ): StockAnalystHistory = history(symbol = symbol, currency = "PLN", from = from, to = to)
+
+    private fun decodeError(body: String): UpstreamErrorEnvelope? = runCatching {
+        json.decodeFromString<StockAnalystApiErrorPayload>(body).toEnvelope()
+    }.getOrNull()
+
+    private fun StockAnalystApiErrorPayload.toEnvelope() = UpstreamErrorEnvelope(
+        error = error,
+        errorCode = errorCode,
+        retryable = retryable,
+        requestId = requestId
+    )
+
+    private fun StockAnalystDataProvenancePayload.toDomain() = StockAnalystDataProvenance(
+        source = source,
+        retrievedAt = Instant.parse(retrievedAt),
+        marketTimestamp = marketTimestamp?.let(Instant::parse),
+        marketDate = marketDate?.let(LocalDate::parse),
+        currency = currency,
+        unitScale = unitScale,
+        adjustment = adjustment,
+        coverageFrom = coverageFrom?.let(LocalDate::parse),
+        coverageTo = coverageTo?.let(LocalDate::parse),
+        status = status
+    )
+
+    private companion object {
+        const val STOCK_ANALYST = "stock-analyst"
+    }
 }
 
 data class StockAnalystQuote(
@@ -103,25 +127,24 @@ data class StockAnalystQuote(
     val currency: String?,
     val date: LocalDate,
     val lastPrice: Double,
-    val previousClose: Double? = null
+    val previousClose: Double? = null,
+    val provenance: StockAnalystDataProvenance
 )
 
-@Serializable
-private data class StockAnalystQuoteResponse(
-    val symbol: String,
-    val currency: String? = null,
-    val date: String,
-    @SerialName("lastPrice") val lastPrice: Double,
-    val previousClose: Double? = null
+data class StockAnalystHistory(
+    val prices: List<HistoricalPricePoint>,
+    val provenance: StockAnalystDataProvenance
 )
 
-@Serializable
-private data class StockAnalystHistoryResponse(
-    val prices: List<StockAnalystHistoryPriceResponse>
-)
-
-@Serializable
-private data class StockAnalystHistoryPriceResponse(
-    val date: String,
-    val close: Double
+data class StockAnalystDataProvenance(
+    val source: String,
+    val retrievedAt: Instant,
+    val marketTimestamp: Instant?,
+    val marketDate: LocalDate?,
+    val currency: String?,
+    val unitScale: Double,
+    val adjustment: String,
+    val coverageFrom: LocalDate?,
+    val coverageTo: LocalDate?,
+    val status: String
 )

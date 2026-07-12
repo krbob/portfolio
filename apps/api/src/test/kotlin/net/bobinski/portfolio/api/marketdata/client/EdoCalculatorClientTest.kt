@@ -66,7 +66,7 @@ class EdoCalculatorClientTest {
         """.trimIndent()
 
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/edo/value") { exchange ->
+        server.createContext("/v1/edo/value") { exchange ->
             val bytes = responseBody.toByteArray()
             exchange.sendResponseHeaders(200, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
@@ -137,7 +137,7 @@ class EdoCalculatorClientTest {
         """.trimIndent()
 
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/edo/value") { exchange ->
+        server.createContext("/v1/edo/value") { exchange ->
             val bytes = responseBody.toByteArray()
             exchange.sendResponseHeaders(200, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
@@ -167,7 +167,7 @@ class EdoCalculatorClientTest {
     }
 
     @Test
-    fun `unitValueInPln handles response without periods gracefully`() = runBlocking {
+    fun `unitValueInPln handles an empty contract-compliant period list`() = runBlocking {
         val responseBody = """
             {
               "purchaseDate": "2024-03-15",
@@ -176,13 +176,14 @@ class EdoCalculatorClientTest {
               "margin": "2.00",
               "principal": "100.00",
               "edoValue": {
-                "totalValue": "106.50"
+                "totalValue": "106.50",
+                "periods": []
               }
             }
         """.trimIndent()
 
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/edo/value") { exchange ->
+        server.createContext("/v1/edo/value") { exchange ->
             val bytes = responseBody.toByteArray()
             exchange.sendResponseHeaders(200, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
