@@ -8,8 +8,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.sql.DataSource
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
@@ -30,8 +30,13 @@ class SystemReadinessService(
     private val edoCalculatorClient: EdoCalculatorClient? = null,
     private val goldApiClient: GoldApiClient? = null
 ) {
+    fun currentLocal(): SystemReadiness = readiness(localChecks())
+
     suspend fun current(): SystemReadiness {
-        val checks = checks()
+        return readiness(localChecks() + marketDataChecks())
+    }
+
+    private fun readiness(checks: List<SystemReadinessCheck>): SystemReadiness {
         return SystemReadiness(
             status = readinessStatus(checks),
             checkedAt = Instant.now(clock),
@@ -39,13 +44,12 @@ class SystemReadinessService(
         )
     }
 
-    private suspend fun checks(): List<SystemReadinessCheck> = buildList {
-        add(databasePathCheck())
-        add(databaseConnectionCheck())
-        add(backupDirectoryCheck())
-        addAll(marketDataChecks())
-        add(authCheck())
-    }
+    private fun localChecks(): List<SystemReadinessCheck> = listOf(
+        databasePathCheck(),
+        databaseConnectionCheck(),
+        backupDirectoryCheck(),
+        authCheck()
+    )
 
     private fun databasePathCheck(): SystemReadinessCheck {
         val databasePath = Path.of(persistenceConfig.databasePath).toAbsolutePath().normalize()
@@ -249,6 +253,7 @@ class SystemReadinessService(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun probeCheck(
         key: String,
         label: String,
@@ -265,36 +270,43 @@ class SystemReadinessService(
                 message = unavailableMessage
             )
         } else {
-            runCatching {
-                val message = withTimeout(MARKET_DATA_PROBE_TIMEOUT_MS) { probe() }
-                SystemReadinessCheck(
-                    key = key,
-                    label = label,
-                    status = ReadinessCheckStatus.PASS,
-                    message = message
-                )
-            }.getOrElse { exception ->
+            try {
+                val message = withTimeoutOrNull(MARKET_DATA_PROBE_TIMEOUT_MS) { probe() }
+                    ?: return timedOutProbeCheck(
+                        key = key,
+                        label = label,
+                        probeDetails = probeDetails
+                    )
+                SystemReadinessCheck(key, label, ReadinessCheckStatus.PASS, message)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
                 val details = when (exception) {
                     is MarketDataClientException -> probeDetails + exception.toReadinessDetails()
-                    is TimeoutCancellationException -> probeDetails + mapOf(
-                        "timeoutMs" to MARKET_DATA_PROBE_TIMEOUT_MS.toString()
-                    )
                     else -> probeDetails
-                }
-                val message = when (exception) {
-                    is TimeoutCancellationException -> "$label probe timed out after ${MARKET_DATA_PROBE_TIMEOUT_MS} ms."
-                    else -> exception.message ?: "$label probe failed."
                 }
                 SystemReadinessCheck(
                     key = key,
                     label = label,
                     status = ReadinessCheckStatus.WARN,
-                    message = message,
+                    message = exception.message ?: "$label probe failed.",
                     details = details
                 )
             }
         }
     }
+
+    private fun timedOutProbeCheck(
+        key: String,
+        label: String,
+        probeDetails: Map<String, String>
+    ): SystemReadinessCheck = SystemReadinessCheck(
+        key = key,
+        label = label,
+        status = ReadinessCheckStatus.WARN,
+        message = "$label probe timed out after ${MARKET_DATA_PROBE_TIMEOUT_MS} ms.",
+        details = probeDetails + mapOf("timeoutMs" to MARKET_DATA_PROBE_TIMEOUT_MS.toString())
+    )
 
     private fun authCheck(): SystemReadinessCheck =
         if (!authConfig.enabled) {

@@ -10,7 +10,9 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
@@ -23,6 +25,7 @@ import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -132,6 +135,67 @@ class SystemReadinessServiceTest {
 
             assertEquals(2, server.stockAnalystRequestCount)
             assertEquals(2, server.edoCalculatorRequestCount)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun `local readiness does not call market data upstreams`() {
+        val server = FakeMarketDataServer()
+        server.start()
+
+        try {
+            val service = SystemReadinessService(
+                persistenceConfig = persistenceConfig(),
+                backupConfig = backupConfig(),
+                marketDataConfig = marketDataConfig(baseUrl = server.baseUrl),
+                authConfig = authConfig(),
+                clock = fixedClock(),
+                stockAnalystClient = stockAnalystClient(server.baseUrl),
+                edoCalculatorClient = edoCalculatorClient(server.baseUrl),
+                goldApiClient = goldApiClient(server.baseUrl)
+            )
+
+            val readiness = service.currentLocal()
+
+            assertEquals(SystemReadinessStatus.READY, readiness.status)
+            assertEquals(0, server.stockAnalystRequestCount)
+            assertEquals(0, server.edoCalculatorRequestCount)
+            assertTrue(readiness.checks.none { check -> check.key == "market-data" })
+            assertTrue(readiness.checks.none { check -> check.key == "stock-analyst" })
+            assertTrue(readiness.checks.none { check -> check.key == "edo-calculator" })
+            assertTrue(readiness.checks.none { check -> check.key == "gold-market-data" })
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun `detailed readiness preserves caller cancellation`() {
+        val server = FakeMarketDataServer(stockAnalystDelayMs = 1_000)
+        server.start()
+
+        try {
+            val service = SystemReadinessService(
+                persistenceConfig = persistenceConfig(),
+                backupConfig = backupConfig(),
+                marketDataConfig = marketDataConfig(baseUrl = server.baseUrl),
+                authConfig = authConfig(),
+                clock = fixedClock(),
+                stockAnalystClient = stockAnalystClient(server.baseUrl),
+                edoCalculatorClient = edoCalculatorClient(server.baseUrl),
+                goldApiClient = goldApiClient(server.baseUrl)
+            )
+
+            assertThrows(TimeoutCancellationException::class.java) {
+                runBlocking {
+                    withTimeout(100) {
+                        service.current()
+                    }
+                }
+            }
+            assertEquals(0, server.edoCalculatorRequestCount)
         } finally {
             server.close()
         }
