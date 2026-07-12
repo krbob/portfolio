@@ -5,9 +5,12 @@ import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
 import { I18nProvider } from './lib/i18n'
 import { queryClient } from './lib/query-client'
+import { initializeUiHandoff } from './lib/ui-handoff'
 import './app.css'
 
 const PRELOAD_RELOAD_KEY = 'portfolio:preload-reload-at'
+
+initializeUiHandoff()
 
 function shouldReloadAfterPreloadError() {
   const now = Date.now()

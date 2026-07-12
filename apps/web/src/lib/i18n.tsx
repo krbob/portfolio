@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react'
+import { readUiLocalePreference } from './ui-handoff'
 
 export type UiLanguage = 'pl' | 'en'
 
@@ -52,6 +53,9 @@ function detectUiLanguage(): UiLanguage {
     return 'en'
   }
 
-  const candidates = navigator.languages?.length ? navigator.languages : [navigator.language]
+  const preferredLocale = typeof window === 'undefined' ? null : readUiLocalePreference()
+  const candidates = preferredLocale
+    ? [preferredLocale]
+    : navigator.languages?.length ? navigator.languages : [navigator.language]
   return candidates.some((language) => language?.toLowerCase().startsWith('pl')) ? 'pl' : 'en'
 }
