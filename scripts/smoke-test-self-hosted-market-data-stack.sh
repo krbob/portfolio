@@ -52,7 +52,7 @@ wait_for_web() {
 wait_for_market_readiness() {
   attempt=0
   while [ "$attempt" -lt 120 ]; do
-    readiness=$(curl -s "$API_BASE_URL/v1/readiness" || true)
+    readiness=$(curl -s "$API_BASE_URL/v1/readiness/details" || true)
     if [ -n "$readiness" ] && JSON_PAYLOAD=$readiness python3 - <<'PY'
 import json
 import os
@@ -75,7 +75,7 @@ PY
     attempt=$((attempt + 1))
     sleep 1
   done
-  printf 'Timed out waiting for self-hosted market-data readiness on %s/v1/readiness\n' "$API_BASE_URL" >&2
+  printf 'Timed out waiting for self-hosted market-data readiness on %s/v1/readiness/details\n' "$API_BASE_URL" >&2
   return 1
 }
 
@@ -165,7 +165,7 @@ wait_for_portfolio_valuation_state
 
 overview=$(curl -sSf "$API_BASE_URL/v1/portfolio/overview")
 holdings=$(curl -sSf "$API_BASE_URL/v1/portfolio/holdings")
-readiness=$(curl -sSf "$API_BASE_URL/v1/readiness")
+readiness=$(curl -sSf "$API_BASE_URL/v1/readiness/details")
 overview_via_web=$(curl -sSf "$WEB_BASE_URL/api/v1/portfolio/overview")
 
 assert_self_hosted_state "$overview" "$holdings" "$readiness" "$overview_via_web"
