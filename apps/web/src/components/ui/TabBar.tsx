@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
 interface TabBarProps<T extends string> {
   value: T
@@ -19,6 +19,23 @@ export function TabBar<T extends string>({
   const containerRef = useRef<HTMLDivElement>(null)
   const [indicator, setIndicator] = useState({ left: 0, width: 0 })
   const hasInitialized = useRef(false)
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = tabs.length - 1
+    if (nextIndex == null) return
+
+    event.preventDefault()
+    const nextTab = tabs[nextIndex]
+    onChange(nextTab.value)
+    containerRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+      .item(nextIndex)
+      .focus()
+  }
 
   useEffect(() => {
     const container = containerRef.current
@@ -43,8 +60,9 @@ export function TabBar<T extends string>({
       className="relative mb-6 flex max-w-full gap-0 overflow-x-auto overscroll-x-contain border-b border-zinc-800 [-webkit-overflow-scrolling:touch]"
       role="tablist"
       aria-label={ariaLabel}
+      aria-orientation="horizontal"
     >
-      {tabs.map((tab) => (
+      {tabs.map((tab, index) => (
         <button
           key={tab.value}
           id={idBase ? `${idBase}-tab-${tab.value}` : undefined}
@@ -54,6 +72,7 @@ export function TabBar<T extends string>({
           aria-controls={idBase ? `${idBase}-panel-${tab.value}` : undefined}
           tabIndex={value === tab.value ? 0 : -1}
           onClick={() => onChange(tab.value)}
+          onKeyDown={(event) => handleKeyDown(event, index)}
           className={clsx(
             'relative shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors',
             value === tab.value ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-300',

@@ -12,6 +12,8 @@ test.describe('keyboard accessibility', () => {
     const dialog = page.getByRole('dialog', { name: /navigation|nawigacja/i })
     const close = dialog.getByRole('button', { name: /close navigation|zamknij nawigację/i })
     await expect(close).toBeFocused()
+    await expect(page.locator('main')).toHaveAttribute('inert', '')
+    await expect(page.locator('main')).toHaveAttribute('aria-hidden', 'true')
 
     await page.keyboard.press('Shift+Tab')
     await expect.poll(() => page.evaluate(() => (

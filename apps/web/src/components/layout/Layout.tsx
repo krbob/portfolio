@@ -138,11 +138,19 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-ui-canvas text-ui-text lg:flex lg:h-screen lg:overflow-hidden">
-      <aside className="hidden border-r border-ui-border lg:flex lg:w-60 lg:shrink-0">
+      <aside
+        className="hidden border-r border-ui-border lg:flex lg:w-60 lg:shrink-0"
+        aria-hidden={isMobileNavVisible ? true : undefined}
+        inert={isMobileNavVisible ? true : undefined}
+      >
         <Sidebar />
       </aside>
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
+      <div
+        className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0"
+        aria-hidden={isMobileNavVisible ? true : undefined}
+        inert={isMobileNavVisible ? true : undefined}
+      >
         <header className="sticky top-0 z-30 border-b border-ui-border bg-ui-canvas/95 backdrop-blur lg:hidden">
           <div
             className="flex items-center gap-3 px-4 py-3"
@@ -182,7 +190,14 @@ export function Layout({ children }: { children: ReactNode }) {
               paddingBottom: 'var(--safe-bottom)',
             }}
           >
-            <div className="mx-auto max-w-[100rem] p-4 sm:p-5 lg:p-8">{children}</div>
+            <div
+              className={clsx(
+                'mx-auto max-w-[100rem] p-4 sm:p-5 lg:p-8',
+                location.pathname !== '/transactions' && 'pb-28 sm:pb-28 lg:pb-24',
+              )}
+            >
+              {children}
+            </div>
           </div>
         </main>
         <QuickAddTransactionButton />

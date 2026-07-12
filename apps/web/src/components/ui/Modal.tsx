@@ -48,9 +48,29 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   useEffect(() => {
     if (!open || !mounted) return undefined
     const previousOverflow = document.body.style.overflow
+    const portalRoot = panelRef.current?.parentElement
+    const backgroundElements = portalRoot
+      ? Array.from(document.body.children).filter((element) => element !== portalRoot)
+      : []
+    const previousBackgroundState = backgroundElements.map((element) => ({
+      element,
+      ariaHidden: element.getAttribute('aria-hidden'),
+      inert: element.hasAttribute('inert'),
+    }))
+
     document.body.style.overflow = 'hidden'
+    for (const element of backgroundElements) {
+      element.setAttribute('aria-hidden', 'true')
+      element.setAttribute('inert', '')
+    }
+
     return () => {
       document.body.style.overflow = previousOverflow
+      for (const { element, ariaHidden, inert } of previousBackgroundState) {
+        if (ariaHidden == null) element.removeAttribute('aria-hidden')
+        else element.setAttribute('aria-hidden', ariaHidden)
+        if (!inert) element.removeAttribute('inert')
+      }
     }
   }, [mounted, open])
 

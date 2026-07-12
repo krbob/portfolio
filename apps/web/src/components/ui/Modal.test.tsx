@@ -39,6 +39,8 @@ describe('Modal keyboard accessibility', () => {
     expect(dialog).toBeInTheDocument()
     expect(close).toHaveFocus()
     expect(document.body.style.overflow).toBe('hidden')
+    expect(opener.parentElement).toHaveAttribute('inert')
+    expect(opener.parentElement).toHaveAttribute('aria-hidden', 'true')
 
     await user.tab({ shift: true })
     expect(save).toHaveFocus()
@@ -49,6 +51,8 @@ describe('Modal keyboard accessibility', () => {
     await user.keyboard('{Escape}')
     expect(opener).toHaveFocus()
     expect(document.body.style.overflow).toBe('')
+    expect(opener.parentElement).not.toHaveAttribute('inert')
+    expect(opener.parentElement).not.toHaveAttribute('aria-hidden')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })
