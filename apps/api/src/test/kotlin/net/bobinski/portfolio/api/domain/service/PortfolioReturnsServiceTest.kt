@@ -1,6 +1,10 @@
 package net.bobinski.portfolio.api.domain.service
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.Transaction
@@ -31,8 +35,62 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 class PortfolioReturnsServiceTest {
+
+    @Test
+    fun `parallel history and returns reuse one daily analytics snapshot`() = runBlocking {
+        val fixture = returnsFixture(coalesceComputations = true)
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(prices = emptyList())
+        val historyStarted = CompletableDeferred<Unit>()
+        val releaseHistory = CompletableDeferred<Unit>()
+        fixture.referenceProvider.beforeGold = {
+            historyStarted.complete(Unit)
+            releaseHistory.await()
+        }
+
+        val history = async(Dispatchers.Default) { fixture.historyService.dailyHistory() }
+        historyStarted.await()
+        val returns = async(Dispatchers.Default) { fixture.service.returns() }
+        yield()
+        releaseHistory.complete(Unit)
+
+        history.await()
+        returns.await()
+        assertEquals(1, fixture.referenceProvider.goldInvocationCount)
+    }
+
+    @Test
+    fun `daily analytics snapshot is reused until canonical revision changes`() = runBlocking {
+        val fixture = returnsFixture(coalesceComputations = true)
+        val originalAccount = account()
+        fixture.accountRepository.save(originalAccount)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(prices = emptyList())
+
+        fixture.historyService.dailyHistory()
+        fixture.historyService.dailyHistory()
+        assertEquals(1, fixture.referenceProvider.goldInvocationCount)
+
+        fixture.accountRepository.save(
+            originalAccount.copy(
+                name = "Renamed brokerage",
+                updatedAt = Instant.parse("2025-03-02T12:00:00Z")
+            )
+        )
+        fixture.historyService.dailyHistory()
+
+        assertEquals(2, fixture.referenceProvider.goldInvocationCount)
+    }
 
     @Test
     fun `returns compute nominal and real mwrr for pln and usd`() = runBlocking {
@@ -445,7 +503,8 @@ class PortfolioReturnsServiceTest {
     }
 
     private fun returnsFixture(
-        clock: Clock = Clock.fixed(Instant.parse("2026-03-01T12:00:00Z"), ZoneOffset.UTC)
+        clock: Clock = Clock.fixed(Instant.parse("2026-03-01T12:00:00Z"), ZoneOffset.UTC),
+        coalesceComputations: Boolean = false
     ): ReturnsFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -470,6 +529,21 @@ class PortfolioReturnsServiceTest {
             auditLogService = auditLogService,
             clock = clock
         )
+        val computationCoordinator = if (coalesceComputations) ReadModelComputationCoordinator() else null
+        val cacheDescriptorService = if (coalesceComputations) {
+            PortfolioReadModelCacheDescriptorService(
+                accountRepository = accountRepository,
+                appPreferenceRepository = appPreferenceRepository,
+                instrumentRepository = instrumentRepository,
+                portfolioTargetRepository = portfolioTargetRepository,
+                transactionRepository = transactionRepository,
+                marketDataCacheFingerprint = "returns-test",
+                json = net.bobinski.portfolio.api.config.AppJsonFactory.create(),
+                clock = clock
+            )
+        } else {
+            null
+        }
         val historyService = PortfolioHistoryService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -481,7 +555,9 @@ class PortfolioReturnsServiceTest {
             inflationAdjustmentProvider = inflationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
             benchmarkSettingsService = benchmarkSettingsService,
-            clock = clock
+            clock = clock,
+            cacheDescriptorService = cacheDescriptorService,
+            computationCoordinator = computationCoordinator
         )
         val service = PortfolioReturnsService(
             transactionRepository = transactionRepository,
@@ -490,11 +566,14 @@ class PortfolioReturnsServiceTest {
             referenceSeriesProvider = referenceProvider,
             inflationAdjustmentProvider = inflationProvider,
             benchmarkSettingsService = benchmarkSettingsService,
-            clock = clock
+            clock = clock,
+            cacheDescriptorService = cacheDescriptorService,
+            computationCoordinator = computationCoordinator
         )
 
         return ReturnsFixture(
             service = service,
+            historyService = historyService,
             accountRepository = accountRepository,
             transactionRepository = transactionRepository,
             referenceProvider = referenceProvider,
@@ -611,6 +690,7 @@ class PortfolioReturnsServiceTest {
 
     private data class ReturnsFixture(
         val service: PortfolioReturnsService,
+        val historyService: PortfolioHistoryService,
         val accountRepository: InMemoryAccountRepository,
         val transactionRepository: InMemoryTransactionRepository,
         val referenceProvider: FakeReferenceSeriesProvider,
@@ -624,10 +704,18 @@ class PortfolioReturnsServiceTest {
         var equity: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Equity benchmark not set.")
         var bond: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Bond benchmark not set.")
         val benchmarksBySymbol: MutableMap<String, ReferenceSeriesResult> = linkedMapOf()
+        private val goldInvocations = AtomicInteger()
+        val goldInvocationCount: Int
+            get() = goldInvocations.get()
+        var beforeGold: suspend () -> Unit = {}
 
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
-        override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = gold
+        override suspend fun goldPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult {
+            goldInvocations.incrementAndGet()
+            beforeGold()
+            return gold
+        }
 
         override suspend fun equityBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = equity
 

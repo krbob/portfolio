@@ -1,17 +1,20 @@
 package net.bobinski.portfolio.api.plugins
 
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.dependency.RepositoryBindingMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.dependency.appModule
+import net.bobinski.portfolio.api.domain.service.ReadModelComputationCoordinator
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import org.koin.ktor.plugin.Koin
+import org.koin.ktor.ext.get
 
 fun Application.configureDependencyInjection(
     repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
@@ -46,5 +49,8 @@ fun Application.configureDependencyInjection(
                 repositoryBindingMode = repositoryBindingMode
             )
         )
+    }
+    monitor.subscribe(ApplicationStopping) {
+        get<ReadModelComputationCoordinator>().close()
     }
 }

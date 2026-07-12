@@ -44,7 +44,9 @@ class PortfolioHistoryService(
     private val transactionFxConversionService: TransactionFxConversionService,
     private val benchmarkSettingsService: PortfolioBenchmarkSettingsService,
     private val clock: Clock,
-    private val marketDataStaleAfterDays: Long = 3
+    private val marketDataStaleAfterDays: Long = 3,
+    private val cacheDescriptorService: PortfolioReadModelCacheDescriptorService? = null,
+    private val computationCoordinator: ReadModelComputationCoordinator? = null
 ) {
     private val freshnessPolicy = MarketDataFreshnessPolicy(
         clock = clock,
@@ -52,7 +54,19 @@ class PortfolioHistoryService(
     )
     private val inflationSupport = PortfolioInflationSupport(inflationAdjustmentProvider)
 
-    suspend fun dailyHistory(): PortfolioDailyHistory {
+    suspend fun dailyHistory(forceRefresh: Boolean = false): PortfolioDailyHistory {
+        val coordinator = computationCoordinator ?: return computeDailyHistory()
+        val descriptor = cacheDescriptorService?.dailyHistoryDescriptor()
+            ?: return computeDailyHistory()
+        val key = descriptor.computationKey("domain:daily-history")
+        return if (forceRefresh) {
+            coordinator.refresh(key) { computeDailyHistory() }
+        } else {
+            coordinator.getOrCompute(key) { computeDailyHistory() }
+        }
+    }
+
+    private suspend fun computeDailyHistory(): PortfolioDailyHistory {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
         val transactions = transactionRepository.list()

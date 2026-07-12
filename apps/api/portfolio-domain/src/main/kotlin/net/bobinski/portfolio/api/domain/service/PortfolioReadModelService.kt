@@ -33,7 +33,9 @@ class PortfolioReadModelService(
     private val edoLotValuationProvider: EdoLotValuationProvider,
     private val transactionFxConversionService: TransactionFxConversionService,
     private val clock: Clock,
-    private val marketDataStaleAfterDays: Long = 3
+    private val marketDataStaleAfterDays: Long = 3,
+    private val cacheDescriptorService: PortfolioReadModelCacheDescriptorService? = null,
+    private val computationCoordinator: ReadModelComputationCoordinator? = null
 ) {
     private val freshnessPolicy = MarketDataFreshnessPolicy(
         clock = clock,
@@ -181,6 +183,15 @@ class PortfolioReadModelService(
     }
 
     private suspend fun buildValuedSnapshot(): PortfolioValuationSnapshot {
+        val coordinator = computationCoordinator ?: return computeValuedSnapshot()
+        val descriptor = cacheDescriptorService?.valuationDescriptor()
+            ?: return computeValuedSnapshot()
+        return coordinator.run(descriptor.computationKey("domain:valuation-snapshot")) {
+            computeValuedSnapshot()
+        }
+    }
+
+    private suspend fun computeValuedSnapshot(): PortfolioValuationSnapshot {
         val ledgerSnapshot = buildLedgerSnapshot()
         val valuations = valueInstruments(
             ledgerSnapshot.holdings.map(MutableHolding::instrument).filter { it.kind != InstrumentKind.BOND_EDO }

@@ -27,6 +27,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.PersistenceTransactionRunner
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
+import net.bobinski.portfolio.api.domain.service.ReadModelComputationCoordinator
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
 import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
@@ -199,7 +200,15 @@ fun appModule(
 
     single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
     single { MarketDataSnapshotCacheService(appPreferenceService = get()) }
-    single { ReadModelCacheService(repository = get(), json = get(), clock = get()) }
+    single { ReadModelComputationCoordinator() }
+    single {
+        ReadModelCacheService(
+            repository = get(),
+            json = get(),
+            clock = get(),
+            computationCoordinator = get()
+        )
+    }
     single { AuditLogService(auditEventRepository = get(), clock = get()) }
     single { MarketDataFailureAuditService(auditLogService = get()) }
     single<PortfolioPushNotifier> {
@@ -281,7 +290,9 @@ fun appModule(
             edoLotValuationProvider = get(),
             transactionFxConversionService = get(),
             clock = get(),
-            marketDataStaleAfterDays = marketDataConfig.staleAfterDays
+            marketDataStaleAfterDays = marketDataConfig.staleAfterDays,
+            cacheDescriptorService = get(),
+            computationCoordinator = get()
         )
     }
     single {
@@ -327,7 +338,9 @@ fun appModule(
             transactionFxConversionService = get(),
             benchmarkSettingsService = get(),
             clock = get(),
-            marketDataStaleAfterDays = marketDataConfig.staleAfterDays
+            marketDataStaleAfterDays = marketDataConfig.staleAfterDays,
+            cacheDescriptorService = get(),
+            computationCoordinator = get()
         )
     }
     single {
@@ -338,7 +351,9 @@ fun appModule(
             referenceSeriesProvider = get(),
             inflationAdjustmentProvider = get(),
             benchmarkSettingsService = get(),
-            clock = get()
+            clock = get(),
+            cacheDescriptorService = get(),
+            computationCoordinator = get()
         )
     }
     single {

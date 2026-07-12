@@ -11,8 +11,12 @@ class PortfolioAllocationService(
     private val portfolioReadModelService: PortfolioReadModelService,
     private val rebalancingSettingsService: PortfolioRebalancingSettingsService
 ) {
-    suspend fun summary(): PortfolioAllocationSummary {
-        val context = loadContext()
+    suspend fun summary(): PortfolioAllocationSummary = computeSummary(loadContext())
+
+    suspend fun summary(overview: PortfolioOverview): PortfolioAllocationSummary =
+        computeSummary(loadContext(overview))
+
+    private fun computeSummary(context: AllocationContext): PortfolioAllocationSummary {
         return buildSummary(
             inputs = SummaryInputs(
                 asOf = context.overview.asOf,
@@ -256,7 +260,10 @@ class PortfolioAllocationService(
     }
 
     private suspend fun loadContext(): AllocationContext {
-        val overview = portfolioReadModelService.overview()
+        return loadContext(portfolioReadModelService.overview())
+    }
+
+    private suspend fun loadContext(overview: PortfolioOverview): AllocationContext {
         val targets = portfolioTargetRepository.list()
         return AllocationContext(
             overview = overview,

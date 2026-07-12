@@ -31,31 +31,48 @@ class PortfolioReadModelCacheDescriptorService(
         private const val FINGERPRINT_MODULUS = 100_000_000
     }
 
+    suspend fun valuationDescriptor(): ReadModelCacheDescriptor = descriptor(
+        cacheKey = "portfolio.valuation-snapshot",
+        modelName = "VALUATION_SNAPSHOT",
+        modelVersion = 1,
+        includeTargets = false
+    )
+
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
-        modelVersion = 9
+        modelVersion = 10,
+        preferenceUpdatedAt = preferenceUpdatedAt(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
     )
 
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.returns",
         modelName = "RETURNS",
-        modelVersion = 6,
-        preferenceUpdatedAt = appPreferenceRepository.get(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)?.updatedAt
+        modelVersion = 7,
+        preferenceUpdatedAt = preferenceUpdatedAt(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
     )
 
     private suspend fun descriptor(
         cacheKey: String,
         modelName: String,
         modelVersion: Int,
-        preferenceUpdatedAt: Instant? = null
+        preferenceUpdatedAt: Instant? = null,
+        includeTargets: Boolean = true,
+        parameters: Map<String, String> = emptyMap()
     ): ReadModelCacheDescriptor {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
-        val targets = portfolioTargetRepository.list()
+        val targets = if (includeTargets) portfolioTargetRepository.list() else emptyList()
         val transactions = transactionRepository.list()
         val marketDataSnapshotUpdatedAt = marketDataSnapshotCanonicalUpdatedAt()
         val today = LocalDate.now(clock)
+        val canonicalRevision = maxUpdatedAt(
+            accounts = accounts,
+            instruments = instruments,
+            targets = targets,
+            transactions = transactions,
+            preferenceUpdatedAt = preferenceUpdatedAt
+        )
 
         return ReadModelCacheDescriptor(
             cacheKey = cacheKey,
@@ -63,16 +80,13 @@ class PortfolioReadModelCacheDescriptorService(
             modelVersion = cacheDescriptorVersion(modelVersion),
             inputsFrom = transactions.minOfOrNull(Transaction::tradeDate) ?: today,
             inputsTo = today,
-            sourceUpdatedAt = maxUpdatedAt(
-                accounts,
-                instruments,
-                targets,
-                transactions,
-                preferenceUpdatedAt,
-                marketDataSnapshotUpdatedAt
-            )
+            sourceUpdatedAt = listOfNotNull(canonicalRevision, marketDataSnapshotUpdatedAt).maxOrNull(),
+            canonicalRevision = canonicalRevision,
+            parameters = parameters.toSortedMap()
         )
     }
+
+    private suspend fun preferenceUpdatedAt(key: String): Instant? = appPreferenceRepository.get(key)?.updatedAt
 
     private fun cacheDescriptorVersion(baseVersion: Int): Int =
         (baseVersion * FINGERPRINT_MODULUS) + marketDataFingerprint()

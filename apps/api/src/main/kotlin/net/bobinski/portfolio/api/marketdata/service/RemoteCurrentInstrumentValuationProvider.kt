@@ -6,6 +6,7 @@ import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystQuote
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import kotlinx.coroutines.CancellationException
 import java.math.RoundingMode
 import java.time.LocalDate
 
@@ -57,6 +58,8 @@ class RemoteCurrentInstrumentValuationProvider(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             instrument.symbol?.let { symbol ->
                 snapshotCacheService.recordQuoteFailure(

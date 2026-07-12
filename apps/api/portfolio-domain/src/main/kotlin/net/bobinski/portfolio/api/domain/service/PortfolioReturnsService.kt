@@ -27,12 +27,32 @@ class PortfolioReturnsService(
     private val referenceSeriesProvider: ReferenceSeriesProvider,
     private val inflationAdjustmentProvider: InflationAdjustmentProvider,
     private val benchmarkSettingsService: PortfolioBenchmarkSettingsService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val cacheDescriptorService: PortfolioReadModelCacheDescriptorService? = null,
+    private val computationCoordinator: ReadModelComputationCoordinator? = null
 ) {
     private val inflationSupport = PortfolioInflationSupport(inflationAdjustmentProvider)
 
     suspend fun returns(): PortfolioReturns {
-        val history = portfolioHistoryService.dailyHistory()
+        val coordinator = computationCoordinator
+            ?: return computeReturns(portfolioHistoryService.dailyHistory())
+        val descriptor = cacheDescriptorService?.returnsDescriptor()
+            ?: return computeReturns(portfolioHistoryService.dailyHistory())
+        return coordinator.getOrCompute(descriptor.computationKey("domain:returns")) {
+            computeReturns(portfolioHistoryService.dailyHistory())
+        }
+    }
+
+    suspend fun returns(history: PortfolioDailyHistory): PortfolioReturns {
+        val coordinator = computationCoordinator ?: return computeReturns(history)
+        val descriptor = cacheDescriptorService?.returnsDescriptor()
+            ?: return computeReturns(history)
+        return coordinator.refresh(descriptor.computationKey("domain:returns")) {
+            computeReturns(history)
+        }
+    }
+
+    private suspend fun computeReturns(history: PortfolioDailyHistory): PortfolioReturns {
         val today = LocalDate.now(clock)
 
         if (history.points.isEmpty()) {

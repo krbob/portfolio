@@ -4,6 +4,7 @@ import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import java.time.YearMonth
+import kotlinx.coroutines.CancellationException
 
 class RemoteInflationAdjustmentProvider(
     private val config: MarketDataConfig,
@@ -28,6 +29,8 @@ class RemoteInflationAdjustmentProvider(
             snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
             snapshotCacheService.getCumulativeInflation(from)?.let { return it }
             InflationAdjustmentResult.Failure(exception.message ?: "Inflation request failed.")
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
             snapshotCacheService.getCumulativeInflation(from)?.let { return it }
@@ -58,6 +61,8 @@ class RemoteInflationAdjustmentProvider(
             snapshotCacheService.recordMonthlyInflationFailure(reason = exception.message)
             snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }
             InflationSeriesResult.Failure(exception.message ?: "Monthly inflation request failed.")
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordMonthlyInflationFailure(reason = exception.message)
             snapshotCacheService.getMonthlyInflation(from = from, untilExclusive = untilExclusive)?.let { return it }

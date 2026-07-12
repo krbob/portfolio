@@ -102,25 +102,11 @@ class ReadModelRefreshService(
         lastTrigger = trigger
 
         return try {
-            val dailyHistoryDescriptor = descriptorService.dailyHistoryDescriptor()
-            readModelCacheService.forceRefresh(
-                descriptor = dailyHistoryDescriptor,
-                serializer = PortfolioDailyHistoryResponse.serializer()
-            ) {
-                portfolioHistoryService.dailyHistory().toRefreshResponse()
-            }
-
-            val returnsDescriptor = descriptorService.returnsDescriptor()
-            readModelCacheService.forceRefresh(
-                descriptor = returnsDescriptor,
-                serializer = PortfolioReturnsResponse.serializer()
-            ) {
-                portfolioReturnsService.returns().toRefreshResponse()
-            }
+            val returns = refreshAnalyticsSnapshots()
 
             val alertDispatchResult = portfolioAlertService?.let { service ->
                 runCatching {
-                    service.dispatchNewAlerts()
+                    service.dispatchNewAlerts(prefetchedReturns = returns)
                 }.onFailure { error ->
                     if (error is CancellationException) {
                         throw error
@@ -157,6 +143,8 @@ class ReadModelRefreshService(
                 refreshedModelCount = MODEL_NAMES.size,
                 modelNames = MODEL_NAMES
             )
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             val failedAt = Instant.now(clock)
             val durationMs = failedAt.toEpochMilli() - startedAt.toEpochMilli()
@@ -180,6 +168,27 @@ class ReadModelRefreshService(
         } finally {
             running = false
         }
+    }
+
+    private suspend fun refreshAnalyticsSnapshots(): PortfolioReturns {
+        val dailyHistoryDescriptor = descriptorService.dailyHistoryDescriptor()
+        val dailyHistory = portfolioHistoryService.dailyHistory(forceRefresh = true)
+        readModelCacheService.forceRefresh(
+            descriptor = dailyHistoryDescriptor,
+            serializer = PortfolioDailyHistoryResponse.serializer()
+        ) {
+            dailyHistory.toRefreshResponse()
+        }
+
+        val returnsDescriptor = descriptorService.returnsDescriptor()
+        val returns = portfolioReturnsService.returns(dailyHistory)
+        readModelCacheService.forceRefresh(
+            descriptor = returnsDescriptor,
+            serializer = PortfolioReturnsResponse.serializer()
+        ) {
+            returns.toRefreshResponse()
+        }
+        return returns
     }
 
     companion object {

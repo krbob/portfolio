@@ -14,8 +14,10 @@ import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.BenchmarkKey
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
+import net.bobinski.portfolio.api.domain.service.PortfolioOverview
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnPeriod
+import net.bobinski.portfolio.api.domain.service.PortfolioReturns
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.ReturnPeriodKey
 import net.bobinski.portfolio.api.domain.service.ValuationState
@@ -31,57 +33,84 @@ class PortfolioAlertService(
 ) {
     private val dispatchMutex = Mutex()
 
-    suspend fun currentAlerts(): List<PortfolioAlert> {
+    suspend fun currentAlerts(): List<PortfolioAlert> = currentAlerts(prefetchedReturns = null)
+
+    private suspend fun currentAlerts(prefetchedReturns: PortfolioReturns?): List<PortfolioAlert> {
         val settings = alertSettingsService.settings()
         if (!settings.enabled) {
             return emptyList()
         }
 
         val observedAt = Instant.now(clock)
+        var sharedOverview: PortfolioOverview? = null
+        suspend fun overview(): PortfolioOverview = sharedOverview
+            ?: portfolioReadModelService.overview().also { sharedOverview = it }
+
         return buildList {
             if (settings.typeEnabled(PortfolioAlertType.MARKET_DATA_STALE)) {
-                addAll(staleMarketDataAlerts(observedAt))
+                addAll(staleMarketDataAlerts(observedAt = observedAt, loadOverview = ::overview))
             }
             if (settings.typeEnabled(PortfolioAlertType.ALLOCATION_DRIFT)) {
-                addAll(allocationDriftAlerts(settings, observedAt))
+                addAll(
+                    allocationDriftAlerts(
+                        settings = settings,
+                        observedAt = observedAt,
+                        loadOverview = ::overview
+                    )
+                )
             }
             if (settings.typeEnabled(PortfolioAlertType.BENCHMARK_UNDERPERFORMANCE)) {
-                addAll(benchmarkUnderperformanceAlerts(settings, observedAt))
+                addAll(
+                    benchmarkUnderperformanceAlerts(
+                        settings = settings,
+                        observedAt = observedAt,
+                        prefetchedReturns = prefetchedReturns
+                    )
+                )
             }
         }.sortedWith(compareByDescending<PortfolioAlert> { it.severity }.thenBy { it.id })
     }
 
-    suspend fun dispatchNewAlerts(): PortfolioAlertDispatchResult = dispatchMutex.withLock {
-        val settings = alertSettingsService.settings()
-        val alerts = currentAlerts()
-        val previousState = appPreferenceService.get(
-            key = ALERT_STATE_PREFERENCE_KEY,
-            serializer = PortfolioAlertState.serializer(),
-            defaultValue = { PortfolioAlertState(activeAlertIds = emptyList()) }
-        )
-        val previousIds = previousState.activeAlertIds.toSet()
-        val newAlerts = alerts.filterNot { alert -> alert.id in previousIds }
+    suspend fun dispatchNewAlerts(): PortfolioAlertDispatchResult = dispatchNewAlertsInternal(prefetchedReturns = null)
 
-        val pushResult = when {
-            !settings.pushEnabled -> WebPushDispatchResult.empty()
-            newAlerts.isEmpty() -> pushNotifier.send(emptyList())
-            else -> pushNotifier.send(newAlerts)
+    suspend fun dispatchNewAlerts(prefetchedReturns: PortfolioReturns): PortfolioAlertDispatchResult =
+        dispatchNewAlertsInternal(prefetchedReturns = prefetchedReturns)
+
+    private suspend fun dispatchNewAlertsInternal(prefetchedReturns: PortfolioReturns?): PortfolioAlertDispatchResult =
+        dispatchMutex.withLock {
+            val settings = alertSettingsService.settings()
+            val alerts = currentAlerts(prefetchedReturns = prefetchedReturns)
+            val previousState = appPreferenceService.get(
+                key = ALERT_STATE_PREFERENCE_KEY,
+                serializer = PortfolioAlertState.serializer(),
+                defaultValue = { PortfolioAlertState(activeAlertIds = emptyList()) }
+            )
+            val previousIds = previousState.activeAlertIds.toSet()
+            val newAlerts = alerts.filterNot { alert -> alert.id in previousIds }
+
+            val pushResult = when {
+                !settings.pushEnabled -> WebPushDispatchResult.empty()
+                newAlerts.isEmpty() -> pushNotifier.send(emptyList())
+                else -> pushNotifier.send(newAlerts)
+            }
+
+            if (shouldStoreActiveAlertState(newAlerts, pushResult)) {
+                storeActiveAlertState(alerts)
+            }
+
+            return PortfolioAlertDispatchResult(
+                activeAlertCount = alerts.size,
+                newAlertCount = newAlerts.size,
+                push = pushResult
+            )
         }
 
-        if (shouldStoreActiveAlertState(newAlerts, pushResult)) {
-            storeActiveAlertState(alerts)
-        }
-
-        return PortfolioAlertDispatchResult(
-            activeAlertCount = alerts.size,
-            newAlertCount = newAlerts.size,
-            push = pushResult
-        )
-    }
-
-    private suspend fun staleMarketDataAlerts(observedAt: Instant): List<PortfolioAlert> =
+    private suspend fun staleMarketDataAlerts(
+        observedAt: Instant,
+        loadOverview: suspend () -> PortfolioOverview
+    ): List<PortfolioAlert> =
         alertSection {
-            val overview = portfolioReadModelService.overview()
+            val overview = loadOverview()
             if (overview.valuationState != ValuationState.STALE) {
                 return@alertSection emptyList()
             }
@@ -101,10 +130,12 @@ class PortfolioAlertService(
 
     private suspend fun allocationDriftAlerts(
         settings: PortfolioAlertSettings,
-        observedAt: Instant
+        observedAt: Instant,
+        loadOverview: suspend () -> PortfolioOverview
     ): List<PortfolioAlert> =
         alertSection {
-            val summary = portfolioAllocationService.summary()
+            val overview = loadOverview()
+            val summary = portfolioAllocationService.summary(overview)
             summary.buckets
                 .filter { bucket ->
                     bucket.driftPctPoints?.absGreaterOrEqual(settings.allocationDriftThresholdPctPoints) == true
@@ -124,10 +155,11 @@ class PortfolioAlertService(
 
     private suspend fun benchmarkUnderperformanceAlerts(
         settings: PortfolioAlertSettings,
-        observedAt: Instant
+        observedAt: Instant,
+        prefetchedReturns: PortfolioReturns?
     ): List<PortfolioAlert> =
         alertSection {
-            val returns = portfolioReturnsService.returns()
+            val returns = prefetchedReturns ?: portfolioReturnsService.returns()
             val period = returns.periods.firstOrNull { it.key == ReturnPeriodKey.ONE_YEAR }
                 ?: returns.periods.firstOrNull { it.key == ReturnPeriodKey.MAX }
                 ?: return@alertSection emptyList()

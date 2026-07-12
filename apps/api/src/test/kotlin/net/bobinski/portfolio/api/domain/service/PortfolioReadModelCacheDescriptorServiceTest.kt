@@ -5,6 +5,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.runBlocking
+import net.bobinski.portfolio.api.domain.model.Account
+import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
@@ -15,12 +17,71 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRe
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import java.math.BigDecimal
+import java.util.UUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PortfolioReadModelCacheDescriptorServiceTest {
+
+    @Test
+    fun `canonical mutation changes revision and invalidates the cached computation`() = runBlocking {
+        val accountRepository = InMemoryAccountRepository()
+        val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
+        val targetRepository = InMemoryPortfolioTargetRepository()
+        val transactionRepository = InMemoryTransactionRepository()
+        val descriptorService = PortfolioReadModelCacheDescriptorService(
+            accountRepository = accountRepository,
+            appPreferenceRepository = appPreferenceRepository,
+            instrumentRepository = instrumentRepository,
+            portfolioTargetRepository = targetRepository,
+            transactionRepository = transactionRepository,
+            marketDataCacheFingerprint = "enabled=true",
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val cacheService = ReadModelCacheService(
+            repository = InMemoryReadModelCacheRepository(),
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val original = Account(
+            id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+            name = "Brokerage",
+            institution = "Broker",
+            type = AccountType.BROKERAGE,
+            baseCurrency = "PLN",
+            isActive = true,
+            createdAt = Instant.parse("2026-03-14T08:00:00Z"),
+            updatedAt = Instant.parse("2026-03-14T08:00:00Z")
+        )
+        accountRepository.save(original)
+        var computeCount = 0
+
+        val beforeMutation = descriptorService.dailyHistoryDescriptor()
+        cacheService.getOrCompute(beforeMutation, CachedPayload.serializer()) {
+            computeCount += 1
+            CachedPayload("before")
+        }
+        accountRepository.save(
+            original.copy(
+                name = "Primary brokerage",
+                updatedAt = Instant.parse("2026-03-14T09:00:00Z")
+            )
+        )
+        val afterMutation = descriptorService.dailyHistoryDescriptor()
+        val result = cacheService.getOrCompute(afterMutation, CachedPayload.serializer()) {
+            computeCount += 1
+            CachedPayload("after")
+        }
+
+        assertNotEquals(beforeMutation.sourceUpdatedAt, afterMutation.sourceUpdatedAt)
+        assertNotEquals(beforeMutation.canonicalRevision, afterMutation.canonicalRevision)
+        assertEquals(CachedPayload("after"), result)
+        assertEquals(2, computeCount)
+    }
 
     @Test
     fun `daily history descriptor invalidates when market data config changes`() {

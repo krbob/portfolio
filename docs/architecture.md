@@ -36,6 +36,12 @@ Portfolio is intentionally split into:
 
 Transactions remain canonical. Everything analytical must be rebuildable from canonical state plus historical market data.
 
+Analytics computations use a key made from the model identity and version, canonical source revision, input range, and
+normalized parameters. Concurrent callers for the same key share one supervised computation. Daily history and returns
+reuse a successful snapshot for that revision through a small bounded LRU; current valuation only coalesces active work,
+and allocation reuses that valuation so market prices are never retained by this layer. A cancelled caller does not
+cancel shared work, and failed computations are removed before a later retry.
+
 ## Transfer and recoverability model
 
 Operational state transfer is part of the product, not a side script.

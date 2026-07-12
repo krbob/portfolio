@@ -1,6 +1,11 @@
 package net.bobinski.portfolio.api.domain.service
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
+import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -20,7 +25,9 @@ import net.bobinski.portfolio.api.marketdata.service.InstrumentValuation
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -32,8 +39,48 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 class PortfolioReadModelServiceTest {
+
+    @Test
+    fun `parallel overview and holdings share one valued snapshot`() = runBlocking {
+        val fixture = portfolioFixture(coalesceComputations = true)
+        fixture.accountRepository.save(account())
+        val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
+        fixture.instrumentRepository.save(vwce)
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = vwce.id,
+                quantity = "10",
+                grossAmount = "1000.00",
+                feeAmount = "5.00"
+            )
+        )
+        fixture.valuationProvider.values[vwce.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("120.00"),
+                valuedAt = LocalDate.parse("2026-03-10")
+            )
+        )
+        val valuationStarted = CompletableDeferred<Unit>()
+        val releaseValuation = CompletableDeferred<Unit>()
+        fixture.valuationProvider.beforeValue = {
+            valuationStarted.complete(Unit)
+            releaseValuation.await()
+        }
+
+        val overview = async(Dispatchers.Default) { fixture.service.overview() }
+        valuationStarted.await()
+        val holdings = async(Dispatchers.Default) { fixture.service.holdings() }
+        yield()
+        releaseValuation.complete(Unit)
+
+        assertEquals(BigDecimal("2195.00"), overview.await().totalCurrentValuePln)
+        assertEquals(BigDecimal("1200.00"), holdings.await().single().currentValuePln)
+        assertEquals(1, fixture.valuationProvider.invocationCount)
+    }
 
     @Test
     fun `overview uses current valuations when all holdings are valued`() = runBlocking {
@@ -540,7 +587,8 @@ class PortfolioReadModelServiceTest {
     }
 
     private fun portfolioFixture(
-        clock: Clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC)
+        clock: Clock = Clock.fixed(Instant.parse("2026-03-13T12:00:00Z"), ZoneOffset.UTC),
+        coalesceComputations: Boolean = false
     ): PortfolioFixture {
         val accountRepository = InMemoryAccountRepository()
         val instrumentRepository = InMemoryInstrumentRepository()
@@ -548,6 +596,21 @@ class PortfolioReadModelServiceTest {
         val valuationProvider = FakeCurrentInstrumentValuationProvider()
         val edoLotValuationProvider = FakeEdoLotValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
+        val computationCoordinator = if (coalesceComputations) ReadModelComputationCoordinator() else null
+        val cacheDescriptorService = if (coalesceComputations) {
+            PortfolioReadModelCacheDescriptorService(
+                accountRepository = accountRepository,
+                appPreferenceRepository = InMemoryAppPreferenceRepository(),
+                instrumentRepository = instrumentRepository,
+                portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
+                transactionRepository = transactionRepository,
+                marketDataCacheFingerprint = "read-model-test",
+                json = AppJsonFactory.create(),
+                clock = clock
+            )
+        } else {
+            null
+        }
         val service = PortfolioReadModelService(
             accountRepository = accountRepository,
             instrumentRepository = instrumentRepository,
@@ -555,7 +618,9 @@ class PortfolioReadModelServiceTest {
             currentInstrumentValuationProvider = valuationProvider,
             edoLotValuationProvider = edoLotValuationProvider,
             transactionFxConversionService = TransactionFxConversionService(fxRateHistoryProvider = fxRateProvider),
-            clock = clock
+            clock = clock,
+            cacheDescriptorService = cacheDescriptorService,
+            computationCoordinator = computationCoordinator
         )
         return PortfolioFixture(
             service = service,
@@ -712,13 +777,20 @@ class PortfolioReadModelServiceTest {
 
     private class FakeCurrentInstrumentValuationProvider : CurrentInstrumentValuationProvider {
         val values: MutableMap<UUID, InstrumentValuationResult> = linkedMapOf()
+        private val invocations = AtomicInteger()
+        val invocationCount: Int
+            get() = invocations.get()
+        var beforeValue: suspend () -> Unit = {}
 
-        override suspend fun value(instrument: Instrument): InstrumentValuationResult =
-            values[instrument.id]
+        override suspend fun value(instrument: Instrument): InstrumentValuationResult {
+            invocations.incrementAndGet()
+            beforeValue()
+            return values[instrument.id]
                 ?: InstrumentValuationResult.Failure(
                     type = InstrumentValuationFailureType.UNAVAILABLE,
                     reason = "No fake valuation for ${instrument.name}."
                 )
+        }
     }
 
     private class FakeEdoLotValuationProvider : EdoLotValuationProvider {

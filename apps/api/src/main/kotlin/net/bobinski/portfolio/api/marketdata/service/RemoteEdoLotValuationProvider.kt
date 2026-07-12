@@ -53,6 +53,8 @@ class RemoteEdoLotValuationProvider(
                 type = InstrumentValuationFailureType.UNAVAILABLE,
                 reason = exception.message ?: "Market data request failed."
             )
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordQuoteFailure(
                 identity = edoQuoteIdentity(lotTerms),
