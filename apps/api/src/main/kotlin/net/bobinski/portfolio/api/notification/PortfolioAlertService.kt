@@ -110,7 +110,7 @@ class PortfolioAlertService(
         observedAt: Instant,
         loadOverview: suspend () -> PortfolioOverview
     ): List<PortfolioAlert> =
-        alertSection {
+        alertSection(PortfolioAlertType.MARKET_DATA_STALE) {
             val overview = loadOverview()
             if (overview.valuationState != ValuationState.STALE) {
                 return@alertSection emptyList()
@@ -134,7 +134,7 @@ class PortfolioAlertService(
         observedAt: Instant,
         loadOverview: suspend () -> PortfolioOverview
     ): List<PortfolioAlert> =
-        alertSection {
+        alertSection(PortfolioAlertType.ALLOCATION_DRIFT) {
             val overview = loadOverview()
             val summary = portfolioAllocationService.summary(overview)
             summary.buckets
@@ -159,7 +159,7 @@ class PortfolioAlertService(
         observedAt: Instant,
         prefetchedReturns: PortfolioReturns?
     ): List<PortfolioAlert> =
-        alertSection {
+        alertSection(PortfolioAlertType.BENCHMARK_UNDERPERFORMANCE) {
             val returns = prefetchedReturns ?: portfolioReturnsService.returns()
             val period = returns.periods.firstOrNull { it.key == ReturnPeriodKey.ONE_YEAR }
                 ?: returns.periods.firstOrNull { it.key == ReturnPeriodKey.MAX }
@@ -225,19 +225,28 @@ class PortfolioAlertService(
         AssetClass.BENCHMARK -> "benchmarki"
     }
 
-    private suspend fun alertSection(block: suspend () -> List<PortfolioAlert>): List<PortfolioAlert> =
-        try {
-            block()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Exception) {
-            emptyList()
-        }
-
     private companion object {
         val HUNDRED: BigDecimal = BigDecimal("100")
     }
 }
+
+internal suspend fun alertSection(
+    type: PortfolioAlertType,
+    block: suspend () -> List<PortfolioAlert>
+): List<PortfolioAlert> = try {
+    block()
+} catch (error: CancellationException) {
+    throw error
+} catch (error: PortfolioAlertEvaluationException) {
+    throw error
+} catch (error: Exception) {
+    throw PortfolioAlertEvaluationException(type = type, cause = error)
+}
+
+class PortfolioAlertEvaluationException(
+    val type: PortfolioAlertType,
+    cause: Throwable
+) : IllegalStateException("Failed to evaluate ${type.name} portfolio alerts.", cause)
 
 data class PortfolioAlert(
     val id: String,
