@@ -1,23 +1,33 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
   ],
   "timezone": "Europe/Warsaw",
-  "automerge": true,
-  "automergeType": "pr",
-  "platformAutomerge": true,
+  "dependencyDashboard": true,
+  "automerge": false,
+  "platformAutomerge": false,
+  "minimumReleaseAge": "7 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
   "rebaseWhen": "behind-base-branch",
   "schedule": [
-    "* * 1 * *"
+    "before 6am on the first monday of the month"
   ],
-  "automergeSchedule": [
-    "at any time"
+  "updateNotScheduled": false,
+  "prConcurrentLimit": 5,
+  "branchConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": [
+    "dependencies"
   ],
-  "updateNotScheduled": true,
-  "prConcurrentLimit": 0,
-  "branchConcurrentLimit": 0,
-  "prHourlyLimit": 0,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "automerge": false,
+    "schedule": [
+      "at any time"
+    ]
+  },
   "packageRules": [
     {
       "description": "Group non-major frontend runtime dependency updates",

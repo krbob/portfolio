@@ -1,5 +1,8 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+import org.cyclonedx.gradle.CyclonedxDirectTask
+import org.cyclonedx.model.Component
+import org.gradle.api.artifacts.dsl.LockMode
 import java.security.MessageDigest
 import java.util.Properties
 
@@ -8,6 +11,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktor)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.cyclonedx)
 }
 
 group = "net.bobinski.portfolio"
@@ -15,6 +19,11 @@ version = "0.1.0"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+    lockMode.set(LockMode.STRICT)
 }
 
 val contractGeneratorSourceSet = sourceSets.create("contractGenerator")
@@ -124,6 +133,48 @@ tasks.named("check") {
     dependsOn(checkUpstreamContracts)
 }
 
+allprojects {
+    tasks.withType<CyclonedxDirectTask>().configureEach {
+        includeConfigs = listOf("runtimeClasspath")
+        includeBomSerialNumber = false
+        includeBuildSystem = false
+        includeMetadataResolution = false
+    }
+}
+
+tasks.cyclonedxDirectBom {
+    projectType = Component.Type.APPLICATION
+}
+
+tasks.cyclonedxBom {
+    projectType = Component.Type.APPLICATION
+    componentName = "portfolio-api"
+    includeBomSerialNumber = false
+    includeBuildSystem = false
+    jsonOutput = layout.buildDirectory.file("reports/sbom/portfolio-api.raw.cdx.json").get().asFile
+    xmlOutput.unsetConvention()
+}
+
+val reproducibleSbom = tasks.register<Exec>("reproducibleSbom") {
+    group = "build"
+    description = "Generates a normalized reproducible CycloneDX SBOM for the API runtime."
+    dependsOn(tasks.cyclonedxBom)
+    val rawSbom = layout.buildDirectory.file("reports/sbom/portfolio-api.raw.cdx.json")
+    val normalizedSbom = layout.buildDirectory.file("reports/sbom/portfolio-api.cdx.json")
+    inputs.file(rawSbom)
+    outputs.file(normalizedSbom)
+    commandLine(
+        "python3",
+        rootProject.file("../../scripts/normalize-cyclonedx.py").absolutePath,
+        rawSbom.get().asFile.absolutePath,
+        normalizedSbom.get().asFile.absolutePath
+    )
+}
+
+tasks.named("assemble") {
+    dependsOn(reproducibleSbom)
+}
+
 configure<DetektExtension> {
     buildUponDefaultConfig = true
     parallel = true
@@ -173,6 +224,11 @@ kotlin {
 
 subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    dependencyLocking {
+        lockAllConfigurations()
+        lockMode.set(LockMode.STRICT)
+    }
 
     extensions.configure<DetektExtension> {
         buildUponDefaultConfig = true

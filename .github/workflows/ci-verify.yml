@@ -4,8 +4,8 @@ on:
   workflow_call:
 
 env:
-  JDK_VERSION: "21"
-  NODE_VERSION: "24"
+  JDK_VERSION: "21.0.11"
+  NODE_VERSION: "24.18.0"
 
 jobs:
   infra:
@@ -16,15 +16,21 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Validate pinned supply-chain inputs
+        run: python3 scripts/validate-supply-chain.py
+
+      - name: Lint GitHub Actions workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
 
       - name: Lint Dockerfiles
         run: |
-          docker run --rm -i hadolint/hadolint:latest hadolint --failure-threshold error - < apps/api/Dockerfile
-          docker run --rm -i hadolint/hadolint:latest hadolint --failure-threshold error - < apps/web/Dockerfile
+          docker run --rm -i hadolint/hadolint:v2.14.0@sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e hadolint --failure-threshold error - < apps/api/Dockerfile
+          docker run --rm -i hadolint/hadolint:v2.14.0@sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e hadolint --failure-threshold error - < apps/web/Dockerfile
 
       - name: ShellCheck scripts
-        run: docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/*.sh
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d scripts/*.sh
 
   api:
     name: API tests
@@ -34,16 +40,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Set up JDK ${{ env.JDK_VERSION }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           distribution: temurin
           java-version: ${{ env.JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
         with:
           build-scan-publish: true
           build-scan-terms-of-use-url: 'https://gradle.com/help/legal-terms-of-use'
@@ -69,10 +78,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Node ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -95,13 +104,13 @@ jobs:
         run: npm run build
 
       - name: Set up JDK ${{ env.JDK_VERSION }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           distribution: temurin
           java-version: ${{ env.JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
         with:
           build-scan-publish: true
           build-scan-terms-of-use-url: 'https://gradle.com/help/legal-terms-of-use'
@@ -114,10 +123,11 @@ jobs:
       - name: Verify generated API client is committed
         run: git diff --exit-code -- apps/web/src/api/generated/portfolio-api.d.ts
 
-  smoke-sqlite-docker:
-    name: SQLite Docker smoke
+  supply-chain:
+    name: SBOM and vulnerability gates
     runs-on: ubuntu-latest
     needs:
+      - infra
       - api
       - web
     permissions:
@@ -125,7 +135,135 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Generate reproducible API SBOM twice
+        working-directory: apps/api
+        run: |
+          ./gradlew reproducibleSbom
+          cp build/reports/sbom/portfolio-api.cdx.json /tmp/portfolio-api.cdx.json
+          ./gradlew reproducibleSbom --rerun-tasks
+          cmp /tmp/portfolio-api.cdx.json build/reports/sbom/portfolio-api.cdx.json
+
+      - name: Generate reproducible web SBOM twice
+        working-directory: apps/web
+        run: |
+          npm run sbom
+          cp build/reports/sbom/portfolio-web.cdx.json /tmp/portfolio-web.cdx.json
+          npm run sbom
+          cmp /tmp/portfolio-web.cdx.json build/reports/sbom/portfolio-web.cdx.json
+
+      - name: Audit complete npm dependency tree
+        working-directory: apps/web
+        run: npm audit --audit-level=high
+
+      - name: Scan API SBOM for HIGH or CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: sbom
+          scan-ref: apps/api/build/reports/sbom/portfolio-api.cdx.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          cache-dir: ${{ runner.temp }}/trivy
+
+      - name: Scan web SBOM for HIGH or CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: sbom
+          scan-ref: apps/web/build/reports/sbom/portfolio-web.cdx.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          cache-dir: ${{ runner.temp }}/trivy
+
+      - name: Upload dependency SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: portfolio-dependency-sboms
+          path: |
+            apps/api/build/reports/sbom/portfolio-api.cdx.json
+            apps/web/build/reports/sbom/portfolio-web.cdx.json
+          if-no-files-found: error
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Build API image for security scan
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./apps/api
+          file: ./apps/api/Dockerfile
+          load: true
+          tags: portfolio-api:security-scan
+          cache-from: type=gha,scope=portfolio-api-security
+          cache-to: type=gha,mode=max,scope=portfolio-api-security
+
+      - name: Build web image for security scan
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./apps/web
+          file: ./apps/web/Dockerfile
+          load: true
+          tags: portfolio-web:security-scan
+          cache-from: type=gha,scope=portfolio-web-security
+          cache-to: type=gha,mode=max,scope=portfolio-web-security
+
+      - name: Scan API image for HIGH or CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: portfolio-api:security-scan
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          cache-dir: ${{ runner.temp }}/trivy
+
+      - name: Scan web image for HIGH or CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: portfolio-web:security-scan
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          cache-dir: ${{ runner.temp }}/trivy
+
+  smoke-sqlite-docker:
+    name: SQLite Docker smoke
+    runs-on: ubuntu-latest
+    needs:
+      - api
+      - web
+      - supply-chain
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Run SQLite Docker smoke test
         run: ./scripts/smoke-test-sqlite-stack.sh
@@ -136,15 +274,16 @@ jobs:
     needs:
       - api
       - web
+      - supply-chain
     permissions:
       contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Node ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -162,7 +301,7 @@ jobs:
 
       - name: Upload web smoke traces
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: web-smoke-test-results
           path: apps/web/test-results

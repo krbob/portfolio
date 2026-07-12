@@ -54,6 +54,9 @@ portfolio/
 └── README.md
 ```
 
+Build inputs, dependency locks, reproducible SBOMs, vulnerability gates, and image attestations are documented in
+[`docs/supply-chain.md`](docs/supply-chain.md).
+
 ## Quick start
 
 ### 1. Local app stack from this repo

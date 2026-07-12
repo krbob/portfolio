@@ -2,6 +2,11 @@
   "name": "portfolio-web",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": "24.18.0",
+    "npm": "11.16.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +16,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "lint": "eslint src scripts",
-    "validate:tokens": "node scripts/validate-design-tokens.mjs"
+    "validate:tokens": "node scripts/validate-design-tokens.mjs",
+    "sbom": "mkdir -p build/reports/sbom && npm sbom --package-lock-only --sbom-format=cyclonedx --sbom-type=application > build/reports/sbom/portfolio-web.raw.cdx.json && python3 ../../scripts/normalize-cyclonedx.py build/reports/sbom/portfolio-web.raw.cdx.json build/reports/sbom/portfolio-web.cdx.json && rm build/reports/sbom/portfolio-web.raw.cdx.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
