@@ -2,6 +2,7 @@ import type {
   ImportTransactionsPayload,
   ImportTransactionsPreviewResult,
   SaveTransactionImportProfilePayload,
+  Transaction,
   TransactionImportProfile,
 } from '../../api/write-model'
 import { getActiveUiLanguage, type UiLanguage } from '../../lib/i18n'
@@ -551,6 +552,81 @@ export function buildRedeemPreview(
     unmatchedQuantity: remaining,
     byPurchaseDate,
   }
+}
+
+export function buildInstrumentAvailabilityAsOf(
+  transactions: Transaction[],
+  accountId: string,
+  asOfTradeDate: string,
+  excludedTransactionId: string | null = null,
+): Map<string, string> {
+  if (accountId === '' || asOfTradeDate === '') {
+    return new Map()
+  }
+
+  const quantityRows = transactions
+    .filter(
+      (transaction) =>
+        transaction.id !== excludedTransactionId &&
+        transaction.accountId === accountId &&
+        transaction.instrumentId != null &&
+        transaction.tradeDate <= asOfTradeDate &&
+        (transaction.type === 'BUY' || transaction.type === 'SELL' || transaction.type === 'REDEEM'),
+    )
+    .map((transaction) => ({
+      transaction,
+      quantity: parseDecimalParts(normalizeDecimalInput(transaction.quantity ?? '')),
+    }))
+    .filter(
+      (row): row is { transaction: Transaction; quantity: { unscaled: bigint; scale: number } } =>
+        row.quantity != null,
+    )
+
+  const commonScale = quantityRows.reduce((maximum, row) => Math.max(maximum, row.quantity.scale), 0)
+  const balances = new Map<string, bigint>()
+
+  for (const { transaction, quantity } of quantityRows) {
+    const instrumentId = transaction.instrumentId
+    if (instrumentId == null) {
+      continue
+    }
+
+    const scaledQuantity = quantity.unscaled * 10n ** BigInt(commonScale - quantity.scale)
+    const signedQuantity = transaction.type === 'BUY' ? scaledQuantity : -scaledQuantity
+    balances.set(instrumentId, (balances.get(instrumentId) ?? 0n) + signedQuantity)
+  }
+
+  return new Map(
+    [...balances.entries()]
+      .filter(([, quantity]) => quantity > 0n)
+      .map(([instrumentId, quantity]) => [
+        instrumentId,
+        formatDecimalInput(quantity, commonScale, '.', 0),
+      ]),
+  )
+}
+
+export function quantityExceedsAvailability(requestedRaw: string, availableRaw: string | null): boolean {
+  const requested = parseDecimalParts(normalizeDecimalInput(requestedRaw))
+  const available = parseDecimalParts(normalizeDecimalInput(availableRaw ?? ''))
+  if (requested == null || available == null || requested.unscaled <= 0n) {
+    return false
+  }
+
+  const commonScale = Math.max(requested.scale, available.scale)
+  const requestedAtCommonScale = requested.unscaled * 10n ** BigInt(commonScale - requested.scale)
+  const availableAtCommonScale = available.unscaled * 10n ** BigInt(commonScale - available.scale)
+  return requestedAtCommonScale > availableAtCommonScale
+}
+
+export function formatTransactionSubmitError(message: string): string {
+  if (
+    message.includes('Long-only portfolios cannot have negative instrument positions') ||
+    message.includes('exceeds the available quantity')
+  ) {
+    return formatMessage(t('txHelpers.longOnlyServerRejected'), { message })
+  }
+  return message
 }
 
 export function toWholeUnits(value: string | number | null | undefined) {

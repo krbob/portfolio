@@ -8,16 +8,19 @@ import { useI18n } from '../../lib/i18n'
 import type { TransactionComposerDraft, TransactionRouteState } from '../../lib/transaction-composer'
 import {
   buildRedeemPreview,
+  buildInstrumentAvailabilityAsOf,
   compareAccountsByDisplayOrder,
   compareEdoLotsByPurchaseDate,
   compareInstrumentsByName,
   compareJournalRows,
   initialForm,
   initialJournalFilters,
+  formatTransactionSubmitError,
   multiplyDecimalInputs,
   normalizeDecimalForPayload,
   normalizeIntegerInput,
   normalizeOptionalDecimalForPayload,
+  quantityExceedsAvailability,
   type JournalFilters,
   type JournalRow,
 } from './transactions-helpers'
@@ -136,15 +139,36 @@ export function TransactionJournal({
     [redeemableEdoHoldings],
   )
 
+  const sellAvailabilityByInstrumentId = useMemo(
+    () =>
+      buildInstrumentAvailabilityAsOf(
+        transactions,
+        form.accountId,
+        form.tradeDate,
+        editingTransactionId,
+      ),
+    [editingTransactionId, form.accountId, form.tradeDate, transactions],
+  )
+
   const selectableInstrumentOptions = useMemo(() => {
     if (form.type === 'REDEEM') {
       return sortedInstrumentOptions.filter((instrument) => redeemableInstrumentIds.has(instrument.id))
     }
     if (form.type === 'SELL') {
-      return sortedInstrumentOptions.filter((instrument) => instrument.kind !== 'BOND_EDO')
+      return sortedInstrumentOptions.filter(
+        (instrument) =>
+          instrument.kind !== 'BOND_EDO' && sellAvailabilityByInstrumentId.has(instrument.id),
+      )
     }
     return sortedInstrumentOptions
-  }, [form.type, redeemableInstrumentIds, sortedInstrumentOptions])
+  }, [form.type, redeemableInstrumentIds, sellAvailabilityByInstrumentId, sortedInstrumentOptions])
+
+  const selectedSellAvailableQuantity =
+    form.type === 'SELL' && form.instrumentId !== ''
+      ? sellAvailabilityByInstrumentId.get(form.instrumentId) ?? null
+      : null
+  const sellQuantityExceedsAvailable =
+    form.type === 'SELL' && quantityExceedsAvailability(form.quantity, selectedSellAvailableQuantity)
 
   const selectedRedeemHolding = useMemo(() => {
     if (form.type !== 'REDEEM' || form.accountId === '' || form.instrumentId === '') {
@@ -291,7 +315,10 @@ export function TransactionJournal({
     [filteredRows],
   )
 
-  const submitErrorMessage = createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message ?? null
+  const rawSubmitErrorMessage = createTransactionMutation.error?.message ?? updateTransactionMutation.error?.message ?? null
+  const submitErrorMessage = rawSubmitErrorMessage == null
+    ? null
+    : formatTransactionSubmitError(rawSubmitErrorMessage)
   const deleteErrorMessage = deleteTransactionMutation.error?.message ?? null
   const holdingsErrorMessage = holdingsQuery.error?.message ?? null
 
@@ -404,6 +431,14 @@ export function TransactionJournal({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (
+      (form.type === 'SELL' &&
+        (selectedSellAvailableQuantity == null || sellQuantityExceedsAvailable)) ||
+      (form.type === 'REDEEM' && redeemPreview.unmatchedQuantity > 0)
+    ) {
+      return
+    }
+
     const payload = {
       accountId: form.accountId,
       instrumentId: requiresInstrument ? form.instrumentId : null,
@@ -668,6 +703,9 @@ export function TransactionJournal({
           form={form}
           sortedAccountOptions={sortedAccountOptions}
           selectableInstrumentOptions={selectableInstrumentOptions}
+          sellAvailabilityByInstrumentId={sellAvailabilityByInstrumentId}
+          selectedSellAvailableQuantity={selectedSellAvailableQuantity}
+          sellQuantityExceedsAvailable={sellQuantityExceedsAvailable}
           requiresInstrument={requiresInstrument}
           decimalSeparator={decimalSeparator}
           grossAmountMode={grossAmountMode}

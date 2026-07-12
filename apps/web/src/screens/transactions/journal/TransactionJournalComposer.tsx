@@ -29,6 +29,9 @@ interface TransactionJournalComposerProps {
   form: TransactionFormState
   sortedAccountOptions: Account[]
   selectableInstrumentOptions: Instrument[]
+  sellAvailabilityByInstrumentId: ReadonlyMap<string, string>
+  selectedSellAvailableQuantity: string | null
+  sellQuantityExceedsAvailable: boolean
   requiresInstrument: boolean
   decimalSeparator: '.' | ','
   grossAmountMode: 'auto' | 'manual'
@@ -80,6 +83,9 @@ export function TransactionJournalComposer({
   form,
   sortedAccountOptions,
   selectableInstrumentOptions,
+  sellAvailabilityByInstrumentId,
+  selectedSellAvailableQuantity,
+  sellQuantityExceedsAvailable,
   requiresInstrument,
   decimalSeparator,
   grossAmountMode,
@@ -112,7 +118,14 @@ export function TransactionJournalComposer({
   onResetSettlementDateToTradeDate,
   onSettlementDateChange,
 }: TransactionJournalComposerProps) {
-  const canSubmit = form.accountId !== '' && (!requiresInstrument || form.instrumentId !== '')
+  const redeemQuantityExceedsAvailable = form.type === 'REDEEM' && redeemPreview.unmatchedQuantity > 0
+  const canSubmit =
+    form.accountId !== '' &&
+    (!requiresInstrument || form.instrumentId !== '') &&
+    (form.type !== 'SELL' || selectedSellAvailableQuantity != null) &&
+    (form.type !== 'REDEEM' || hasSelectedRedeemHolding) &&
+    !sellQuantityExceedsAvailable &&
+    !redeemQuantityExceedsAvailable
 
   return (
     <Modal
@@ -171,16 +184,25 @@ export function TransactionJournalComposer({
               <span className={labelClass}>{t('journal.instrument')}</span>
               <select
                 className={input}
+                aria-label={t('journal.instrument')}
                 value={form.instrumentId}
                 onChange={(event) => onInstrumentChange(event.target.value)}
+                required
               >
                 <option value="">{t('journal.selectInstrument')}</option>
                 {selectableInstrumentOptions.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
-                    {instrument.name}
+                    {form.type === 'SELL'
+                      ? `${instrument.name} · ${formatMessage(t('journal.availableToSellOption'), {
+                          quantity: formatNumber(sellAvailabilityByInstrumentId.get(instrument.id) ?? '0'),
+                        })}`
+                      : instrument.name}
                   </option>
                 ))}
               </select>
+              {form.type === 'SELL' && form.accountId !== '' && form.tradeDate !== '' && selectableInstrumentOptions.length === 0 && (
+                <span className="mt-1 block text-xs text-zinc-500">{t('journal.noSellableInstruments')}</span>
+              )}
             </label>
           )}
 
@@ -194,9 +216,23 @@ export function TransactionJournalComposer({
                   value={form.quantity}
                   onChange={(event) => onQuantityChange(event.target.value)}
                   placeholder="10"
+                  required
                 />
               </label>
               <p className="mt-1 text-xs text-zinc-500">{t('journal.wholeUnitsOnly')}</p>
+              {form.type === 'SELL' && selectedSellAvailableQuantity != null && (
+                <p
+                  className={`mt-1 text-xs ${sellQuantityExceedsAvailable ? 'text-red-400' : 'text-zinc-400'}`}
+                  role={sellQuantityExceedsAvailable ? 'alert' : undefined}
+                  aria-live="polite"
+                >
+                  {formatMessage(t('journal.sellAvailability'), {
+                    date: formatDate(form.tradeDate),
+                    quantity: formatNumber(selectedSellAvailableQuantity),
+                  })}
+                  {sellQuantityExceedsAvailable ? ` ${t('journal.sellQuantityExceeded')}` : ''}
+                </p>
+              )}
             </div>
           )}
 
@@ -306,7 +342,7 @@ export function TransactionJournalComposer({
                   </div>
 
                   {redeemPreview.unmatchedQuantity > 0 && (
-                    <p className="text-sm text-amber-300">
+                    <p className="text-sm text-red-400" role="alert">
                       {formatMessage(t('journal.quantityExceedsLots'), { count: formatNumber(redeemPreview.unmatchedQuantity, { maximumFractionDigits: 0 }) })}
                     </p>
                   )}
@@ -324,6 +360,7 @@ export function TransactionJournalComposer({
                 value={form.unitPrice}
                 onChange={(event) => onUnitPriceChange(event.target.value)}
                 placeholder={decimalSeparator === ',' ? '123,45' : '123.45'}
+                required
               />
             </label>
           )}
@@ -470,7 +507,11 @@ export function TransactionJournalComposer({
             </button>
           </div>
 
-          {submitErrorMessage && <p className="col-span-full text-sm text-red-400">{submitErrorMessage}</p>}
+          {submitErrorMessage && (
+            <p className="col-span-full text-sm text-red-400" role="alert">
+              {submitErrorMessage}
+            </p>
+          )}
         </form>
       </div>
     </Modal>

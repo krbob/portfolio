@@ -31,8 +31,21 @@ export const transactionMessages = {
   'journal.tradeDate': { pl: 'Data transakcji', en: 'Trade date' },
   'journal.instrument': { pl: 'Instrument', en: 'Instrument' },
   'journal.selectInstrument': { pl: 'Wybierz instrument', en: 'Select instrument' },
+  'journal.availableToSellOption': { pl: '{quantity} dostępne', en: '{quantity} available' },
+  'journal.noSellableInstruments': {
+    pl: 'Na koniec wybranej daty to konto nie miało żadnych instrumentów innych niż EDO dostępnych do sprzedaży.',
+    en: 'At the end of the selected date this account had no non-EDO instruments available to sell.',
+  },
   'journal.quantity': { pl: 'Liczba sztuk', en: 'Quantity' },
   'journal.wholeUnitsOnly': { pl: 'Ręczny formularz przyjmuje tylko całe sztuki.', en: 'The manual form accepts whole units only.' },
+  'journal.sellAvailability': {
+    pl: 'Dostępne na koniec {date}: {quantity} szt.',
+    en: 'Available at the end of {date}: {quantity} units.',
+  },
+  'journal.sellQuantityExceeded': {
+    pl: 'Liczba sztuk przekracza stan dostępny na wybranym koncie i w wybranej dacie.',
+    en: 'Quantity exceeds the position available in the selected account on the selected date.',
+  },
   'journal.activeEdoLots': { pl: 'Aktywne partie EDO', en: 'Active EDO lots' },
   'journal.redeemFifoHint': {
     pl: 'Wykup działa FIFO. Podgląd poniżej pokazuje, które partie zostaną skonsumowane dla wpisanej liczby sztuk.',
@@ -261,6 +274,10 @@ export const transactionMessages = {
   'txHelpers.invalidPayloadShape': {
     pl: 'Import strukturalny oczekuje tablicy JSON z wierszami albo obiektu z tablicą "rows".',
     en: 'Structured import expects either a JSON array of rows or an object with a "rows" array.',
+  },
+  'txHelpers.longOnlyServerRejected': {
+    pl: 'Serwer odrzucił operację, ponieważ spowodowałaby ujemny stan instrumentu. Dziennik mógł zmienić się od otwarcia formularza albo późniejsze transakcje wykorzystują tę ilość. Odśwież dane i sprawdź datę oraz liczbę sztuk. Szczegóły: {message}',
+    en: 'The server rejected the operation because it would create a negative instrument position. The journal may have changed since the form was opened, or later transactions already use that quantity. Refresh the data and check the date and quantity. Details: {message}',
   },
   'txHelpers.mapAtLeastOneColumn': { pl: 'Zmapuj przynajmniej jedną kolumnę CSV, aby wygenerować przykład.', en: 'Map at least one CSV column to generate a sample.' },
   'txHelpers.exampleNotes': { pl: 'Pierwsza partia', en: 'Starter lot' },
