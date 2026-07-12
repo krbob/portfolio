@@ -1,15 +1,31 @@
 package net.bobinski.portfolio.api.marketdata.client
 
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
+import java.net.Authenticator
+import java.net.CookieHandler
 import java.net.InetSocketAddress
+import java.net.ProxySelector
 import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 import java.time.LocalDate
+import java.util.Optional
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLParameters
 
 class GoldApiClientTest {
 
@@ -60,4 +76,75 @@ class GoldApiClientTest {
             server.stop(0)
         }
     }
+
+    @Test
+    fun `historyUsd cancellation cancels the upstream request future`() = runBlocking {
+        val responseFuture = TrackingResponseFuture()
+        val httpClient = PendingHttpClient(responseFuture)
+        val client = GoldApiClient(
+            httpClient = httpClient,
+            json = AppJsonFactory.create(),
+            baseUrl = "http://gold.test"
+        )
+
+        val request = async {
+            client.historyUsd(
+                apiKey = "test-key",
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-20")
+            )
+        }
+        while (!httpClient.requestStarted.get()) yield()
+
+        request.cancelAndJoin()
+
+        assertTrue(responseFuture.cancelledWithInterrupt.get())
+        assertTrue(responseFuture.isCancelled)
+    }
+}
+
+private class TrackingResponseFuture : CompletableFuture<HttpResponse<String>>() {
+    val cancelledWithInterrupt = AtomicBoolean(false)
+
+    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+        cancelledWithInterrupt.set(mayInterruptIfRunning)
+        return super.cancel(mayInterruptIfRunning)
+    }
+}
+
+private class PendingHttpClient(
+    private val responseFuture: CompletableFuture<HttpResponse<String>>,
+    private val delegate: HttpClient = HttpClient.newHttpClient()
+) : HttpClient() {
+    val requestStarted = AtomicBoolean(false)
+
+    override fun cookieHandler(): Optional<CookieHandler> = delegate.cookieHandler()
+    override fun connectTimeout(): Optional<Duration> = delegate.connectTimeout()
+    override fun followRedirects(): Redirect = delegate.followRedirects()
+    override fun proxy(): Optional<ProxySelector> = delegate.proxy()
+    override fun sslContext(): SSLContext = delegate.sslContext()
+    override fun sslParameters(): SSLParameters = delegate.sslParameters()
+    override fun authenticator(): Optional<Authenticator> = delegate.authenticator()
+    override fun version(): Version = delegate.version()
+    override fun executor(): Optional<Executor> = delegate.executor()
+
+    override fun <T : Any?> send(
+        request: HttpRequest,
+        responseBodyHandler: HttpResponse.BodyHandler<T>
+    ): HttpResponse<T> = error("GoldApiClient must use the cancellable asynchronous transport.")
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any?> sendAsync(
+        request: HttpRequest,
+        responseBodyHandler: HttpResponse.BodyHandler<T>
+    ): CompletableFuture<HttpResponse<T>> {
+        requestStarted.set(true)
+        return responseFuture as CompletableFuture<HttpResponse<T>>
+    }
+
+    override fun <T : Any?> sendAsync(
+        request: HttpRequest,
+        responseBodyHandler: HttpResponse.BodyHandler<T>,
+        pushPromiseHandler: HttpResponse.PushPromiseHandler<T>
+    ): CompletableFuture<HttpResponse<T>> = sendAsync(request, responseBodyHandler)
 }

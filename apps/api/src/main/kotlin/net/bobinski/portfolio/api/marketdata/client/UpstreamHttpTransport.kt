@@ -100,7 +100,7 @@ internal class UpstreamHttpTransport(
     }
 }
 
-private suspend fun <T> CompletableFuture<T>.awaitCancellable(): T = suspendCancellableCoroutine { continuation ->
+internal suspend fun <T> CompletableFuture<T>.awaitCancellable(): T = suspendCancellableCoroutine { continuation ->
     whenComplete { value, error ->
         if (!continuation.isActive) return@whenComplete
         if (error == null) {

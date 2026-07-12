@@ -34,7 +34,7 @@ class GoldApiClient(
             .GET()
             .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString()).awaitCancellable()
         if (response.statusCode() !in 200..299) {
             throw MarketDataClientException(
                 message = "gold-api history returned HTTP ${response.statusCode()} for symbol $symbol.",
