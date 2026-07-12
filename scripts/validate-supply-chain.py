@@ -5,12 +5,121 @@
 import json
 import pathlib
 import re
+import shlex
 import sys
 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 ACTION_SHA = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
+IMAGE_TAG = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+IMAGE_REPOSITORY = re.compile(
+    r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]+)?"
+    r"(?:/[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*)*$"
+)
+
+DOCKER_RUN_FLAG_OPTIONS = {
+    "--detach",
+    "--init",
+    "--interactive",
+    "--oom-kill-disable",
+    "--privileged",
+    "--publish-all",
+    "--quiet",
+    "--read-only",
+    "--rm",
+    "--sig-proxy",
+    "--tty",
+}
+DOCKER_RUN_VALUE_OPTIONS = {
+    "--add-host",
+    "--annotation",
+    "--attach",
+    "--blkio-weight",
+    "--blkio-weight-device",
+    "--cap-add",
+    "--cap-drop",
+    "--cgroup-parent",
+    "--cgroupns",
+    "--cidfile",
+    "--cpu-period",
+    "--cpu-quota",
+    "--cpu-rt-period",
+    "--cpu-rt-runtime",
+    "--cpu-shares",
+    "--cpus",
+    "--cpuset-cpus",
+    "--cpuset-mems",
+    "--detach-keys",
+    "--device",
+    "--device-cgroup-rule",
+    "--device-read-bps",
+    "--device-read-iops",
+    "--device-write-bps",
+    "--device-write-iops",
+    "--dns",
+    "--dns-option",
+    "--dns-search",
+    "--domainname",
+    "--entrypoint",
+    "--env",
+    "--env-file",
+    "--expose",
+    "--gpus",
+    "--group-add",
+    "--health-cmd",
+    "--health-interval",
+    "--health-retries",
+    "--health-start-interval",
+    "--health-start-period",
+    "--health-timeout",
+    "--hostname",
+    "--ip",
+    "--ip6",
+    "--ipc",
+    "--isolation",
+    "--kernel-memory",
+    "--label",
+    "--label-file",
+    "--link",
+    "--link-local-ip",
+    "--log-driver",
+    "--log-opt",
+    "--mac-address",
+    "--memory",
+    "--memory-reservation",
+    "--memory-swap",
+    "--memory-swappiness",
+    "--mount",
+    "--name",
+    "--network",
+    "--network-alias",
+    "--oom-score-adj",
+    "--pid",
+    "--pids-limit",
+    "--platform",
+    "--publish",
+    "--pull",
+    "--restart",
+    "--runtime",
+    "--security-opt",
+    "--shm-size",
+    "--stop-signal",
+    "--stop-timeout",
+    "--storage-opt",
+    "--sysctl",
+    "--tmpfs",
+    "--ulimit",
+    "--user",
+    "--userns",
+    "--uts",
+    "--volume",
+    "--volume-driver",
+    "--volumes-from",
+    "--workdir",
+}
+DOCKER_RUN_SHORT_FLAG_OPTIONS = set("diPqt")
+DOCKER_RUN_SHORT_VALUE_OPTIONS = set("acehlmpuvw")
 
 
 def fail(message: str) -> None:
@@ -36,6 +145,105 @@ def validate_actions() -> None:
                 continue
             if not ACTION_SHA.fullmatch(reference):
                 fail(f"{workflow.relative_to(ROOT)}:{line_number} action is not pinned to a full commit SHA: {reference}")
+
+
+def workflow_shell_lines(workflow: pathlib.Path):
+    """Yield shell lines after joining explicit backslash continuations."""
+    buffered = ""
+    start_line = 0
+    for line_number, line in enumerate(workflow.read_text(encoding="utf-8").splitlines(), 1):
+        if not buffered:
+            start_line = line_number
+        buffered = f"{buffered} {line.lstrip()}" if buffered else line
+        if buffered.rstrip().endswith("\\"):
+            buffered = buffered.rstrip()[:-1]
+            continue
+        yield start_line, buffered
+        buffered = ""
+    if buffered:
+        yield start_line, buffered
+
+
+def docker_run_image(tokens: list[str], start: int, location: str) -> str:
+    index = start
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "--":
+            index += 1
+            break
+        if not token.startswith("-") or token == "-":
+            break
+
+        if token.startswith("--"):
+            option, separator, _ = token.partition("=")
+            if option in DOCKER_RUN_FLAG_OPTIONS:
+                index += 1
+                continue
+            if option in DOCKER_RUN_VALUE_OPTIONS:
+                if separator:
+                    index += 1
+                elif index + 1 < len(tokens):
+                    index += 2
+                else:
+                    fail(f"{location} docker run option has no value: {option}")
+                continue
+            fail(f"{location} unsupported docker run option prevents image validation: {option}")
+
+        short_options = token[1:]
+        position = 0
+        while position < len(short_options):
+            option = short_options[position]
+            if option in DOCKER_RUN_SHORT_FLAG_OPTIONS:
+                position += 1
+                continue
+            if option in DOCKER_RUN_SHORT_VALUE_OPTIONS:
+                if position + 1 == len(short_options):
+                    if index + 1 >= len(tokens):
+                        fail(f"{location} docker run option has no value: -{option}")
+                    index += 1
+                position = len(short_options)
+                continue
+            fail(f"{location} unsupported docker run option prevents image validation: -{option}")
+        index += 1
+
+    if index >= len(tokens) or tokens[index] in {"&&", "||", ";", "|"}:
+        fail(f"{location} docker run command has no image reference")
+    return tokens[index].strip("'\"")
+
+
+def validate_helper_image(image: str, location: str) -> None:
+    reference, separator, digest = image.partition("@sha256:")
+    repository_tag, tag_separator, tag = reference.rpartition(":")
+    if (
+        separator != "@sha256:"
+        or not SHA256.fullmatch(digest)
+        or tag_separator != ":"
+        or not IMAGE_TAG.fullmatch(tag)
+        or not IMAGE_REPOSITORY.fullmatch(repository_tag)
+    ):
+        fail(f"{location} docker run image must have an explicit tag and sha256 digest: {image}")
+
+
+def validate_workflow_helper_images() -> None:
+    workflows = sorted((ROOT / ".github/workflows").glob("*.yml"))
+    workflows.extend(sorted((ROOT / ".github/workflows").glob("*.yaml")))
+    for workflow in workflows:
+        for line_number, line in workflow_shell_lines(workflow):
+            lexer = shlex.shlex(line, posix=False)
+            lexer.whitespace_split = True
+            lexer.commenters = ""
+            try:
+                tokens = list(lexer)
+            except ValueError as error:
+                if re.search(r"\bdocker\s+run\b", line):
+                    fail(f"{workflow.relative_to(ROOT)}:{line_number} cannot parse docker run command: {error}")
+                continue
+            for index in range(len(tokens) - 1):
+                if pathlib.PurePath(tokens[index]).name != "docker" or tokens[index + 1] != "run":
+                    continue
+                location = f"{workflow.relative_to(ROOT)}:{line_number}"
+                image = docker_run_image(tokens, index + 2, location)
+                validate_helper_image(image, location)
 
 
 def validate_dockerfiles() -> None:
@@ -100,12 +308,13 @@ def validate_renovate() -> None:
 
 def main() -> None:
     validate_actions()
+    validate_workflow_helper_images()
     validate_dockerfiles()
     validate_gradle()
     validate_node()
     validate_ci_toolchains()
     validate_renovate()
-    print("Supply-chain inputs verified: actions, base images, wrapper and dependency locks are immutable.")
+    print("Supply-chain inputs verified: actions, helper and base images, wrapper and dependency locks are immutable.")
 
 
 if __name__ == "__main__":
