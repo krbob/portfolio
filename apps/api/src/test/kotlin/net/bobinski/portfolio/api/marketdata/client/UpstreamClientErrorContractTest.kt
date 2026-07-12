@@ -3,6 +3,8 @@ package net.bobinski.portfolio.api.marketdata.client
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -11,12 +13,53 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import java.net.URI
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.concurrent.atomic.AtomicInteger
 
 class UpstreamClientErrorContractTest {
+
+    @Test
+    fun `caller deadline cancels the in-flight upstream request`() {
+        val requests = AtomicInteger()
+        val server = errorServer("/slow") { exchange ->
+            requests.incrementAndGet()
+            Thread.sleep(1_000)
+            runCatching { exchange.respond(status = 200, body = "{}") }
+        }
+
+        try {
+            val transport = UpstreamHttpTransport(HttpClient.newHttpClient())
+            val startedAt = System.nanoTime()
+
+            assertThrows<TimeoutCancellationException> {
+                runBlocking {
+                    withTimeout(250) {
+                        transport.get(
+                            uri = URI.create("${server.baseUrl()}/slow"),
+                            timeout = Duration.ofSeconds(5),
+                            context = UpstreamRequestContext(
+                                upstream = "slow-upstream",
+                                operation = "deadline-test",
+                                subject = "fixture"
+                            ),
+                            decodeSuccess = { body -> body },
+                            decodeError = { null }
+                        )
+                    }
+                }
+            }
+
+            val elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis()
+            assertTrue(elapsedMs < 900, "Caller deadline took ${elapsedMs} ms to cancel the request.")
+            assertEquals(1, requests.get())
+        } finally {
+            server.stop(0)
+        }
+    }
 
     @Test
     fun `stock client exposes history provenance without folding it into price points`() {

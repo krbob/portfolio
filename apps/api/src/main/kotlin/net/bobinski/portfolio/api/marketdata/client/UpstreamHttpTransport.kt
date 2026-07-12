@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.marketdata.client
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.net.URI
 import java.net.URLEncoder
@@ -9,6 +10,10 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 internal object UpstreamTimeoutBudgets {
     // stock-analyst has a 15 s backend request budget; Portfolio keeps 5 s for serialization and transfer.
@@ -49,7 +54,7 @@ internal class UpstreamHttpTransport(
             .header("Accept", "application/json")
             .GET()
             .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString()).awaitCancellable()
         if (response.statusCode() !in 200..299) {
             val envelope = runCatching { decodeError(response.body()) }.getOrNull()
             val responseRequestId = response.headers().firstValue(REQUEST_ID_HEADER).orElse(null)
@@ -93,6 +98,20 @@ internal class UpstreamHttpTransport(
         const val REQUEST_ID_HEADER = "X-Request-ID"
         const val RETRY_AFTER_HEADER = "Retry-After"
     }
+}
+
+private suspend fun <T> CompletableFuture<T>.awaitCancellable(): T = suspendCancellableCoroutine { continuation ->
+    whenComplete { value, error ->
+        if (!continuation.isActive) return@whenComplete
+        if (error == null) {
+            continuation.resume(value)
+        } else {
+            continuation.resumeWithException(
+                if (error is CompletionException && error.cause != null) error.cause!! else error
+            )
+        }
+    }
+    continuation.invokeOnCancellation { cancel(true) }
 }
 
 internal fun buildUpstreamUri(
