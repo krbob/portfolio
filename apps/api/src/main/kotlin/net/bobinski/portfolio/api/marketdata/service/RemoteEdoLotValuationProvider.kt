@@ -24,9 +24,7 @@ class RemoteEdoLotValuationProvider(
         return try {
             val value = edoCalculatorClient.unitValueInPln(terms = lotTerms)
             val yesterday = LocalDate.now().minusDays(1)
-            val previousCloseValue = if (!yesterday.isBefore(lotTerms.purchaseDate)) {
-                runCatching { edoCalculatorClient.unitValueInPln(terms = lotTerms, asOf = yesterday) }.getOrNull()
-            } else null
+            val previousCloseValue = previousCloseValue(lotTerms, yesterday)
             val valuation = InstrumentValuation(
                 pricePerUnitPln = value.totalValue,
                 pricePerUnitNative = value.totalValue,
@@ -74,6 +72,20 @@ class RemoteEdoLotValuationProvider(
             )
         }
     }
+
+    @Suppress("SwallowedException")
+    private suspend fun previousCloseValue(lotTerms: EdoLotTerms, asOf: LocalDate) =
+        if (asOf.isBefore(lotTerms.purchaseDate)) {
+            null
+        } else {
+            try {
+                edoCalculatorClient.unitValueInPln(terms = lotTerms, asOf = asOf)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                null
+            }
+        }
 
     override suspend fun dailyPriceSeries(
         lotTerms: EdoLotTerms,

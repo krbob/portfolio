@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.marketdata.service
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
@@ -101,10 +102,28 @@ class RemoteValuationProbeServiceTest {
         assertEquals(true, exception.message?.contains("Could not reach"))
     }
 
-    private fun buildService(port: Int): RemoteValuationProbeService {
+    @Test
+    fun `caller cancellation is propagated from symbol verification`() {
+        val service = buildService(
+            baseUrl = "http://cancelled.test",
+            httpClient = SelectiveCancellingHttpClient { true }
+        )
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking { service.verifyStockAnalystSymbol("VWRA.L") }
+        }
+    }
+
+    private fun buildService(port: Int): RemoteValuationProbeService =
+        buildService(baseUrl = "http://127.0.0.1:$port")
+
+    private fun buildService(
+        baseUrl: String,
+        httpClient: HttpClient = HttpClient.newBuilder().build()
+    ): RemoteValuationProbeService {
         val config = MarketDataConfig(
             enabled = true,
-            stockAnalystApiUrl = "http://127.0.0.1:$port",
+            stockAnalystApiUrl = baseUrl,
             edoCalculatorApiUrl = "http://127.0.0.1:1",
             goldApiUrl = "http://127.0.0.1:1",
             goldApiKey = null,
@@ -114,9 +133,9 @@ class RemoteValuationProbeServiceTest {
             bondBenchmarkSymbol = "VAGF.DE"
         )
         val client = StockAnalystClient(
-            httpClient = HttpClient.newBuilder().build(),
+            httpClient = httpClient,
             json = AppJsonFactory.create(),
-            baseUrl = "http://127.0.0.1:$port"
+            baseUrl = baseUrl
         )
         return RemoteValuationProbeService(config, client)
     }

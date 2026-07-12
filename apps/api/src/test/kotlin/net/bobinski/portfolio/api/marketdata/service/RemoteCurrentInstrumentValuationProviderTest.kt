@@ -9,6 +9,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.AssetClass
@@ -24,6 +25,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 class RemoteCurrentInstrumentValuationProviderTest {
@@ -68,7 +70,30 @@ class RemoteCurrentInstrumentValuationProviderTest {
         }
     }
 
-    private fun buildService(port: Int): RemoteCurrentInstrumentValuationProvider {
+    @Test
+    fun `caller cancellation is propagated from trading day verification`() {
+        val server = startFakeStockAnalyst(historyPricesJson = "[]")
+
+        try {
+            val service = buildService(
+                port = server.address.port,
+                httpClient = SelectiveCancellingHttpClient { request ->
+                    request.uri().path.startsWith("/v1/history/")
+                }
+            )
+
+            assertThrows(CancellationException::class.java) {
+                runBlocking { service.value(vwraInstrument()) }
+            }
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    private fun buildService(
+        port: Int,
+        httpClient: HttpClient = HttpClient.newBuilder().build()
+    ): RemoteCurrentInstrumentValuationProvider {
         val clock = Clock.fixed(Instant.parse("2026-05-04T21:10:00Z"), ZoneOffset.UTC)
         val json = AppJsonFactory.create()
         val operationalStateService = OperationalStateService(
@@ -94,7 +119,7 @@ class RemoteCurrentInstrumentValuationProviderTest {
         return RemoteCurrentInstrumentValuationProvider(
             config = config,
             stockAnalystClient = StockAnalystClient(
-                httpClient = HttpClient.newBuilder().build(),
+                httpClient = httpClient,
                 json = json,
                 baseUrl = "http://127.0.0.1:$port"
             ),

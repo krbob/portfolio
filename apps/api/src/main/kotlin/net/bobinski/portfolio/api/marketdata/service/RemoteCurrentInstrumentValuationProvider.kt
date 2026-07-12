@@ -114,12 +114,17 @@ class RemoteCurrentInstrumentValuationProvider(
             hasTradingDayPrice(symbol = symbol, date = plnQuote.date)
         }?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)
 
+    @Suppress("SwallowedException")
     private suspend fun hasTradingDayPrice(symbol: String, date: LocalDate): Boolean =
-        runCatching {
+        try {
             stockAnalystClient.historyInPln(symbol = symbol, from = date, to = date)
                 .prices
                 .any { it.date == date }
-        }.getOrDefault(false)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            false
+        }
 
     private suspend fun cachedQuoteResult(instrument: Instrument): InstrumentValuationResult.Success? {
         val symbol = instrument.symbol ?: return null
