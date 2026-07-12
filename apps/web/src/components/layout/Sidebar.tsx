@@ -28,7 +28,7 @@ function NavSection({
 
   return (
     <div className="mb-6">
-      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
+      <span className="mb-2 block px-3 text-xs font-medium uppercase tracking-wider text-ui-text-muted">
         {label}
       </span>
       <ul className="flex flex-col gap-0.5">
@@ -41,10 +41,10 @@ function NavSection({
               onClick={onNavigate}
               className={({ isActive }) =>
                 clsx(
-                  'flex select-none items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color] [-webkit-tap-highlight-color:transparent] focus:outline-none focus-visible:border-blue-400 focus-visible:bg-zinc-800/80 focus-visible:ring-2 focus-visible:ring-blue-500/20 active:bg-zinc-800',
+                  'flex select-none items-center gap-3 rounded-ui-control border-l-2 px-3 py-2.5 text-sm font-medium transition-[background-color,color,border-color] [-webkit-tap-highlight-color:transparent] focus:outline-none focus-visible:border-ui-action focus-visible:bg-ui-surface-raised focus-visible:ring-2 focus-visible:ring-ui-action/20 active:bg-ui-surface-raised',
                   isActive
-                    ? 'border-blue-500 bg-zinc-800 text-zinc-100'
-                    : 'border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300',
+                    ? 'border-ui-action bg-ui-surface-raised text-ui-text'
+                    : 'border-transparent text-ui-text-muted hover:bg-ui-surface-raised/70 hover:text-ui-text-secondary',
                 )
               }
             >
@@ -76,9 +76,9 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   })
 
   return (
-    <nav className={`flex h-full min-h-0 w-full flex-col bg-zinc-900/80 ${className}`} aria-label={t('layout.navigation')}>
+    <nav className={`flex h-full min-h-0 w-full flex-col bg-ui-surface/90 ${className}`} aria-label={t('layout.navigation')}>
       <div className="px-5 py-6">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-100">Portfolio</h1>
+        <h1 className="text-xl font-bold tracking-tight text-ui-text">Portfolio</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3">
@@ -92,17 +92,17 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
         ))}
       </div>
 
-      <div className="border-t border-zinc-800 px-4 py-4">
+      <div className="border-t border-ui-border px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <StatusDot status={systemStatus.dot} />
-            <span className="text-xs font-medium text-zinc-400">
+            <span className="text-xs font-medium text-ui-text-muted">
               {t('layout.runtimeHealth')}
             </span>
           </div>
-          <span className="text-xs text-zinc-400">{systemStatus.label}</span>
+          <span className="text-xs text-ui-text-muted">{systemStatus.label}</span>
         </div>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-ui-text-muted">
           {readinessQuery.isLoading
             ? t('layout.checkingDeps')
             : readinessQuery.isError
@@ -112,7 +112,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
         <NavLink
           to={appRoutes.system.diagnostics}
           onClick={onNavigate}
-          className="mt-2 inline-flex text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+          className="mt-2 inline-flex text-xs font-medium text-ui-text-muted transition-colors hover:text-ui-text"
         >
           {t('layout.openHealth')}
         </NavLink>

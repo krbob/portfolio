@@ -1,0 +1,34 @@
+/* Portfolio's framework adapter for the public stock-ecosystem-ui contract. */
+@theme inline {
+  --color-ui-canvas: var(--ui-color-canvas);
+  --color-ui-surface: var(--ui-color-surface);
+  --color-ui-surface-raised: var(--ui-color-surface-raised);
+  --color-ui-border: var(--ui-color-border);
+  --color-ui-border-strong: var(--ui-color-border-strong);
+  --color-ui-text: var(--ui-color-text);
+  --color-ui-text-secondary: var(--ui-color-text-secondary);
+  --color-ui-text-muted: var(--ui-color-text-muted);
+  --color-ui-action: var(--ui-color-action);
+  --color-ui-on-action: var(--ui-color-on-action);
+  --color-ui-positive: var(--ui-color-positive);
+  --color-ui-negative: var(--ui-color-negative);
+  --color-ui-danger: var(--ui-color-danger);
+  --color-ui-highlight: var(--ui-color-highlight);
+  --color-ui-chart-background: var(--ui-chart-background);
+  --color-ui-chart-grid: var(--ui-chart-grid);
+  --color-ui-chart-border: var(--ui-chart-scale-border);
+  --color-ui-chart-text: var(--ui-chart-text);
+  --color-ui-chart-up: var(--ui-chart-up);
+  --color-ui-chart-down: var(--ui-chart-down);
+  --color-ui-chart-accent: var(--ui-chart-accent);
+  --color-ui-chart-series-1: var(--ui-chart-series-1);
+  --color-ui-chart-series-2: var(--ui-chart-series-2);
+  --color-ui-chart-series-3: var(--ui-chart-series-3);
+  --color-ui-chart-series-4: var(--ui-chart-series-4);
+  --color-ui-chart-series-5: var(--ui-chart-series-5);
+  --color-ui-chart-series-6: var(--ui-chart-series-6);
+  --radius-ui-field: var(--ui-radius-field);
+  --radius-ui-control: var(--ui-radius-control);
+  --radius-ui-card: var(--ui-radius-card);
+  --radius-ui-pill: var(--ui-radius-pill);
+}

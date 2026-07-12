@@ -22,26 +22,26 @@ describe('StatCard', () => {
 
   it('renders colored dot for equity', () => {
     const { container } = render(<StatCard label="Equities" value="100 zł" dot="equity" />)
-    const dot = container.querySelector('.bg-blue-500')
+    const dot = container.querySelector('.bg-ui-action')
     expect(dot).toBeInTheDocument()
   })
 
   it('renders colored dot for bond', () => {
     const { container } = render(<StatCard label="Bonds" value="50 zł" dot="bond" />)
-    const dot = container.querySelector('.bg-amber-500')
+    const dot = container.querySelector('.bg-ui-highlight')
     expect(dot).toBeInTheDocument()
   })
 
   it('applies positive change color', () => {
     render(<StatCard label="Change" value="+10 zł" change="positive" />)
     const valueEl = screen.getByText('+10 zł')
-    expect(valueEl.className).toContain('text-emerald-400')
+    expect(valueEl.className).toContain('text-ui-positive')
   })
 
   it('applies negative change color', () => {
     render(<StatCard label="Change" value="-10 zł" change="negative" />)
     const valueEl = screen.getByText('-10 zł')
-    expect(valueEl.className).toContain('text-red-400')
+    expect(valueEl.className).toContain('text-ui-negative')
   })
 
   it('applies animate-pulse when loading', () => {
@@ -64,7 +64,7 @@ describe('StatCard', () => {
     it('detects zero via numericValue prop', () => {
       render(<StatCard label="Value" value="0,00 PLN" numericValue={0} />)
       const valueEl = screen.getByText('0,00 PLN')
-      expect(valueEl.className).toContain('text-zinc-400')
+      expect(valueEl.className).toContain('text-ui-text-muted')
     })
 
     it('does not treat non-zero numericValue as zero', () => {
@@ -76,7 +76,7 @@ describe('StatCard', () => {
     it('falls back to string matching when numericValue is omitted', () => {
       render(<StatCard label="Value" value="0,00 zł" />)
       const valueEl = screen.getByText('0,00 zł')
-      expect(valueEl.className).toContain('text-zinc-400')
+      expect(valueEl.className).toContain('text-ui-text-muted')
     })
 
     it('does not false-positive on formatted strings not in allowlist', () => {

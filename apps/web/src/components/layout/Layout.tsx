@@ -135,13 +135,13 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [isMobileNavMounted, isMobileNavVisible])
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex lg:h-screen lg:overflow-hidden">
-      <aside className="hidden border-r border-zinc-800 lg:flex lg:w-60 lg:shrink-0">
+    <div className="min-h-screen bg-ui-canvas text-ui-text lg:flex lg:h-screen lg:overflow-hidden">
+      <aside className="hidden border-r border-ui-border lg:flex lg:w-60 lg:shrink-0">
         <Sidebar />
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0">
-        <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 border-b border-ui-border bg-ui-canvas/95 backdrop-blur lg:hidden">
           <div
             className="flex items-center gap-3 px-4 py-3"
             style={{
@@ -152,7 +152,7 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-ui-control border border-ui-border bg-ui-surface text-ui-text-secondary transition-colors hover:border-ui-border-strong hover:text-ui-text"
               onClick={openMobileNav}
               aria-label={t('layout.openNavigation')}
               aria-expanded={isMobileNavVisible}
@@ -162,8 +162,8 @@ export function Layout({ children }: { children: ReactNode }) {
             </button>
 
             <div className="min-w-0 flex-1 px-3">
-              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">{t('layout.appName')}</p>
-              <p className="truncate text-sm font-semibold text-zinc-100">{currentTitle}</p>
+              <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-ui-text-muted">{t('layout.appName')}</p>
+              <p className="truncate text-sm font-semibold text-ui-text">{currentTitle}</p>
             </div>
           </div>
         </header>
@@ -186,7 +186,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <>
           <div
             className={clsx(
-              'fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden',
+              'fixed inset-0 z-40 bg-ui-canvas/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden',
               isMobileNavVisible ? 'opacity-100' : 'opacity-0',
             )}
             onClick={closeMobileNav}
@@ -197,7 +197,7 @@ export function Layout({ children }: { children: ReactNode }) {
             ref={mobileNavRef}
             id="mobile-navigation"
             className={clsx(
-              'fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-zinc-800 bg-zinc-900 shadow-2xl transition-transform duration-200 ease-out lg:hidden',
+              'fixed inset-y-0 left-0 z-50 w-72 max-w-[86vw] border-r border-ui-border bg-ui-surface shadow-2xl transition-transform duration-200 ease-out lg:hidden',
               isMobileNavVisible ? 'translate-x-0' : '-translate-x-full',
             )}
             style={{
@@ -213,7 +213,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={closeMobileNav}
-              className="absolute right-3 top-3 rounded-lg p-2 text-zinc-400 hover:text-zinc-200"
+              className="absolute right-3 top-3 rounded-ui-control p-2 text-ui-text-muted hover:text-ui-text"
               aria-label={t('layout.closeNavigation')}
             >
               <IconClose />

@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run validate:tokens && tsc -b && vite build",
     "generate:api": "../api/gradlew -p ../api exportOpenApiSpec && npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript ../api/build/openapi/portfolio-api.json -o src/api/generated/portfolio-api.d.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "lint": "eslint src"
+    "lint": "eslint src scripts",
+    "validate:tokens": "node scripts/validate-design-tokens.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",

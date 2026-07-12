@@ -1,8 +1,8 @@
 const statusColors = {
-  healthy: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  error: 'bg-red-500',
-  unknown: 'bg-zinc-600',
+  healthy: 'bg-ui-positive',
+  warning: 'bg-ui-highlight',
+  error: 'bg-ui-danger',
+  unknown: 'bg-ui-text-muted',
 } as const
 
 interface StatusDotProps {

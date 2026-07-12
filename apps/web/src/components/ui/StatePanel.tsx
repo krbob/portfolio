@@ -17,27 +17,27 @@ interface StatePanelProps {
 }
 
 const toneClasses: Record<StateTone, string> = {
-  default: 'border-zinc-800 bg-zinc-900 text-zinc-300',
-  warning: 'border-amber-500/25 bg-amber-500/5 text-amber-100',
-  error: 'border-red-500/25 bg-red-500/5 text-red-100',
+  default: 'border-ui-border bg-ui-surface-raised text-ui-text-secondary',
+  warning: 'border-ui-highlight/30 bg-ui-highlight/5 text-ui-text',
+  error: 'border-ui-danger/30 bg-ui-danger/5 text-ui-text',
 }
 
 const descriptionToneClasses: Record<StateTone, string> = {
-  default: 'text-zinc-400',
-  warning: 'text-amber-200/70',
-  error: 'text-red-200/70',
+  default: 'text-ui-text-muted',
+  warning: 'text-ui-highlight',
+  error: 'text-ui-danger',
 }
 
 const eyebrowToneClasses: Record<StateTone, string> = {
-  default: 'text-zinc-400',
-  warning: 'text-amber-300/80',
-  error: 'text-red-300/80',
+  default: 'text-ui-text-muted',
+  warning: 'text-ui-highlight',
+  error: 'text-ui-danger',
 }
 
 const iconToneClasses: Record<StateTone, string> = {
-  default: 'bg-zinc-800 text-zinc-300',
-  warning: 'bg-amber-500/15 text-amber-300',
-  error: 'bg-red-500/15 text-red-300',
+  default: 'bg-ui-surface text-ui-text-secondary',
+  warning: 'bg-ui-highlight/15 text-ui-highlight',
+  error: 'bg-ui-danger/15 text-ui-danger',
 }
 
 export function StatePanel({
@@ -62,7 +62,7 @@ export function StatePanel({
             {eyebrow}
           </p>
         )}
-        <h3 className="mt-2 text-lg font-semibold text-zinc-100">{title}</h3>
+        <h3 className="mt-2 text-lg font-semibold text-ui-text">{title}</h3>
         <p className={`mt-2 max-w-md text-sm ${descriptionToneClasses[tone]}`}>{description}</p>
         {action && (
           <div className="mt-6">

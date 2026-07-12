@@ -283,6 +283,11 @@ Alert types, alert thresholds and global push delivery can also be adjusted in `
 
 Set `PORTFOLIO_SHOW_CHART_ATTRIBUTION=false` on a private local container to hide the TradingView attribution logo on Lightweight Charts without rebuilding the image. For local Vite development, use `VITE_SHOW_CHART_ATTRIBUTION=false` in `apps/web/.env.local`.
 
+Portfolio vendors the framework-neutral `stock-ecosystem-ui` design-token contract under
+`apps/web/src/styles/vendor`. `source.json` pins the reviewed upstream commit and file hashes; application code uses
+only the public semantic/component roles through the local Tailwind adapter. Verify integrity, inventory and the
+private primitive boundary with `cd apps/web && npm run validate:tokens`.
+
 ### OpenAPI UI
 
 - `PORTFOLIO_OPENAPI_UI_ENABLED`

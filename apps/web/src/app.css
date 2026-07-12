@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/vendor/stock-ecosystem-ui/tokens.css";
+@import "./styles/portfolio-tokens.css";
 
 @theme {
   --animate-fade-in: fade-in 300ms ease-out both;
@@ -39,7 +41,8 @@
   body {
     min-height: 100vh;
     min-height: 100dvh;
-    background: #09090b;
+    background: var(--ui-color-canvas);
+    color: var(--ui-color-text);
   }
 
   input,
@@ -67,7 +70,7 @@
   }
 
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-    outline: 2px solid #60a5fa;
-    outline-offset: 2px;
+    outline: var(--ui-focus-width) solid var(--ui-focus-color);
+    outline-offset: var(--ui-focus-offset);
   }
 }

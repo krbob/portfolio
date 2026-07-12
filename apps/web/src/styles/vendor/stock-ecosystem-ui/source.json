@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "https://github.com/krbob/stock-analyst-ui",
+  "sourceCommit": "708bb071ad693173585b05644ac553f102aeec50",
+  "contractVersion": "1.0.1",
+  "files": {
+    "tokens.css": "23bb71bec002264e161619d28a9822e70f488907694a32c5eca5ea02be297c50",
+    "tokens.manifest.json": "7aa093a7f9020cbd28952f92ee6f260c08d5d7570ed764eb006beec977adf2ad"
+  }
+}

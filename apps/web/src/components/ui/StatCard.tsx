@@ -14,9 +14,9 @@ interface StatCardProps {
 }
 
 const dotColors: Record<string, string> = {
-  equity: 'bg-blue-500',
-  bond: 'bg-amber-500',
-  cash: 'bg-zinc-500',
+  equity: 'bg-ui-action',
+  bond: 'bg-ui-highlight',
+  cash: 'bg-ui-text-muted',
 }
 
 export function StatCard({ label, value, numericValue, subtitle, change, dot, hero, loading, to }: StatCardProps) {
@@ -27,11 +27,11 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
   const content = (
     <div
       className={clsx(
-        'min-h-[5.5rem] rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:min-h-[6rem] sm:p-5',
-        to && 'transition-colors hover:border-zinc-700',
+        'min-h-[5.5rem] rounded-ui-card border border-ui-border bg-ui-surface-raised p-4 sm:min-h-[6rem] sm:p-5',
+        to && 'transition-colors hover:border-ui-border-strong',
       )}
     >
-      <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-400 sm:text-sm sm:normal-case sm:tracking-normal">
+      <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ui-text-muted sm:text-sm sm:normal-case sm:tracking-normal">
         {dotClass && <span className={clsx('inline-block h-2 w-2 rounded-full', dotClass)} />}
         {label}
       </div>
@@ -40,21 +40,21 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
           'mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums',
           loading && 'animate-pulse',
           hero
-            ? [isLong ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl', 'text-zinc-50']
+            ? [isLong ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl', 'text-ui-text']
             : isLong ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl',
           isZero
-            ? 'text-zinc-400'
+            ? 'text-ui-text-muted'
             : change === 'positive'
-              ? 'text-emerald-400'
+              ? 'text-ui-positive'
               : change === 'negative'
-                ? 'text-red-400'
+                ? 'text-ui-negative'
                 : undefined,
         )}
       >
         {value}
       </div>
       {subtitle && (
-        <p className="mt-1 text-xs text-zinc-400 sm:text-sm sm:tabular-nums">{subtitle}</p>
+        <p className="mt-1 text-xs text-ui-text-muted sm:text-sm sm:tabular-nums">{subtitle}</p>
       )}
     </div>
   )
@@ -63,7 +63,7 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
     return (
       <Link
         to={to}
-        className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+        className="block rounded-ui-card focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-action/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ui-canvas"
       >
         {content}
       </Link>

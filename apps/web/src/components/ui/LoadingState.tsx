@@ -30,13 +30,13 @@ export function LoadingState({
   return (
     <Card className={`${surfaceClassName} ${className}`}>
       <div className="mx-auto max-w-lg text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-ui-text-muted">
           {t('ui.loadingEyebrow')}
         </p>
-        <h3 className="mt-2 text-lg font-semibold text-zinc-100">
+        <h3 className="mt-2 text-lg font-semibold text-ui-text">
           {title ?? t('ui.loadingTitle')}
         </h3>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-ui-text-muted">
           {description ?? t('ui.loadingDescription')}
         </p>
       </div>
@@ -44,7 +44,7 @@ export function LoadingState({
         {Array.from({ length: blocks }, (_, index) => (
           <div
             key={index}
-            className="h-24 animate-pulse rounded-xl border border-zinc-800 bg-zinc-950/70"
+            className="h-24 animate-pulse rounded-ui-card border border-ui-border bg-ui-canvas/70"
           />
         ))}
       </div>
