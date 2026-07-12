@@ -85,6 +85,21 @@ class PortfolioAlertRouteTest {
         val accountId = createAccount()
         createDeposit(accountId)
         createEquityTarget()
+        val settings = client.post("/v1/portfolio/alert-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "enabled": true,
+                  "pushEnabled": false,
+                  "enabledTypes": ["ALLOCATION_DRIFT"],
+                  "allocationDriftThresholdPctPoints": "5.00",
+                  "benchmarkUnderperformanceThresholdPctPoints": "5.00"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, settings.status, settings.bodyAsText())
 
         val english = client.get("/v1/portfolio/alerts") {
             header(HttpHeaders.AcceptLanguage, "pl;q=0.4, en-GB;q=0.9")
@@ -96,13 +111,14 @@ class PortfolioAlertRouteTest {
         val invalidLocale = client.get("/v1/portfolio/alerts") {
             header(HttpHeaders.AcceptLanguage, "de-DE, invalid;q=broken")
         }
+        val englishBody = english.bodyAsText()
 
-        assertEquals(HttpStatusCode.OK, english.status)
-        assertTrue(english.bodyAsText().contains("Allocation drift: cash"), english.bodyAsText())
-        assertTrue(english.bodyAsText().contains("The deviation is"), english.bodyAsText())
-        assertTrue(polish.bodyAsText().contains("Dryf alokacji: gotówka"), polish.bodyAsText())
-        assertTrue(defaultLocale.bodyAsText().contains("Dryf alokacji: gotówka"), defaultLocale.bodyAsText())
-        assertTrue(invalidLocale.bodyAsText().contains("Dryf alokacji: gotówka"), invalidLocale.bodyAsText())
+        assertEquals(HttpStatusCode.OK, english.status, englishBody)
+        assertTrue(englishBody.contains("Allocation drift: equities"), englishBody)
+        assertTrue(englishBody.contains("The deviation is"), englishBody)
+        assertTrue(polish.bodyAsText().contains("Dryf alokacji: akcje"), polish.bodyAsText())
+        assertTrue(defaultLocale.bodyAsText().contains("Dryf alokacji: akcje"), defaultLocale.bodyAsText())
+        assertTrue(invalidLocale.bodyAsText().contains("Dryf alokacji: akcje"), invalidLocale.bodyAsText())
     }
 
     @Test
