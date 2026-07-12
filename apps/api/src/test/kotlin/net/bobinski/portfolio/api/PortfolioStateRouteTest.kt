@@ -206,7 +206,6 @@ class PortfolioStateRouteTest {
                 "accounts": [],
                 "appPreferences": [],
                 "instruments": [],
-                "targets": [],
                 "importProfiles": [],
                 "transactions": []
               }
@@ -238,6 +237,62 @@ class PortfolioStateRouteTest {
         assertTrue(targetsBody.contains("\"targetWeight\": \"0.800000\""), targetsBody)
         assertTrue(targetsBody.contains("\"assetClass\": \"BONDS\""), targetsBody)
         assertTrue(targetsBody.contains("\"targetWeight\": \"0.200000\""), targetsBody)
+    }
+
+    @Test
+    fun `merge import clears targets when snapshot contains an explicit empty targets section`() = testApplication {
+        application {
+            module()
+        }
+
+        createTargets(
+            """
+            {
+              "items": [
+                { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                { "assetClass": "BONDS", "targetWeight": "0.20" }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        val requestBody =
+            """
+            {
+              "mode": "MERGE",
+              "snapshot": {
+                "schemaVersion": 4,
+                "exportedAt": "2026-03-20T12:00:00Z",
+                "accounts": [],
+                "appPreferences": [],
+                "instruments": [],
+                "targets": [],
+                "importProfiles": [],
+                "transactions": []
+              }
+            }
+            """.trimIndent()
+        val previewResponse = client.post("/v1/portfolio/state/preview") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+        val targetsResponse = client.get("/v1/portfolio/targets")
+        val previewBody = previewResponse.bodyAsText()
+        val importBody = importResponse.bodyAsText()
+        val targetsBody = targetsResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, previewResponse.status, previewBody)
+        assertTrue(previewBody.contains("\"isValid\": true"), previewBody)
+        assertTrue(previewBody.contains("\"code\": \"TARGETS_SECTION_REPLACED\""), previewBody)
+        assertTrue(previewBody.contains("\"deletedCount\": 2"), previewBody)
+        assertTrue(previewBody.contains("\"sectionSkipped\": false"), previewBody)
+        assertEquals(HttpStatusCode.OK, importResponse.status, importBody)
+        assertTrue(importBody.contains("\"targetCount\": 0"), importBody)
+        assertEquals("[]", targetsBody)
     }
 
     @Test

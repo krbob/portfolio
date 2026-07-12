@@ -24,7 +24,7 @@ data class PortfolioSnapshotResponse(
     val accounts: List<AccountSnapshotResponse>,
     val appPreferences: List<AppPreferenceSnapshotResponse> = emptyList(),
     val instruments: List<InstrumentSnapshotResponse>,
-    val targets: List<PortfolioTargetSnapshotResponse> = emptyList(),
+    val targets: List<PortfolioTargetSnapshotResponse>? = null,
     val importProfiles: List<TransactionImportProfileSnapshotResponse> = emptyList(),
     val transactions: List<TransactionSnapshotResponse>
 )
@@ -505,7 +505,8 @@ internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Po
         accounts = snapshot.accounts.map(AccountSnapshotResponse::toDomain),
         appPreferences = snapshot.appPreferences.map(AppPreferenceSnapshotResponse::toDomain),
         instruments = snapshot.instruments.map(InstrumentSnapshotResponse::toDomain),
-        targets = snapshot.targets.map(PortfolioTargetSnapshotResponse::toDomain),
+        targets = snapshot.targets.orEmpty().map(PortfolioTargetSnapshotResponse::toDomain),
+        targetsSectionPresent = snapshot.targets != null,
         importProfiles = snapshot.importProfiles.map(TransactionImportProfileSnapshotResponse::toDomain),
         transactions = snapshot.transactions.map(TransactionSnapshotResponse::toDomain)
     )

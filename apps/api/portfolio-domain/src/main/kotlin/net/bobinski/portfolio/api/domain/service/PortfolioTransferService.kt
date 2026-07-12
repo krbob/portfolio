@@ -306,6 +306,7 @@ class PortfolioTransferService(
             mode = request.mode,
             existingTargets = existingTargets,
             snapshotTargets = snapshotTargets,
+            targetsSectionPresent = request.snapshot.targetsSectionPresent,
             issues = issues
         )
         val importProfilesPlan = prepareImportProfilesPlan(
@@ -457,9 +458,10 @@ class PortfolioTransferService(
         mode: ImportMode,
         existingTargets: List<PortfolioTarget>,
         snapshotTargets: List<PortfolioTarget>,
+        targetsSectionPresent: Boolean,
         issues: MutableList<PortfolioImportIssue>
     ): PreparedTargetImportPlan {
-        if (mode == ImportMode.MERGE && snapshotTargets.isEmpty()) {
+        if (mode == ImportMode.MERGE && !targetsSectionPresent) {
             if (existingTargets.isNotEmpty()) {
                 issues += PortfolioImportIssue(
                     severity = ImportIssueSeverity.WARNING,
@@ -470,7 +472,7 @@ class PortfolioTransferService(
             return PreparedTargetImportPlan.Preserve
         }
 
-        if (mode == ImportMode.MERGE && snapshotTargets.isNotEmpty() && existingTargets.isNotEmpty()) {
+        if (mode == ImportMode.MERGE && targetsSectionPresent && existingTargets.isNotEmpty()) {
             issues += PortfolioImportIssue(
                 severity = ImportIssueSeverity.WARNING,
                 code = "TARGETS_SECTION_REPLACED",
@@ -826,6 +828,7 @@ data class PortfolioSnapshot(
     val appPreferences: List<AppPreferenceSnapshot> = emptyList(),
     val instruments: List<InstrumentSnapshot>,
     val targets: List<PortfolioTargetSnapshot> = emptyList(),
+    val targetsSectionPresent: Boolean = true,
     val importProfiles: List<TransactionImportProfileSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )

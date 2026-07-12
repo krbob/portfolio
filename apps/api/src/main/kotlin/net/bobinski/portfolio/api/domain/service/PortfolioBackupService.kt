@@ -256,7 +256,7 @@ class PortfolioBackupService(
                     !OperationalStateKeys.isLegacyPreference(preference.key)
                 },
                 instrumentCount = snapshot.instruments.size,
-                targetCount = snapshot.targets.size,
+                targetCount = snapshot.targets.orEmpty().size,
                 transactionCount = snapshot.transactions.size,
                 importProfileCount = snapshot.importProfiles.size,
                 isReadable = true,
@@ -379,7 +379,7 @@ private data class StoredPortfolioSnapshot(
     val accounts: List<AccountSnapshot>,
     val appPreferences: List<AppPreferenceSnapshot> = emptyList(),
     val instruments: List<InstrumentSnapshot>,
-    val targets: List<PortfolioTargetSnapshot> = emptyList(),
+    val targets: List<PortfolioTargetSnapshot>? = null,
     val importProfiles: List<TransactionImportProfileSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
@@ -405,7 +405,8 @@ private fun StoredPortfolioSnapshot.toDomain(): PortfolioSnapshot = PortfolioSna
         OperationalStateKeys.isLegacyPreference(preference.key)
     },
     instruments = instruments,
-    targets = targets,
+    targets = targets.orEmpty(),
+    targetsSectionPresent = targets != null,
     importProfiles = importProfiles,
     transactions = transactions
 )
