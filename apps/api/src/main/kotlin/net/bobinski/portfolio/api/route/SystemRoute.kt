@@ -75,7 +75,8 @@ fun Route.systemRoute(application: Application) {
 
         get("/readiness") {
             val readiness = readinessService.current()
-            call.respond(readiness.publicStatus(), readiness.toSummaryResponse())
+            call.response.status(readiness.publicStatus())
+            call.respond(readiness.toSummaryResponse())
         }.documented(
             operationId = "getReadiness",
             summary = "Get public system readiness",
