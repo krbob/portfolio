@@ -2,8 +2,6 @@ package net.bobinski.portfolio.api.domain.service
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.StandardOpenOption.WRITE
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -25,6 +23,7 @@ class PortfolioBackupService(
     private val clock: Clock
 ) {
     private val operationMutex = Mutex()
+    private val backupFileWriter = AtomicBackupFileWriter()
 
     @Volatile
     private var running = false
@@ -70,11 +69,9 @@ class PortfolioBackupService(
             val snapshot = transferService.exportState().toStored()
             val file = backupDirectory().resolve(fileNameFor(snapshot.exportedAt))
 
-            Files.writeString(
-                file,
-                json.encodeToString(StoredPortfolioSnapshot.serializer(), snapshot),
-                CREATE_NEW,
-                WRITE
+            backupFileWriter.write(
+                target = file,
+                content = json.encodeToString(StoredPortfolioSnapshot.serializer(), snapshot)
             )
 
             val prunedBackups = pruneOldBackups()

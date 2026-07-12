@@ -40,11 +40,11 @@ Transactions remain canonical. Everything analytical must be rebuildable from ca
 
 Operational state transfer is part of the product, not a side script.
 
-- canonical export returns the full write model as JSON
+- canonical export reads the full write model in one database snapshot and returns it as JSON
 - preview import validates the same rules as real import
 - `MERGE` preserves omitted sections where that is the explicit contract
 - `REPLACE` is destructive and must be guarded by confirmation plus safety backup
-- backup and restore remain JSON-first workflows
+- backup and restore remain JSON-first workflows; backup files are staged, forced, and atomically published
 - audit events record state-changing operations
 
 Two semantics matter especially:

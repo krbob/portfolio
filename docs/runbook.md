@@ -69,6 +69,7 @@ Important semantics:
 - scheduled JSON backups are the first recovery path
 - canonical export/import remains the portability path
 - `REPLACE` restore/import is a maintenance action, not a casual edit flow
+- a listed `.json` backup has already been fully written and atomically published; abandoned temporary files are not backup candidates
 
 If a restore is needed, prefer:
 

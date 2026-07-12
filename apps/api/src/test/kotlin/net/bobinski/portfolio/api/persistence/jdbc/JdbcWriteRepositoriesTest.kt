@@ -22,6 +22,7 @@ import net.bobinski.portfolio.api.domain.model.PortfolioTarget
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
+import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.domain.service.AccountSnapshot
 import net.bobinski.portfolio.api.domain.service.AuditLogService
@@ -36,6 +37,7 @@ import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
 import net.bobinski.portfolio.api.persistence.db.PersistenceResources
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
+import org.sqlite.SQLiteDataSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -110,6 +112,67 @@ class JdbcWriteRepositoriesTest {
             transactionRepository.save(redeemTransaction)
 
             assertEquals(redeemTransaction, transactionRepository.get(redeemTransaction.id))
+        }
+    }
+
+    @Test
+    fun `state export keeps one sqlite read snapshot across repository reads`() = runBlocking {
+        sqliteDatabase { dataSource ->
+            val connectionManager = JdbcConnectionManager(dataSource)
+            val accountDelegate = JdbcAccountRepository(connectionManager)
+            val transactionRepository = JdbcTransactionRepository(connectionManager)
+            val initialAccount = account()
+            val concurrentAccount = account().copy(
+                id = UUID.fromString("20000000-0000-0000-0000-000000000002"),
+                name = "Concurrent brokerage"
+            )
+            val concurrentTransaction = depositTransaction(
+                id = UUID.fromString("40000000-0000-0000-0000-000000000003"),
+                accountId = concurrentAccount.id
+            )
+            val jdbcUrl = dataSource.connection.use { connection -> connection.metaData.url }
+            val writerDataSource = SQLiteDataSource().apply { url = jdbcUrl }
+            val writerAccountRepository = JdbcAccountRepository(writerDataSource)
+            val writerTransactionRepository = JdbcTransactionRepository(writerDataSource)
+            var concurrentWriteCompleted = false
+            val interleavingAccountRepository = object : AccountRepository {
+                override suspend fun list(): List<Account> {
+                    val accounts = accountDelegate.list()
+                    if (!concurrentWriteCompleted) {
+                        writerAccountRepository.save(concurrentAccount)
+                        writerTransactionRepository.save(concurrentTransaction)
+                        concurrentWriteCompleted = true
+                    }
+                    return accounts
+                }
+
+                override suspend fun get(id: UUID): Account? = accountDelegate.get(id)
+
+                override suspend fun save(account: Account): Account = accountDelegate.save(account)
+
+                override suspend fun saveAll(accounts: List<Account>) = accountDelegate.saveAll(accounts)
+
+                override suspend fun deleteAll() = accountDelegate.deleteAll()
+            }
+            val transferService = PortfolioTransferService(
+                accountRepository = interleavingAccountRepository,
+                appPreferenceRepository = JdbcAppPreferenceRepository(connectionManager),
+                instrumentRepository = JdbcInstrumentRepository(connectionManager),
+                portfolioTargetRepository = JdbcPortfolioTargetRepository(connectionManager),
+                transactionRepository = transactionRepository,
+                transactionImportProfileRepository = JdbcTransactionImportProfileRepository(connectionManager, Json.Default),
+                transactionRunner = connectionManager,
+                auditLogService = AuditLogService(InMemoryAuditEventRepository(), Clock.systemUTC()),
+                clock = Clock.systemUTC()
+            )
+            accountDelegate.save(initialAccount)
+
+            val snapshot = transferService.exportState()
+
+            assertTrue(concurrentWriteCompleted)
+            assertEquals(listOf(initialAccount.id.toString()), snapshot.accounts.map { account -> account.id })
+            assertTrue(snapshot.transactions.isEmpty())
+            assertEquals(concurrentTransaction, writerTransactionRepository.get(concurrentTransaction.id))
         }
     }
 
@@ -342,6 +405,25 @@ class JdbcWriteRepositoriesTest {
         currency = "PLN",
         fxRateToPln = null,
         notes = "Maturity redemption",
+        createdAt = Instant.parse("2026-03-15T12:05:00Z"),
+        updatedAt = Instant.parse("2026-03-15T12:05:00Z")
+    )
+
+    private fun depositTransaction(id: UUID, accountId: UUID) = Transaction(
+        id = id,
+        accountId = accountId,
+        instrumentId = null,
+        type = TransactionType.DEPOSIT,
+        tradeDate = LocalDate.parse("2026-03-15"),
+        settlementDate = LocalDate.parse("2026-03-15"),
+        quantity = null,
+        unitPrice = null,
+        grossAmount = BigDecimal("1000.00"),
+        feeAmount = BigDecimal.ZERO,
+        taxAmount = BigDecimal.ZERO,
+        currency = "PLN",
+        fxRateToPln = null,
+        notes = "Concurrent deposit",
         createdAt = Instant.parse("2026-03-15T12:05:00Z"),
         updatedAt = Instant.parse("2026-03-15T12:05:00Z")
     )

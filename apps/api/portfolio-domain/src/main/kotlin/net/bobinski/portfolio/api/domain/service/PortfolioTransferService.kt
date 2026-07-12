@@ -38,7 +38,7 @@ class PortfolioTransferService(
     private val auditLogService: AuditLogService,
     private val clock: Clock
 ) {
-    suspend fun exportState(): PortfolioSnapshot {
+    suspend fun exportState(): PortfolioSnapshot = transactionRunner.inTransaction {
         val accounts = accountRepository.list()
             .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
         val appPreferences = appPreferenceRepository.list().sortedBy(AppPreference::key)
@@ -50,7 +50,7 @@ class PortfolioTransferService(
         val importProfiles = transactionImportProfileRepository.list()
             .sortedWith(compareBy<TransactionImportProfile>({ it.name.lowercase() }, { it.createdAt }))
 
-        return PortfolioSnapshot(
+        PortfolioSnapshot(
             schemaVersion = CURRENT_SCHEMA_VERSION,
             exportedAt = Instant.now(clock),
             accounts = accounts.map { it.toSnapshot() },
