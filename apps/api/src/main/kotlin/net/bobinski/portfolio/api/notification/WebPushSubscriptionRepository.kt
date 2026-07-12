@@ -7,6 +7,7 @@ data class WebPushSubscriptionRecord(
     val p256dh: String,
     val auth: String,
     val userAgent: String?,
+    val locale: PortfolioLocale,
     val createdAt: Instant,
     val updatedAt: Instant
 )
@@ -15,7 +16,8 @@ data class SaveWebPushSubscriptionCommand(
     val endpoint: String,
     val p256dh: String,
     val auth: String,
-    val userAgent: String?
+    val userAgent: String?,
+    val locale: PortfolioLocale
 )
 
 interface WebPushSubscriptionRepository {

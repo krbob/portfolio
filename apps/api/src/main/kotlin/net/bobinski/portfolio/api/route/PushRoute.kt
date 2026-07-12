@@ -12,6 +12,7 @@ import java.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.notification.SaveWebPushSubscriptionCommand
+import net.bobinski.portfolio.api.notification.PortfolioLocale
 import net.bobinski.portfolio.api.notification.WebPushSubscriptionRecord
 import net.bobinski.portfolio.api.notification.WebPushSubscriptionRepository
 import net.bobinski.portfolio.api.notification.config.PortfolioAlertConfig
@@ -78,11 +79,13 @@ private fun PushSubscriptionRequest.toCommand(): SaveWebPushSubscriptionCommand 
     endpoint = endpoint,
     p256dh = keys.p256dh,
     auth = keys.auth,
-    userAgent = userAgent
+    userAgent = userAgent,
+    locale = PortfolioLocale.fromLanguageTag(locale)
 )
 
 private fun WebPushSubscriptionRecord.toResponse(): PushSubscriptionResponse = PushSubscriptionResponse(
     endpoint = endpoint,
+    locale = locale.code,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString()
 )
@@ -105,7 +108,8 @@ data class PushSubscriptionRequest(
     val expirationTime: Long? = null,
     val keys: PushSubscriptionKeysRequest,
     @SerialName("user_agent")
-    val userAgent: String? = null
+    val userAgent: String? = null,
+    val locale: String? = null
 )
 
 @Serializable
@@ -116,6 +120,7 @@ data class PushSubscriptionDeleteRequest(
 @Serializable
 data class PushSubscriptionResponse(
     val endpoint: String,
+    val locale: String,
     val createdAt: String,
     val updatedAt: String
 )

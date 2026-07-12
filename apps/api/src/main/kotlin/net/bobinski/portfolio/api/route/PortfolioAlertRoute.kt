@@ -1,19 +1,23 @@
 package net.bobinski.portfolio.api.route
 
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
+import io.ktor.server.request.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
-import net.bobinski.portfolio.api.notification.PortfolioAlert
+import net.bobinski.portfolio.api.notification.LocalizedPortfolioAlert
 import net.bobinski.portfolio.api.notification.PortfolioAlertDispatchResult
+import net.bobinski.portfolio.api.notification.PortfolioLocale
 import net.bobinski.portfolio.api.notification.PortfolioAlertService
 import net.bobinski.portfolio.api.notification.PortfolioAlertSettings
 import net.bobinski.portfolio.api.notification.PortfolioAlertSettingsService
 import net.bobinski.portfolio.api.notification.SavePortfolioAlertSettingsCommand
 import net.bobinski.portfolio.api.notification.WebPushDispatchResult
+import net.bobinski.portfolio.api.notification.localize
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioAlertRoute() {
@@ -21,7 +25,8 @@ fun Route.portfolioAlertRoute() {
     val alertSettingsService: PortfolioAlertSettingsService by inject()
 
     get("/v1/portfolio/alerts") {
-        call.respond(alertService.currentAlerts().map { it.toResponse() })
+        val locale = PortfolioLocale.fromAcceptLanguage(call.request.header(HttpHeaders.AcceptLanguage))
+        call.respond(alertService.currentAlerts().map { alert -> alert.localize(locale).toResponse() })
     }.documented(
         operationId = "listPortfolioAlerts",
         summary = "List active portfolio alerts",
@@ -58,7 +63,7 @@ fun Route.portfolioAlertRoute() {
     )
 }
 
-internal fun PortfolioAlert.toResponse(): PortfolioAlertResponse = PortfolioAlertResponse(
+internal fun LocalizedPortfolioAlert.toResponse(): PortfolioAlertResponse = PortfolioAlertResponse(
     id = id,
     type = type.name,
     severity = severity.name,

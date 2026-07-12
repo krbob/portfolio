@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.persistence.jdbc
 
 import java.time.Instant
 import net.bobinski.portfolio.api.notification.SaveWebPushSubscriptionCommand
+import net.bobinski.portfolio.api.notification.PortfolioLocale
 import net.bobinski.portfolio.api.notification.WebPushSubscriptionRecord
 import net.bobinski.portfolio.api.notification.WebPushSubscriptionRepository
 
@@ -12,7 +13,7 @@ class JdbcWebPushSubscriptionRepository(
         connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
-                select endpoint, p256dh, auth, user_agent, created_at, updated_at
+                select endpoint, p256dh, auth, user_agent, locale, created_at, updated_at
                 from web_push_subscriptions
                 order by updated_at desc, endpoint asc
                 """.trimIndent()
@@ -31,16 +32,17 @@ class JdbcWebPushSubscriptionRepository(
         command: SaveWebPushSubscriptionCommand,
         now: Instant
     ): WebPushSubscriptionRecord {
-        connectionManager.withConnection { connection ->
+        return connectionManager.withConnection { connection ->
             connection.prepareStatement(
                 """
                 insert into web_push_subscriptions (
-                    endpoint, p256dh, auth, user_agent, created_at, updated_at
-                ) values (?, ?, ?, ?, ?, ?)
+                    endpoint, p256dh, auth, user_agent, locale, created_at, updated_at
+                ) values (?, ?, ?, ?, ?, ?, ?)
                 on conflict(endpoint) do update set
                     p256dh = excluded.p256dh,
                     auth = excluded.auth,
                     user_agent = excluded.user_agent,
+                    locale = excluded.locale,
                     updated_at = excluded.updated_at
                 """.trimIndent()
             ).use { statement ->
@@ -48,19 +50,25 @@ class JdbcWebPushSubscriptionRepository(
                 statement.setString(2, command.p256dh)
                 statement.setString(3, command.auth)
                 statement.setString(4, command.userAgent)
-                statement.setInstant(5, now)
+                statement.setString(5, command.locale.code)
                 statement.setInstant(6, now)
+                statement.setInstant(7, now)
                 statement.executeUpdate()
             }
+            connection.prepareStatement(
+                """
+                select endpoint, p256dh, auth, user_agent, locale, created_at, updated_at
+                from web_push_subscriptions
+                where endpoint = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, command.endpoint)
+                statement.executeQuery().use { resultSet ->
+                    require(resultSet.next()) { "Saved web push subscription was not found." }
+                    resultSet.toRecord()
+                }
+            }
         }
-        return WebPushSubscriptionRecord(
-            endpoint = command.endpoint,
-            p256dh = command.p256dh,
-            auth = command.auth,
-            userAgent = command.userAgent,
-            createdAt = now,
-            updatedAt = now
-        )
     }
 
     override suspend fun delete(endpoint: String): Boolean =
@@ -81,6 +89,7 @@ class JdbcWebPushSubscriptionRepository(
         p256dh = getString("p256dh"),
         auth = getString("auth"),
         userAgent = getString("user_agent"),
+        locale = PortfolioLocale.fromLanguageTag(getString("locale")),
         createdAt = instant("created_at"),
         updatedAt = instant("updated_at")
     )

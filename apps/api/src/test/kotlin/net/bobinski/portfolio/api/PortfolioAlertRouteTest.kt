@@ -2,10 +2,12 @@ package net.bobinski.portfolio.api
 
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
@@ -75,6 +77,35 @@ class PortfolioAlertRouteTest {
     }
 
     @Test
+    fun `alerts endpoint localizes content from accept language with a Polish compatibility fallback`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        createDeposit(accountId)
+        createEquityTarget()
+
+        val english = client.get("/v1/portfolio/alerts") {
+            header(HttpHeaders.AcceptLanguage, "pl;q=0.4, en-GB;q=0.9")
+        }
+        val polish = client.get("/v1/portfolio/alerts") {
+            header(HttpHeaders.AcceptLanguage, "pl-PL")
+        }
+        val defaultLocale = client.get("/v1/portfolio/alerts")
+        val invalidLocale = client.get("/v1/portfolio/alerts") {
+            header(HttpHeaders.AcceptLanguage, "de-DE, invalid;q=broken")
+        }
+
+        assertEquals(HttpStatusCode.OK, english.status)
+        assertTrue(english.bodyAsText().contains("Allocation drift: cash"), english.bodyAsText())
+        assertTrue(english.bodyAsText().contains("The deviation is"), english.bodyAsText())
+        assertTrue(polish.bodyAsText().contains("Dryf alokacji: gotówka"), polish.bodyAsText())
+        assertTrue(defaultLocale.bodyAsText().contains("Dryf alokacji: gotówka"), defaultLocale.bodyAsText())
+        assertTrue(invalidLocale.bodyAsText().contains("Dryf alokacji: gotówka"), invalidLocale.bodyAsText())
+    }
+
+    @Test
     fun `alert settings reject unsupported alert types`() = testApplication {
         application {
             module()
@@ -139,6 +170,35 @@ class PortfolioAlertRouteTest {
 
         assertEquals(HttpStatusCode.Created, createResponse.status)
         assertTrue(createBody.contains("https://push.example.test/subscription-1"))
+        assertTrue(createBody.contains("\"locale\": \"pl\""), createBody)
+
+        val englishResponse = client.post("/v1/push/subscriptions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "endpoint": "https://push.example.test/subscription-2",
+                  "keys": { "p256dh": "public-key", "auth": "auth-secret" },
+                  "locale": "en-GB"
+                }
+                """.trimIndent()
+            )
+        }
+        val invalidLocaleResponse = client.post("/v1/push/subscriptions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "endpoint": "https://push.example.test/subscription-3",
+                  "keys": { "p256dh": "public-key", "auth": "auth-secret" },
+                  "locale": "invalid"
+                }
+                """.trimIndent()
+            )
+        }
+
+        assertTrue(englishResponse.bodyAsText().contains("\"locale\": \"en\""), englishResponse.bodyAsText())
+        assertTrue(invalidLocaleResponse.bodyAsText().contains("\"locale\": \"pl\""), invalidLocaleResponse.bodyAsText())
 
         val deleteResponse = client.delete("/v1/push/subscriptions") {
             contentType(ContentType.Application.Json)
@@ -146,5 +206,58 @@ class PortfolioAlertRouteTest {
         }
 
         assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(): String {
+        val response = client.post("/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Primary",
+                  "institution": "Broker",
+                  "type": "BROKERAGE",
+                  "baseCurrency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status, response.bodyAsText())
+        return Regex("\"id\":\\s*\"([^\"]+)\"").find(response.bodyAsText())!!.groupValues[1]
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createDeposit(accountId: String) {
+        val response = client.post("/v1/transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountId": "$accountId",
+                  "type": "DEPOSIT",
+                  "tradeDate": "2026-07-13",
+                  "settlementDate": "2026-07-13",
+                  "grossAmount": "1000.00",
+                  "currency": "PLN"
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status, response.bodyAsText())
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createEquityTarget() {
+        val response = client.post("/v1/portfolio/targets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "items": [
+                    { "assetClass": "EQUITIES", "targetWeight": "1.00" }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsText())
     }
 }

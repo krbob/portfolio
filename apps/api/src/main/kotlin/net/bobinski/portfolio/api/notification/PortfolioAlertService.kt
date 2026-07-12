@@ -121,8 +121,10 @@ class PortfolioAlertService(
                     id = "market-data:stale",
                     type = PortfolioAlertType.MARKET_DATA_STALE,
                     severity = PortfolioAlertSeverity.WARNING,
-                    title = "Dane rynkowe są opóźnione",
-                    message = "Pełną wycenę ma ${overview.valuedHoldingCount} z ${overview.activeHoldingCount} aktywnych pozycji.",
+                    content = PortfolioAlertContent.MarketDataStale(
+                        valuedHoldingCount = overview.valuedHoldingCount,
+                        activeHoldingCount = overview.activeHoldingCount
+                    ),
                     route = "/system/market-data",
                     observedAt = observedAt
                 )
@@ -146,8 +148,11 @@ class PortfolioAlertService(
                         id = "allocation:${bucket.assetClass.name}",
                         type = PortfolioAlertType.ALLOCATION_DRIFT,
                         severity = PortfolioAlertSeverity.WARNING,
-                        title = "Dryf alokacji: ${bucket.assetClass.alertLabel()}",
-                        message = "Odchylenie wynosi ${bucket.driftPctPoints?.toPlainString()} pp przy progu ${settings.allocationDriftThresholdPctPoints.toPlainString()} pp.",
+                        content = PortfolioAlertContent.AllocationDrift(
+                            assetClass = bucket.assetClass,
+                            driftPctPoints = requireNotNull(bucket.driftPctPoints).toPlainString(),
+                            thresholdPctPoints = settings.allocationDriftThresholdPctPoints.toPlainString()
+                        ),
                         route = "/strategy/targets",
                         observedAt = observedAt
                     )
@@ -201,29 +206,20 @@ class PortfolioAlertService(
         id = "benchmark:${period.key.name}:$key",
         type = PortfolioAlertType.BENCHMARK_UNDERPERFORMANCE,
         severity = PortfolioAlertSeverity.WARNING,
-        title = alertTitle(),
-        message = "Nadwyżka TWR dla ${period.label} wynosi ${excessTimeWeightedReturn?.toPercentPointString()} pp.",
+        content = PortfolioAlertContent.BenchmarkUnderperformance(
+            periodLabel = period.label,
+            benchmarkKey = key,
+            benchmarkLabel = label,
+            excessTimeWeightedReturnPctPoints = requireNotNull(excessTimeWeightedReturn).toPercentPointString()
+        ),
         route = "/performance",
         observedAt = observedAt
     )
-
-    private fun BenchmarkComparison.alertTitle(): String = when (key) {
-        BenchmarkKey.TARGET_MIX.name -> "Portfel odstaje od alokacji docelowej"
-        else -> "Portfel odstaje od benchmarku $label"
-    }
 
     private fun BigDecimal.absGreaterOrEqual(threshold: BigDecimal): Boolean = abs() >= threshold
 
     private fun BigDecimal.toPercentPointString(): String =
         multiply(HUNDRED).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
-
-    private fun AssetClass.alertLabel(): String = when (this) {
-        AssetClass.EQUITIES -> "akcje"
-        AssetClass.BONDS -> "obligacje"
-        AssetClass.CASH -> "gotówka"
-        AssetClass.FX -> "waluty"
-        AssetClass.BENCHMARK -> "benchmarki"
-    }
 
     private companion object {
         val HUNDRED: BigDecimal = BigDecimal("100")
@@ -252,11 +248,30 @@ data class PortfolioAlert(
     val id: String,
     val type: PortfolioAlertType,
     val severity: PortfolioAlertSeverity,
-    val title: String,
-    val message: String,
+    val content: PortfolioAlertContent,
     val route: String,
     val observedAt: Instant
 )
+
+sealed interface PortfolioAlertContent {
+    data class MarketDataStale(
+        val valuedHoldingCount: Int,
+        val activeHoldingCount: Int
+    ) : PortfolioAlertContent
+
+    data class AllocationDrift(
+        val assetClass: AssetClass,
+        val driftPctPoints: String,
+        val thresholdPctPoints: String
+    ) : PortfolioAlertContent
+
+    data class BenchmarkUnderperformance(
+        val periodLabel: String,
+        val benchmarkKey: String,
+        val benchmarkLabel: String,
+        val excessTimeWeightedReturnPctPoints: String
+    ) : PortfolioAlertContent
+}
 
 data class PortfolioAlertDispatchResult(
     val activeAlertCount: Int,

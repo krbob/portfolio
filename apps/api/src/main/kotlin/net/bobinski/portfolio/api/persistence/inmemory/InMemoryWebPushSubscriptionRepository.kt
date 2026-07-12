@@ -25,6 +25,7 @@ class InMemoryWebPushSubscriptionRepository : WebPushSubscriptionRepository {
                 p256dh = command.p256dh,
                 auth = command.auth,
                 userAgent = command.userAgent,
+                locale = command.locale,
                 createdAt = existing?.createdAt ?: now,
                 updatedAt = now
             )

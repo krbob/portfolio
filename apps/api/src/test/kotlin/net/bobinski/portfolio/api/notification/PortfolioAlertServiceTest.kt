@@ -1,7 +1,9 @@
 package net.bobinski.portfolio.api.notification
 
+import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
+import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.service.BenchmarkKey
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -49,5 +51,39 @@ class PortfolioAlertServiceTest {
         }
 
         assertSame(cancellation, error)
+    }
+
+    @Test
+    fun `alert localization supports Polish and English without changing alert identity`() {
+        val alert = PortfolioAlert(
+            id = "allocation:CASH",
+            type = PortfolioAlertType.ALLOCATION_DRIFT,
+            severity = PortfolioAlertSeverity.WARNING,
+            content = PortfolioAlertContent.AllocationDrift(
+                assetClass = AssetClass.CASH,
+                driftPctPoints = "12.50",
+                thresholdPctPoints = "5.00"
+            ),
+            route = "/strategy/targets",
+            observedAt = Instant.parse("2026-07-13T10:00:00Z")
+        )
+
+        val polish = alert.localize(PortfolioLocale.PL)
+        val english = alert.localize(PortfolioLocale.EN)
+
+        assertEquals(alert.id, polish.id)
+        assertEquals(alert.id, english.id)
+        assertEquals("Dryf alokacji: gotówka", polish.title)
+        assertEquals("Odchylenie wynosi 12.50 pp przy progu 5.00 pp.", polish.message)
+        assertEquals("Allocation drift: cash", english.title)
+        assertEquals("The deviation is 12.50 pp against a 5.00 pp threshold.", english.message)
+    }
+
+    @Test
+    fun `accept language uses quality weights and safe compatibility fallback`() {
+        assertEquals(PortfolioLocale.EN, PortfolioLocale.fromAcceptLanguage("pl;q=0.4, en-GB;q=0.9"))
+        assertEquals(PortfolioLocale.PL, PortfolioLocale.fromAcceptLanguage("pl-PL, en;q=0.5"))
+        assertEquals(PortfolioLocale.PL, PortfolioLocale.fromAcceptLanguage(null))
+        assertEquals(PortfolioLocale.PL, PortfolioLocale.fromAcceptLanguage("de-DE, invalid;q=broken"))
     }
 }

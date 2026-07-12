@@ -21,7 +21,7 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(11, appliedMigrationCount(connection))
+                    assertEquals(12, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
@@ -63,11 +63,69 @@ class SqliteMigrationTest {
         }
     }
 
+    @Test
+    fun `web push locale migration preserves existing subscriptions with Polish fallback`() {
+        val directory = createTempDirectory("portfolio-web-push-locale-migration-test")
+        val databasePath = directory.resolve("portfolio.db")
+        val dataSource = DataSourceFactory.create(sqlitePersistenceConfig(databasePath.toString()))
+
+        try {
+            migrateToVersion11(dataSource)
+            dataSource.connection.use { connection ->
+                connection.prepareStatement(
+                    """
+                    insert into web_push_subscriptions (
+                        endpoint, p256dh, auth, user_agent, created_at, updated_at
+                    ) values (?, ?, ?, ?, ?, ?)
+                    """.trimIndent()
+                ).use { statement ->
+                    statement.setString(1, "https://push.example.test/legacy")
+                    statement.setString(2, "p256dh")
+                    statement.setString(3, "auth")
+                    statement.setString(4, "legacy-agent")
+                    statement.setString(5, "2026-07-12T10:00:00Z")
+                    statement.setString(6, "2026-07-12T10:00:00Z")
+                    statement.executeUpdate()
+                }
+            }
+
+            DatabaseMigrator.migrate(dataSource)
+
+            dataSource.connection.use { connection ->
+                assertEquals(12, appliedMigrationCount(connection))
+                connection.prepareStatement(
+                    "select locale from web_push_subscriptions where endpoint = ?"
+                ).use { statement ->
+                    statement.setString(1, "https://push.example.test/legacy")
+                    statement.executeQuery().use { resultSet ->
+                        assertTrue(resultSet.next())
+                        assertEquals("pl", resultSet.getString("locale"))
+                    }
+                }
+            }
+        } finally {
+            (dataSource as? AutoCloseable)?.close()
+            (directory / "portfolio.db").deleteIfExists()
+            (directory / "portfolio.db-shm").deleteIfExists()
+            (directory / "portfolio.db-wal").deleteIfExists()
+            directory.deleteIfExists()
+        }
+    }
+
     private fun migrateToVersion10(dataSource: javax.sql.DataSource) {
         Flyway.configure()
             .dataSource(dataSource)
             .locations("classpath:db/migration")
             .target("10")
+            .load()
+            .migrate()
+    }
+
+    private fun migrateToVersion11(dataSource: javax.sql.DataSource) {
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .target("11")
             .load()
             .migrate()
     }
@@ -99,7 +157,7 @@ class SqliteMigrationTest {
 
     private fun assertOperationalStateMigration(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(11, appliedMigrationCount(connection))
+            assertEquals(12, appliedMigrationCount(connection))
             assertEquals(
                 listOf("portfolio.benchmark-settings"),
                 storedKeys(connection, table = "app_preferences", keyColumn = "preference_key")

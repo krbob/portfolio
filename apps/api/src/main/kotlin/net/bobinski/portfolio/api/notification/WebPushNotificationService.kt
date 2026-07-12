@@ -50,13 +50,15 @@ class WebPushNotificationService(
             )
         }
 
-        val payload = json.encodeToString(alerts.toPushPayload())
         val pushService = buildPushService()
         var delivered = 0
         var failed = 0
         var removed = 0
 
         subscriptions.forEach { subscription ->
+            val payload = json.encodeToString(
+                alerts.toPushPayload(locale = subscription.locale, timestamp = Instant.now(clock))
+            )
             val statusCode = runCatching {
                 sendWithTimeout(pushService, subscription, payload)
             }.getOrElse { error ->
@@ -163,32 +165,6 @@ class WebPushNotificationService(
         return Base64.getDecoder().decode(body)
     }
 
-    private fun List<PortfolioAlert>.toPushPayload(): PortfolioPushPayload {
-        val count = size
-        val firstAlert = first()
-        val title = if (count == 1) {
-            firstAlert.title
-        } else {
-            "Portfolio: $count nowe alerty"
-        }
-        val body = if (count == 1) {
-            firstAlert.message
-        } else {
-            take(2).joinToString(separator = ", ") { alert -> alert.title } +
-                if (count > 2) " +${count - 2}" else ""
-        }
-
-        return PortfolioPushPayload(
-            title = title,
-            body = body,
-            tag = "portfolio-alerts",
-            url = firstAlert.route,
-            icon = "/favicon.svg",
-            badge = "/favicon.svg",
-            timestamp = Instant.now(clock).toString()
-        )
-    }
-
     private fun ensureBouncyCastleProvider() {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             Security.addProvider(BouncyCastleProvider())
@@ -207,6 +183,39 @@ class WebPushNotificationService(
             .setSocketTimeout(WEB_PUSH_SOCKET_TIMEOUT_MS)
             .build()
     }
+}
+
+internal fun List<PortfolioAlert>.toPushPayload(
+    locale: PortfolioLocale,
+    timestamp: Instant
+): PortfolioPushPayload {
+    val localizedAlerts = map { alert -> alert.localize(locale) }
+    val count = localizedAlerts.size
+    val firstAlert = localizedAlerts.first()
+    val title = if (count == 1) {
+        firstAlert.title
+    } else {
+        when (locale) {
+            PortfolioLocale.PL -> "Portfolio: $count nowe alerty"
+            PortfolioLocale.EN -> "Portfolio: $count new alerts"
+        }
+    }
+    val body = if (count == 1) {
+        firstAlert.message
+    } else {
+        localizedAlerts.take(2).joinToString(separator = ", ") { alert -> alert.title } +
+            if (count > 2) " +${count - 2}" else ""
+    }
+
+    return PortfolioPushPayload(
+        title = title,
+        body = body,
+        tag = "portfolio-alerts",
+        url = firstAlert.route,
+        icon = "/favicon.svg",
+        badge = "/favicon.svg",
+        timestamp = timestamp.toString()
+    )
 }
 
 data class WebPushDispatchResult(
@@ -228,7 +237,7 @@ data class WebPushDispatchResult(
 }
 
 @Serializable
-private data class PortfolioPushPayload(
+internal data class PortfolioPushPayload(
     val title: String,
     val body: String,
     val tag: String,
