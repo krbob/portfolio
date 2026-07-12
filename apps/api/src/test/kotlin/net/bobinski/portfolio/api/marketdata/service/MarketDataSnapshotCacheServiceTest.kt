@@ -13,11 +13,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
-import net.bobinski.portfolio.api.domain.model.AppPreference
-import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
+import net.bobinski.portfolio.api.domain.model.OperationalStateEntry
+import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
-import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -166,7 +166,7 @@ class MarketDataSnapshotCacheServiceTest {
 
     @Test
     fun `concurrent range updates preserve the union of points and coverage`() = runBlocking {
-        val repository = DelayedAppPreferenceRepository(InMemoryAppPreferenceRepository())
+        val repository = DelayedOperationalStateRepository(InMemoryOperationalStateRepository())
         val firstSnapshotCache = snapshotCache(repository)
         val secondSnapshotCache = snapshotCache(repository)
         val identity = "fx-history:USD"
@@ -203,12 +203,12 @@ class MarketDataSnapshotCacheServiceTest {
 
     @Test
     fun `backfilling older coverage does not regress the newest source date`() = runBlocking {
-        val repository = InMemoryAppPreferenceRepository()
+        val repository = InMemoryOperationalStateRepository()
 
         fun snapshotCacheAt(instant: String): MarketDataSnapshotCacheService {
             val clock = fixedClock(instant)
             return MarketDataSnapshotCacheService(
-                appPreferenceService = AppPreferenceService(
+                operationalStateService = OperationalStateService(
                     repository = repository,
                     json = AppJsonFactory.create(),
                     clock = clock
@@ -242,11 +242,11 @@ class MarketDataSnapshotCacheServiceTest {
 
     @Test
     fun `list snapshots summarizes cached quote series and inflation coverage with freshness metadata`() = runBlocking {
-        val repository = InMemoryAppPreferenceRepository()
+        val repository = InMemoryOperationalStateRepository()
         val json = AppJsonFactory.create()
 
         fun snapshotCacheAt(instant: String) = MarketDataSnapshotCacheService(
-            appPreferenceService = AppPreferenceService(
+            operationalStateService = OperationalStateService(
                 repository = repository,
                 json = json,
                 clock = fixedClock(instant)
@@ -342,11 +342,11 @@ class MarketDataSnapshotCacheServiceTest {
 
     @Test
     fun `unchanged payload preserves canonical timestamp while failed recheck updates diagnostics`() = runBlocking {
-        val repository = InMemoryAppPreferenceRepository()
+        val repository = InMemoryOperationalStateRepository()
         val json = AppJsonFactory.create()
 
         fun snapshotCacheAt(instant: String) = MarketDataSnapshotCacheService(
-            appPreferenceService = AppPreferenceService(
+            operationalStateService = OperationalStateService(
                 repository = repository,
                 json = json,
                 clock = fixedClock(instant)
@@ -385,11 +385,11 @@ class MarketDataSnapshotCacheServiceTest {
     private fun fixedClock(instant: String): Clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)
 
     private fun snapshotCache(
-        repository: AppPreferenceRepository = InMemoryAppPreferenceRepository()
+        repository: OperationalStateRepository = InMemoryOperationalStateRepository()
     ): MarketDataSnapshotCacheService {
         val clock = fixedClock("2026-03-27T12:00:00Z")
         return MarketDataSnapshotCacheService(
-            appPreferenceService = AppPreferenceService(
+            operationalStateService = OperationalStateService(
                 repository = repository,
                 json = AppJsonFactory.create(),
                 clock = clock
@@ -404,18 +404,15 @@ class MarketDataSnapshotCacheServiceTest {
     )
 }
 
-private class DelayedAppPreferenceRepository(
-    private val delegate: AppPreferenceRepository
-) : AppPreferenceRepository {
-    override suspend fun get(key: String): AppPreference? = delegate.get(key).also { delay(25) }
+private class DelayedOperationalStateRepository(
+    private val delegate: OperationalStateRepository
+) : OperationalStateRepository {
+    override suspend fun get(key: String): OperationalStateEntry? = delegate.get(key).also { delay(25) }
 
-    override suspend fun list(): List<AppPreference> = delegate.list()
+    override suspend fun listByPrefix(prefix: String): List<OperationalStateEntry> = delegate.listByPrefix(prefix)
 
-    override suspend fun listByPrefix(prefix: String): List<AppPreference> = delegate.listByPrefix(prefix)
+    override suspend fun save(entry: OperationalStateEntry): OperationalStateEntry = delegate.save(entry)
 
-    override suspend fun save(preference: AppPreference): AppPreference = delegate.save(preference)
-
-    override suspend fun delete(key: String): Boolean = delegate.delete(key)
-
-    override suspend fun deleteAll() = delegate.deleteAll()
+    override suspend fun saveIfAbsent(entry: OperationalStateEntry): OperationalStateEntry =
+        delegate.saveIfAbsent(entry)
 }

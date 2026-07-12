@@ -9,9 +9,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AssetClass
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.BenchmarkComparison
 import net.bobinski.portfolio.api.domain.service.BenchmarkKey
+import net.bobinski.portfolio.api.domain.service.OperationalStateKeys
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationBucket
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioOverview
@@ -27,7 +28,7 @@ class PortfolioAlertService(
     private val portfolioReadModelService: PortfolioReadModelService,
     private val portfolioAllocationService: PortfolioAllocationService,
     private val portfolioReturnsService: PortfolioReturnsService,
-    private val appPreferenceService: AppPreferenceService,
+    private val operationalStateService: OperationalStateService,
     private val pushNotifier: PortfolioPushNotifier,
     private val clock: Clock
 ) {
@@ -80,8 +81,8 @@ class PortfolioAlertService(
         dispatchMutex.withLock {
             val settings = alertSettingsService.settings()
             val alerts = currentAlerts(prefetchedReturns = prefetchedReturns)
-            val previousState = appPreferenceService.get(
-                key = ALERT_STATE_PREFERENCE_KEY,
+            val previousState = operationalStateService.get(
+                key = OperationalStateKeys.ACTIVE_ALERTS,
                 serializer = PortfolioAlertState.serializer(),
                 defaultValue = { PortfolioAlertState(activeAlertIds = emptyList()) }
             )
@@ -176,8 +177,8 @@ class PortfolioAlertService(
         }
 
     private suspend fun storeActiveAlertState(alerts: List<PortfolioAlert>) {
-        appPreferenceService.put(
-            key = ALERT_STATE_PREFERENCE_KEY,
+        operationalStateService.put(
+            key = OperationalStateKeys.ACTIVE_ALERTS,
             serializer = PortfolioAlertState.serializer(),
             value = PortfolioAlertState(activeAlertIds = alerts.map(PortfolioAlert::id))
         )
@@ -234,7 +235,6 @@ class PortfolioAlertService(
         }
 
     private companion object {
-        const val ALERT_STATE_PREFERENCE_KEY = "portfolio.alerts.active"
         val HUNDRED: BigDecimal = BigDecimal("100")
     }
 }

@@ -154,7 +154,7 @@ Portfolio has two import modes: `MERGE` and `REPLACE`.
 
 ### `MERGE`
 
-- accounts, instruments, transactions, and app preferences are upserted by id or key
+- accounts, instruments, transactions, and user preferences are upserted by id or key
 - if the snapshot omits `targets`, the current target allocation is preserved
 - if the snapshot contains `targets`, that section replaces the target allocation as one set
 - if the snapshot omits `importProfiles`, current profiles are preserved
@@ -163,8 +163,12 @@ Portfolio has two import modes: `MERGE` and `REPLACE`.
 ### `REPLACE`
 
 - requires explicit `REPLACE` confirmation
-- clears the current write model before loading the snapshot
+- clears the current canonical write model and user preferences before loading the snapshot
 - creates a safety backup automatically before the destructive step
+
+Market-data cache payloads/metadata and the active alert-dispatch set are runtime state. They are not exported, counted
+as app preferences, shown in import diffs, or overwritten by either import mode. Benchmark, rebalancing, and alert
+settings remain portable user preferences.
 
 ### Preview behavior
 

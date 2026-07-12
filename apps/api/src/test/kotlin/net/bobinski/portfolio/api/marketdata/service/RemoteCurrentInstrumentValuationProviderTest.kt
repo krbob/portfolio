@@ -15,12 +15,12 @@ import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.ValuationSource
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
-import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -70,8 +70,8 @@ class RemoteCurrentInstrumentValuationProviderTest {
     private fun buildService(port: Int): RemoteCurrentInstrumentValuationProvider {
         val clock = Clock.fixed(Instant.parse("2026-05-04T21:10:00Z"), ZoneOffset.UTC)
         val json = AppJsonFactory.create()
-        val appPreferenceService = AppPreferenceService(
-            repository = InMemoryAppPreferenceRepository(),
+        val operationalStateService = OperationalStateService(
+            repository = InMemoryOperationalStateRepository(),
             json = json,
             clock = clock
         )
@@ -98,7 +98,7 @@ class RemoteCurrentInstrumentValuationProviderTest {
                 baseUrl = "http://127.0.0.1:$port"
             ),
             marketDataFailureAuditService = MarketDataFailureAuditService(auditLogService),
-            snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService, clock)
+            snapshotCacheService = MarketDataSnapshotCacheService(operationalStateService, clock)
         )
     }
 

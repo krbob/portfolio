@@ -16,8 +16,13 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
+import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
+import net.bobinski.portfolio.api.domain.service.OperationalStateKeys
+import org.koin.ktor.ext.getKoin
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -26,6 +31,8 @@ class PortfolioBackupRouteTest {
     @Test
     fun `portfolio backup can be created listed and restored`() = testApplication {
         val backupDirectory = Files.createTempDirectory("portfolio-backups-test")
+        lateinit var appPreferenceRepository: AppPreferenceRepository
+        lateinit var operationalStateRepository: OperationalStateRepository
 
         environment {
             config = MapApplicationConfig(
@@ -38,6 +45,8 @@ class PortfolioBackupRouteTest {
 
         application {
             module()
+            appPreferenceRepository = getKoin().get()
+            operationalStateRepository = getKoin().get()
         }
 
         try {
@@ -57,6 +66,11 @@ class PortfolioBackupRouteTest {
                 }
                 """.trimIndent()
             )
+            val dispatchResponse = client.post("/v1/portfolio/alerts/dispatch")
+            val operationalStateBeforeBackup = requireNotNull(
+                operationalStateRepository.get(OperationalStateKeys.ACTIVE_ALERTS)
+            )
+            assertNull(appPreferenceRepository.get(OperationalStateKeys.ACTIVE_ALERTS))
 
             val runResponse = client.post("/v1/portfolio/backups/run")
             val backupFileName = Regex("\"fileName\":\\s*\"([^\"]+)\"").find(runResponse.bodyAsText())!!.groupValues[1]
@@ -79,7 +93,12 @@ class PortfolioBackupRouteTest {
             }
             val accountsResponse = client.get("/v1/accounts")
             val downloadPayload = Json.parseToJsonElement(downloadResponse.bodyAsText()).jsonObject
+            val backedUpPreferenceKeys = downloadPayload["appPreferences"]
+                ?.jsonArray
+                .orEmpty()
+                .map { preference -> preference.jsonObject.getValue("key").jsonPrimitive.content }
 
+            assertEquals(HttpStatusCode.OK, dispatchResponse.status)
             assertEquals(HttpStatusCode.OK, runResponse.status)
             assertTrue(runResponse.bodyAsText().contains("\"isReadable\": true"))
             assertTrue(runResponse.bodyAsText().contains("\"appPreferenceCount\": 2"))
@@ -90,6 +109,11 @@ class PortfolioBackupRouteTest {
             assertEquals(HttpStatusCode.OK, downloadResponse.status)
             assertTrue(downloadPayload["schemaVersion"]?.jsonPrimitive?.intOrNull?.let { it > 0 } == true)
             assertEquals(2, downloadPayload["appPreferences"]?.jsonArray?.size)
+            assertEquals(
+                setOf("portfolio.benchmark-settings", "portfolio.rebalancing-settings"),
+                backedUpPreferenceKeys.toSet()
+            )
+            assertTrue(backedUpPreferenceKeys.none(OperationalStateKeys::isLegacyPreference))
             assertEquals(1, downloadPayload["importProfiles"]?.jsonArray?.size)
             assertTrue(downloadResponse.headers[HttpHeaders.ContentDisposition]?.contains(backupFileName) == true)
             assertEquals(HttpStatusCode.OK, restoreResponse.status)
@@ -99,6 +123,10 @@ class PortfolioBackupRouteTest {
             assertTrue(restoreResponse.bodyAsText().contains("\"safetyBackupFileName\": \"portfolio-backup-"))
             assertTrue(accountsResponse.bodyAsText().contains("\"name\": \"Primary\""))
             assertFalse(accountsResponse.bodyAsText().contains("\"name\": \"Secondary\""))
+            assertEquals(
+                operationalStateBeforeBackup,
+                operationalStateRepository.get(OperationalStateKeys.ACTIVE_ALERTS)
+            )
         } finally {
             backupDirectory.toFile().deleteRecursively()
         }

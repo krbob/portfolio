@@ -9,11 +9,11 @@ import java.time.YearMonth
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 
 class MarketDataSnapshotCacheService(
-    private val appPreferenceService: AppPreferenceService,
+    private val operationalStateService: OperationalStateService,
     private val clock: Clock = Clock.systemUTC()
 ) {
     suspend fun getSeriesSnapshotSummary(identity: String): MarketDataSnapshotSummary? {
@@ -48,31 +48,31 @@ class MarketDataSnapshotCacheService(
     }
 
     suspend fun listSnapshots(): List<MarketDataSnapshotSummary> {
-        val payloads = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+        val payloads = operationalStateService.listByPrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
             .mapNotNull { preference ->
-                val key = preference.key.removePrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+                val key = preference.key.removePrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
                 val type = key.substringBefore('.', missingDelimiterValue = "")
                 when (type) {
                     SnapshotPreferenceType.QUOTE.preferenceType ->
-                        appPreferenceService.decodeOrNull(preference, StoredQuoteSnapshot.serializer())
+                        operationalStateService.decodeOrNull(preference, StoredQuoteSnapshot.serializer())
                             ?.toPayloadSummary(preference.updatedAt)
                     SnapshotPreferenceType.SERIES.preferenceType ->
-                        appPreferenceService.decodeOrNull(preference, StoredSeriesSnapshot.serializer())
+                        operationalStateService.decodeOrNull(preference, StoredSeriesSnapshot.serializer())
                             ?.toPayloadSummary(preference.updatedAt)
                     SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType ->
-                        appPreferenceService.decodeOrNull(preference, StoredMonthlyInflationSnapshot.serializer())
+                        operationalStateService.decodeOrNull(preference, StoredMonthlyInflationSnapshot.serializer())
                             ?.toPayloadSummary(preference.updatedAt)
                     SnapshotPreferenceType.INFLATION_WINDOW.preferenceType ->
-                        appPreferenceService.decodeOrNull(preference, StoredInflationWindow.serializer())
+                        operationalStateService.decodeOrNull(preference, StoredInflationWindow.serializer())
                             ?.toPayloadSummary(preference.updatedAt)
                     else -> null
                 }
             }
             .associateBy(PayloadSnapshotSummary::key)
 
-        val metadata = appPreferenceService.listByPrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+        val metadata = operationalStateService.listByPrefix(MarketDataSnapshotPreferences.METADATA_KEY_PREFIX)
             .mapNotNull { preference ->
-                appPreferenceService.decodeOrNull(preference, MarketDataSnapshotMetadata.serializer())
+                operationalStateService.decodeOrNull(preference, MarketDataSnapshotMetadata.serializer())
             }
             .associateBy { stored ->
                 SnapshotIdentity(
@@ -121,7 +121,7 @@ class MarketDataSnapshotCacheService(
         )
         val existing = getStoredQuote(identity)
 
-        appPreferenceService.put(
+        operationalStateService.put(
             key = preferenceKey(SnapshotPreferenceType.QUOTE.preferenceType, identity),
             serializer = StoredQuoteSnapshot.serializer(),
             value = stored
@@ -208,7 +208,7 @@ class MarketDataSnapshotCacheService(
             )
         )
 
-        appPreferenceService.put(
+        operationalStateService.put(
             key = preferenceKey(SnapshotPreferenceType.SERIES.preferenceType, identity),
             serializer = StoredSeriesSnapshot.serializer(),
             value = stored
@@ -307,7 +307,7 @@ class MarketDataSnapshotCacheService(
         )
         val existing = getStoredMonthlyInflation(identity)
 
-        appPreferenceService.put(
+        operationalStateService.put(
             key = preferenceKey(SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType, identity),
             serializer = StoredMonthlyInflationSnapshot.serializer(),
             value = stored
@@ -387,7 +387,7 @@ class MarketDataSnapshotCacheService(
         )
         val existing = getStoredInflationWindow(identity)
 
-        appPreferenceService.put(
+        operationalStateService.put(
             key = preferenceKey(SnapshotPreferenceType.INFLATION_WINDOW.preferenceType, identity),
             serializer = StoredInflationWindow.serializer(),
             value = stored
@@ -442,25 +442,25 @@ class MarketDataSnapshotCacheService(
     }
 
     private suspend fun getStoredQuote(identity: String): StoredQuoteSnapshot? =
-        appPreferenceService.getOrNull(
+        operationalStateService.getOrNull(
             key = preferenceKey(SnapshotPreferenceType.QUOTE.preferenceType, identity),
             serializer = StoredQuoteSnapshot.serializer()
         )
 
     private suspend fun getStoredSeries(identity: String): StoredSeriesSnapshot? =
-        appPreferenceService.getOrNull(
+        operationalStateService.getOrNull(
             key = preferenceKey(SnapshotPreferenceType.SERIES.preferenceType, identity),
             serializer = StoredSeriesSnapshot.serializer()
         )
 
     private suspend fun getStoredMonthlyInflation(identity: String): StoredMonthlyInflationSnapshot? =
-        appPreferenceService.getOrNull(
+        operationalStateService.getOrNull(
             key = preferenceKey(SnapshotPreferenceType.INFLATION_MONTHLY.preferenceType, identity),
             serializer = StoredMonthlyInflationSnapshot.serializer()
         )
 
     private suspend fun getStoredInflationWindow(identity: String): StoredInflationWindow? =
-        appPreferenceService.getOrNull(
+        operationalStateService.getOrNull(
             key = preferenceKey(SnapshotPreferenceType.INFLATION_WINDOW.preferenceType, identity),
             serializer = StoredInflationWindow.serializer()
         )
@@ -468,7 +468,7 @@ class MarketDataSnapshotCacheService(
     private suspend fun getStoredMetadata(
         snapshotType: SnapshotPreferenceType,
         identity: String
-    ): MarketDataSnapshotMetadata? = appPreferenceService.getOrNull(
+    ): MarketDataSnapshotMetadata? = operationalStateService.getOrNull(
         key = metadataPreferenceKey(snapshotType.preferenceType, identity),
         serializer = MarketDataSnapshotMetadata.serializer()
     )
@@ -504,7 +504,7 @@ class MarketDataSnapshotCacheService(
             lastFailureAt = null,
             lastFailureReason = null
         )
-        appPreferenceService.put(
+        operationalStateService.put(
             key = metadataPreferenceKey(snapshotType.preferenceType, identity),
             serializer = MarketDataSnapshotMetadata.serializer(),
             value = metadata
@@ -537,7 +537,7 @@ class MarketDataSnapshotCacheService(
             lastFailureAt = now.toString(),
             lastFailureReason = reason?.takeIf { it.isNotBlank() } ?: previous?.lastFailureReason
         )
-        appPreferenceService.put(
+        operationalStateService.put(
             key = metadataPreferenceKey(snapshotType.preferenceType, identity),
             serializer = MarketDataSnapshotMetadata.serializer(),
             value = metadata
@@ -570,10 +570,10 @@ class MarketDataSnapshotCacheService(
         .toList()
 
     private fun preferenceKey(type: String, identity: String): String =
-        "${MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX}$type.${identity.sha256Hex()}"
+        "${MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX}$type.${identity.sha256Hex()}"
 
     private fun metadataPreferenceKey(type: String, identity: String): String =
-        "${MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX}$type.${identity.sha256Hex()}"
+        "${MarketDataSnapshotPreferences.METADATA_KEY_PREFIX}$type.${identity.sha256Hex()}"
 
     private fun seriesMutationMutex(identity: String): Mutex =
         seriesMutationMutexes[Math.floorMod(identity.hashCode(), seriesMutationMutexes.size)]

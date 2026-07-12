@@ -252,7 +252,9 @@ class PortfolioBackupService(
                 sizeBytes = sizeBytes,
                 schemaVersion = snapshot.schemaVersion,
                 accountCount = snapshot.accounts.size,
-                appPreferenceCount = snapshot.appPreferences.size,
+                appPreferenceCount = snapshot.appPreferences.count { preference ->
+                    !OperationalStateKeys.isLegacyPreference(preference.key)
+                },
                 instrumentCount = snapshot.instruments.size,
                 targetCount = snapshot.targets.size,
                 transactionCount = snapshot.transactions.size,
@@ -386,7 +388,9 @@ private fun PortfolioSnapshot.toStored(): StoredPortfolioSnapshot = StoredPortfo
     schemaVersion = schemaVersion,
     exportedAt = exportedAt.toString(),
     accounts = accounts,
-    appPreferences = appPreferences,
+    appPreferences = appPreferences.filterNot { preference ->
+        OperationalStateKeys.isLegacyPreference(preference.key)
+    },
     instruments = instruments,
     targets = targets,
     importProfiles = importProfiles,
@@ -397,7 +401,9 @@ private fun StoredPortfolioSnapshot.toDomain(): PortfolioSnapshot = PortfolioSna
     schemaVersion = schemaVersion,
     exportedAt = Instant.parse(exportedAt),
     accounts = accounts,
-    appPreferences = appPreferences,
+    appPreferences = appPreferences.filterNot { preference ->
+        OperationalStateKeys.isLegacyPreference(preference.key)
+    },
     instruments = instruments,
     targets = targets,
     importProfiles = importProfiles,

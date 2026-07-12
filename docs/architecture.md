@@ -24,7 +24,7 @@ Portfolio is intentionally split into:
   - instruments
   - transactions
   - targets
-  - app preferences
+  - user preferences (benchmark, rebalancing, and alert settings)
   - transaction import profiles
 - analytical read models:
   - overview
@@ -36,6 +36,11 @@ Portfolio is intentionally split into:
 
 Transactions remain canonical. Everything analytical must be rebuildable from canonical state plus historical market data.
 
+Runtime-only JSON state has a separate typed repository and SQLite table. Market-data payloads and metadata, plus the
+active alert-dispatch set, live there rather than in user preferences. Migration V11 moves historical runtime keys out
+of `app_preferences`; read-through migration remains as a compatibility path and never overwrites a newer operational
+entry.
+
 Analytics computations use a key made from the model identity and version, canonical source revision, input range, and
 normalized parameters. Concurrent callers for the same key share one supervised computation. Daily history and returns
 reuse a successful snapshot for that revision through a small bounded LRU; current valuation only coalesces active work,
@@ -44,12 +49,14 @@ cancel shared work, and failed computations are removed before a later retry.
 
 ## Transfer and recoverability model
 
-Operational state transfer is part of the product, not a side script.
+Canonical state transfer is part of the product, while runtime operational state remains local to the installation.
 
 - canonical export reads the full write model in one database snapshot and returns it as JSON
+- export, preview diff, backup, and `appPreferenceCount` include user preferences only
 - preview import validates the same rules as real import
 - `MERGE` preserves omitted sections where that is the explicit contract
 - `REPLACE` is destructive and must be guarded by confirmation plus safety backup
+- neither import mode imports, clears, or counts market-data snapshots or active alert-dispatch state
 - backup and restore remain JSON-first workflows; backup files are staged, forced, and atomically published
 - audit events record state-changing operations
 
@@ -64,6 +71,9 @@ Market data is external and imperfect, so the runtime keeps two distinct layers:
 
 - canonical write model in SQLite
 - last-known-good market-data snapshots for quotes, history, benchmark series, and inflation
+
+The snapshots are stored in `operational_state`, outside portable portfolio JSON. Upgrade migration preserves existing
+cache payloads and metadata, while restore/import leaves the current runtime state untouched.
 
 Those snapshots are not treated as fresh truth. They exist so the product can degrade explicitly:
 

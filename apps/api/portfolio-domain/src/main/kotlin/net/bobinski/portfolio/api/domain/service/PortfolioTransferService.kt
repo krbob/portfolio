@@ -41,7 +41,7 @@ class PortfolioTransferService(
     suspend fun exportState(): PortfolioSnapshot = transactionRunner.inTransaction {
         val accounts = accountRepository.list()
             .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
-        val appPreferences = appPreferenceRepository.list().sortedBy(AppPreference::key)
+        val appPreferences = userPreferences().sortedBy(AppPreference::key)
         val instruments = instrumentRepository.list().sortedBy(Instrument::createdAt)
         val targets = portfolioTargetRepository.list()
             .sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
@@ -89,7 +89,7 @@ class PortfolioTransferService(
                 transactionImportProfileRepository.deleteAll()
                 portfolioTargetRepository.deleteAll()
                 instrumentRepository.deleteAll()
-                appPreferenceRepository.deleteAll()
+                deleteUserPreferences()
                 accountRepository.deleteAll()
             }
 
@@ -158,7 +158,7 @@ class PortfolioTransferService(
 
     private suspend fun prepareImport(request: PortfolioImportRequest): PreparedPortfolioImport {
         val existingAccounts = accountRepository.list()
-        val existingAppPreferences = appPreferenceRepository.list()
+        val existingAppPreferences = userPreferences()
         val existingInstruments = instrumentRepository.list()
         val existingTargets = portfolioTargetRepository.list()
         val existingTransactions = transactionRepository.list()
@@ -176,7 +176,9 @@ class PortfolioTransferService(
         issues += duplicateIdIssues("account", request.snapshot.accounts.map(AccountSnapshot::id))
         issues += duplicateIdIssues("instrument", request.snapshot.instruments.map(InstrumentSnapshot::id))
         issues += duplicateIdIssues("target", request.snapshot.targets.map(PortfolioTargetSnapshot::id))
-        issues += duplicateStringIssues("app preference", request.snapshot.appPreferences.map(AppPreferenceSnapshot::key))
+        val snapshotUserPreferences = request.snapshot.appPreferences
+            .filterNot { preference -> OperationalStateKeys.isLegacyPreference(preference.key) }
+        issues += duplicateStringIssues("app preference", snapshotUserPreferences.map(AppPreferenceSnapshot::key))
         issues += duplicateIdIssues("transaction", request.snapshot.transactions.map(TransactionSnapshot::id))
         issues += duplicateIdIssues("import profile", request.snapshot.importProfiles.map(TransactionImportProfileSnapshot::id))
 
@@ -188,7 +190,7 @@ class PortfolioTransferService(
             convert = { snapshot -> snapshot.toDomain() }
         )
         val snapshotAppPreferences = parseSnapshots(
-            snapshots = request.snapshot.appPreferences,
+            snapshots = snapshotUserPreferences,
             entityName = "app preference",
             entityId = AppPreferenceSnapshot::key,
             issues = issues,
@@ -399,7 +401,7 @@ class PortfolioTransferService(
                 schemaVersion = request.snapshot.schemaVersion,
                 isValid = sortedIssues.none { issue -> issue.severity == ImportIssueSeverity.ERROR },
                 snapshotAccountCount = request.snapshot.accounts.size,
-                snapshotAppPreferenceCount = request.snapshot.appPreferences.size,
+                snapshotAppPreferenceCount = snapshotUserPreferences.size,
                 snapshotInstrumentCount = request.snapshot.instruments.size,
                 snapshotTargetCount = request.snapshot.targets.size,
                 snapshotTransactionCount = request.snapshot.transactions.size,
@@ -422,6 +424,13 @@ class PortfolioTransferService(
                 issues = sortedIssues
             )
         )
+    }
+
+    private suspend fun userPreferences(): List<AppPreference> = appPreferenceRepository.list()
+        .filterNot { preference -> OperationalStateKeys.isLegacyPreference(preference.key) }
+
+    private suspend fun deleteUserPreferences() {
+        userPreferences().forEach { preference -> appPreferenceRepository.delete(preference.key) }
     }
 
     private inline fun <S, T> parseSnapshots(

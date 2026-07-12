@@ -13,6 +13,7 @@ import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheServ
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
@@ -32,14 +33,19 @@ class PortfolioReadModelCacheDescriptorServiceTest {
         val instrumentRepository = InMemoryInstrumentRepository()
         val targetRepository = InMemoryPortfolioTargetRepository()
         val transactionRepository = InMemoryTransactionRepository()
+        val json = AppJsonFactory.create()
         val descriptorService = PortfolioReadModelCacheDescriptorService(
             accountRepository = accountRepository,
             appPreferenceRepository = appPreferenceRepository,
+            operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
+                json = json,
+                clock = fixedClock()
+            ),
             instrumentRepository = instrumentRepository,
             portfolioTargetRepository = targetRepository,
             transactionRepository = transactionRepository,
             marketDataCacheFingerprint = "enabled=true",
-            json = AppJsonFactory.create(),
             clock = fixedClock()
         )
         val cacheService = ReadModelCacheService(
@@ -158,24 +164,31 @@ class PortfolioReadModelCacheDescriptorServiceTest {
     @Test
     fun `descriptor tracks canonical market data updates instead of last check timestamp`() = runBlocking {
         val repository = InMemoryAppPreferenceRepository()
+        val operationalStateRepository = InMemoryOperationalStateRepository()
         val json = AppJsonFactory.create()
 
         fun descriptor(clock: Clock) = PortfolioReadModelCacheDescriptorService(
             accountRepository = InMemoryAccountRepository(),
             appPreferenceRepository = repository,
+            operationalStateService = OperationalStateService(
+                repository = operationalStateRepository,
+                json = json,
+                clock = clock,
+                legacyPreferenceRepository = repository
+            ),
             instrumentRepository = InMemoryInstrumentRepository(),
             portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
             transactionRepository = InMemoryTransactionRepository(),
             marketDataCacheFingerprint = "enabled=true",
-            json = json,
             clock = clock
         )
 
         fun snapshotCache(clock: Clock) = MarketDataSnapshotCacheService(
-            appPreferenceService = AppPreferenceService(
-                repository = repository,
+            operationalStateService = OperationalStateService(
+                repository = operationalStateRepository,
                 json = json,
-                clock = clock
+                clock = clock,
+                legacyPreferenceRepository = repository
             ),
             clock = clock
         )
@@ -219,11 +232,15 @@ class PortfolioReadModelCacheDescriptorServiceTest {
         PortfolioReadModelCacheDescriptorService(
             accountRepository = InMemoryAccountRepository(),
             appPreferenceRepository = InMemoryAppPreferenceRepository(),
+            operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
+                json = AppJsonFactory.create(),
+                clock = fixedClock()
+            ),
             instrumentRepository = InMemoryInstrumentRepository(),
             portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
             transactionRepository = InMemoryTransactionRepository(),
             marketDataCacheFingerprint = marketDataCacheFingerprint,
-            json = AppJsonFactory.create(),
             clock = fixedClock()
         )
 

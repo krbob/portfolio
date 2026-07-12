@@ -14,6 +14,7 @@ import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
@@ -32,6 +33,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
@@ -72,11 +74,15 @@ class ReadModelRefreshServiceTest {
         val descriptorService = PortfolioReadModelCacheDescriptorService(
             accountRepository = accountRepository,
             appPreferenceRepository = appPreferenceRepository,
+            operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
+                json = json,
+                clock = clock
+            ),
             instrumentRepository = instrumentRepository,
             portfolioTargetRepository = portfolioTargetRepository,
             transactionRepository = transactionRepository,
             marketDataCacheFingerprint = "qa-test",
-            json = json,
             clock = clock
         )
         val historyService = PortfolioHistoryService(

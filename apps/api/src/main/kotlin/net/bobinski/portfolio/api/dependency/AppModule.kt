@@ -7,6 +7,7 @@ import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.AuditEventRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
+import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
 import net.bobinski.portfolio.api.domain.repository.PortfolioTargetRepository
 import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
@@ -15,6 +16,7 @@ import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
 import net.bobinski.portfolio.api.domain.service.PortfolioBackupService
 import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
@@ -68,6 +70,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventReposit
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
@@ -77,6 +80,7 @@ import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcConnectionManager
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcReadModelCacheRepository
@@ -173,6 +177,7 @@ fun appModule(
         single { JdbcConnectionManager(dataSource = get()) }
         single<PersistenceTransactionRunner> { get<JdbcConnectionManager>() }
         single<AppPreferenceRepository> { JdbcAppPreferenceRepository(connectionManager = get()) }
+        single<OperationalStateRepository> { JdbcOperationalStateRepository(connectionManager = get()) }
         single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
         single<AccountRepository> { JdbcAccountRepository(connectionManager = get()) }
         single<InstrumentRepository> { JdbcInstrumentRepository(connectionManager = get()) }
@@ -188,6 +193,7 @@ fun appModule(
             }
         }
         single<AppPreferenceRepository> { InMemoryAppPreferenceRepository() }
+        single<OperationalStateRepository> { InMemoryOperationalStateRepository() }
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
         single<AccountRepository> { InMemoryAccountRepository() }
         single<InstrumentRepository> { InMemoryInstrumentRepository() }
@@ -199,7 +205,15 @@ fun appModule(
     }
 
     single { AppPreferenceService(repository = get(), json = get(), clock = get()) }
-    single { MarketDataSnapshotCacheService(appPreferenceService = get()) }
+    single {
+        OperationalStateService(
+            repository = get(),
+            json = get(),
+            clock = get(),
+            legacyPreferenceRepository = get()
+        )
+    }
+    single { MarketDataSnapshotCacheService(operationalStateService = get()) }
     single { ReadModelComputationCoordinator() }
     single {
         ReadModelCacheService(
@@ -299,6 +313,7 @@ fun appModule(
         PortfolioReadModelCacheDescriptorService(
             accountRepository = get(),
             appPreferenceRepository = get(),
+            operationalStateService = get(),
             instrumentRepository = get(),
             portfolioTargetRepository = get(),
             transactionRepository = get(),
@@ -314,7 +329,6 @@ fun appModule(
                 marketDataConfig.equityBenchmarkSymbol,
                 marketDataConfig.bondBenchmarkSymbol
             ).joinToString(separator = "|"),
-            json = get(),
             clock = get()
         )
     }
@@ -370,7 +384,7 @@ fun appModule(
             portfolioReadModelService = get(),
             portfolioAllocationService = get(),
             portfolioReturnsService = get(),
-            appPreferenceService = get(),
+            operationalStateService = get(),
             pushNotifier = get(),
             clock = get()
         )

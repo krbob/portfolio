@@ -24,10 +24,10 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
-import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -203,12 +203,12 @@ class RemoteFxRateHistoryProviderTest {
     }
 
     private fun buildSnapshotCacheService(): MarketDataSnapshotCacheService {
-        val appPreferenceService = AppPreferenceService(
-            repository = InMemoryAppPreferenceRepository(),
+        val operationalStateService = OperationalStateService(
+            repository = InMemoryOperationalStateRepository(),
             json = AppJsonFactory.create(),
             clock = Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), ZoneOffset.UTC)
         )
-        return MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+        return MarketDataSnapshotCacheService(operationalStateService = operationalStateService)
     }
 
     private fun buildProvider(

@@ -53,9 +53,10 @@ Represents small persisted configuration payloads such as:
 
 - benchmark settings
 - rebalancing settings
-- cache and operational preferences
+- alert settings
 
-These are canonical operational settings, not analytical output.
+These are user-owned configuration, participate in export/import, and are counted as app preferences in transfer and
+backup responses.
 
 ### Transaction import profile
 
@@ -89,9 +90,12 @@ Separately from canonical entities, the product persists operational state for r
 - audit events
 - read-model cache snapshots
 - market-data snapshots
+- active alert-dispatch state
 - backup records
 
-These support observability and recovery, not portfolio accounting itself.
+Market-data snapshots and active alert state use the typed operational-state repository, not app preferences. They are
+preserved across `MERGE`, `REPLACE`, and restore, but are deliberately absent from portable JSON, preview diffs, and
+backup entity counts. These models support observability and recovery, not portfolio accounting itself.
 
 ## Invariants
 

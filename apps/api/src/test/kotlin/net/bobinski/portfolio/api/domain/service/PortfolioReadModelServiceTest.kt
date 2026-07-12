@@ -27,6 +27,7 @@ import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -601,11 +602,15 @@ class PortfolioReadModelServiceTest {
             PortfolioReadModelCacheDescriptorService(
                 accountRepository = accountRepository,
                 appPreferenceRepository = InMemoryAppPreferenceRepository(),
+                operationalStateService = OperationalStateService(
+                    repository = InMemoryOperationalStateRepository(),
+                    json = AppJsonFactory.create(),
+                    clock = clock
+                ),
                 instrumentRepository = instrumentRepository,
                 portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
                 transactionRepository = transactionRepository,
                 marketDataCacheFingerprint = "read-model-test",
-                json = AppJsonFactory.create(),
                 clock = clock
             )
         } else {

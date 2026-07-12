@@ -62,6 +62,8 @@ Important semantics:
 - in `MERGE`, missing `targets` means preserve current targets
 - in `MERGE`, present `targets` replace the allocation set
 - in `MERGE`, missing `importProfiles` means preserve current profiles
+- market-data snapshots and active alert-dispatch state are excluded from transfer JSON and survive both import modes
+- `appPreferenceCount` and preference diffs describe user settings only
 - preview and real import should agree on business validation
 
 ## Backup and restore posture
@@ -69,6 +71,7 @@ Important semantics:
 - scheduled JSON backups are the first recovery path
 - canonical export/import remains the portability path
 - `REPLACE` restore/import is a maintenance action, not a casual edit flow
+- restore does not roll market-data cache or active alert-delivery state backward to the backup timestamp
 - a listed `.json` backup has already been fully written and atomically published; abandoned temporary files are not backup candidates
 
 If a restore is needed, prefer:

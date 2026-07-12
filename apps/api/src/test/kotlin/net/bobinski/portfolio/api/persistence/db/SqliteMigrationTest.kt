@@ -6,6 +6,7 @@ import kotlin.io.path.div
 import net.bobinski.portfolio.api.persistence.config.JournalMode
 import net.bobinski.portfolio.api.persistence.config.PersistenceConfig
 import net.bobinski.portfolio.api.persistence.config.SynchronousMode
+import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -20,7 +21,7 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(10, appliedMigrationCount(connection))
+                    assertEquals(11, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
@@ -31,6 +32,7 @@ class SqliteMigrationTest {
                     assertTrue(tableExists(connection, "transaction_import_profiles"))
                     assertTrue(tableExists(connection, "app_preferences"))
                     assertTrue(tableExists(connection, "web_push_subscriptions"))
+                    assertTrue(tableExists(connection, "operational_state"))
                 }
             }
         } finally {
@@ -38,6 +40,79 @@ class SqliteMigrationTest {
             (directory / "portfolio.db-shm").deleteIfExists()
             (directory / "portfolio.db-wal").deleteIfExists()
             directory.deleteIfExists()
+        }
+    }
+
+    @Test
+    fun `operational state migration moves legacy runtime keys out of user preferences`() {
+        val directory = createTempDirectory("portfolio-operational-state-migration-test")
+        val databasePath = directory.resolve("portfolio.db")
+        val dataSource = DataSourceFactory.create(sqlitePersistenceConfig(databasePath.toString()))
+
+        try {
+            migrateToVersion10(dataSource)
+            seedLegacyPreferences(dataSource)
+            DatabaseMigrator.migrate(dataSource)
+            assertOperationalStateMigration(dataSource)
+        } finally {
+            (dataSource as? AutoCloseable)?.close()
+            (directory / "portfolio.db").deleteIfExists()
+            (directory / "portfolio.db-shm").deleteIfExists()
+            (directory / "portfolio.db-wal").deleteIfExists()
+            directory.deleteIfExists()
+        }
+    }
+
+    private fun migrateToVersion10(dataSource: javax.sql.DataSource) {
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .target("10")
+            .load()
+            .migrate()
+    }
+
+    private fun seedLegacyPreferences(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                insert into app_preferences (preference_key, value_json, updated_at)
+                values (?, ?, ?)
+                """.trimIndent()
+            ).use { statement ->
+                listOf(
+                    "portfolio.benchmark-settings" to "{\"enabled\":true}",
+                    "portfolio.alerts.active" to "{\"activeAlertIds\":[]}",
+                    "portfolio.market-data.quote.hash" to "{\"price\":\"101.00\"}",
+                    "market-data.snapshot.quote.hash" to "{\"price\":\"100.00\"}",
+                    "market-data.snapshot-meta.quote.hash" to "{\"status\":\"FRESH\"}"
+                ).forEach { (key, valueJson) ->
+                    statement.setString(1, key)
+                    statement.setString(2, valueJson)
+                    statement.setString(3, "2026-03-27T12:00:00Z")
+                    statement.addBatch()
+                }
+                statement.executeBatch()
+            }
+        }
+    }
+
+    private fun assertOperationalStateMigration(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            assertEquals(11, appliedMigrationCount(connection))
+            assertEquals(
+                listOf("portfolio.benchmark-settings"),
+                storedKeys(connection, table = "app_preferences", keyColumn = "preference_key")
+            )
+            assertEquals(
+                listOf(
+                    "market-data.snapshot-meta.quote.hash",
+                    "market-data.snapshot.quote.hash",
+                    "portfolio.alerts.active",
+                    "portfolio.market-data.quote.hash"
+                ),
+                storedKeys(connection, table = "operational_state", keyColumn = "state_key")
+            )
         }
     }
 
@@ -59,6 +134,22 @@ class SqliteMigrationTest {
                 resultSet.getInt(1) == 1
             }
         }
+
+    private fun storedKeys(
+        connection: java.sql.Connection,
+        table: String,
+        keyColumn: String
+    ): List<String> = connection.prepareStatement(
+        "select $keyColumn from $table order by $keyColumn"
+    ).use { statement ->
+        statement.executeQuery().use { resultSet ->
+            buildList {
+                while (resultSet.next()) {
+                    add(resultSet.getString(1))
+                }
+            }
+        }
+    }
 
     private fun sqlitePersistenceConfig(databasePath: String) = PersistenceConfig(
         databasePath = databasePath,

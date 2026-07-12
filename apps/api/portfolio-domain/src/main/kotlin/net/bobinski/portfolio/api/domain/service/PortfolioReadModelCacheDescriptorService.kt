@@ -4,7 +4,6 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.security.MessageDigest
-import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
@@ -20,11 +19,11 @@ import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotPreferenc
 class PortfolioReadModelCacheDescriptorService(
     private val accountRepository: AccountRepository,
     private val appPreferenceRepository: AppPreferenceRepository,
+    private val operationalStateService: OperationalStateService,
     private val instrumentRepository: InstrumentRepository,
     private val portfolioTargetRepository: PortfolioTargetRepository,
     private val transactionRepository: TransactionRepository,
     private val marketDataCacheFingerprint: String,
-    private val json: Json,
     private val clock: Clock
 ) {
     companion object {
@@ -92,26 +91,24 @@ class PortfolioReadModelCacheDescriptorService(
         (baseVersion * FINGERPRINT_MODULUS) + marketDataFingerprint()
 
     private suspend fun marketDataSnapshotCanonicalUpdatedAt(): Instant? {
-        val payloads = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+        val payloads = operationalStateService.listByPrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
         if (payloads.isEmpty()) {
             return null
         }
 
-        val metadataBySuffix = appPreferenceRepository.listByPrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+        val metadataBySuffix = operationalStateService.listByPrefix(MarketDataSnapshotPreferences.METADATA_KEY_PREFIX)
             .associateBy(
                 keySelector = { preference ->
-                    preference.key.removePrefix(MarketDataSnapshotPreferences.METADATA_PREFERENCE_KEY_PREFIX)
+                    preference.key.removePrefix(MarketDataSnapshotPreferences.METADATA_KEY_PREFIX)
                 },
                 valueTransform = { preference ->
-                    runCatching {
-                        json.decodeFromString(MarketDataSnapshotMetadata.serializer(), preference.valueJson)
-                    }.getOrNull()
+                    operationalStateService.decodeOrNull(preference, MarketDataSnapshotMetadata.serializer())
                 }
             )
 
         return payloads.asSequence()
             .mapNotNull { preference ->
-                val suffix = preference.key.removePrefix(MarketDataSnapshotPreferences.PREFERENCE_KEY_PREFIX)
+                val suffix = preference.key.removePrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
                 metadataBySuffix[suffix]
                     ?.canonicalUpdatedAt
                     ?.let(Instant::parse)

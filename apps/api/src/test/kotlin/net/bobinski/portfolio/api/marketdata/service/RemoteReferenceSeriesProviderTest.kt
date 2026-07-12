@@ -14,13 +14,13 @@ import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 import net.bobinski.portfolio.api.domain.model.AuditEventOutcome
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
-import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -34,12 +34,14 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
-            val appPreferenceService = AppPreferenceService(
-                repository = InMemoryAppPreferenceRepository(),
+            val operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
                 json = AppJsonFactory.create(),
                 clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
             )
-            val snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+            val snapshotCacheService = MarketDataSnapshotCacheService(
+                operationalStateService = operationalStateService
+            )
 
             val warmProvider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
@@ -137,12 +139,14 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
-            val appPreferenceService = AppPreferenceService(
-                repository = InMemoryAppPreferenceRepository(),
+            val operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
                 json = AppJsonFactory.create(),
                 clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
             )
-            val snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+            val snapshotCacheService = MarketDataSnapshotCacheService(
+                operationalStateService = operationalStateService
+            )
 
             val warmProvider = RemoteReferenceSeriesProvider(
                 config = MarketDataConfig(
@@ -239,8 +243,8 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
-            val appPreferenceService = AppPreferenceService(
-                repository = InMemoryAppPreferenceRepository(),
+            val operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
                 json = AppJsonFactory.create(),
                 clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
             )
@@ -272,7 +276,9 @@ class RemoteReferenceSeriesProviderTest {
                         clock = Clock.fixed(Instant.parse("2026-03-26T12:00:00Z"), ZoneOffset.UTC)
                     )
                 ),
-                snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+                snapshotCacheService = MarketDataSnapshotCacheService(
+                    operationalStateService = operationalStateService
+                )
             )
 
             val result = provider.goldPln(
@@ -299,8 +305,8 @@ class RemoteReferenceSeriesProviderTest {
 
         try {
             val auditEventRepository = InMemoryAuditEventRepository()
-            val appPreferenceService = AppPreferenceService(
-                repository = InMemoryAppPreferenceRepository(),
+            val operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
                 json = AppJsonFactory.create(),
                 clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
             )
@@ -332,7 +338,9 @@ class RemoteReferenceSeriesProviderTest {
                         clock = Clock.fixed(Instant.parse("2026-03-26T12:30:00Z"), ZoneOffset.UTC)
                     )
                 ),
-                snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+                snapshotCacheService = MarketDataSnapshotCacheService(
+                    operationalStateService = operationalStateService
+                )
             )
 
             val result = provider.usdPln(
@@ -361,12 +369,14 @@ class RemoteReferenceSeriesProviderTest {
     @Test
     fun `reference series falls back to cached snapshot when upstream later fails`() = runBlocking {
         val cacheClock = Clock.fixed(Instant.parse("2026-03-27T13:00:00Z"), ZoneOffset.UTC)
-        val appPreferenceService = AppPreferenceService(
-            repository = InMemoryAppPreferenceRepository(),
+        val operationalStateService = OperationalStateService(
+            repository = InMemoryOperationalStateRepository(),
             json = AppJsonFactory.create(),
             clock = cacheClock
         )
-        val snapshotCacheService = MarketDataSnapshotCacheService(appPreferenceService = appPreferenceService)
+        val snapshotCacheService = MarketDataSnapshotCacheService(
+            operationalStateService = operationalStateService
+        )
 
         val successServer = FakeReferenceSeriesServer()
         successServer.start()

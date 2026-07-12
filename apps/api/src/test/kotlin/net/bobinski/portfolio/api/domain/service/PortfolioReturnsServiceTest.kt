@@ -22,6 +22,7 @@ import net.bobinski.portfolio.api.marketdata.service.ReferenceSeriesResult
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -516,6 +517,7 @@ class PortfolioReturnsServiceTest {
         val edoLotValuationProvider = FakeEdoLotValuationProvider()
         val fxRateProvider = FakeFxRateHistoryProvider()
         val inflationProvider = FakeInflationAdjustmentProvider()
+        val json = net.bobinski.portfolio.api.config.AppJsonFactory.create()
         val auditLogService = AuditLogService(
             auditEventRepository = net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository(),
             clock = clock
@@ -523,7 +525,7 @@ class PortfolioReturnsServiceTest {
         val benchmarkSettingsService = PortfolioBenchmarkSettingsService(
             appPreferenceService = AppPreferenceService(
                 repository = appPreferenceRepository,
-                json = net.bobinski.portfolio.api.config.AppJsonFactory.create(),
+                json = json,
                 clock = clock
             ),
             auditLogService = auditLogService,
@@ -534,11 +536,15 @@ class PortfolioReturnsServiceTest {
             PortfolioReadModelCacheDescriptorService(
                 accountRepository = accountRepository,
                 appPreferenceRepository = appPreferenceRepository,
+                operationalStateService = OperationalStateService(
+                    repository = InMemoryOperationalStateRepository(),
+                    json = json,
+                    clock = clock
+                ),
                 instrumentRepository = instrumentRepository,
                 portfolioTargetRepository = portfolioTargetRepository,
                 transactionRepository = transactionRepository,
                 marketDataCacheFingerprint = "returns-test",
-                json = net.bobinski.portfolio.api.config.AppJsonFactory.create(),
                 clock = clock
             )
         } else {

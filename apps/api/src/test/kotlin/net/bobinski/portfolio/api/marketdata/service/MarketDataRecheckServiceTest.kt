@@ -13,15 +13,15 @@ import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.ValuationSource
-import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
 import net.bobinski.portfolio.api.domain.service.InstrumentService
+import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.domain.service.ValuationProbeService
 import net.bobinski.portfolio.api.marketdata.config.MarketDataRecheckConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
-import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -143,10 +143,10 @@ class MarketDataRecheckServiceTest {
     }
 
     private fun snapshotCacheService(clock: Clock): MarketDataSnapshotCacheService {
-        val repository = InMemoryAppPreferenceRepository()
+        val repository = InMemoryOperationalStateRepository()
         val json = AppJsonFactory.create()
         return MarketDataSnapshotCacheService(
-            appPreferenceService = AppPreferenceService(
+            operationalStateService = OperationalStateService(
                 repository = repository,
                 json = json,
                 clock = clock
