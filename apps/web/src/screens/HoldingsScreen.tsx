@@ -15,6 +15,7 @@ import { labelAssetClass, labelInstrumentKind } from '../lib/labels'
 import { formatMessage, t } from '../lib/messages'
 import { usePersistentState } from '../lib/persistence'
 import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
+import { appLinkPreferencesForLocale } from '../lib/app-links'
 import type { TransactionRouteState } from '../lib/transaction-composer'
 import { isMarketValuedStatus } from '../lib/valuation'
 import {
@@ -53,7 +54,7 @@ export function HoldingsScreen() {
 }
 
 export function HoldingsContent() {
-  const { language } = useI18n()
+  const { language, localeTag } = useI18n()
   const navigate = useNavigate()
   const appMetaQuery = useAppMeta()
   const holdingsQuery = usePortfolioHoldings()
@@ -146,6 +147,7 @@ export function HoldingsContent() {
   const stockAnalystAnalysisUrl = buildStockAnalystAnalysisUrl(
     appMetaQuery.data?.stockAnalystUiUrl,
     selectedHoldingInstrument?.valuationSource === 'STOCK_ANALYST' ? selectedHoldingInstrument.symbol : null,
+    appLinkPreferencesForLocale(localeTag),
   )
 
   const totalValue = filteredHoldings.reduce(

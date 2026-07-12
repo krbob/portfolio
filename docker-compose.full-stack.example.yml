@@ -8,7 +8,7 @@ services:
       PORTFOLIO_BUSY_TIMEOUT_MS: 5000
       PORTFOLIO_MARKET_DATA_ENABLED: "true"
       PORTFOLIO_STOCK_ANALYST_API_URL: http://stock-analyst:8080
-      PORTFOLIO_STOCK_ANALYST_UI_URL: ${PORTFOLIO_STOCK_ANALYST_UI_URL:-}
+      PORTFOLIO_STOCK_ANALYST_UI_URL: ${PORTFOLIO_STOCK_ANALYST_UI_URL:-http://127.0.0.1:18083}
       PORTFOLIO_EDO_CALCULATOR_API_URL: http://edo-calculator:8080
       PORTFOLIO_GOLD_API_URL: https://api.gold-api.com
       PORTFOLIO_GOLD_API_KEY: ${PORTFOLIO_GOLD_API_KEY:-}
@@ -82,6 +82,23 @@ services:
 
   stock-analyst-backend-yfinance:
     image: ghcr.io/krbob/stock-analyst-backend-yfinance:main
+    restart: unless-stopped
+
+  stock-analyst-ui:
+    image: ghcr.io/krbob/stock-analyst-ui:latest
+    depends_on:
+      - stock-analyst
+    environment:
+      API_URL: http://stock-analyst:8080
+      PORTFOLIO_URL: ${PORTFOLIO_PUBLIC_URL:-http://127.0.0.1:4174}
+    ports:
+      - "${PORTFOLIO_STOCK_ANALYST_UI_PORT:-18083}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     restart: unless-stopped
 
   edo-calculator:

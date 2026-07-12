@@ -7,6 +7,7 @@ import { IconClose, IconMenu } from '../ui/icons'
 import { useDialogFocus } from '../ui/use-dialog-focus'
 import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
 import { MarketDataStatusBar } from '../MarketDataStatusBar'
+import { AppSwitcher } from '../AppSwitcher'
 import { Sidebar } from './Sidebar'
 import { resolveRouteTitle } from './navigation'
 
@@ -166,6 +167,8 @@ export function Layout({ children }: { children: ReactNode }) {
               <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-ui-text-muted">{t('layout.appName')}</p>
               <p className="truncate text-sm font-semibold text-ui-text">{currentTitle}</p>
             </div>
+
+            <AppSwitcher compact />
           </div>
         </header>
 

@@ -115,6 +115,7 @@ This adds:
 
 - `stock-analyst`
 - `stock-analyst-backend-yfinance`
+- `stock-analyst-ui` at `http://127.0.0.1:18083`
 - `edo-calculator`
 
 On ARM hosts, the override currently pins upstream market-data services to `linux/amd64`. If those images become multi-arch later, remove or override `PORTFOLIO_MARKET_DATA_PLATFORM`.
@@ -210,7 +211,15 @@ docker compose up -d
 - `PORTFOLIO_GOLD_API_KEY`
 - `PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS`
 
-`PORTFOLIO_STOCK_ANALYST_UI_URL` is optional. Set it only when you want the UI to open an external stock-analyst page for instruments backed by that upstream.
+`PORTFOLIO_STOCK_ANALYST_UI_URL` is optional. Set it to a browser-reachable Stock Analyst UI URL to enable the
+global app switcher and instrument analysis links. The self-hosted overrides default it to
+`http://127.0.0.1:18083`; use the public HTTPS URL when deploying behind a reverse proxy.
+
+The two UIs use a small bidirectional handoff contract. Portfolio passes only `uiTheme`, canonical `uiLocale`, and,
+for an explicit instrument analysis link, `s`. Stock Analyst receives `PORTFOLIO_URL` (set from
+`PORTFOLIO_PUBLIC_URL` in the example stacks) and passes back only `uiTheme` and `uiLocale`. Neither direction
+forwards authentication, portfolio state, account data, or arbitrary query parameters. Both applications validate
+the configured destination as a root-relative or absolute HTTP(S) URL before rendering a link.
 
 #### Upstream API contracts and timeout budgets
 

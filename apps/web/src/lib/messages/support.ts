@@ -1,6 +1,9 @@
 import type { MessageCatalog } from './types'
 
 export const supportMessages = {
+  'appSwitcher.stockAnalyst': { pl: 'Stock Analyst', en: 'Stock Analyst' },
+  'appSwitcher.openStockAnalyst': { pl: 'Otwórz aplikację Stock Analyst', en: 'Open Stock Analyst application' },
+  'appSwitcher.switchToStockAnalyst': { pl: 'Przejdź do Stock Analyst', en: 'Switch to Stock Analyst' },
   'marketStatus.ariaLabel': { pl: 'Status danych rynkowych', en: 'Market data status' },
   'marketStatus.title': { pl: 'Dane rynkowe', en: 'Market data' },
   'marketStatus.datasets': { pl: 'Stock: {count} zest.', en: 'Stock: {count} datasets' },

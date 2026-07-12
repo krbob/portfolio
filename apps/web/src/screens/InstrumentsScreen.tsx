@@ -19,6 +19,7 @@ import {
   parsePortfolioNumber,
 } from '../lib/portfolio-presentation'
 import { buildStockAnalystAnalysisUrl } from '../lib/stock-analyst'
+import { appLinkPreferencesForLocale } from '../lib/app-links'
 import { badge, td, tdRight, tr } from '../lib/styles'
 import { InstrumentDetailsCard, InstrumentSummaryTile } from './instruments/InstrumentsScreenSections'
 import { buildInstrumentRows, compareRows, defaultSort, isSortState, labelInstrumentStatus, statusVariant } from './instruments/InstrumentsScreenModel'
@@ -64,7 +65,7 @@ function InstrumentsPageHeaderContent() {
 }
 
 export function InstrumentsManagement() {
-  const { language } = useI18n()
+  const { language, localeTag } = useI18n()
   const appMetaQuery = useAppMeta()
   const instrumentsQuery = useInstruments()
   const holdingsQuery = usePortfolioHoldings()
@@ -96,6 +97,7 @@ export function InstrumentsManagement() {
   const stockAnalystAnalysisUrl = buildStockAnalystAnalysisUrl(
     appMetaQuery.data?.stockAnalystUiUrl,
     selectedRow?.instrument.valuationSource === 'STOCK_ANALYST' ? selectedRow.instrument.symbol : null,
+    appLinkPreferencesForLocale(localeTag),
   )
 
   useEffect(() => {

@@ -40,6 +40,10 @@ export function readUiLocalePreference(): string | null {
   return parseUiLocale(readPreference(LOCALE_STORAGE_KEY))
 }
 
+export function readUiThemePreference(): UiThemePreference | null {
+  return parseUiTheme(readPreference(THEME_STORAGE_KEY))
+}
+
 function parseUiTheme(value: string | null): UiThemePreference | null {
   return value && UI_THEME_VALUES.has(value as UiThemePreference)
     ? value as UiThemePreference

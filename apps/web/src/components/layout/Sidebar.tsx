@@ -9,6 +9,7 @@ import { appRoutes } from '../../lib/routes'
 import { navSections, type NavItem } from './navigation'
 import { useI18n } from '../../lib/i18n'
 import { formatMessage, t } from '../../lib/messages'
+import { AppSwitcher } from '../AppSwitcher'
 
 interface SidebarProps {
   className?: string
@@ -77,8 +78,9 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
 
   return (
     <nav className={`flex h-full min-h-0 w-full flex-col bg-ui-surface/90 ${className}`} aria-label={t('layout.navigation')}>
-      <div className="px-5 py-6">
+      <div className="flex items-center justify-between gap-3 px-5 py-6">
         <h1 className="text-xl font-bold tracking-tight text-ui-text">Portfolio</h1>
+        <AppSwitcher compact onNavigate={onNavigate} />
       </div>
 
       <div className="flex-1 overflow-y-auto px-3">
