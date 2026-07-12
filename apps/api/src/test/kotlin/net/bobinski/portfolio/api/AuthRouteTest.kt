@@ -105,4 +105,43 @@ class AuthRouteTest {
         assertTrue(!readinessBody.contains("\"checks\""), readinessBody)
         assertEquals(HttpStatusCode.Unauthorized, readinessDetailsResponse.status)
     }
+
+    @Test
+    fun `login applies bounded backoff after repeated invalid passwords`() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "portfolio.auth.enabled" to "true",
+                "portfolio.auth.password" to "secret-pass",
+                "portfolio.auth.sessionSecret" to "0123456789abcdef0123456789abcdef",
+                "portfolio.auth.secureCookie" to "false"
+            )
+        }
+
+        application {
+            module()
+        }
+
+        val first = invalidLogin()
+        val second = invalidLogin()
+        val limited = invalidLogin()
+        val correctWhileLimited = client.post("/v1/auth/session") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"password":"secret-pass"}""")
+        }
+        val limitedBody = limited.bodyAsText()
+
+        assertEquals(HttpStatusCode.Unauthorized, first.status)
+        assertEquals(HttpStatusCode.Unauthorized, second.status)
+        assertEquals(HttpStatusCode.TooManyRequests, limited.status, limitedBody)
+        assertEquals("1", limited.headers[HttpHeaders.RetryAfter])
+        assertTrue(limitedBody.contains("\"errorCode\": \"RATE_LIMITED\""), limitedBody)
+        assertTrue(limitedBody.contains("\"retryable\": true"), limitedBody)
+        assertEquals(HttpStatusCode.TooManyRequests, correctWhileLimited.status)
+    }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.invalidLogin() =
+        client.post("/v1/auth/session") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"password":"wrong-pass"}""")
+        }
 }

@@ -1,9 +1,12 @@
 package net.bobinski.portfolio.api.route
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
+import io.ktor.server.plugins.origin
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -16,6 +19,7 @@ import io.ktor.server.sessions.sessions
 import io.ktor.server.sessions.set
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.auth.config.AuthConfig
+import net.bobinski.portfolio.api.auth.LoginAttemptLimiter
 import net.bobinski.portfolio.api.auth.config.matchesPassword
 import net.bobinski.portfolio.api.auth.config.modeName
 import net.bobinski.portfolio.api.auth.config.passwordFingerprint
@@ -26,6 +30,7 @@ import net.bobinski.portfolio.api.plugins.respondError
 fun Route.authRoute(application: Application) {
     val authConfig = AuthConfig.from(application.environment.config)
     val passwordFingerprint = authConfig.passwordFingerprint()
+    val loginAttemptLimiter = LoginAttemptLimiter()
 
     route("/v1/auth") {
         get("/session") {
@@ -56,8 +61,33 @@ fun Route.authRoute(application: Application) {
                 return@post
             }
 
+            // Deliberately key by the transport peer instead of trusting spoofable forwarding headers.
+            // Behind the bundled reverse proxy this becomes a shared, bounded single-user login budget.
+            val transportPeerKey = call.request.origin.remoteHost.take(MAX_TRANSPORT_PEER_KEY_LENGTH)
+            loginAttemptLimiter.retryAfterSeconds(transportPeerKey)?.let { retryAfterSeconds ->
+                call.response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
+                call.respondError(
+                    HttpStatusCode.TooManyRequests,
+                    "Too many login attempts. Retry later.",
+                    ApiErrorCode.RATE_LIMITED,
+                    retryable = true
+                )
+                return@post
+            }
+
             val payload = call.receive<CreateAuthSessionRequest>()
             if (!authConfig.matchesPassword(payload.password)) {
+                val retryAfterSeconds = loginAttemptLimiter.recordFailure(transportPeerKey)
+                if (retryAfterSeconds != null) {
+                    call.response.header(HttpHeaders.RetryAfter, retryAfterSeconds.toString())
+                    call.respondError(
+                        HttpStatusCode.TooManyRequests,
+                        "Too many login attempts. Retry later.",
+                        ApiErrorCode.RATE_LIMITED,
+                        retryable = true
+                    )
+                    return@post
+                }
                 call.respondError(
                     HttpStatusCode.Unauthorized,
                     "Invalid password.",
@@ -66,6 +96,7 @@ fun Route.authRoute(application: Application) {
                 return@post
             }
 
+            loginAttemptLimiter.recordSuccess(transportPeerKey)
             call.sessions.set(PortfolioSession(passwordFingerprint = passwordFingerprint))
             call.respond(
                 AuthSessionResponse(
@@ -110,3 +141,5 @@ data class AuthSessionResponse(
     val authenticated: Boolean,
     val mode: String
 )
+
+private const val MAX_TRANSPORT_PEER_KEY_LENGTH = 128
