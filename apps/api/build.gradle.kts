@@ -35,6 +35,8 @@ val generatedContractsFile = generatedContractsDirectory.map {
 
 dependencies {
     implementation(project(":portfolio-domain"))
+    implementation(platform(libs.jackson.bom))
+    implementation(platform(libs.netty.bom))
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.call.logging)
@@ -52,11 +54,22 @@ dependencies {
     implementation(libs.hikaricp)
     implementation(libs.flyway.core)
     implementation(libs.sqlite.jdbc)
-    implementation(libs.web.push)
+    implementation(libs.web.push) {
+        exclude(group = "org.asynchttpclient")
+    }
     implementation(libs.bouncycastle.provider)
     implementation(libs.apache.httpcore)
     implementation(libs.apache.httpclient)
     implementation(libs.apache.httpasyncclient)
+
+    constraints {
+        implementation(libs.handlebars) {
+            because("CVE-2026-55760 is fixed in Handlebars 4.5.2")
+        }
+        implementation(libs.jose4j) {
+            because("CVE-2023-31582 and CVE-2024-29371 are fixed in jose4j 0.9.6")
+        }
+    }
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
@@ -65,6 +78,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 
     add(contractGeneratorSourceSet.implementationConfigurationName, libs.swagger.parser)
+    add(contractGeneratorSourceSet.implementationConfigurationName, platform(libs.jackson.bom))
 }
 
 val checkUpstreamContracts = tasks.register("checkUpstreamContracts") {
