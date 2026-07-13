@@ -17,6 +17,10 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescript
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
+import net.bobinski.portfolio.api.domain.service.ValuationState
+import net.bobinski.portfolio.api.readmodel.isPortfolioAnalyticsHistoryPreferredForCache
+import net.bobinski.portfolio.api.readmodel.isPreferredForCache
+import net.bobinski.portfolio.api.readmodel.requireCoreSafeToServe
 
 internal fun Route.registerPortfolioReadModelRoutes(
     portfolioReadModelService: PortfolioReadModelService,
@@ -56,38 +60,11 @@ internal fun Route.registerPortfolioAnalyticsRoutes(
     portfolioHistoryService: PortfolioHistoryService,
     portfolioReturnsService: PortfolioReturnsService,
 ) {
-    get("/history/daily") {
-        val descriptor = portfolioReadModelCacheDescriptorService.dailyHistoryDescriptor()
-        call.respond(
-            readModelCacheService.getOrCompute(
-                descriptor = descriptor,
-                serializer = PortfolioDailyHistoryResponse.serializer()
-            ) {
-                portfolioHistoryService.dailyHistory().toResponse()
-            }
-        )
-    }.documented(
-        operationId = "getPortfolioDailyHistory",
-        summary = "Get daily portfolio history",
-        description = "Returns the cached or freshly computed daily portfolio history read model.",
-        tag = "Portfolio"
-    )
-
-    get("/returns") {
-        val descriptor = portfolioReadModelCacheDescriptorService.returnsDescriptor()
-        call.respond(
-            readModelCacheService.getOrCompute(
-                descriptor = descriptor,
-                serializer = PortfolioReturnsResponse.serializer()
-            ) {
-                portfolioReturnsService.returns().toResponse()
-            }
-        )
-    }.documented(
-        operationId = "getPortfolioReturns",
-        summary = "Get portfolio returns",
-        description = "Returns aggregated portfolio return metrics and benchmark comparisons.",
-        tag = "Portfolio"
+    registerPortfolioAnalyticsReadModelRoutes(
+        readModelCacheService = readModelCacheService,
+        portfolioReadModelCacheDescriptorService = portfolioReadModelCacheDescriptorService,
+        portfolioHistoryService = portfolioHistoryService,
+        portfolioReturnsService = portfolioReturnsService
     )
 
     get("/allocation/contribution-plan") {
@@ -120,6 +97,64 @@ internal fun Route.registerPortfolioAnalyticsRoutes(
         tag = "Portfolio"
     )
 }
+
+internal fun Route.registerPortfolioAnalyticsReadModelRoutes(
+    readModelCacheService: ReadModelCacheService,
+    portfolioReadModelCacheDescriptorService: PortfolioReadModelCacheDescriptorService,
+    portfolioHistoryService: PortfolioHistoryService,
+    portfolioReturnsService: PortfolioReturnsService,
+) {
+    get("/history/daily") {
+        val descriptor = portfolioReadModelCacheDescriptorService.dailyHistoryDescriptor()
+        call.respond(
+            readModelCacheService.getOrComputeStaleIfError(
+                descriptor = descriptor,
+                serializer = PortfolioDailyHistoryResponse.serializer(),
+                descriptorAfterCompute = portfolioReadModelCacheDescriptorService::dailyHistoryDescriptor,
+                isAcceptable = PortfolioDailyHistoryResponse::isPreferredForCache
+            ) {
+                portfolioHistoryService.dailyHistory(forceRefresh = true)
+                    .also { history -> history.requireCoreSafeToServe() }
+                    .toResponse()
+            }
+        )
+    }.documented(
+        operationId = "getPortfolioDailyHistory",
+        summary = "Get daily portfolio history",
+        description = "Returns the cached or freshly computed daily portfolio history read model.",
+        tag = "Portfolio"
+    )
+
+    get("/returns") {
+        val descriptor = portfolioReadModelCacheDescriptorService.returnsDescriptor()
+        var computedHistoryIsPreferred = false
+        call.respond(
+            readModelCacheService.getOrComputeStaleIfError(
+                descriptor = descriptor,
+                serializer = PortfolioReturnsResponse.serializer(),
+                descriptorAfterCompute = portfolioReadModelCacheDescriptorService::returnsDescriptor,
+                shouldPersist = { computedHistoryIsPreferred }
+            ) {
+                val history = portfolioHistoryService.dailyHistory(forceRefresh = true)
+                    .also { candidate -> candidate.requireCoreSafeToServe() }
+                computedHistoryIsPreferred = history.isPreferredForCache()
+                portfolioReturnsService.returns(history).toResponse()
+            }
+        )
+    }.documented(
+        operationId = "getPortfolioReturns",
+        summary = "Get portfolio returns",
+        description = "Returns aggregated portfolio return metrics and benchmark comparisons.",
+        tag = "Portfolio"
+    )
+}
+
+private fun PortfolioDailyHistoryResponse.isPreferredForCache(): Boolean =
+    isPortfolioAnalyticsHistoryPreferredForCache(
+        valuationState = ValuationState.entries.firstOrNull { state -> state.name == valuationState },
+        missingFxTransactions = missingFxTransactions,
+        referenceSeriesIssueCount = referenceSeriesIssueCount
+    )
 
 private fun ApplicationCall.requiredMoneyQueryParameter(name: String): BigDecimal {
     val rawValue = request.queryParameters[name]

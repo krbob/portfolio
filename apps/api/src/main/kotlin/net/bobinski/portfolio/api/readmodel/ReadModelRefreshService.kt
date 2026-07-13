@@ -171,17 +171,22 @@ class ReadModelRefreshService(
     }
 
     private suspend fun refreshAnalyticsSnapshots(): PortfolioReturns {
-        val dailyHistoryDescriptor = descriptorService.dailyHistoryDescriptor()
         val dailyHistory = portfolioHistoryService.dailyHistory(forceRefresh = true)
+        dailyHistory.requireSafeToPublish()
+
+        // Compute the coherent pair before replacing either persistent snapshot. Besides
+        // preventing a partial write when returns fail, this lets market-data providers
+        // finish updating their canonical revisions before the descriptors are captured.
+        val returns = portfolioReturnsService.returns(dailyHistory)
+        val dailyHistoryDescriptor = descriptorService.dailyHistoryDescriptor()
+        val returnsDescriptor = descriptorService.returnsDescriptor()
+
         readModelCacheService.forceRefresh(
             descriptor = dailyHistoryDescriptor,
             serializer = PortfolioDailyHistoryResponse.serializer()
         ) {
             dailyHistory.toRefreshResponse()
         }
-
-        val returnsDescriptor = descriptorService.returnsDescriptor()
-        val returns = portfolioReturnsService.returns(dailyHistory)
         readModelCacheService.forceRefresh(
             descriptor = returnsDescriptor,
             serializer = PortfolioReturnsResponse.serializer()

@@ -79,6 +79,172 @@ class ReadModelCacheServiceTest {
     }
 
     @Test
+    fun `stale-if-error returns compatible healthy snapshot when refreshed candidate is rejected`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(
+            repository = repository,
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val canonicalRevision = Instant.parse("2026-03-14T00:00:00Z")
+        val healthyDescriptor = descriptor(canonicalRevision)
+        service.getOrCompute(healthyDescriptor, CachedPayload.serializer()) {
+            CachedPayload("healthy")
+        }
+        val healthySnapshot = repository.list().single()
+        val marketRevisionChanged = healthyDescriptor.copy(
+            sourceUpdatedAt = Instant.parse("2026-03-14T01:00:00Z"),
+            canonicalRevision = canonicalRevision
+        )
+
+        val result = service.getOrComputeStaleIfError(
+            descriptor = marketRevisionChanged,
+            serializer = CachedPayload.serializer(),
+            isAcceptable = { payload -> payload.value != "degraded" }
+        ) {
+            CachedPayload("degraded")
+        }
+
+        assertEquals(CachedPayload("healthy"), result)
+        assertEquals(healthySnapshot, repository.list().single())
+    }
+
+    @Test
+    fun `stale-if-error serves rejected candidate without caching when no fallback exists`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(
+            repository = repository,
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+
+        val result = service.getOrComputeStaleIfError(
+            descriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z")),
+            serializer = CachedPayload.serializer(),
+            isAcceptable = { payload -> payload.value != "degraded" }
+        ) {
+            CachedPayload("degraded")
+        }
+
+        assertEquals(CachedPayload("degraded"), result)
+        assertTrue(repository.list().isEmpty())
+    }
+
+    @Test
+    fun `stale-if-error returns compatible snapshot when recomputation fails`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(
+            repository = repository,
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val canonicalRevision = Instant.parse("2026-03-14T00:00:00Z")
+        val healthyDescriptor = descriptor(canonicalRevision)
+        service.getOrCompute(healthyDescriptor, CachedPayload.serializer()) {
+            CachedPayload("healthy")
+        }
+        val healthySnapshot = repository.list().single()
+
+        val result = service.getOrComputeStaleIfError(
+            descriptor = healthyDescriptor.copy(
+                sourceUpdatedAt = Instant.parse("2026-03-14T01:00:00Z"),
+                canonicalRevision = canonicalRevision
+            ),
+            serializer = CachedPayload.serializer()
+        ) {
+            error("provider unavailable")
+        }
+
+        assertEquals(CachedPayload("healthy"), result)
+        assertEquals(healthySnapshot, repository.list().single())
+    }
+
+    @Test
+    fun `stale-if-error does not reuse snapshot for another model window or newer canonical state`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(
+            repository = repository,
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val healthyDescriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z"))
+        service.getOrCompute(healthyDescriptor, CachedPayload.serializer()) {
+            CachedPayload("healthy")
+        }
+        val incompatibleDescriptors = listOf(
+            healthyDescriptor.copy(modelVersion = healthyDescriptor.modelVersion + 1),
+            healthyDescriptor.copy(inputsFrom = healthyDescriptor.inputsFrom?.minusDays(1)),
+            healthyDescriptor.copy(
+                sourceUpdatedAt = Instant.parse("2026-03-14T02:00:00Z"),
+                canonicalRevision = Instant.parse("2026-03-14T02:00:00Z")
+            )
+        )
+
+        incompatibleDescriptors.forEach { incompatible ->
+            val exception = assertThrows(IllegalStateException::class.java) {
+                runBlocking {
+                    service.getOrComputeStaleIfError(incompatible, CachedPayload.serializer()) {
+                        error("provider unavailable")
+                    }
+                }
+            }
+            assertEquals("provider unavailable", exception.message)
+        }
+    }
+
+    @Test
+    fun `stale-if-error persists descriptor captured after successful computation`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(
+            repository = repository,
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
+        val canonicalRevision = Instant.parse("2026-03-14T00:00:00Z")
+        val beforeCompute = descriptor(canonicalRevision)
+        val afterCompute = beforeCompute.copy(
+            sourceUpdatedAt = Instant.parse("2026-03-14T01:00:00Z"),
+            canonicalRevision = canonicalRevision
+        )
+
+        val result = service.getOrComputeStaleIfError(
+            descriptor = beforeCompute,
+            serializer = CachedPayload.serializer(),
+            descriptorAfterCompute = { afterCompute }
+        ) {
+            CachedPayload("fresh")
+        }
+
+        assertEquals(CachedPayload("fresh"), result)
+        assertEquals(afterCompute.sourceUpdatedAt, repository.list().single().sourceUpdatedAt)
+    }
+
+    @Test
+    fun `stale-if-error never turns cancellation into a stale response`() = runBlocking {
+        val service = cacheService()
+        val canonicalRevision = Instant.parse("2026-03-14T00:00:00Z")
+        val healthyDescriptor = descriptor(canonicalRevision)
+        service.getOrCompute(healthyDescriptor, CachedPayload.serializer()) {
+            CachedPayload("healthy")
+        }
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking {
+                service.getOrComputeStaleIfError(
+                    descriptor = healthyDescriptor.copy(
+                        sourceUpdatedAt = Instant.parse("2026-03-14T01:00:00Z"),
+                        canonicalRevision = canonicalRevision
+                    ),
+                    serializer = CachedPayload.serializer()
+                ) {
+                    throw CancellationException("request cancelled")
+                }
+            }
+        }
+        Unit
+    }
+
+    @Test
     fun `force refresh rebuilds snapshot even when descriptor is unchanged`() {
         val service = ReadModelCacheService(
             repository = InMemoryReadModelCacheRepository(),

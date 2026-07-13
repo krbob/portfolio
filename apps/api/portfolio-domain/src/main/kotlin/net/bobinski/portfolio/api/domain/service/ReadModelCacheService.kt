@@ -57,6 +57,47 @@ class ReadModelCacheService(
         }
     }
 
+    suspend fun <T> getOrComputeStaleIfError(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        descriptorAfterCompute: suspend () -> ReadModelCacheDescriptor = { descriptor },
+        isAcceptable: (T) -> Boolean = { true },
+        shouldPersist: (T) -> Boolean = isAcceptable,
+        compute: suspend () -> T
+    ): T {
+        val cached = repository.get(descriptor.storageKey())
+        val cachedValue = cached
+            ?.takeIf { snapshot -> snapshot.isCompatibleStaleFallbackFor(descriptor) }
+            ?.decodeAcceptableOrNull(serializer, isAcceptable)
+        if (cached != null && cached.matches(descriptor) && cachedValue != null) {
+            return cachedValue
+        }
+
+        val attempted = runCatching {
+            computeStaleCandidate(
+                descriptor = descriptor,
+                serializer = serializer,
+                descriptorAfterCompute = descriptorAfterCompute,
+                isAcceptable = isAcceptable,
+                shouldPersist = shouldPersist,
+                compute = compute
+            )
+        }
+        if (attempted.isSuccess) {
+            return attempted.getOrThrow()
+        }
+
+        val failure = checkNotNull(attempted.exceptionOrNull())
+        if (failure is CancellationException || failure !is Exception) {
+            throw failure
+        }
+        return latestAcceptableOrNull(
+            descriptor = descriptor,
+            serializer = serializer,
+            isAcceptable = isAcceptable
+        ) ?: cachedValue ?: throw failure
+    }
+
     suspend fun <T> forceRefresh(
         descriptor: ReadModelCacheDescriptor,
         serializer: KSerializer<T>,
@@ -86,6 +127,53 @@ class ReadModelCacheService(
         compute: suspend () -> T
     ): T {
         val value = compute()
+        persist(
+            descriptor = descriptor,
+            serializer = serializer,
+            value = value,
+            invalidationReason = invalidationReason
+        )
+        return value
+    }
+
+    private suspend fun <T> computeStaleCandidate(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        descriptorAfterCompute: suspend () -> ReadModelCacheDescriptor,
+        isAcceptable: (T) -> Boolean,
+        shouldPersist: (T) -> Boolean,
+        compute: suspend () -> T
+    ): T = computationCoordinator.run(descriptor.computationKey(PERSISTENT_COMPUTATION)) {
+        val latest = repository.get(descriptor.storageKey())
+        val latestValue = latest
+            ?.takeIf { snapshot -> snapshot.isCompatibleStaleFallbackFor(descriptor) }
+            ?.decodeAcceptableOrNull(serializer, isAcceptable)
+        if (latest != null && latest.matches(descriptor) && latestValue != null) {
+            return@run latestValue
+        }
+
+        val value = compute()
+        if (!shouldPersist(value)) {
+            return@run latestValue ?: value
+        }
+        val refreshedDescriptor = descriptorAfterCompute()
+        descriptor.requireSameCanonicalInputs(refreshedDescriptor)
+        persist(
+            descriptor = refreshedDescriptor,
+            serializer = serializer,
+            value = value,
+            invalidationReason = latest?.invalidationReasonFor(refreshedDescriptor)
+                ?: ReadModelCacheInvalidationReason.CACHE_MISS
+        )
+        value
+    }
+
+    private suspend fun <T> persist(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        value: T,
+        invalidationReason: ReadModelCacheInvalidationReason
+    ) {
         val payloadJson = json.encodeToString(serializer, value)
         repository.save(
             ReadModelCacheSnapshot(
@@ -101,11 +189,49 @@ class ReadModelCacheService(
                 payloadSizeBytes = payloadJson.toByteArray(Charsets.UTF_8).size
             )
         )
-        return value
+    }
+
+    private fun <T> ReadModelCacheSnapshot.decodeAcceptableOrNull(
+        serializer: KSerializer<T>,
+        isAcceptable: (T) -> Boolean
+    ): T? = try {
+        json.decodeFromString(serializer, payloadJson).takeIf(isAcceptable)
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (_: Exception) {
+        null
+    }
+
+    private suspend fun <T> latestAcceptableOrNull(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        isAcceptable: (T) -> Boolean
+    ): T? = try {
+        repository.get(descriptor.storageKey())
+            ?.takeIf { snapshot -> snapshot.isCompatibleStaleFallbackFor(descriptor) }
+            ?.decodeAcceptableOrNull(serializer, isAcceptable)
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (_: Exception) {
+        null
     }
 
     private companion object {
         const val PERSISTENT_COMPUTATION = "persistent:read-model"
+    }
+}
+
+private fun ReadModelCacheDescriptor.requireSameCanonicalInputs(refreshed: ReadModelCacheDescriptor) {
+    check(
+        cacheKey == refreshed.cacheKey &&
+            modelName == refreshed.modelName &&
+            modelVersion == refreshed.modelVersion &&
+            inputsFrom == refreshed.inputsFrom &&
+            inputsTo == refreshed.inputsTo &&
+            canonicalRevision == refreshed.canonicalRevision &&
+            parameters == refreshed.parameters
+    ) {
+        "Canonical read-model inputs changed while ${modelName} was being computed."
     }
 }
 
@@ -149,6 +275,17 @@ data class ReadModelCacheSnapshot(
     val payloadJson: String,
     val payloadSizeBytes: Int
 ) {
+    fun isCompatibleStaleFallbackFor(descriptor: ReadModelCacheDescriptor): Boolean =
+        cacheKey == descriptor.storageKey() &&
+            modelName == descriptor.modelName &&
+            modelVersion == descriptor.modelVersion &&
+            inputsFrom == descriptor.inputsFrom &&
+            inputsTo == descriptor.inputsTo &&
+            (
+                descriptor.canonicalRevision == null ||
+                    (sourceUpdatedAt != null && !descriptor.canonicalRevision.isAfter(sourceUpdatedAt))
+                )
+
     fun matches(descriptor: ReadModelCacheDescriptor): Boolean =
         invalidationReasonFor(descriptor) == null
 
