@@ -52,6 +52,9 @@ export function AuthGate({ children }: AuthGateProps) {
   }, [authSessionQuery.data])
 
   if (metaQuery.isLoading || authSessionQuery.isLoading) {
+    if (canRenderOfflineShell()) {
+      return <>{children}</>
+    }
     return (
       <AuthLayout>
         <StatePanel

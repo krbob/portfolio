@@ -75,6 +75,26 @@ describe('AuthGate offline shell', () => {
     expect(screen.getByRole('main')).toHaveTextContent('Offline portfolio shell')
   })
 
+  it('does not wait for query retries before rendering a remembered offline shell', () => {
+    window.localStorage.setItem('portfolio:offline-shell:auth-disabled-v1', 'true')
+    setOnline(false)
+    vi.mocked(useAppMeta).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAppMeta>)
+    vi.mocked(useAuthSession).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAuthSession>)
+
+    renderGate()
+    expect(screen.getByRole('main')).toHaveTextContent('Offline portfolio shell')
+  })
+
   it('does not remember or bypass an enabled authentication gate', async () => {
     window.localStorage.setItem('portfolio:offline-shell:auth-disabled-v1', 'true')
     vi.mocked(useAuthSession).mockReturnValue({
