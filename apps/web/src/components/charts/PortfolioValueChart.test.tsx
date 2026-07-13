@@ -133,7 +133,7 @@ describe('PortfolioValueChart', () => {
       },
     ]
 
-    const { rerender, unmount } = render(
+    const { container, rerender, unmount } = render(
       <PortfolioValueChart
         points={initialPoints}
         valueKey="totalCurrentValuePln"
@@ -146,6 +146,7 @@ describe('PortfolioValueChart', () => {
     expect(chartAddSeriesMock).toHaveBeenCalledTimes(2)
     expect(valueSeries.setData).toHaveBeenCalledTimes(1)
     expect(contributionsSeries.setData).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveAttribute('inert')
 
     rerender(
       <PortfolioValueChart

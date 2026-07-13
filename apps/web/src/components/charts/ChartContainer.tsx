@@ -75,6 +75,7 @@ export function ChartContainer({ height = 320, title, subtitle, legend, dataTabl
         ref={containerRef}
         className={`transition-opacity duration-300 ${chartReady ? 'opacity-100' : 'opacity-0'}`}
         aria-hidden="true"
+        inert
       />
       {dataTable}
     </div>

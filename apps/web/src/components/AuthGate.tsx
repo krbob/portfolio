@@ -12,6 +12,8 @@ interface AuthGateProps {
   children: ReactNode
 }
 
+const OFFLINE_SHELL_MARKER = 'portfolio:offline-shell:auth-disabled-v1'
+
 export function AuthGate({ children }: AuthGateProps) {
   const queryClient = useQueryClient()
   const metaQuery = useAppMeta()
@@ -34,6 +36,21 @@ export function AuthGate({ children }: AuthGateProps) {
     }
   }, [queryClient])
 
+  useEffect(() => {
+    const session = authSessionQuery.data
+    if (!session) return
+
+    try {
+      if (!session.authEnabled && session.authenticated) {
+        window.localStorage.setItem(OFFLINE_SHELL_MARKER, 'true')
+      } else {
+        window.localStorage.removeItem(OFFLINE_SHELL_MARKER)
+      }
+    } catch {
+      // Storage can be unavailable in hardened/private browser contexts.
+    }
+  }, [authSessionQuery.data])
+
   if (metaQuery.isLoading || authSessionQuery.isLoading) {
     return (
       <AuthLayout>
@@ -48,6 +65,9 @@ export function AuthGate({ children }: AuthGateProps) {
   }
 
   if (metaQuery.isError || authSessionQuery.isError || !metaQuery.data || !authSessionQuery.data) {
+    if (canRenderOfflineShell()) {
+      return <>{children}</>
+    }
     return (
       <AuthLayout>
         <StatePanel
@@ -65,6 +85,15 @@ export function AuthGate({ children }: AuthGateProps) {
   }
 
   return <>{children}</>
+}
+
+function canRenderOfflineShell(): boolean {
+  if (typeof navigator === 'undefined' || navigator.onLine) return false
+  try {
+    return window.localStorage.getItem(OFFLINE_SHELL_MARKER) === 'true'
+  } catch {
+    return false
+  }
 }
 
 function AuthLayout({ children }: { children: ReactNode }) {

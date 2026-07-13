@@ -34,7 +34,7 @@ export function AccountsSection() {
       />
 
       <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
-        <div>
+        <label>
           <span className={labelClass}>{t('accounts.name')}</span>
           <input
             className={input}
@@ -43,9 +43,9 @@ export function AccountsSection() {
             placeholder="Interactive Brokers"
             required
           />
-        </div>
+        </label>
 
-        <div>
+        <label>
           <span className={labelClass}>{t('accounts.institution')}</span>
           <input
             className={input}
@@ -56,9 +56,9 @@ export function AccountsSection() {
             placeholder="Interactive Brokers"
             required
           />
-        </div>
+        </label>
 
-        <div>
+        <label>
           <span className={labelClass}>{t('accounts.type')}</span>
           <select
             className={input}
@@ -69,9 +69,9 @@ export function AccountsSection() {
             <option value="BOND_REGISTER">{labelAccountType('BOND_REGISTER')}</option>
             <option value="CASH">{labelAccountType('CASH')}</option>
           </select>
-        </div>
+        </label>
 
-        <div>
+        <label>
           <span className={labelClass}>{t('accounts.baseCurrency')}</span>
           <input
             className={input}
@@ -82,7 +82,7 @@ export function AccountsSection() {
             maxLength={3}
             required
           />
-        </div>
+        </label>
 
         <div className="col-span-full flex items-center gap-3 mt-2">
           <button className={btnPrimary} type="submit" disabled={createAccountMutation.isPending}>

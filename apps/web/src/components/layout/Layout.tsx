@@ -182,7 +182,12 @@ export function Layout({ children }: { children: ReactNode }) {
 
         <MarketDataStatusBar />
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
+          aria-hidden={isMobileNavVisible ? true : undefined}
+          inert={isMobileNavVisible ? true : undefined}
+        >
           <div
             style={{
               paddingLeft: 'var(--safe-left)',

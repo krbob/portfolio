@@ -1074,6 +1074,8 @@ describe('App', () => {
     const navigationDialog = await screen.findByRole('dialog', { name: /navigation/i })
     const closeNavigationButton = screen.getByRole('button', { name: /close navigation/i })
     await waitFor(() => expect(closeNavigationButton).toHaveFocus())
+    expect(document.querySelector('main')).toHaveAttribute('inert')
+    expect(document.querySelector('main')).toHaveAttribute('aria-hidden', 'true')
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
     expect(navigationDialog).toContainElement(document.activeElement as HTMLElement)
     expect(closeNavigationButton).not.toHaveFocus()
