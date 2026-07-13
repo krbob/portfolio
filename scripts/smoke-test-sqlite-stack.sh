@@ -10,6 +10,8 @@ export PORTFOLIO_API_PORT="${PORTFOLIO_SMOKE_API_PORT:-28082}"
 export PORTFOLIO_WEB_PORT="${PORTFOLIO_SMOKE_WEB_PORT:-24174}"
 export PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/smoke-test.db
 export PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups/smoke-test
+export PORTFOLIO_MARKET_DATA_ENABLED=false
+export PORTFOLIO_READ_MODEL_REFRESH_ENABLED=false
 
 API_BASE_URL=${PORTFOLIO_API_BASE_URL:-http://127.0.0.1:${PORTFOLIO_API_PORT}}
 WEB_BASE_URL=${PORTFOLIO_WEB_BASE_URL:-http://127.0.0.1:${PORTFOLIO_WEB_PORT}}
@@ -58,6 +60,18 @@ elif mode == "after":
     assert lots == {"2026-03-22": "20"}, lots
 else:
     raise SystemExit(f"Unsupported assertion mode: {mode}")
+PY
+}
+
+assert_no_persisted_analytics() {
+  READ_MODEL_CACHE_JSON=$1 python3 - <<'PY'
+import json
+import os
+
+snapshots = json.loads(os.environ["READ_MODEL_CACHE_JSON"])
+persisted = {item["modelName"] for item in snapshots}
+unexpected = persisted.intersection({"DAILY_HISTORY", "RETURNS"})
+assert not unexpected, sorted(unexpected)
 PY
 }
 
@@ -126,7 +140,7 @@ printf '%s' "$holdings" | grep -F '"kind": "BOND_EDO"' >/dev/null
 printf '%s' "$transactions" | grep -F '"fxRateToPln": "3.99000000"' >/dev/null
 printf '%s' "$read_model_refresh_status" | grep -F '"schedulerEnabled": false' >/dev/null
 printf '%s' "$read_model_refresh_run" | grep -F '"refreshedModelCount": 2' >/dev/null
-printf '%s' "$read_model_cache" | grep -F '"invalidationReason": "EXPLICIT_REFRESH"' >/dev/null
+assert_no_persisted_analytics "$read_model_cache"
 printf '%s' "$meta_via_web" | grep -F '"name": "Portfolio"' >/dev/null
 
 edo_instrument_response=$(curl -sSf \

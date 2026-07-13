@@ -39,6 +39,7 @@ import net.bobinski.portfolio.api.route.ReturnBreakdownResponse
 import net.bobinski.portfolio.api.route.ReturnMetricResponse
 import net.bobinski.portfolio.api.route.RollingReturnObservationResponse
 import net.bobinski.portfolio.api.route.RollingReturnWindowResponse
+import net.bobinski.portfolio.api.route.isPreferredForCache
 import org.slf4j.LoggerFactory
 
 class ReadModelRefreshService(
@@ -102,11 +103,13 @@ class ReadModelRefreshService(
         lastTrigger = trigger
 
         return try {
-            val returns = refreshAnalyticsSnapshots()
+            val analyticsRefresh = refreshAnalyticsSnapshots()
 
-            val alertDispatchResult = portfolioAlertService?.let { service ->
+            val alertDispatchResult = portfolioAlertService?.takeIf {
+                analyticsRefresh.snapshotsPersisted
+            }?.let { service ->
                 runCatching {
-                    service.dispatchNewAlerts(prefetchedReturns = returns)
+                    service.dispatchNewAlerts(prefetchedReturns = analyticsRefresh.returns)
                 }.onFailure { error ->
                     if (error is CancellationException) {
                         throw error
@@ -126,10 +129,11 @@ class ReadModelRefreshService(
                 category = AuditEventCategory.SYSTEM,
                 action = "READ_MODEL_REFRESH_COMPLETED",
                 entityType = "READ_MODEL_REFRESH",
-                message = "Refreshed cached portfolio history and returns.",
+                message = "Refreshed portfolio history and returns.",
                 metadata = mapOf(
                     "trigger" to trigger.name,
                     "modelNames" to MODEL_NAMES.joinToString(","),
+                    "snapshotsPersisted" to analyticsRefresh.snapshotsPersisted.toString(),
                     "durationMs" to durationMs.toString(),
                     "activeAlertCount" to (alertDispatchResult?.activeAlertCount?.toString() ?: "unknown"),
                     "newAlertCount" to (alertDispatchResult?.newAlertCount?.toString() ?: "unknown")
@@ -170,9 +174,8 @@ class ReadModelRefreshService(
         }
     }
 
-    private suspend fun refreshAnalyticsSnapshots(): PortfolioReturns {
+    private suspend fun refreshAnalyticsSnapshots(): AnalyticsRefresh {
         val dailyHistory = portfolioHistoryService.dailyHistory(forceRefresh = true)
-        dailyHistory.requireSafeToPublish()
 
         // Compute the coherent pair before replacing either persistent snapshot. Besides
         // preventing a partial write when returns fail, this lets market-data providers
@@ -180,6 +183,26 @@ class ReadModelRefreshService(
         val returns = portfolioReturnsService.returns(dailyHistory)
         val dailyHistoryDescriptor = descriptorService.dailyHistoryDescriptor()
         val returnsDescriptor = descriptorService.returnsDescriptor()
+
+        if (!dailyHistory.isPreferredForCache()) {
+            // A cold or canonically changed portfolio has no safe pair to fall back to. Keep
+            // that bootstrap usable without persisting it or dispatching alerts from it; only
+            // fail the refresh when a compatible last-good pair must be protected.
+            val hasPreferredHistory = readModelCacheService.hasCompatibleAcceptableSnapshot(
+                descriptor = dailyHistoryDescriptor,
+                serializer = PortfolioDailyHistoryResponse.serializer(),
+                isAcceptable = PortfolioDailyHistoryResponse::isPreferredForCache
+            )
+            val hasCompatibleReturns = readModelCacheService.hasCompatibleAcceptableSnapshot(
+                descriptor = returnsDescriptor,
+                serializer = PortfolioReturnsResponse.serializer(),
+                isAcceptable = { true }
+            )
+            if (hasPreferredHistory && hasCompatibleReturns) {
+                dailyHistory.requireSafeToPublish()
+            }
+            return AnalyticsRefresh(returns = returns, snapshotsPersisted = false)
+        }
 
         readModelCacheService.forceRefresh(
             descriptor = dailyHistoryDescriptor,
@@ -193,13 +216,18 @@ class ReadModelRefreshService(
         ) {
             returns.toRefreshResponse()
         }
-        return returns
+        return AnalyticsRefresh(returns = returns, snapshotsPersisted = true)
     }
 
     companion object {
         private val MODEL_NAMES = listOf("DAILY_HISTORY", "RETURNS")
     }
 }
+
+private data class AnalyticsRefresh(
+    val returns: PortfolioReturns,
+    val snapshotsPersisted: Boolean
+)
 
 data class ReadModelRefreshStatus(
     val schedulerEnabled: Boolean,

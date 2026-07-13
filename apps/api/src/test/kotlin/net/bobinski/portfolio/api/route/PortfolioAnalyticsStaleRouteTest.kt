@@ -62,6 +62,43 @@ import org.junit.jupiter.api.Test
 class PortfolioAnalyticsStaleRouteTest {
 
     @Test
+    fun `book-only bootstrap history and returns are served without becoming last-good cache`() {
+        val fixture = AnalyticsRouteFixture()
+
+        testApplication {
+            application {
+                configureSerialization()
+                routing {
+                    route("/v1/portfolio") {
+                        registerPortfolioAnalyticsReadModelRoutes(
+                            readModelCacheService = fixture.readModelCacheService,
+                            portfolioReadModelCacheDescriptorService = fixture.descriptorService,
+                            portfolioHistoryService = fixture.historyService,
+                            portfolioReturnsService = fixture.returnsService
+                        )
+                    }
+                }
+            }
+
+            fixture.seedPortfolio()
+            fixture.degradeAllProviders()
+
+            val historyResponse = client.get("/v1/portfolio/history/daily")
+            val returnsResponse = client.get("/v1/portfolio/returns")
+            val returns = fixture.json.decodeFromString(
+                PortfolioReturnsResponse.serializer(),
+                returnsResponse.bodyAsText()
+            )
+
+            assertEquals(HttpStatusCode.OK, historyResponse.status)
+            assertEquals(HttpStatusCode.OK, returnsResponse.status)
+            assertTrue(historyResponse.bodyAsText().contains("\"valuationState\": \"BOOK_ONLY\""))
+            assertTrue(returns.periods.isNotEmpty())
+            assertTrue(fixture.cacheRepository.list().isEmpty())
+        }
+    }
+
+    @Test
     fun `history and returns keep last good snapshots when market revision recompute is degraded`() {
         val fixture = AnalyticsRouteFixture()
 
@@ -252,6 +289,11 @@ class PortfolioAnalyticsStaleRouteTest {
                 prices = listOf(HistoricalPricePoint(date = UNTIL, closePricePln = BigDecimal.TEN))
             )
             historyProvider.degraded = false
+            referenceSeriesProvider.degraded = true
+        }
+
+        fun degradeAllProviders() {
+            historyProvider.degraded = true
             referenceSeriesProvider.degraded = true
         }
 

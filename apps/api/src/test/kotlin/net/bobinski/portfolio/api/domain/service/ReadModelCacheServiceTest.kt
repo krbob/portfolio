@@ -19,6 +19,7 @@ import kotlinx.serialization.encoding.Encoder
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -128,6 +129,41 @@ class ReadModelCacheServiceTest {
 
         assertEquals(CachedPayload("degraded"), result)
         assertTrue(repository.list().isEmpty())
+    }
+
+    @Test
+    fun `compatible acceptable snapshot lookup ignores degraded and newer canonical state`() = runBlocking {
+        val service = cacheService()
+        val canonicalRevision = Instant.parse("2026-03-14T00:00:00Z")
+        val storedDescriptor = descriptor(canonicalRevision)
+        service.getOrCompute(storedDescriptor, CachedPayload.serializer()) {
+            CachedPayload("healthy")
+        }
+
+        assertTrue(
+            service.hasCompatibleAcceptableSnapshot(
+                descriptor = storedDescriptor.copy(sourceUpdatedAt = Instant.parse("2026-03-14T01:00:00Z")),
+                serializer = CachedPayload.serializer(),
+                isAcceptable = { payload -> payload.value == "healthy" }
+            )
+        )
+        assertFalse(
+            service.hasCompatibleAcceptableSnapshot(
+                descriptor = storedDescriptor,
+                serializer = CachedPayload.serializer(),
+                isAcceptable = { payload -> payload.value == "degraded" }
+            )
+        )
+        assertFalse(
+            service.hasCompatibleAcceptableSnapshot(
+                descriptor = storedDescriptor.copy(
+                    sourceUpdatedAt = Instant.parse("2026-03-14T02:00:00Z"),
+                    canonicalRevision = Instant.parse("2026-03-14T02:00:00Z")
+                ),
+                serializer = CachedPayload.serializer(),
+                isAcceptable = { true }
+            )
+        )
     }
 
     @Test

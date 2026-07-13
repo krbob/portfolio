@@ -20,7 +20,6 @@ import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ValuationState
 import net.bobinski.portfolio.api.readmodel.isPortfolioAnalyticsHistoryPreferredForCache
 import net.bobinski.portfolio.api.readmodel.isPreferredForCache
-import net.bobinski.portfolio.api.readmodel.requireCoreSafeToServe
 
 internal fun Route.registerPortfolioReadModelRoutes(
     portfolioReadModelService: PortfolioReadModelService,
@@ -114,7 +113,6 @@ internal fun Route.registerPortfolioAnalyticsReadModelRoutes(
                 isAcceptable = PortfolioDailyHistoryResponse::isPreferredForCache
             ) {
                 portfolioHistoryService.dailyHistory(forceRefresh = true)
-                    .also { history -> history.requireCoreSafeToServe() }
                     .toResponse()
             }
         )
@@ -136,7 +134,6 @@ internal fun Route.registerPortfolioAnalyticsReadModelRoutes(
                 shouldPersist = { computedHistoryIsPreferred }
             ) {
                 val history = portfolioHistoryService.dailyHistory(forceRefresh = true)
-                    .also { candidate -> candidate.requireCoreSafeToServe() }
                 computedHistoryIsPreferred = history.isPreferredForCache()
                 portfolioReturnsService.returns(history).toResponse()
             }
@@ -149,7 +146,7 @@ internal fun Route.registerPortfolioAnalyticsReadModelRoutes(
     )
 }
 
-private fun PortfolioDailyHistoryResponse.isPreferredForCache(): Boolean =
+internal fun PortfolioDailyHistoryResponse.isPreferredForCache(): Boolean =
     isPortfolioAnalyticsHistoryPreferredForCache(
         valuationState = ValuationState.entries.firstOrNull { state -> state.name == valuationState },
         missingFxTransactions = missingFxTransactions,

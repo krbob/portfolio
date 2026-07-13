@@ -111,6 +111,16 @@ class ReadModelCacheService(
         )
     }
 
+    suspend fun <T> hasCompatibleAcceptableSnapshot(
+        descriptor: ReadModelCacheDescriptor,
+        serializer: KSerializer<T>,
+        isAcceptable: (T) -> Boolean
+    ): Boolean = latestAcceptableOrNull(
+        descriptor = descriptor,
+        serializer = serializer,
+        isAcceptable = isAcceptable
+    ) != null
+
     suspend fun list(): List<ReadModelCacheSnapshot> = repository.list()
         .sortedByDescending(ReadModelCacheSnapshot::generatedAt)
 

@@ -44,6 +44,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionReposi
 import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -79,6 +80,28 @@ class ReadModelRefreshServiceTest {
         val status = fixture.service.status()
         assertNotNull(status.lastFailureAt)
         assertEquals("History provider boom", status.lastFailureMessage)
+    }
+
+    @Test
+    fun `degraded bootstrap refresh stays usable without creating a last-good cache`() = runBlocking {
+        lateinit var historyProvider: SwitchableHistoricalProvider
+        val fixture = refreshFixture { snapshotCacheService ->
+            SwitchableHistoricalProvider(snapshotCacheService).also { historyProvider = it }
+        }
+        fixture.seedStockPortfolio()
+        historyProvider.failureMode = HistoricalFailureMode.ALL
+        fixture.referenceProvider.degraded = true
+
+        val result = fixture.service.runManualRefresh()
+
+        assertEquals(2, result.refreshedModelCount)
+        assertEquals(listOf("DAILY_HISTORY", "RETURNS"), result.modelNames)
+        assertTrue(fixture.readModelCacheRepository.list().isEmpty())
+        val status = fixture.service.status()
+        assertNotNull(status.lastSuccessAt)
+        assertNull(status.lastFailureAt)
+        val auditEvent = fixture.auditLogService.list(limit = 1, category = AuditEventCategory.SYSTEM).single()
+        assertEquals("false", auditEvent.metadata["snapshotsPersisted"])
     }
 
     @Test

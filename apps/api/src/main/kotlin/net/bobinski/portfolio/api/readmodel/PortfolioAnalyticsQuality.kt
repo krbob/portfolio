@@ -3,23 +3,8 @@ package net.bobinski.portfolio.api.readmodel
 import net.bobinski.portfolio.api.domain.service.PortfolioDailyHistory
 import net.bobinski.portfolio.api.domain.service.ValuationState
 
-internal fun PortfolioDailyHistory.requireCoreSafeToServe() {
-    check(
-        isPortfolioAnalyticsHistoryCorePublishable(
-            valuationState = valuationState,
-            missingFxTransactions = missingFxTransactions
-        )
-    ) {
-        "Refusing to replace cached portfolio analytics with ${valuationState.name} history " +
-            "($instrumentHistoryIssueCount instrument history issue(s), " +
-            "$missingFxTransactions missing FX conversion(s), " +
-            "$referenceSeriesIssueCount reference series issue(s))."
-    }
-}
-
 internal fun PortfolioDailyHistory.requireSafeToPublish() {
-    requireCoreSafeToServe()
-    check(hasCompleteReferenceViews()) {
+    check(isPreferredForCache()) {
         "Refusing to replace cached portfolio analytics with ${valuationState.name} history " +
             "($instrumentHistoryIssueCount instrument history issue(s), " +
             "$missingFxTransactions missing FX conversion(s), " +

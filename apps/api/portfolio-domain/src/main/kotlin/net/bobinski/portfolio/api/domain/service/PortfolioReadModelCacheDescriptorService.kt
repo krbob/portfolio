@@ -47,7 +47,7 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun returnsDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.returns",
         modelName = "RETURNS",
-        modelVersion = 7,
+        modelVersion = 8,
         preferenceUpdatedAt = preferenceUpdatedAt(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
     )
 

@@ -128,6 +128,15 @@ class PortfolioReadModelCacheDescriptorServiceTest {
     }
 
     @Test
+    fun `returns descriptor invalidates legacy unqualified cache generation`() {
+        val descriptor = runBlocking {
+            descriptorService(marketDataCacheFingerprint = "enabled=true").returnsDescriptor()
+        }
+
+        assertEquals(8, descriptor.modelVersion / CACHE_VERSION_MODULUS)
+    }
+
+    @Test
     fun `read-model cache rebuilds when market data fingerprint changes`() {
         val cacheService = ReadModelCacheService(
             repository = InMemoryReadModelCacheRepository(),
@@ -248,4 +257,8 @@ class PortfolioReadModelCacheDescriptorServiceTest {
 
     @kotlinx.serialization.Serializable
     private data class CachedPayload(val value: String)
+
+    private companion object {
+        const val CACHE_VERSION_MODULUS = 100_000_000
+    }
 }
