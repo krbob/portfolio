@@ -32,7 +32,15 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
     if (open) {
       setMounted(true)
       // Trigger enter animation on next frame
-      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
+      let enterFrame: number | undefined
+      const mountFrame = requestAnimationFrame(() => {
+        enterFrame = requestAnimationFrame(() => setVisible(true))
+      })
+
+      return () => {
+        cancelAnimationFrame(mountFrame)
+        if (enterFrame != null) cancelAnimationFrame(enterFrame)
+      }
     } else {
       setVisible(false)
       // Fallback for environments where transitionend doesn't fire (e.g. jsdom)

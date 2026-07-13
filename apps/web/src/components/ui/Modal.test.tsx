@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
 
 function ModalHarness() {
@@ -25,6 +25,11 @@ function ModalHarness() {
 }
 
 describe('Modal keyboard accessibility', () => {
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
   it('traps forward and reverse tab navigation and restores focus after Escape', async () => {
     const user = userEvent.setup()
     render(<ModalHarness />)
@@ -54,5 +59,25 @@ describe('Modal keyboard accessibility', () => {
     expect(opener.parentElement).not.toHaveAttribute('inert')
     expect(opener.parentElement).not.toHaveAttribute('aria-hidden')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('cancels pending entrance frames when unmounted', () => {
+    let nextFrameId = 0
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      const frameId = ++nextFrameId
+      if (frameId === 1) callback(0)
+      return frameId
+    })
+    const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
+
+    const { unmount } = render(
+      <Modal open onClose={vi.fn()} title="Pending animation">
+        Content
+      </Modal>,
+    )
+    unmount()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(2)
   })
 })
