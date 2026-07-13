@@ -33,6 +33,9 @@ export function DashboardHeroStats({
   historyLoading,
   equityPct,
   bondPct,
+  ytdTwrr,
+  ytdTwrrAvailable,
+  ytdTwrrLoading,
 }: {
   overview: PortfolioOverview
   valuationState: string
@@ -45,12 +48,23 @@ export function DashboardHeroStats({
   historyLoading: boolean
   equityPct: number
   bondPct: number
+  ytdTwrr?: string | null
+  ytdTwrrAvailable: boolean
+  ytdTwrrLoading: boolean
 }) {
   const { language } = useI18n()
   const dailyChangeLoading = historyLoading && dailyChange == null
+  const ytdTwrrChange = returnTone(ytdTwrr, ytdTwrrAvailable && !ytdTwrrLoading)
+  const ytdTwrrSubtitle = ytdTwrrLoading
+    ? t('dashboardSections.waitingForData')
+    : ytdTwrrAvailable && ytdTwrr != null
+      ? t('dashboardSections.ytdTwrrSubtitle')
+      : hasMarketBackedCurrentValuation
+        ? t('dashboardSections.noReturnData')
+        : t('dashboardSections.requiresMarketValuation')
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <StatCard
         label={labelPrimaryPortfolioValueMetric(valuationState, language)}
         value={formatCurrencyPln(displayedTotalValuePln)}
@@ -87,6 +101,15 @@ export function DashboardHeroStats({
         numericValue={Number(displayedBondValuePln)}
         subtitle={describeAssetSliceValuation(bondPct, valuationState, language)}
         dot="bond"
+      />
+      <StatCard
+        label={t('dashboardSections.ytdTwrr')}
+        value={ytdTwrrLoading ? '—' : formatReturnValue(ytdTwrr, ytdTwrrAvailable, language)}
+        numericValue={ytdTwrr != null && ytdTwrrAvailable ? Number(ytdTwrr) : undefined}
+        subtitle={ytdTwrrSubtitle}
+        change={ytdTwrrChange}
+        loading={ytdTwrrLoading}
+        to={appRoutes.performance}
       />
     </div>
   )
@@ -487,42 +510,19 @@ export function DashboardQuickStats({
   overview,
   valuationState,
   hasMarketBackedCurrentValuation,
-  ytdTwrr,
-  ytdTwrrAvailable,
-  ytdTwrrLoading,
   contributionBreakdownSubtitle,
   cashBreakdownSubtitle,
 }: {
   overview: PortfolioOverview
   valuationState: string
   hasMarketBackedCurrentValuation: boolean
-  ytdTwrr?: string | null
-  ytdTwrrAvailable: boolean
-  ytdTwrrLoading: boolean
   contributionBreakdownSubtitle?: string
   cashBreakdownSubtitle?: string
 }) {
   const { language } = useI18n()
-  const ytdTwrrChange = returnTone(ytdTwrr, ytdTwrrAvailable && !ytdTwrrLoading)
-  const ytdTwrrSubtitle = ytdTwrrLoading
-    ? t('dashboardSections.waitingForData')
-    : ytdTwrrAvailable && ytdTwrr != null
-      ? t('dashboardSections.ytdTwrrSubtitle')
-      : hasMarketBackedCurrentValuation
-        ? t('dashboardSections.noReturnData')
-        : t('dashboardSections.requiresMarketValuation')
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <StatCard
-        label={t('dashboardSections.ytdTwrr')}
-        value={ytdTwrrLoading ? '—' : formatReturnValue(ytdTwrr, ytdTwrrAvailable, language)}
-        numericValue={ytdTwrr != null && ytdTwrrAvailable ? Number(ytdTwrr) : undefined}
-        subtitle={ytdTwrrSubtitle}
-        change={ytdTwrrChange}
-        loading={ytdTwrrLoading}
-        to={appRoutes.performance}
-      />
+    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         label={t('dashboardSections.unrealizedPL')}
         value={hasMarketBackedCurrentValuation ? formatSignedCurrencyPln(overview.totalUnrealizedGainPln) : missingDataLabel(language)}

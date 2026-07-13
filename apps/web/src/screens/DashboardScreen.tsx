@@ -168,6 +168,9 @@ export function DashboardScreen() {
         historyLoading={overviewQuery.isFetching}
         equityPct={equityPct}
         bondPct={bondPct}
+        ytdTwrr={ytdTwrr}
+        ytdTwrrAvailable={returnsDisplayAvailable}
+        ytdTwrrLoading={returnsQuery.isLoading && allPeriods.length === 0}
       />
 
       <DashboardAllocationBar
@@ -207,9 +210,6 @@ export function DashboardScreen() {
         overview={overview}
         valuationState={valuationState}
         hasMarketBackedCurrentValuation={hasMarketBackedCurrentValuation}
-        ytdTwrr={ytdTwrr}
-        ytdTwrrAvailable={returnsDisplayAvailable}
-        ytdTwrrLoading={returnsQuery.isLoading && allPeriods.length === 0}
         contributionBreakdownSubtitle={contributionBreakdownSubtitle}
         cashBreakdownSubtitle={cashBreakdownSubtitle}
       />

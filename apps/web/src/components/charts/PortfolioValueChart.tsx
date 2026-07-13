@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { AreaSeries, LineSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import type { PortfolioDailyHistoryPoint } from '../../api/read-model'
 import { chartPalette } from '../../lib/chart-theme'
@@ -14,6 +14,7 @@ interface PortfolioValueChartProps {
   unit: 'PLN' | 'USD' | 'AU'
   height?: number
   title?: string
+  headerControl?: ReactNode
 }
 
 export function PortfolioValueChart({
@@ -23,6 +24,7 @@ export function PortfolioValueChart({
   unit,
   height = 320,
   title = 'Portfolio Value',
+  headerControl,
 }: PortfolioValueChartProps) {
   const resolvedTitle = title === 'Portfolio Value' ? t('portfolioValue.title') : title
   const chartRef = useRef<IChartApi | null>(null)
@@ -105,6 +107,7 @@ export function PortfolioValueChart({
       height={height}
       title={resolvedTitle}
       subtitle={formatMessage(t('portfolioValue.subtitle'), { unit })}
+      headerControl={headerControl}
       legend={
         <>
           <ChartLegendItem color={chartPalette.portfolio} label={formatMessage(t('portfolioValue.valueLegend'), { unit })} />

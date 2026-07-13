@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PortfolioValueChart } from './PortfolioValueChart'
 
@@ -92,6 +92,25 @@ describe('PortfolioValueChart', () => {
   })
 
   afterEach(() => cleanup())
+
+  it('shares a stable responsive header between the title and unit control', () => {
+    render(
+      <PortfolioValueChart
+        points={[]}
+        valueKey="totalCurrentValuePln"
+        contributionsKey="netContributionsPln"
+        unit="PLN"
+        title="Portfolio Value (PLN)"
+        headerControl={<button type="button">Unit control</button>}
+      />,
+    )
+
+    const heading = screen.getByRole('heading', { name: 'Portfolio Value (PLN)' })
+    const control = screen.getByRole('button', { name: 'Unit control' })
+    const header = heading.parentElement?.parentElement
+    expect(header).toContainElement(control)
+    expect(header).toHaveClass('min-h-10', 'md:flex-row')
+  })
 
   it('updates series data without recreating the chart instance', () => {
     const initialPoints = [

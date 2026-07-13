@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, StatCard, TabBar } from '../components/ui'
 import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
@@ -28,6 +28,7 @@ export function PerformanceScreen() {
   const [tab, setTab] = useState<Tab>('charts')
   const [period, setPeriod] = useState<Period>('MAX')
   const [unit, setUnit] = useState<Unit>('PLN')
+  const unitViewportRef = useRef<UnitViewportSnapshot | null>(null)
 
   const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
@@ -66,6 +67,57 @@ export function PerformanceScreen() {
   function handleRetry() {
     void Promise.all([historyQuery.refetch(), returnsQuery.refetch(), benchmarkSettingsQuery.refetch()])
   }
+
+  function handleUnitChange(nextUnit: Unit) {
+    if (nextUnit === unit) return
+
+    const focusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const scrollContainer = focusedElement?.closest<HTMLElement>('main') ?? document.querySelector<HTMLElement>('main')
+    unitViewportRef.current = {
+      focusedElement,
+      scrollContainer,
+      scrollTop: scrollContainer?.scrollTop ?? 0,
+      windowScrollX: window.scrollX,
+      windowScrollY: window.scrollY,
+    }
+    setUnit(nextUnit)
+  }
+
+  useLayoutEffect(() => {
+    const snapshot = unitViewportRef.current
+    if (!snapshot) return
+    unitViewportRef.current = null
+    const {
+      focusedElement,
+      scrollContainer,
+      scrollTop,
+      windowScrollX,
+      windowScrollY,
+    } = snapshot
+
+    function restoreViewport() {
+      if (scrollContainer?.isConnected) {
+        scrollContainer.scrollTop = scrollTop
+      }
+      if (window.scrollX !== windowScrollX || window.scrollY !== windowScrollY) {
+        window.scrollTo(windowScrollX, windowScrollY)
+      }
+      if (focusedElement?.isConnected && document.activeElement !== focusedElement) {
+        focusedElement.focus({ preventScroll: true })
+      }
+    }
+
+    restoreViewport()
+    let settledFrame = 0
+    const layoutFrame = window.requestAnimationFrame(() => {
+      restoreViewport()
+      settledFrame = window.requestAnimationFrame(restoreViewport)
+    })
+    return () => {
+      window.cancelAnimationFrame(layoutFrame)
+      window.cancelAnimationFrame(settledFrame)
+    }
+  }, [unit])
 
   if ((historyQuery.isLoading || returnsQuery.isLoading || holdingsQuery.isLoading) && !hasHistory && !hasReturns) {
     return (
@@ -171,7 +223,7 @@ export function PerformanceScreen() {
               period={period}
               onPeriodChange={setPeriod}
               unit={unit}
-              onUnitChange={setUnit}
+              onUnitChange={handleUnitChange}
               series={series}
               benchmarkOrder={benchmarkOrder}
               pinnedBenchmarkKeys={pinnedBenchmarkKeys}
@@ -196,4 +248,12 @@ export function PerformanceScreen() {
       </FadeIn>
     </>
   )
+}
+
+interface UnitViewportSnapshot {
+  focusedElement: HTMLElement | null
+  scrollContainer: HTMLElement | null
+  scrollTop: number
+  windowScrollX: number
+  windowScrollY: number
 }

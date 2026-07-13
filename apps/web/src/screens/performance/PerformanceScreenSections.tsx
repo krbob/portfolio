@@ -102,21 +102,6 @@ export function ChartsTab({
       </div>
 
       <div className={card}>
-        <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
-          <div className="flex items-center justify-between gap-3 xl:ml-auto">
-            <span className="text-sm font-medium text-zinc-400">{t('performanceSections.unit')}</span>
-            <SegmentedControl
-              options={[
-                { value: 'PLN', label: 'PLN' },
-                { value: 'USD', label: 'USD' },
-                { value: 'AU', label: t('performanceSections.gold') },
-              ]}
-              value={unit}
-              onChange={(value) => onUnitChange(value as Unit)}
-              ariaLabel={t('performanceSections.chartUnitLabel')}
-            />
-          </div>
-        </div>
         <PortfolioValueChart
           points={points}
           valueKey={series.valueKey}
@@ -124,6 +109,21 @@ export function ChartsTab({
           unit={unit}
           height={360}
           title={formatMessage(t('performanceSections.chartTitle'), { unit })}
+          headerControl={(
+            <div className="flex shrink-0 items-center justify-between gap-3">
+              <span className="text-sm font-medium text-zinc-400">{t('performanceSections.unit')}</span>
+              <SegmentedControl
+                options={[
+                  { value: 'PLN', label: 'PLN' },
+                  { value: 'USD', label: 'USD' },
+                  { value: 'AU', label: t('performanceSections.gold') },
+                ]}
+                value={unit}
+                onChange={(value) => onUnitChange(value as Unit)}
+                ariaLabel={t('performanceSections.chartUnitLabel')}
+              />
+            </div>
+          )}
         />
       </div>
 

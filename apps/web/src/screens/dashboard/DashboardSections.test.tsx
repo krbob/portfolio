@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PortfolioAllocationSummary, PortfolioContributionPlan, PortfolioDailyHistoryPoint, PortfolioOverview } from '../../api/read-model'
 import { I18nProvider } from '../../lib/i18n'
 import { usePortfolioContributionPlan, usePortfolioManualContributionPreview } from '../../hooks/use-read-model'
-import { DashboardHistoryCard, DashboardQuickStats, DashboardTargetDriftCard } from './DashboardSections'
+import { DashboardHeroStats, DashboardHistoryCard, DashboardTargetDriftCard } from './DashboardSections'
 
 vi.mock('../../hooks/use-read-model', async () => {
   const actual = await vi.importActual<typeof import('../../hooks/use-read-model')>('../../hooks/use-read-model')
@@ -275,17 +275,25 @@ const historyPoint = {
   valuedHoldingCount: 4,
 } satisfies PortfolioDailyHistoryPoint
 
-describe('DashboardQuickStats', () => {
-  it('shows YTD TWRR as a glanceable dashboard metric', () => {
+describe('DashboardHeroStats', () => {
+  it('keeps YTD TWRR above the dashboard fold as a primary metric', () => {
     setLanguage('en')
 
     render(
       <MemoryRouter>
         <I18nProvider>
-          <DashboardQuickStats
+          <DashboardHeroStats
             overview={overview}
             valuationState="MARK_TO_MARKET"
+            displayedTotalValuePln={overview.totalCurrentValuePln}
+            displayedEquityValuePln={overview.equityCurrentValuePln}
+            displayedBondValuePln={overview.bondCurrentValuePln}
+            dailyChange={125}
+            dailyChangePct={0.03}
             hasMarketBackedCurrentValuation
+            historyLoading={false}
+            equityPct={81.1}
+            bondPct={18.63}
             ytdTwrr="0.1234"
             ytdTwrrAvailable
             ytdTwrrLoading={false}

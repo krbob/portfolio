@@ -38,7 +38,9 @@ describe('DashboardSetupBanner', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: /there are open setup or data-trust items/i })).toBeInTheDocument()
+    const heading = screen.getByRole('heading', { name: /there are open setup or data-trust items/i })
+    expect(heading).toBeInTheDocument()
+    expect(heading.closest('section')).toHaveClass('mt-4')
     expect(screen.getByRole('link', { name: /open checklist/i })).toHaveAttribute('href', '/setup')
   })
 })

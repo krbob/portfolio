@@ -1,4 +1,46 @@
 /* Portfolio's framework adapter for the public stock-ecosystem-ui contract. */
+:root {
+  /* Product palette: keep Portfolio's information-dense dark UI neutral. */
+  --portfolio-dark-canvas: #09090b;
+  --portfolio-dark-surface: #151517;
+  --portfolio-dark-surface-raised: #18181b;
+  --portfolio-dark-border: #27272a;
+  --portfolio-dark-border-strong: #3f3f46;
+  --portfolio-dark-text: #f4f4f5;
+  --portfolio-dark-text-secondary: #a1a1aa;
+  --portfolio-dark-text-muted: #8b8b8b;
+  --portfolio-dark-chart-grid: #27272a;
+  --portfolio-dark-chart-text: #e4e4e7;
+}
+
+:root[data-theme="dark"] {
+  --ui-color-canvas: var(--portfolio-dark-canvas);
+  --ui-color-surface: var(--portfolio-dark-surface);
+  --ui-color-surface-raised: var(--portfolio-dark-surface-raised);
+  --ui-color-border: var(--portfolio-dark-border);
+  --ui-color-border-strong: var(--portfolio-dark-border-strong);
+  --ui-color-text: var(--portfolio-dark-text);
+  --ui-color-text-secondary: var(--portfolio-dark-text-secondary);
+  --ui-color-text-muted: var(--portfolio-dark-text-muted);
+  --ui-chart-grid: var(--portfolio-dark-chart-grid);
+  --ui-chart-text: var(--portfolio-dark-chart-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ui-color-canvas: var(--portfolio-dark-canvas);
+    --ui-color-surface: var(--portfolio-dark-surface);
+    --ui-color-surface-raised: var(--portfolio-dark-surface-raised);
+    --ui-color-border: var(--portfolio-dark-border);
+    --ui-color-border-strong: var(--portfolio-dark-border-strong);
+    --ui-color-text: var(--portfolio-dark-text);
+    --ui-color-text-secondary: var(--portfolio-dark-text-secondary);
+    --ui-color-text-muted: var(--portfolio-dark-text-muted);
+    --ui-chart-grid: var(--portfolio-dark-chart-grid);
+    --ui-chart-text: var(--portfolio-dark-chart-text);
+  }
+}
+
 @theme inline {
   --color-ui-canvas: var(--ui-color-canvas);
   --color-ui-surface: var(--ui-color-surface);

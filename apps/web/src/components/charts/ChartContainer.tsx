@@ -7,11 +7,20 @@ interface ChartContainerProps {
   title?: string
   subtitle?: string
   legend?: ReactNode
+  headerControl?: ReactNode
   dataTable?: ReactNode
   onChartReady: (chart: IChartApi) => void | (() => void)
 }
 
-export function ChartContainer({ height = 320, title, subtitle, legend, dataTable, onChartReady }: ChartContainerProps) {
+export function ChartContainer({
+  height = 320,
+  title,
+  subtitle,
+  legend,
+  headerControl,
+  dataTable,
+  onChartReady,
+}: ChartContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const onChartReadyRef = useRef(onChartReady)
@@ -60,15 +69,20 @@ export function ChartContainer({ height = 320, title, subtitle, legend, dataTabl
 
   return (
     <div>
-      {(title || legend) && (
-        <div className="mb-3 flex items-start justify-between">
+      {(title || legend || headerControl) && (
+        <div className="mb-3 flex min-h-10 flex-col gap-3 md:flex-row md:items-start md:justify-between">
           {title && (
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
               {subtitle && <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>}
             </div>
           )}
-          {legend && <div className="flex items-center gap-4">{legend}</div>}
+          {(legend || headerControl) && (
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center md:ml-auto md:justify-end">
+              {legend && <div className="flex flex-wrap items-center gap-x-4 gap-y-2">{legend}</div>}
+              {headerControl}
+            </div>
+          )}
         </div>
       )}
       <div
