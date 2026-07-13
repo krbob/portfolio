@@ -153,7 +153,9 @@ private fun PortfolioDailyHistoryResponse.isPreferredForCache(): Boolean =
     isPortfolioAnalyticsHistoryPreferredForCache(
         valuationState = ValuationState.entries.firstOrNull { state -> state.name == valuationState },
         missingFxTransactions = missingFxTransactions,
-        referenceSeriesIssueCount = referenceSeriesIssueCount
+        referenceViewsAvailable = points.all { point ->
+            point.totalCurrentValueUsd != null && point.totalCurrentValueAu != null
+        }
     )
 
 private fun ApplicationCall.requiredMoneyQueryParameter(name: String): BigDecimal {

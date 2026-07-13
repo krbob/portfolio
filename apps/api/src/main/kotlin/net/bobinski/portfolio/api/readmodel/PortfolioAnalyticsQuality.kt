@@ -19,7 +19,7 @@ internal fun PortfolioDailyHistory.requireCoreSafeToServe() {
 
 internal fun PortfolioDailyHistory.requireSafeToPublish() {
     requireCoreSafeToServe()
-    check(referenceSeriesIssueCount == 0) {
+    check(hasCompleteReferenceViews()) {
         "Refusing to replace cached portfolio analytics with ${valuationState.name} history " +
             "($instrumentHistoryIssueCount instrument history issue(s), " +
             "$missingFxTransactions missing FX conversion(s), " +
@@ -31,16 +31,21 @@ internal fun PortfolioDailyHistory.isPreferredForCache(): Boolean =
     isPortfolioAnalyticsHistoryPreferredForCache(
         valuationState = valuationState,
         missingFxTransactions = missingFxTransactions,
-        referenceSeriesIssueCount = referenceSeriesIssueCount
+        referenceViewsAvailable = hasCompleteReferenceViews()
     )
+
+private fun PortfolioDailyHistory.hasCompleteReferenceViews(): Boolean =
+    points.all { point ->
+        point.totalCurrentValueUsd != null && point.totalCurrentValueAu != null
+    }
 
 internal fun isPortfolioAnalyticsHistoryPreferredForCache(
     valuationState: ValuationState?,
     missingFxTransactions: Int,
-    referenceSeriesIssueCount: Int
+    referenceViewsAvailable: Boolean
 ): Boolean =
     isPortfolioAnalyticsHistoryCorePublishable(valuationState, missingFxTransactions) &&
-        referenceSeriesIssueCount == 0
+        referenceViewsAvailable
 
 private fun isPortfolioAnalyticsHistoryCorePublishable(
     valuationState: ValuationState?,
