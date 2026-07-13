@@ -221,6 +221,39 @@ class PortfolioHistoryServiceTest {
     }
 
     @Test
+    fun `daily history keeps foreign position quantities when transaction fx is unavailable`() = runBlocking {
+        val fixture = historyFixture()
+        val instrument = etfInstrument().copy(name = "VWRA", symbol = "VWRA.L", currency = "USD")
+        fixture.accountRepository.save(account())
+        fixture.instrumentRepository.save(instrument)
+        fixture.transactionRepository.save(depositTransaction(grossAmount = "2000.00", currency = "USD"))
+        fixture.transactionRepository.save(
+            buyTransaction(
+                instrumentId = instrument.id,
+                quantity = "10",
+                grossAmount = "1900.00",
+                feeAmount = "5.00",
+                currency = "USD"
+            )
+        )
+        fixture.historyProvider.values[instrument.id] = HistoricalInstrumentValuationResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(2, history.missingFxTransactions)
+        assertEquals(ValuationState.PARTIALLY_VALUED, history.valuationState)
+        assertEquals(1, history.points.last().activeHoldingCount)
+        assertEquals(1, history.points.last().valuedHoldingCount)
+        assertEquals(BigDecimal("1100.00"), history.points.last().equityCurrentValuePln)
+        assertEquals(BigDecimal("1100.00"), history.points.last().totalCurrentValuePln)
+    }
+
+    @Test
     fun `daily history exposes portfolio and benchmark indices`() = runBlocking {
         val fixture = historyFixture()
         val instrument = etfInstrument()
@@ -516,7 +549,7 @@ class PortfolioHistoryServiceTest {
         fxRateToPln: BigDecimal? = null,
         tradeDate: LocalDate = LocalDate.parse("2026-03-01")
     ): Transaction = Transaction(
-        id = UUID.nameUUIDFromBytes("history-deposit".toByteArray()),
+        id = UUID.nameUUIDFromBytes("history-deposit-$tradeDate-$grossAmount-$currency".toByteArray()),
         accountId = ACCOUNT_ID,
         instrumentId = null,
         type = TransactionType.DEPOSIT,
@@ -539,6 +572,7 @@ class PortfolioHistoryServiceTest {
         quantity: String = "10",
         grossAmount: String = "1000.00",
         feeAmount: String = "5.00",
+        currency: String = "PLN",
         tradeDate: LocalDate = LocalDate.parse("2026-03-02")
     ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("history-buy-$instrumentId-$tradeDate".toByteArray()),
@@ -552,7 +586,7 @@ class PortfolioHistoryServiceTest {
         grossAmount = BigDecimal(grossAmount),
         feeAmount = BigDecimal(feeAmount),
         taxAmount = BigDecimal.ZERO,
-        currency = "PLN",
+        currency = currency,
         fxRateToPln = null,
         notes = "",
         createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),

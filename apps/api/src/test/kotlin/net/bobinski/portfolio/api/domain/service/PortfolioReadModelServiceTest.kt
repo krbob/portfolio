@@ -333,6 +333,56 @@ class PortfolioReadModelServiceTest {
     }
 
     @Test
+    fun `missing fx never removes foreign holdings from current market value`() = runBlocking {
+        val fixture = portfolioFixture()
+        fixture.accountRepository.save(account(baseCurrency = "USD"))
+        val vwra = etfInstrument(name = "VWRA", symbol = "VWRA.L", currency = "USD")
+        fixture.instrumentRepository.save(vwra)
+        repeat(3) { index ->
+            val depositDate = LocalDate.parse("2026-03-01").plusDays(index.toLong() * 2)
+            val buyDate = depositDate.plusDays(1)
+            fixture.transactionRepository.save(
+                depositTransaction(
+                    grossAmount = "19000.00",
+                    currency = "USD",
+                    tradeDate = depositDate
+                )
+            )
+            fixture.transactionRepository.save(
+                buyTransaction(
+                    instrumentId = vwra.id,
+                    quantity = "100",
+                    grossAmount = "18900.00",
+                    feeAmount = "10.00",
+                    currency = "USD",
+                    tradeDate = buyDate
+                )
+            )
+        }
+        fixture.valuationProvider.values[vwra.id] = InstrumentValuationResult.Success(
+            InstrumentValuation(
+                pricePerUnitPln = BigDecimal("714.65"),
+                valuedAt = LocalDate.parse("2026-03-13")
+            )
+        )
+
+        val overview = fixture.service.overview()
+        val holding = fixture.service.holdings().single()
+        val accountSummary = fixture.service.accounts().single()
+
+        assertEquals(6, overview.missingFxTransactions)
+        assertEquals(ValuationState.PARTIALLY_VALUED, overview.valuationState)
+        assertEquals(1, overview.activeHoldingCount)
+        assertEquals(1, overview.valuedHoldingCount)
+        assertEquals(BigDecimal("214395.00"), overview.equityCurrentValuePln)
+        assertEquals(BigDecimal("214395.00"), overview.totalCurrentValuePln)
+        assertEquals(0, holding.quantity.compareTo(BigDecimal("300")))
+        assertEquals(BigDecimal("214395.00"), holding.currentValuePln)
+        assertTrue(holding.valuationIssue?.contains("unavailable for 3 holding transaction(s)") == true)
+        assertEquals(ValuationState.PARTIALLY_VALUED, accountSummary.valuationState)
+    }
+
+    @Test
     fun `overview removes redeemed EDO lots from holdings and leaves redemption cash`() = runBlocking {
         val fixture = portfolioFixture()
         fixture.accountRepository.save(account())
@@ -653,7 +703,7 @@ class PortfolioReadModelServiceTest {
         updatedAt = CREATED_AT
     )
 
-    private fun etfInstrument(name: String, symbol: String): Instrument {
+    private fun etfInstrument(name: String, symbol: String, currency: String = "EUR"): Instrument {
         val id = UUID.nameUUIDFromBytes(name.toByteArray())
         return Instrument(
             id = id,
@@ -661,7 +711,7 @@ class PortfolioReadModelServiceTest {
             kind = InstrumentKind.ETF,
             assetClass = AssetClass.EQUITIES,
             symbol = symbol,
-            currency = "EUR",
+            currency = currency,
             valuationSource = ValuationSource.STOCK_ANALYST,
             isActive = true,
             createdAt = CREATED_AT,
@@ -718,6 +768,7 @@ class PortfolioReadModelServiceTest {
         quantity: String,
         grossAmount: String,
         feeAmount: String,
+        currency: String = "PLN",
         tradeDate: LocalDate = LocalDate.parse("2026-03-02")
     ): Transaction = Transaction(
         id = UUID.nameUUIDFromBytes("$accountId-$instrumentId-$tradeDate".toByteArray()),
@@ -731,7 +782,7 @@ class PortfolioReadModelServiceTest {
         grossAmount = BigDecimal(grossAmount),
         feeAmount = BigDecimal(feeAmount),
         taxAmount = BigDecimal.ZERO,
-        currency = "PLN",
+        currency = currency,
         fxRateToPln = null,
         notes = "",
         createdAt = CREATED_AT.plusSeconds(tradeDate.dayOfMonth.toLong()),

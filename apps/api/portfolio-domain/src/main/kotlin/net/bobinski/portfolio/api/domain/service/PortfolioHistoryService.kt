@@ -118,7 +118,6 @@ class PortfolioHistoryService(
                 val converted = fxLookups.convertedAmountsOrNull(transaction)
                 if (converted == null) {
                     missingFxTransactions += 1
-                    return@forEach
                 }
 
                 when (transaction.type) {
@@ -129,25 +128,31 @@ class PortfolioHistoryService(
                             MutableHolding(account = account, instrument = instrument)
                         }
                         val buyQuantity = transaction.quantity ?: BigDecimal.ZERO
-                        val buyCostBasis = converted.grossPln
-                            .add(converted.feePln, MONEY_CONTEXT)
-                            .add(converted.taxPln, MONEY_CONTEXT)
+                        val buyCostBasis = converted?.let { amounts ->
+                            amounts.grossPln
+                                .add(amounts.feePln, MONEY_CONTEXT)
+                                .add(amounts.taxPln, MONEY_CONTEXT)
+                        }
                         if (instrument.kind == InstrumentKind.BOND_EDO) {
                             holding.addEdoLot(
                                 purchaseDate = transaction.tradeDate,
                                 quantity = buyQuantity,
-                                costBasisPln = buyCostBasis
+                                costBasisPln = buyCostBasis ?: BigDecimal.ZERO
                             )
                         } else {
                             holding.quantity = holding.quantity.add(buyQuantity, MONEY_CONTEXT)
-                            holding.costBasisPln = holding.costBasisPln.add(buyCostBasis, MONEY_CONTEXT)
+                            if (buyCostBasis != null) {
+                                holding.costBasisPln = holding.costBasisPln.add(buyCostBasis, MONEY_CONTEXT)
+                            }
                         }
                         holding.transactionCount += 1
 
-                        cashBalancePln = cashBalancePln
-                            .subtract(converted.grossPln, MONEY_CONTEXT)
-                            .subtract(converted.feePln, MONEY_CONTEXT)
-                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln
+                                .subtract(amounts.grossPln, MONEY_CONTEXT)
+                                .subtract(amounts.feePln, MONEY_CONTEXT)
+                                .subtract(amounts.taxPln, MONEY_CONTEXT)
+                        }
                     }
 
                     TransactionType.SELL -> {
@@ -175,10 +180,12 @@ class PortfolioHistoryService(
                         }
                         holding.transactionCount += 1
 
-                        cashBalancePln = cashBalancePln
-                            .add(converted.grossPln, MONEY_CONTEXT)
-                            .subtract(converted.feePln, MONEY_CONTEXT)
-                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln
+                                .add(amounts.grossPln, MONEY_CONTEXT)
+                                .subtract(amounts.feePln, MONEY_CONTEXT)
+                                .subtract(amounts.taxPln, MONEY_CONTEXT)
+                        }
                     }
 
                     TransactionType.REDEEM -> {
@@ -194,49 +201,59 @@ class PortfolioHistoryService(
                         }
                         holding.transactionCount += 1
 
-                        cashBalancePln = cashBalancePln
-                            .add(converted.grossPln, MONEY_CONTEXT)
-                            .subtract(converted.feePln, MONEY_CONTEXT)
-                            .subtract(converted.taxPln, MONEY_CONTEXT)
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln
+                                .add(amounts.grossPln, MONEY_CONTEXT)
+                                .subtract(amounts.feePln, MONEY_CONTEXT)
+                                .subtract(amounts.taxPln, MONEY_CONTEXT)
+                        }
                     }
 
                     TransactionType.DEPOSIT -> {
-                        cashBalancePln = cashBalancePln.add(converted.grossPln, MONEY_CONTEXT)
-                        netContributionsPln = netContributionsPln.add(converted.grossPln, MONEY_CONTEXT)
-                        netContributionsUsd = netContributionsUsd.addReferenceUnits(
-                            amountPln = converted.grossPln,
-                            lookup = referenceLoads.usdPln,
-                            date = transaction.tradeDate
-                        )
-                        netContributionsAu = netContributionsAu.addReferenceUnits(
-                            amountPln = converted.grossPln,
-                            lookup = referenceLoads.goldPln,
-                            date = transaction.tradeDate
-                        )
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln.add(amounts.grossPln, MONEY_CONTEXT)
+                            netContributionsPln = netContributionsPln.add(amounts.grossPln, MONEY_CONTEXT)
+                            netContributionsUsd = netContributionsUsd.addReferenceUnits(
+                                amountPln = amounts.grossPln,
+                                lookup = referenceLoads.usdPln,
+                                date = transaction.tradeDate
+                            )
+                            netContributionsAu = netContributionsAu.addReferenceUnits(
+                                amountPln = amounts.grossPln,
+                                lookup = referenceLoads.goldPln,
+                                date = transaction.tradeDate
+                            )
+                        }
                     }
 
                     TransactionType.WITHDRAWAL -> {
-                        cashBalancePln = cashBalancePln.subtract(converted.grossPln, MONEY_CONTEXT)
-                        netContributionsPln = netContributionsPln.subtract(converted.grossPln, MONEY_CONTEXT)
-                        netContributionsUsd = netContributionsUsd.subtractReferenceUnits(
-                            amountPln = converted.grossPln,
-                            lookup = referenceLoads.usdPln,
-                            date = transaction.tradeDate
-                        )
-                        netContributionsAu = netContributionsAu.subtractReferenceUnits(
-                            amountPln = converted.grossPln,
-                            lookup = referenceLoads.goldPln,
-                            date = transaction.tradeDate
-                        )
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln.subtract(amounts.grossPln, MONEY_CONTEXT)
+                            netContributionsPln = netContributionsPln.subtract(amounts.grossPln, MONEY_CONTEXT)
+                            netContributionsUsd = netContributionsUsd.subtractReferenceUnits(
+                                amountPln = amounts.grossPln,
+                                lookup = referenceLoads.usdPln,
+                                date = transaction.tradeDate
+                            )
+                            netContributionsAu = netContributionsAu.subtractReferenceUnits(
+                                amountPln = amounts.grossPln,
+                                lookup = referenceLoads.goldPln,
+                                date = transaction.tradeDate
+                            )
+                        }
                     }
 
                     TransactionType.FEE,
                     TransactionType.TAX -> {
-                        cashBalancePln = cashBalancePln.subtract(converted.grossPln, MONEY_CONTEXT)
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln.subtract(amounts.grossPln, MONEY_CONTEXT)
+                        }
                     }
 
                     TransactionType.INTEREST -> {
-                        cashBalancePln = cashBalancePln.add(converted.grossPln, MONEY_CONTEXT)
+                        converted?.let { amounts ->
+                            cashBalancePln = cashBalancePln.add(amounts.grossPln, MONEY_CONTEXT)
+                        }
                     }
 
                     TransactionType.CORRECTION -> {
@@ -294,7 +311,11 @@ class PortfolioHistoryService(
         return PortfolioDailyHistory(
             from = from,
             until = until,
-            valuationState = historyLoads.valuationState,
+            valuationState = if (missingFxTransactions > 0) {
+                ValuationState.PARTIALLY_VALUED
+            } else {
+                historyLoads.valuationState
+            },
             instrumentHistoryIssueCount = historyLoads.issueCount,
             referenceSeriesIssueCount = referenceLoads.issueCount,
             benchmarkSeriesIssueCount = benchmarkLoads.issueCount,
