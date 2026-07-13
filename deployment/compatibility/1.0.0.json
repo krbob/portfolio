@@ -7,7 +7,7 @@
     {
       "id": "portfolio",
       "repository": "https://github.com/krbob/portfolio",
-      "sourceCommit": "11ea30150447f35e99ae7c2b8914d18c34da00ad"
+      "sourceCommit": "1fc2734c39ed6f3d5722479f27a3e572fe10dd29"
     },
     {
       "id": "stock-analyst",
@@ -22,7 +22,7 @@
     {
       "id": "edo-calculator",
       "repository": "https://github.com/krbob/edo-calculator",
-      "sourceCommit": "8012437cca8cc944d7bd03b16aa739fd69b8fd9b"
+      "sourceCommit": "ed6a522e3c85dc7a66baa79c61c9838292619635"
     }
   ],
   "contracts": [

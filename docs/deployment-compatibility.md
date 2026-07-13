@@ -41,3 +41,7 @@ Run the structural and hash validator after any source, contract, token, manifes
 ```bash
 python3 scripts/validate-compatibility-manifest.py
 ```
+
+CI integration uses `scripts/smoke-test-contract-stack.sh`: local deterministic HTTP fixtures implement the pinned
+Stock Analyst and EDO shapes, and the smoke rejects `DEGRADED`, `WARN`, stale or unvalued holdings. Live Yahoo/GUS
+availability is intentionally isolated in the scheduled, non-blocking `live-canary.yml` workflow.

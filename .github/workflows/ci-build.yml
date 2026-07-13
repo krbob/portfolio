@@ -13,14 +13,15 @@ env:
   REGISTRY: ghcr.io
   API_IMAGE_NAME: ${{ github.repository }}-api
   WEB_IMAGE_NAME: ${{ github.repository }}-web
+  NODE_VERSION: "24.18.0"
 
 jobs:
   verify:
     name: Verify
     uses: ./.github/workflows/ci-verify.yml
 
-  smoke-self-hosted-market-data-docker:
-    name: Self-hosted market-data smoke
+  strict-contract-full-stack:
+    name: Strict pinned-contract full-stack smoke
     runs-on: ubuntu-latest
     needs: verify
     permissions:
@@ -30,15 +31,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
-      - name: Run self-hosted market-data smoke test
-        run: sh ./scripts/smoke-test-self-hosted-market-data-stack.sh
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked browser dependencies
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run deterministic contract-fixture smoke test
+        run: ./scripts/smoke-test-contract-stack.sh
 
   publish-api:
     name: Publish API image
     runs-on: ubuntu-latest
     needs:
       - verify
-      - smoke-self-hosted-market-data-docker
+      - strict-contract-full-stack
     permissions:
       attestations: write
       contents: read
@@ -94,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - verify
-      - smoke-self-hosted-market-data-docker
+      - strict-contract-full-stack
     permissions:
       attestations: write
       contents: read

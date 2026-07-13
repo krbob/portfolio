@@ -62,11 +62,11 @@ payload = json.loads(os.environ["JSON_PAYLOAD"])
 checks = {check["key"]: check["status"] for check in payload.get("checks", [])}
 status = payload.get("status")
 
-if status not in {"READY", "DEGRADED"}:
+if status != "READY":
     sys.exit(1)
-if checks.get("edo-calculator") not in {"PASS", "WARN"}:
+if checks.get("edo-calculator") != "PASS":
     sys.exit(1)
-if checks.get("stock-analyst") not in {"PASS", "WARN"}:
+if checks.get("stock-analyst") != "PASS":
     sys.exit(1)
 PY
     then
@@ -124,29 +124,13 @@ assert web_overview["valuationState"] == overview["valuationState"], (web_overvi
 
 edo_holdings = [holding for holding in holdings if holding["kind"] == "BOND_EDO"]
 assert edo_holdings, holdings
-edo_market_backed = [holding for holding in edo_holdings if holding["valuationStatus"] in {"VALUED", "STALE"}]
-edo_unavailable = [holding for holding in edo_holdings if holding["valuationStatus"] == "UNAVAILABLE"]
-assert edo_market_backed, edo_holdings
-assert all(
-    "edo-calculator" in (holding.get("valuationIssue") or "").lower()
-    for holding in edo_unavailable
-), edo_unavailable
+assert all(holding["valuationStatus"] == "VALUED" for holding in edo_holdings), edo_holdings
 
-market_backed = [holding for holding in holdings if holding["valuationStatus"] in {"VALUED", "STALE"}]
-unavailable = [holding for holding in holdings if holding["valuationStatus"] == "UNAVAILABLE"]
-non_edo_unavailable = [holding for holding in unavailable if holding["kind"] != "BOND_EDO"]
-
-if stock_status == "PASS":
-    assert not non_edo_unavailable, unavailable
-    assert overview["valuationState"] in {"MARK_TO_MARKET", "STALE", "PARTIALLY_VALUED"}, overview["valuationState"]
-    if not unavailable:
-        assert len(market_backed) == len(holdings), holdings
-        assert overview["unvaluedHoldingCount"] == 0, overview
-        assert overview["valuationIssueCount"] == 0, overview
-else:
-    assert stock_status == "WARN", checks
-    assert overview["valuationState"] == "PARTIALLY_VALUED", overview["valuationState"]
-    assert non_edo_unavailable, unavailable
+assert stock_status == "PASS", checks
+assert overview["valuationState"] == "MARK_TO_MARKET", overview["valuationState"]
+assert all(holding["valuationStatus"] == "VALUED" for holding in holdings), holdings
+assert overview["unvaluedHoldingCount"] == 0, overview
+assert overview["valuationIssueCount"] == 0, overview
 PY
 }
 

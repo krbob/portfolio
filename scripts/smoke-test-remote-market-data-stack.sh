@@ -65,7 +65,7 @@ payload = json.loads(os.environ["JSON_PAYLOAD"])
 checks = {check["key"]: check["status"] for check in payload.get("checks", [])}
 status = payload.get("status")
 
-if status not in {"READY", "DEGRADED"}:
+if status != "READY":
     sys.exit(1)
 if checks.get("stock-analyst") != "PASS":
     sys.exit(1)

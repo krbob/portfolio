@@ -1,0 +1,31 @@
+name: Live market-data canary
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  yahoo-gus:
+    name: Non-blocking Yahoo and GUS canary
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Run live upstream canary when endpoints are configured
+        env:
+          PORTFOLIO_STOCK_ANALYST_API_URL: ${{ secrets.LIVE_STOCK_ANALYST_API_URL }}
+          PORTFOLIO_EDO_CALCULATOR_API_URL: ${{ secrets.LIVE_EDO_CALCULATOR_API_URL }}
+        run: |
+          if [ -z "$PORTFOLIO_STOCK_ANALYST_API_URL" ] || [ -z "$PORTFOLIO_EDO_CALCULATOR_API_URL" ]; then
+            echo "Live canary skipped: configure LIVE_STOCK_ANALYST_API_URL and LIVE_EDO_CALCULATOR_API_URL." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          ./scripts/live-market-data-canary.sh

@@ -1,0 +1,11 @@
+services:
+  portfolio-api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PORTFOLIO_MARKET_DATA_ENABLED: "true"
+      PORTFOLIO_STOCK_ANALYST_API_URL: "http://host.docker.internal:${PORTFOLIO_CONTRACT_STOCK_PORT:-29080}"
+      PORTFOLIO_STOCK_ANALYST_UI_URL: ""
+      PORTFOLIO_EDO_CALCULATOR_API_URL: "http://host.docker.internal:${PORTFOLIO_CONTRACT_EDO_PORT:-29081}"
+      PORTFOLIO_GOLD_API_KEY: ""
+      PORTFOLIO_READ_MODEL_REFRESH_ENABLED: "false"
