@@ -22,6 +22,8 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateR
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class MarketDataSnapshotCacheServiceTest {
@@ -187,6 +189,7 @@ class MarketDataSnapshotCacheServiceTest {
         )
 
         assertEquals(MarketDataSnapshotCoverage.PARTIAL, lookup.coverage)
+        assertTrue(lookup.coversFullRangeOrCompletePrefix())
         assertNull(
             snapshotCache.getSeries(
                 identity = identity,
@@ -194,6 +197,34 @@ class MarketDataSnapshotCacheServiceTest {
                 to = LocalDate.parse("2026-03-06")
             )
         )
+    }
+
+    @Test
+    fun `only a missing tail is accepted as a stale series prefix`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "stock-history:VWRA.L"
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-06"),
+            prices = listOf(price("2026-03-02", "101.10"), price("2026-03-06", "102.45"))
+        )
+
+        val tailMissing = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-10")
+        )
+        val headMissing = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-02-28"),
+            to = LocalDate.parse("2026-03-06")
+        )
+
+        assertTrue(tailMissing.coversFullRangeOrCompletePrefix())
+        assertFalse(tailMissing.coversFullRangeOrCompletePrefix(maxMissingTailDays = 3))
+        assertTrue(tailMissing.coversFullRangeOrCompletePrefix(maxMissingTailDays = 4))
+        assertFalse(headMissing.coversFullRangeOrCompletePrefix())
     }
 
     @Test

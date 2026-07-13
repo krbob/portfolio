@@ -275,10 +275,12 @@ class MarketDataSnapshotCacheService(
         require(!to.isBefore(from)) { "Series lookup end must not be before its start." }
         val requestedRange = MarketDataCoverageRange(from = from, to = to)
         val stored = getStoredSeries(identity) ?: return MarketDataSeriesSnapshotLookup(
+            requestedRange = requestedRange,
             coverage = MarketDataSnapshotCoverage.MISS,
             prices = emptyList(),
             coveredRanges = emptyList(),
-            missingRanges = listOf(requestedRange)
+            missingRanges = listOf(requestedRange),
+            legacyPointOnly = false
         )
         val points = stored.points
             .map { point ->
@@ -300,10 +302,12 @@ class MarketDataSnapshotCacheService(
         }
 
         return MarketDataSeriesSnapshotLookup(
+            requestedRange = requestedRange,
             coverage = coverage,
             prices = points,
             coveredRanges = coveredRanges,
-            missingRanges = missingRanges
+            missingRanges = missingRanges,
+            legacyPointOnly = stored.coverageRanges.isEmpty() && stored.points.isNotEmpty()
         )
     }
 
@@ -663,11 +667,47 @@ internal data class MarketDataCoverageRange(
 )
 
 internal data class MarketDataSeriesSnapshotLookup(
+    val requestedRange: MarketDataCoverageRange,
     val coverage: MarketDataSnapshotCoverage,
     val prices: List<HistoricalPricePoint>,
     val coveredRanges: List<MarketDataCoverageRange>,
-    val missingRanges: List<MarketDataCoverageRange>
-)
+    val missingRanges: List<MarketDataCoverageRange>,
+    val legacyPointOnly: Boolean
+) {
+    /**
+     * A complete prefix is safe for stale fallback: portfolio history can carry its last
+     * known value forward, while still rejecting caches with a missing beginning or an
+     * internal hole. Legacy snapshots predate explicit coverage metadata, so their
+     * observed first and last points are treated as the prefix boundary during rollout.
+     */
+    fun coversFullRangeOrCompletePrefix(maxMissingTailDays: Long? = null): Boolean {
+        if (coverage == MarketDataSnapshotCoverage.FULL) {
+            return true
+        }
+        if (coverage != MarketDataSnapshotCoverage.PARTIAL || prices.isEmpty()) {
+            return false
+        }
+
+        if (legacyPointOnly) {
+            return prices.first().date == requestedRange.from &&
+                tailIsWithinLimit(prefixTo = prices.last().date, maxMissingTailDays = maxMissingTailDays)
+        }
+
+        if (coveredRanges.size != 1 || missingRanges.size != 1) {
+            return false
+        }
+        val covered = coveredRanges.single()
+        val missing = missingRanges.single()
+        return covered.from == requestedRange.from &&
+            missing.from == covered.to.plusDays(1) &&
+            missing.to == requestedRange.to &&
+            tailIsWithinLimit(prefixTo = covered.to, maxMissingTailDays = maxMissingTailDays)
+    }
+
+    private fun tailIsWithinLimit(prefixTo: LocalDate, maxMissingTailDays: Long?): Boolean =
+        !prefixTo.isAfter(requestedRange.to) &&
+            (maxMissingTailDays == null || requestedRange.to.toEpochDay() - prefixTo.toEpochDay() <= maxMissingTailDays)
+}
 
 private data class SnapshotIdentity(
     val snapshotType: SnapshotPreferenceType,

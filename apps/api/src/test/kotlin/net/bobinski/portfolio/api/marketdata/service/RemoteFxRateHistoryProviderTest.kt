@@ -156,6 +156,73 @@ class RemoteFxRateHistoryProviderTest {
     }
 
     @Test
+    fun `failure serves a complete cached prefix as stale instead of dropping fx conversions`() = runBlocking {
+        val snapshotCacheService = buildSnapshotCacheService()
+        snapshotCacheService.putSeries(
+            identity = "fx-history:USD",
+            from = LocalDate.parse("2026-03-19"),
+            to = LocalDate.parse("2026-03-20"),
+            prices = listOf(
+                net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint(
+                    date = LocalDate.parse("2026-03-19"),
+                    closePricePln = BigDecimal("3.85")
+                ),
+                net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint(
+                    date = LocalDate.parse("2026-03-20"),
+                    closePricePln = BigDecimal("3.86")
+                )
+            )
+        )
+        val failServer = FakeFxServer(fail = true)
+        failServer.start()
+
+        try {
+            val result = buildProvider(failServer.baseUrl, snapshotCacheService).dailyRateToPln(
+                currency = "USD",
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-03-23")
+            )
+
+            assertTrue(result is FxRateHistoryResult.Success)
+            result as FxRateHistoryResult.Success
+            assertTrue(result.fromCache)
+            assertEquals(LocalDate.parse("2026-03-20"), result.prices.last().date)
+        } finally {
+            failServer.close()
+        }
+    }
+
+    @Test
+    fun `failure rejects a cached fx prefix whose missing tail is older than one week`() = runBlocking {
+        val snapshotCacheService = buildSnapshotCacheService()
+        snapshotCacheService.putSeries(
+            identity = "fx-history:USD",
+            from = LocalDate.parse("2026-03-19"),
+            to = LocalDate.parse("2026-03-20"),
+            prices = listOf(
+                net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint(
+                    date = LocalDate.parse("2026-03-20"),
+                    closePricePln = BigDecimal("3.86")
+                )
+            )
+        )
+        val failServer = FakeFxServer(fail = true)
+        failServer.start()
+
+        try {
+            val result = buildProvider(failServer.baseUrl, snapshotCacheService).dailyRateToPln(
+                currency = "USD",
+                from = LocalDate.parse("2026-03-19"),
+                to = LocalDate.parse("2026-04-10")
+            )
+
+            assertTrue(result is FxRateHistoryResult.Failure)
+        } finally {
+            failServer.close()
+        }
+    }
+
+    @Test
     fun `cancellation is rethrown instead of activating cached fallback`() {
         val snapshotCacheService = buildSnapshotCacheService()
         runBlocking {

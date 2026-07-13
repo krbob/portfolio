@@ -63,7 +63,7 @@ class RemoteFxRateHistoryProvider(
         to: LocalDate
     ): FxRateHistoryResult.Success? {
         val cached = snapshotCacheService.lookupSeries(identity = fxHistoryIdentity(currency), from = from, to = to)
-        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+        if (!cached.coversFullRangeOrCompletePrefix(maxMissingTailDays = MAX_CACHED_FX_TAIL_DAYS)) {
             return null
         }
         return FxRateHistoryResult.Success(prices = cached.prices, fromCache = true)
@@ -78,5 +78,6 @@ class RemoteFxRateHistoryProvider(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RemoteFxRateHistoryProvider::class.java)
+        private const val MAX_CACHED_FX_TAIL_DAYS = 7L
     }
 }

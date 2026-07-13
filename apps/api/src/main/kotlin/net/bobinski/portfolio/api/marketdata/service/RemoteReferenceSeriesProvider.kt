@@ -255,7 +255,7 @@ class RemoteReferenceSeriesProvider(
         to: LocalDate
     ): ReferenceSeriesResult.Success? {
         val cached = snapshotCacheService.lookupSeries(identity = identity, from = from, to = to)
-        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+        if (!cached.coversFullRangeOrCompletePrefix()) {
             return null
         }
         return ReferenceSeriesResult.Success(prices = cached.prices, fromCache = true)

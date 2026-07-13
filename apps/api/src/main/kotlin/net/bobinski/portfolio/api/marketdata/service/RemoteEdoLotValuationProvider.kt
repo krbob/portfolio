@@ -167,7 +167,7 @@ class RemoteEdoLotValuationProvider(
         to: LocalDate
     ): HistoricalInstrumentValuationResult.Success? {
         val cached = snapshotCacheService.lookupSeries(identity = edoHistoryIdentity(lotTerms), from = from, to = to)
-        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+        if (!cached.coversFullRangeOrCompletePrefix()) {
             return null
         }
         return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)

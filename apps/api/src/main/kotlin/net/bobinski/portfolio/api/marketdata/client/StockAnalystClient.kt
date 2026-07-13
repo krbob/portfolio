@@ -1,9 +1,13 @@
 package net.bobinski.portfolio.api.marketdata.client
 
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystApiErrorPayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystContractPaths
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystDataProvenancePayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystHistoricalPricePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystQuotePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystStockHistoryPayload
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
@@ -20,21 +24,20 @@ class StockAnalystClient(
     private val transport = UpstreamHttpTransport(httpClient)
 
     suspend fun quote(symbol: String, currency: String? = null): StockAnalystQuote {
-        val payload = transport.get(
-            uri = buildUpstreamUri(
-                baseUrl = baseUrl,
-                pathTemplate = StockAnalystContractPaths.QUOTE,
-                pathParameters = mapOf("stock" to symbol),
-                queryParameters = listOf("currency" to currency)
-            ),
-            timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
+        val payload = getWithLegacyRouteFallback(
+            versionedPath = StockAnalystContractPaths.QUOTE,
+            legacyPath = LEGACY_QUOTE_PATH,
+            pathParameters = mapOf("stock" to symbol),
+            queryParameters = listOf("currency" to currency),
             context = UpstreamRequestContext(
                 upstream = STOCK_ANALYST,
                 operation = "quote",
                 subject = symbol
             ),
             decodeSuccess = { body -> json.decodeFromString<StockAnalystQuotePayload>(body) },
-            decodeError = ::decodeError
+            decodeLegacySuccess = { body ->
+                json.decodeFromString<LegacyStockAnalystQuotePayload>(body).toCurrentPayload()
+            }
         )
         return StockAnalystQuote(
             symbol = payload.symbol,
@@ -54,27 +57,26 @@ class StockAnalystClient(
         from: LocalDate? = null,
         to: LocalDate? = null
     ): StockAnalystHistory {
-        val payload = transport.get(
-            uri = buildUpstreamUri(
-                baseUrl = baseUrl,
-                pathTemplate = StockAnalystContractPaths.HISTORY,
-                pathParameters = mapOf("stock" to symbol),
-                queryParameters = listOf(
-                    "period" to "max",
-                    "interval" to "1d",
-                    "currency" to currency,
-                    "from" to from?.toString(),
-                    "to" to to?.toString()
-                )
+        val payload = getWithLegacyRouteFallback(
+            versionedPath = StockAnalystContractPaths.HISTORY,
+            legacyPath = LEGACY_HISTORY_PATH,
+            pathParameters = mapOf("stock" to symbol),
+            queryParameters = listOf(
+                "period" to "max",
+                "interval" to "1d",
+                "currency" to currency,
+                "from" to from?.toString(),
+                "to" to to?.toString()
             ),
-            timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
             context = UpstreamRequestContext(
                 upstream = STOCK_ANALYST,
                 operation = "history",
                 subject = symbol
             ),
             decodeSuccess = { body -> json.decodeFromString<StockAnalystStockHistoryPayload>(body) },
-            decodeError = ::decodeError
+            decodeLegacySuccess = { body ->
+                json.decodeFromString<LegacyStockAnalystHistoryPayload>(body).toCurrentPayload(currency)
+            }
         )
         return StockAnalystHistory(
             prices = payload.prices.map { price ->
@@ -92,6 +94,56 @@ class StockAnalystClient(
         from: LocalDate? = null,
         to: LocalDate? = null
     ): StockAnalystHistory = history(symbol = symbol, currency = "PLN", from = from, to = to)
+
+    private suspend fun <T> getWithLegacyRouteFallback(
+        versionedPath: String,
+        legacyPath: String,
+        pathParameters: Map<String, String>,
+        queryParameters: List<Pair<String, String?>>,
+        context: UpstreamRequestContext,
+        decodeSuccess: (String) -> T,
+        decodeLegacySuccess: (String) -> T
+    ): T = requestSemaphore.withPermit {
+        try {
+            get(
+                path = versionedPath,
+                pathParameters = pathParameters,
+                queryParameters = queryParameters,
+                context = context,
+                decodeSuccess = decodeSuccess
+            )
+        } catch (exception: MarketDataClientException) {
+            if (!exception.isRouteNotFound()) {
+                throw exception
+            }
+            get(
+                path = legacyPath,
+                pathParameters = pathParameters,
+                queryParameters = queryParameters,
+                context = context,
+                decodeSuccess = decodeLegacySuccess
+            )
+        }
+    }
+
+    private suspend fun <T> get(
+        path: String,
+        pathParameters: Map<String, String>,
+        queryParameters: List<Pair<String, String?>>,
+        context: UpstreamRequestContext,
+        decodeSuccess: (String) -> T
+    ): T = transport.get(
+        uri = buildUpstreamUri(
+            baseUrl = baseUrl,
+            pathTemplate = path,
+            pathParameters = pathParameters,
+            queryParameters = queryParameters
+        ),
+        timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
+        context = context,
+        decodeSuccess = decodeSuccess,
+        decodeError = ::decodeError
+    )
 
     private fun decodeError(body: String): UpstreamErrorEnvelope? = runCatching {
         json.decodeFromString<StockAnalystApiErrorPayload>(body).toEnvelope()
@@ -119,8 +171,85 @@ class StockAnalystClient(
 
     private companion object {
         const val STOCK_ANALYST = "stock-analyst"
+        const val LEGACY_QUOTE_PATH = "/quote/{stock}"
+        const val LEGACY_HISTORY_PATH = "/history/{stock}"
+        const val MAX_CONCURRENT_REQUESTS = 3
+        val requestSemaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
     }
 }
+
+private fun MarketDataClientException.isRouteNotFound(): Boolean =
+    statusCode == 404 && when (errorCode) {
+        "ROUTE_NOT_FOUND" -> true
+        null -> upstreamError == null && responseBodyPreview == null
+        else -> false
+    }
+
+@Serializable
+private data class LegacyStockAnalystQuotePayload(
+    val symbol: String,
+    val currency: String? = null,
+    val date: String,
+    val lastPrice: Double,
+    val previousClose: Double? = null
+) {
+    fun toCurrentPayload(): StockAnalystQuotePayload = StockAnalystQuotePayload(
+        symbol = symbol,
+        currency = currency,
+        date = date,
+        lastPrice = lastPrice,
+        previousClose = previousClose,
+        provenance = legacyProvenance(
+            currency = currency,
+            marketDate = date,
+            coverageFrom = null,
+            coverageTo = date
+        )
+    )
+}
+
+@Serializable
+private data class LegacyStockAnalystHistoryPayload(
+    val prices: List<LegacyStockAnalystHistoricalPricePayload>
+) {
+    fun toCurrentPayload(currency: String?): StockAnalystStockHistoryPayload {
+        val dates = prices.map(LegacyStockAnalystHistoricalPricePayload::date)
+        return StockAnalystStockHistoryPayload(
+            prices = prices.map { price ->
+                StockAnalystHistoricalPricePayload(date = price.date, close = price.close)
+            },
+            provenance = legacyProvenance(
+                currency = currency,
+                marketDate = dates.maxOrNull(),
+                coverageFrom = dates.minOrNull(),
+                coverageTo = dates.maxOrNull()
+            )
+        )
+    }
+}
+
+@Serializable
+private data class LegacyStockAnalystHistoricalPricePayload(
+    val date: String,
+    val close: Double
+)
+
+private fun legacyProvenance(
+    currency: String?,
+    marketDate: String?,
+    coverageFrom: String?,
+    coverageTo: String?
+): StockAnalystDataProvenancePayload = StockAnalystDataProvenancePayload(
+    source = "YAHOO_FINANCE",
+    retrievedAt = Instant.now().toString(),
+    marketDate = marketDate,
+    currency = currency,
+    unitScale = 1.0,
+    adjustment = "SPLIT_ADJUSTED",
+    coverageFrom = coverageFrom,
+    coverageTo = coverageTo,
+    status = "FRESH"
+)
 
 data class StockAnalystQuote(
     val symbol: String,

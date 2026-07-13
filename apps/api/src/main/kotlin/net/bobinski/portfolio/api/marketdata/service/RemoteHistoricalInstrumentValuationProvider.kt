@@ -144,7 +144,7 @@ class RemoteHistoricalInstrumentValuationProvider(
     ): HistoricalInstrumentValuationResult.Success? {
         val symbol = instrument.symbol ?: return null
         val cached = snapshotCacheService.lookupSeries(identity = stockHistoryIdentity(symbol), from = from, to = to)
-        if (cached.coverage != MarketDataSnapshotCoverage.FULL) {
+        if (!cached.coversFullRangeOrCompletePrefix()) {
             return null
         }
         return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)
