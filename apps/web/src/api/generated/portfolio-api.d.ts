@@ -1082,6 +1082,15 @@ export interface components {
         CreateAuthSessionRequest: {
             password: string;
         };
+        /** ErrorResponse */
+        ErrorResponse: {
+            error: string;
+            /** @enum {string} */
+            errorCode: "INVALID_REQUEST" | "ROUTE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "RESOURCE_NOT_FOUND" | "AUTHENTICATION_REQUIRED" | "INVALID_CREDENTIALS" | "RATE_LIMITED" | "ALERT_EVALUATION_FAILED" | "INTERNAL_ERROR";
+            retryable: boolean;
+            requestId: string;
+            message: string;
+        };
         /** AccountResponse */
         AccountResponse: {
             id: string;
@@ -2199,6 +2208,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    "Retry-After"?: {
+                        "text/plain": unknown;
+                    };
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    "Retry-After"?: {
+                        "text/plain": unknown;
+                    };
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
