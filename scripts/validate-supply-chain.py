@@ -304,6 +304,10 @@ def validate_renovate() -> None:
         fail("Renovate must fail closed for dependencies without release timestamps")
     if "helpers:pinGitHubActionDigests" not in config.get("extends", []):
         fail("Renovate must retain GitHub Action digest maintenance")
+    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != [
+        "* 0-5 1-7 * 1",
+    ]:
+        fail("Renovate must run before 06:00 Europe/Warsaw on the first Monday of each month")
 
 
 def main() -> None:

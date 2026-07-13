@@ -12,7 +12,7 @@
   "minimumReleaseAgeBehaviour": "timestamp-required",
   "rebaseWhen": "behind-base-branch",
   "schedule": [
-    "before 6am on the first monday of the month"
+    "* 0-5 1-7 * 1"
   ],
   "updateNotScheduled": false,
   "prConcurrentLimit": 5,
