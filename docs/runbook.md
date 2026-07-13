@@ -3,14 +3,16 @@
 ## Update an existing deployment
 
 ```bash
-python3 scripts/validate-compatibility-manifest.py
-docker compose -f docker-compose.full-stack.yml config
-docker compose -f docker-compose.full-stack.yml pull
-docker compose -f docker-compose.full-stack.yml up -d
+scripts/rollout-full-stack.sh
 ```
 
 Before these commands, export all digest variables listed in `docs/deployment-compatibility.md`. Never copy a moving
 tag into the production file or invent a digest for an image that has not been published.
+
+The staged order is a correctness requirement. The rollout script exits before touching Portfolio API unless both
+providers pass bounded readiness polling and the versioned Stock Analyst routes pass the OpenAPI gate. Dependency
+startup order alone does not protect a rolling update of already-running containers. The script intentionally uses
+the Stock Analyst container as the network probe for EDO, so it does not require diagnostic tooling in the EDO image.
 
 If this deployment was created before the API image switched to UID/GID `10001:10001`, repair existing SQLite and backup volume ownership once before starting the updated API:
 

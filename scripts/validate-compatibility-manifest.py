@@ -6,6 +6,7 @@ import hashlib
 import json
 import pathlib
 import re
+import stat
 import sys
 
 
@@ -15,6 +16,8 @@ PRODUCTION_COMPOSE_PATH = ROOT / "docker-compose.full-stack.yml"
 DEVELOPMENT_COMPOSE_PATH = ROOT / "docker-compose.full-stack.example.yml"
 SELF_HOSTED_COMPOSE_PATH = ROOT / "docker-compose.market-data.self-hosted.yml"
 SELF_HOSTED_DEVELOPMENT_COMPOSE_PATH = ROOT / "docker-compose.market-data.self-hosted.dev.example.yml"
+ROLLOUT_SCRIPT_PATH = ROOT / "scripts/rollout-full-stack.sh"
+RUNBOOK_PATH = ROOT / "docs/runbook.md"
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -152,6 +155,82 @@ def validate_images(manifest: dict) -> None:
         fail("self-hosted overrides must not force a CPU architecture")
 
 
+def validate_rollout_policy(manifest: dict) -> None:
+    policy = manifest.get("rolloutPolicy", {})
+    stages = policy.get("stages", [])
+    expected_stages = [
+        ("market-backends", ["stock-analyst-backend-yfinance"]),
+        ("providers", ["stock-analyst", "edo-calculator"]),
+        ("portfolio-api", ["portfolio-api"]),
+        ("frontends", ["portfolio-web", "stock-analyst-ui"]),
+    ]
+    actual_stages = [(stage.get("id"), stage.get("images")) for stage in stages]
+    if actual_stages != expected_stages:
+        fail(f"rollout stages must keep providers before consumers: {actual_stages}")
+
+    gates = policy.get("gates", [])
+    expected_gates = [
+        {
+            "afterStage": "providers",
+            "beforeStage": "portfolio-api",
+            "component": "stock-analyst",
+            "method": "GET",
+            "path": "/readyz",
+            "requiredStatus": 200,
+        },
+        {
+            "afterStage": "providers",
+            "beforeStage": "portfolio-api",
+            "component": "edo-calculator",
+            "method": "GET",
+            "path": "/readyz",
+            "requiredStatus": 200,
+        },
+        {
+            "afterStage": "providers",
+            "beforeStage": "portfolio-api",
+            "component": "stock-analyst",
+            "method": "GET",
+            "path": "/openapi/v1.json",
+            "requiredPaths": ["/v1/quote/{stock}", "/v1/history/{stock}"],
+        },
+    ]
+    if gates != expected_gates:
+        fail("rollout policy must gate Portfolio API on both provider readiness checks and versioned Stock Analyst routes")
+
+
+def validate_rollout_script() -> None:
+    try:
+        script = ROLLOUT_SCRIPT_PATH.read_text(encoding="utf-8")
+        runbook = RUNBOOK_PATH.read_text(encoding="utf-8")
+    except OSError as exception:
+        fail(f"cannot read fail-closed rollout documentation: {exception}")
+    if not ROLLOUT_SCRIPT_PATH.stat().st_mode & stat.S_IXUSR:
+        fail("fail-closed rollout script is not executable")
+
+    required_fragments = [
+        "set -euo pipefail",
+        "compose up -d stock-analyst-backend-yfinance",
+        "compose up -d stock-analyst edo-calculator",
+        "http://127.0.0.1:8080/readyz",
+        "http://edo-calculator:8080/readyz",
+        "/v1/quote/{stock}",
+        "/v1/history/{stock}",
+        "compose up -d portfolio-api",
+        "compose up -d portfolio-web stock-analyst-ui",
+    ]
+    positions = []
+    for fragment in required_fragments:
+        position = script.find(fragment)
+        if position < 0:
+            fail(f"rollout script is missing required fail-closed step: {fragment}")
+        positions.append(position)
+    if positions != sorted(positions):
+        fail("rollout script no longer keeps readiness and contract gates before Portfolio consumers")
+    if "scripts/rollout-full-stack.sh" not in runbook:
+        fail("operations runbook does not use the fail-closed rollout script")
+
+
 def main() -> None:
     manifest = load_json(MANIFEST_PATH)
     if manifest.get("schemaVersion") != 1:
@@ -163,6 +242,8 @@ def main() -> None:
     validate_components(manifest)
     validate_contracts(manifest)
     validate_images(manifest)
+    validate_rollout_policy(manifest)
+    validate_rollout_script()
     print(f"Compatibility manifest {manifest['manifestVersion']} verified with pinned contracts and digest placeholders.")
 
 

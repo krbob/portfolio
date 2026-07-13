@@ -26,6 +26,21 @@ docker compose -f docker-compose.full-stack.yml config
 docker compose -f docker-compose.full-stack.yml up -d
 ```
 
+Never roll these images out in arbitrary repository build order. Apply the stages recorded in
+`rolloutPolicy.stages`: market backend first, then both providers, then Portfolio API, and frontends last. Before
+starting Portfolio API, require Stock Analyst `/readyz` to be ready and fetch `/openapi/v1.json`; its `paths` object
+must contain both `/v1/quote/{stock}` and `/v1/history/{stock}`. This contract gate catches the dangerous window in
+which a new Portfolio consumer calls `/v1/*` while an older Stock Analyst still exposes only legacy aliases.
+EDO Calculator `/readyz` must also pass before Portfolio API is replaced.
+
+Use `scripts/rollout-full-stack.sh` for an existing deployment. It runs the staged update with `set -euo pipefail`,
+bounded readiness polling and all provider gates in the same process, so a failed probe cannot fall through to the
+Portfolio API stage.
+
+Portfolio retains a narrow `/v1/*` to legacy-route fallback for rolling-upgrade safety. The gate remains mandatory:
+the fallback is a compatibility seat belt, not a release orchestrator, and it never masks domain-level
+`SYMBOL_NOT_FOUND` responses.
+
 Unset or empty variables stop interpolation before any image is pulled. Tags such as `latest` and `main` are not
 accepted by the production file.
 

@@ -71,6 +71,52 @@
     "requiredDigestFormat": "sha256:<64 lowercase hexadecimal characters>",
     "unpublishedDigest": null
   },
+  "rolloutPolicy": {
+    "stages": [
+      {
+        "id": "market-backends",
+        "images": ["stock-analyst-backend-yfinance"]
+      },
+      {
+        "id": "providers",
+        "images": ["stock-analyst", "edo-calculator"]
+      },
+      {
+        "id": "portfolio-api",
+        "images": ["portfolio-api"]
+      },
+      {
+        "id": "frontends",
+        "images": ["portfolio-web", "stock-analyst-ui"]
+      }
+    ],
+    "gates": [
+      {
+        "afterStage": "providers",
+        "beforeStage": "portfolio-api",
+        "component": "stock-analyst",
+        "method": "GET",
+        "path": "/readyz",
+        "requiredStatus": 200
+      },
+      {
+        "afterStage": "providers",
+        "beforeStage": "portfolio-api",
+        "component": "edo-calculator",
+        "method": "GET",
+        "path": "/readyz",
+        "requiredStatus": 200
+      },
+      {
+        "afterStage": "providers",
+        "beforeStage": "portfolio-api",
+        "component": "stock-analyst",
+        "method": "GET",
+        "path": "/openapi/v1.json",
+        "requiredPaths": ["/v1/quote/{stock}", "/v1/history/{stock}"]
+      }
+    ]
+  },
   "images": [
     {
       "id": "portfolio-api",
