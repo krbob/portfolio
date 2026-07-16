@@ -41,3 +41,21 @@ test('production app shell supports an offline deep-link with a query string @of
     await context.setOffline(false)
   }
 })
+
+test('startup recovers from a transient online auth-session transport failure', async ({ page }) => {
+  let authAttempts = 0
+  await page.route('**/api/v1/auth/session', async (route) => {
+    authAttempts += 1
+    if (authAttempts === 1) {
+      await route.abort('connectionfailed')
+      return
+    }
+    await route.continue()
+  })
+
+  await page.goto('/')
+
+  await expect.poll(() => authAttempts).toBeGreaterThan(1)
+  await expect(page.locator('main')).toBeVisible()
+  await expect(page.getByText('Failed to fetch')).toHaveCount(0)
+})

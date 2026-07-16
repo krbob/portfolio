@@ -56,8 +56,10 @@ self.addEventListener('fetch', (event) => {
           if (response.ok) {
             const cache = await caches.open(CACHE_NAME)
             await cache.put('/', response.clone())
+            return response
           }
-          return response
+
+          return await caches.match('/') || response
         })
         .catch(async () => {
           const cachedShell = await caches.match('/')

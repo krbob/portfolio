@@ -18,12 +18,12 @@ export function AuthGate({ children }: AuthGateProps) {
   const queryClient = useQueryClient()
   const metaQuery = useAppMeta()
   const authSessionQuery = useAuthSession()
-  const startupErrorMessage =
-    metaQuery.error instanceof Error
-        ? metaQuery.error.message
-      : authSessionQuery.error instanceof Error
-        ? authSessionQuery.error.message
-        : t('auth.startupError')
+  const missingStartupData = !metaQuery.data || !authSessionQuery.data
+  const startupRequestInFlight = metaQuery.isFetching || authSessionQuery.isFetching
+
+  function retryStartup() {
+    void Promise.all([metaQuery.refetch(), authSessionQuery.refetch()])
+  }
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -51,7 +51,7 @@ export function AuthGate({ children }: AuthGateProps) {
     }
   }, [authSessionQuery.data])
 
-  if (metaQuery.isLoading || authSessionQuery.isLoading) {
+  if (metaQuery.isLoading || authSessionQuery.isLoading || (missingStartupData && startupRequestInFlight)) {
     if (canRenderOfflineShell()) {
       return <>{children}</>
     }
@@ -76,7 +76,9 @@ export function AuthGate({ children }: AuthGateProps) {
         <StatePanel
           eyebrow={t('auth.connectionIssue')}
           title={t('auth.notReachable')}
-          description={startupErrorMessage}
+          description={t('auth.startupRetryDescription')}
+          action={{ label: t('common.retry'), onClick: retryStartup }}
+          tone="error"
           className="border-0 bg-transparent p-0"
         />
       </AuthLayout>

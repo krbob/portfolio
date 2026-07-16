@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppMeta } from '../hooks/use-app-meta'
 import { useAuthSession } from '../hooks/use-auth-session'
@@ -125,5 +125,33 @@ describe('AuthGate offline shell', () => {
     renderGate()
     expect(screen.queryByRole('main')).not.toBeInTheDocument()
     expect(screen.getByText(/nie można połączyć|not reachable/i)).toBeInTheDocument()
+  })
+
+  it('hides raw transport errors and lets the user retry both startup requests', () => {
+    const refetchMeta = vi.fn().mockResolvedValue(undefined)
+    const refetchSession = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(useAppMeta).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      isError: true,
+      error: new TypeError('Failed to fetch'),
+      refetch: refetchMeta,
+    } as unknown as ReturnType<typeof useAppMeta>)
+    vi.mocked(useAuthSession).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      isError: true,
+      error: new TypeError('Failed to fetch'),
+      refetch: refetchSession,
+    } as unknown as ReturnType<typeof useAuthSession>)
+
+    renderGate()
+
+    expect(screen.queryByText('Failed to fetch')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /spróbuj ponownie|retry/i }))
+    expect(refetchMeta).toHaveBeenCalledOnce()
+    expect(refetchSession).toHaveBeenCalledOnce()
   })
 })

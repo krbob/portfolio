@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createAuthSession, deleteAuthSession, fetchAuthSession, type CreateAuthSessionPayload } from '../api/auth'
+import { shouldRetryStartupQuery, startupQueryRetryDelay } from '../lib/startup-query-retry'
 
 export function useAuthSession() {
   return useQuery({
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
-    retry: false,
+    retry: shouldRetryStartupQuery,
+    retryDelay: startupQueryRetryDelay,
   })
 }
 
