@@ -71,4 +71,5 @@ python3 scripts/test-compatibility-release-gate.py
 
 CI integration uses `scripts/smoke-test-contract-stack.sh`: local deterministic HTTP fixtures implement the pinned
 Stock Analyst and EDO shapes, and the smoke rejects `DEGRADED`, `WARN`, stale or unvalued holdings. Live Yahoo/GUS
-availability is intentionally isolated in the scheduled, non-blocking `live-canary.yml` workflow.
+availability is isolated in the separate scheduled `live-canary.yml` workflow. A provider failure marks that canary
+run red without changing the result of the reproducible build pipeline.
