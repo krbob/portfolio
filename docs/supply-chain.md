@@ -62,5 +62,6 @@ Run the local structural validator after editing Dockerfiles, workflows, tool ve
 
 ```bash
 python3 scripts/validate-supply-chain.py
+python3 scripts/validate-documentation.py
 actionlint
 ```

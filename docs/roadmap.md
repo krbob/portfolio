@@ -2,6 +2,8 @@
 
 Keep this file short. Active priorities only.
 
+Last reviewed: 2026-07-16.
+
 ## Current priorities
 
 ### 1. Daily workflow polish
@@ -20,8 +22,14 @@ Keep this file short. Active priorities only.
 
 - keep deployment docs, smoke coverage, backup/restore, and market-data diagnostics aligned with the real self-hosted path
 - refine actionable stale-data guidance based on real incidents rather than generic monitoring noise
+- publish a released compatibility manifest with immutable digests for each coordinated ecosystem release
 
-### 4. Broker-specific importers
+### 4. Partial-value contract
+
+- replace placeholder zero PLN amounts with nullable values or an explicit completeness envelope in the next compatible API revision
+- preserve native quantities and balances while making every unavailable derived amount unambiguous to clients
+
+### 5. Broker-specific importers
 
 - add broker-specific CSV adapters when generic profiles stop being enough
 - keep broker parsing isolated from canonical transaction logic

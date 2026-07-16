@@ -24,6 +24,9 @@ jobs:
       - name: Validate compatibility manifest
         run: python3 scripts/validate-compatibility-manifest.py
 
+      - name: Validate documentation
+        run: python3 scripts/validate-documentation.py
+
       - name: Verify production Compose fails without image digests
         run: |
           if env \

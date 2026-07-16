@@ -1,105 +1,65 @@
 # Portfolio
 
-Portfolio is a self-hosted portfolio tracker for long-term investors.
+Portfolio is a self-hosted portfolio tracker for a single long-term investor. Transactions are the
+canonical source of truth; holdings, allocation, performance and diagnostics are rebuildable read
+models backed by SQLite.
 
-<a href="docs/screenshots/dashboard.png"><img src="docs/screenshots/dashboard.png" width="720" alt="Dashboard"></a>
+## What it covers
 
-<p>
-  <a href="docs/screenshots/portfolio-holdings.png"><img src="docs/screenshots/portfolio-holdings.png" width="175" alt="Portfolio holdings"></a>
-  <a href="docs/screenshots/performance.png"><img src="docs/screenshots/performance.png" width="175" alt="Performance charts"></a>
-  <a href="docs/screenshots/performance-returns.png"><img src="docs/screenshots/performance-returns.png" width="175" alt="Performance returns"></a>
-  <a href="docs/screenshots/transactions.png"><img src="docs/screenshots/transactions.png" width="175" alt="Transactions"></a>
-</p>
+- accounts, instruments, transactions, targets and reusable CSV import profiles
+- holdings, allocation drift and contribution-first rebalancing guidance
+- daily history and performance in PLN, USD and gold
+- MWRR, TWR, inflation-adjusted return and benchmark comparisons
+- ETF, stock, FX and benchmark data through Stock Analyst
+- Polish EDO bond valuation through EDO Calculator
+- explicit fresh, stale, partial and unavailable market-data states
+- JSON export/import, scheduled backups, restore preview and an audit trail
+- optional single-user password authentication and an installable PWA
 
-The product is built around a few explicit rules:
-
-- transactions are the canonical source of truth
-- analytical views are rebuildable read models
-- SQLite is the runtime database
-- JSON export, import, backup, and restore remain first-class
-- the product is optimized for a single-user self-hosted setup
-
-## What the product covers
-
-- accounts, instruments, transactions, targets, and reusable CSV import profiles
-- holdings, allocation drift, and contribution-first rebalance guidance
-- dashboard contribution planner with suggested splits and manual asset-class previews
-- daily history and performance in `PLN`, `USD`, and gold
-- `MWRR`, `TWR`, real return, and benchmark-relative comparison
-- benchmark configuration with shipped defaults, target-mix, and unlimited custom references
-- EDO valuation via `edo-calculator`
-- ETF, FX, and benchmark history via `stock-analyst`
-- fallback market-data snapshots surfaced as `STALE` or degraded coverage instead of pretending freshness
-- canonical state export/import with preview diff, warnings, and blocking validation
-- server backups, restore workflow, audit trail, and read-model cache diagnostics
-- target-history visibility through audit events
-- optional single-user password auth
-- installable PWA shell for phone and tablet use
-- active mobile views refresh on app resume after a longer pause
+The calculation rules and data-quality boundaries are documented in
+[Financial methodology](docs/financial-methodology.md).
 
 ## Repository layout
 
 ```text
 portfolio/
-├── AGENTS.md
-├── docker-compose.yml
-├── docker-compose.market-data.remote.yml
-├── docker-compose.market-data.self-hosted.yml
-├── docker-compose.market-data.self-hosted.dev.example.yml
-├── docker-compose.full-stack.yml
-├── docker-compose.full-stack.example.yml
-├── docs/
-├── apps/
-│   ├── api/
-│   │   └── portfolio-domain/
-│   └── web/
-└── README.md
+├── apps/api/                  Kotlin/Ktor API and portfolio-domain module
+├── apps/web/                  React/TypeScript SPA
+├── deployment/compatibility/ Reviewed cross-repository release manifests
+├── docs/                      Architecture, operations and product contracts
+├── scripts/                   Validation, smoke and rollout tooling
+└── docker-compose*.yml        Local, integration and published-image stacks
 ```
-
-Build inputs, dependency locks, reproducible SBOMs, vulnerability gates, and image attestations are documented in
-[`docs/supply-chain.md`](docs/supply-chain.md).
-Versioned source/contract/token compatibility evidence and production image-digest hand-off are documented in
-[`docs/deployment-compatibility.md`](docs/deployment-compatibility.md).
 
 ## Quick start
 
-### 1. Local app stack from this repo
+### Local application
 
 ```bash
 docker compose --profile app up -d --build
+curl -fsS http://127.0.0.1:18082/v1/health
+curl -fsS http://127.0.0.1:4174/healthz
 ```
 
-This starts:
+The UI is available at `http://127.0.0.1:4174` and the API at
+`http://127.0.0.1:18082`. Live market data, OpenAPI UI and authentication are disabled in this
+mode. SQLite data and JSON backups use separate named volumes.
 
-- `portfolio-api`
-- `portfolio-web`
-- SQLite on a named Docker volume
-- JSON backups on a separate named Docker volume
-
-Endpoints:
-
-- UI: `http://127.0.0.1:4174`
-- API: `http://127.0.0.1:18082`
-
-In the default local compose mode:
-
-- live market data is off
-- OpenAPI UI is off
-- auth is off
-- Docker sets `PORTFOLIO_AUTH_SECURE_COOKIE=true`, which is the right default when the app later sits behind HTTPS
-
-The API container runs as UID/GID `10001:10001`. If you upgrade an existing deployment that created the SQLite or backup named volumes with an older root-running image, fix ownership once before starting the updated API:
+The API image runs as UID/GID `10001:10001`. Deployments created with an older root-running image
+may need a one-time ownership repair before the updated API starts:
 
 ```bash
 sh scripts/fix-volume-ownership.sh
 ```
 
-### 2. Local app stack with remote market data
+### Remote market-data services
+
+Set the public or private upstream base URLs; do not append an operation path:
 
 ```dotenv
-PORTFOLIO_STOCK_ANALYST_API_URL=https://your-stock-analyst.example/api
-PORTFOLIO_STOCK_ANALYST_UI_URL=https://your-stock-analyst.example
-PORTFOLIO_EDO_CALCULATOR_API_URL=https://your-edo-calculator.example
+PORTFOLIO_STOCK_ANALYST_API_URL=https://stock.example/api
+PORTFOLIO_STOCK_ANALYST_UI_URL=https://stock.example
+PORTFOLIO_EDO_CALCULATOR_API_URL=https://edo.example
 ```
 
 ```bash
@@ -109,7 +69,7 @@ docker compose \
   --profile app up -d --build
 ```
 
-### 3. Local app stack with self-hosted market-data services
+### Disposable full ecosystem
 
 ```bash
 docker compose \
@@ -118,248 +78,98 @@ docker compose \
   --profile app up -d --build
 ```
 
-This adds:
+This development example uses moving image tags. It is not a production deployment input.
 
-- `stock-analyst`
-- `stock-analyst-backend-yfinance`
-- `stock-analyst-ui` at `http://127.0.0.1:18083`
-- `edo-calculator`
+### Published-image deployment
 
-The development example uses moving tags and lets Docker select the native architecture. For a release-like local run,
-use `docker-compose.market-data.self-hosted.yml` after exporting the four real upstream image digests.
-
-### 4. Full self-hosted stack from published images
+Production images must be supplied as six immutable OCI digests. After exporting all digest
+variables listed in [Deployment compatibility](docs/deployment-compatibility.md), use the staged
+rollout script:
 
 ```bash
-# Export the six *_IMAGE_DIGEST values from a real published release first.
 python3 scripts/validate-compatibility-manifest.py
-docker compose -f docker-compose.full-stack.yml up -d
+scripts/rollout-full-stack.sh
 ```
 
-The production file fails before pulling when any digest is absent. The tag-based
-`docker-compose.full-stack.example.yml` remains available only for disposable development.
+Do not replace this command with a single `docker compose up -d` during an update. Provider
+readiness and the Stock Analyst `/v1` contract gate must pass before Portfolio API is replaced.
+The repository manifest `1.0.0` is a reviewed candidate with unpublished digest placeholders, not
+a released set of images.
+
+The supplied script targets the repository's single full-stack Compose project. Installations split
+across independent Compose projects must apply the same stages manually; see the
+[operations runbook](docs/runbook.md).
 
 ## Runtime model
 
-Portfolio is intentionally `SQLite-only`.
+- SQLite is the only supported database.
+- One API process owns one database file.
+- Exact financial values are persisted as canonical decimal text.
+- Transactions remain canonical; analytical snapshots can be discarded and rebuilt.
+- Market-data and alert-dispatch snapshots are operational state, not portable portfolio state.
+- Degraded data is surfaced explicitly and must not silently replace a last-known-good analytical
+  snapshot.
 
-Key invariants:
+See [Architecture](docs/architecture.md), [Domain model](docs/domain-model.md) and
+[Configuration](docs/configuration.md) for the detailed boundaries.
 
-- one API process per database file
-- transactions remain canonical
-- history and returns stay rebuildable
-- market-data snapshots are resilience data, not source of truth
-- backups and exports stay portable JSON
+## State transfer and recovery
 
-Default application config in `apps/api/src/main/resources/application.yaml` is conservative:
+Portfolio supports `MERGE` and destructive `REPLACE` imports:
 
-- `marketData.enabled=false`
-- `openapi.uiEnabled=false`
-- `auth.enabled=false`
+- `MERGE` upserts canonical entities and preserves omitted `targets` and `importProfiles`;
+- a present `targets` section replaces the target allocation as one set;
+- `REPLACE` requires explicit confirmation and creates a safety backup first;
+- preview and real import use the same business validation path;
+- market-data snapshots and active alert-dispatch state are excluded from portable JSON and survive
+  both modes.
 
-Compose overrides decide the real runtime mode. That keeps local raw app startup safe by default and makes market-data behavior explicit instead of accidental.
-
-## State export, preview, import, and restore
-
-Portfolio has two import modes: `MERGE` and `REPLACE`.
-
-### `MERGE`
-
-- accounts, instruments, transactions, and user preferences are upserted by id or key
-- if the snapshot omits `targets`, the current target allocation is preserved
-- if the snapshot contains `targets`, that section replaces the target allocation as one set
-- if the snapshot omits `importProfiles`, current profiles are preserved
-- if the snapshot contains `importProfiles`, they merge by id, but final profile names must stay unique
-
-### `REPLACE`
-
-- requires explicit `REPLACE` confirmation
-- clears the current canonical write model and user preferences before loading the snapshot
-- creates a safety backup automatically before the destructive step
-
-Market-data cache payloads/metadata and the active alert-dispatch set are runtime state. They are not exported, counted
-as app preferences, shown in import diffs, or overwritten by either import mode. Benchmark, rebalancing, and alert
-settings remain portable user preferences.
-
-### Preview behavior
-
-Preview is not a cosmetic dry run. It uses the same validation path as the real import and returns:
-
-- blocking issues
-- warnings
-- section-by-section diff counts
-- skip/preserve semantics for targets and import profiles
-
-If preview says the snapshot is valid, import should not later fail on a hidden business rule that preview skipped.
-
-## Production notes for self-hosting
-
-- keep secrets and upstream URLs in a local `.env`, not in Git
-- prefer the example compose file or your own compose wrapper for real deployment
-- use `PORTFOLIO_AUTH_SECURE_COOKIE=true` behind HTTPS
-- keep `PORTFOLIO_OPENAPI_UI_ENABLED=false` unless you actively need the docs UI
-- configure VAPID keys before enabling browser push notifications
-- treat `REPLACE` import or restore as a maintenance action, not a casual workflow
-- for deployments created before the API ran as UID/GID `10001:10001`, run `sh scripts/fix-volume-ownership.sh` once after pulling the updated image
-
-If you want an empty reset:
-
-```bash
-docker compose down --volumes --remove-orphans
-docker compose up -d
-```
-
-## Important environment variables
-
-### Market data
-
-- `PORTFOLIO_MARKET_DATA_ENABLED`
-- `PORTFOLIO_STOCK_ANALYST_API_URL`
-- `PORTFOLIO_STOCK_ANALYST_UI_URL`
-- `PORTFOLIO_EDO_CALCULATOR_API_URL`
-- `PORTFOLIO_GOLD_API_URL`
-- `PORTFOLIO_GOLD_API_KEY`
-- `PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS`
-
-`PORTFOLIO_STOCK_ANALYST_UI_URL` is optional. Set it to a browser-reachable Stock Analyst UI URL to enable the
-global app switcher and instrument analysis links. The self-hosted overrides default it to
-`http://127.0.0.1:18083`; use the public HTTPS URL when deploying behind a reverse proxy.
-
-The two UIs use a small bidirectional handoff contract. Portfolio passes only `uiTheme`, canonical `uiLocale`, and,
-for an explicit instrument analysis link, `s`. Stock Analyst receives `PORTFOLIO_URL` (set from
-`PORTFOLIO_PUBLIC_URL` in the example stacks) and passes back only `uiTheme` and `uiLocale`. Neither direction
-forwards authentication, portfolio state, account data, or arbitrary query parameters. Both applications validate
-the configured destination as a root-relative or absolute HTTP(S) URL before rendering a link. `uiLocale` is a
-navigation hint for the destination page, not a durable user preference; without a current hint Portfolio resolves
-the language from the browser. `uiTheme` remains a persisted preference.
-
-#### Upstream API contracts and timeout budgets
-
-Portfolio calls only the versioned `stock-analyst` and `edo-calculator` `/v1` routes. The configured base URL may
-include a deployment prefix such as `/api`, but it must not include the operation path itself.
-
-The reviewed upstream OpenAPI documents are vendored under `apps/api/contracts/upstream`. Their source commits and
-SHA-256 hashes are locked in `upstream-contracts.properties`, so an isolated Portfolio checkout does not depend on
-sibling repositories. The build parses those snapshots and generates only the response fields and paths consumed by
-Portfolio; it does not check in a full generated client runtime.
-
-The Stock Analyst adapter keeps the upstream provenance object (`source`, retrieval and market timestamps,
-currency/unit scale, adjustment, coverage, and freshness status) beside quote/history values. Portfolio persists it
-in snapshot metadata, exposes it through the generated Portfolio API contract, and renders a shared Market data status
-bar without flattening provenance into individual price points. The global bar is scoped to live quotes and reference
-series; bounded transaction-FX history remains available in Market data diagnostics but cannot degrade the live
-headline merely because its requested end date is in the past.
-
-```bash
-cd apps/api
-./gradlew checkUpstreamContracts generateUpstreamContracts
-```
-
-Timeouts form an explicit outer budget:
-
-| Call | Upstream internal budget | Portfolio request timeout | Spare |
-| --- | ---: | ---: | ---: |
-| `stock-analyst` quote/history | 15 s | 20 s | 5 s |
-| `edo-calculator` value/history/inflation | 8 s | 10 s | 2 s |
-
-The Stock Analyst client admits at most two concurrent requests. A history call can fan out to
-metadata and price loaders inside Stock Analyst, so this cap stays within the backend's default
-four-loader bulkhead instead of turning a normal Portfolio refresh into retryable `503` responses.
-
-The shared transport issues one HTTP request and does not retry HTTP responses. On failure it preserves HTTP status,
-`error`, `errorCode`, `retryable`, `requestId`, `Retry-After`, and a bounded response preview in readiness and audit
-metadata. Retry policy therefore remains with the explicit upstream budgets instead of multiplying attempts across
-services.
-
-### Backups
-
-- `PORTFOLIO_BACKUPS_ENABLED`
-- `PORTFOLIO_BACKUPS_DIRECTORY`
-- `PORTFOLIO_BACKUPS_INTERVAL_MINUTES`
-- `PORTFOLIO_BACKUPS_RETENTION_COUNT`
-
-### Read-model refresh
-
-- `PORTFOLIO_READ_MODEL_REFRESH_ENABLED`
-- `PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES`
-- `PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START`
-
-### Alerts and web push
-
-- `PORTFOLIO_ALERTS_ENABLED`
-- `PORTFOLIO_ALERT_ALLOCATION_DRIFT_THRESHOLD_PCT_POINTS`
-- `PORTFOLIO_ALERT_BENCHMARK_UNDERPERFORMANCE_THRESHOLD_PCT_POINTS`
-- `PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY`
-- `PORTFOLIO_WEB_PUSH_VAPID_PUBLIC_KEY_FILE`
-- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64`
-- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_B64_FILE`
-- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY`
-- `PORTFOLIO_WEB_PUSH_VAPID_PRIVATE_KEY_FILE`
-- `PORTFOLIO_WEB_PUSH_VAPID_SUBJECT`
-- `PORTFOLIO_WEB_PUSH_VAPID_SUBJECT_FILE`
-
-Web push is optional. Set the VAPID public key, one private-key variant and subject together; `_FILE` variants are supported by the API config reader for secret-backed deployments.
-
-Push dispatch runs after a successful read-model refresh. Enable `PORTFOLIO_READ_MODEL_REFRESH_ENABLED=true` for automatic delivery, or call `POST /v1/portfolio/alerts/dispatch` after a manual data refresh.
-
-Alert types, alert thresholds and global push delivery can also be adjusted in `System -> Notifications`. The alert-related environment variables provide defaults before an in-app setting is saved.
-
-### Web UI
-
-- `PORTFOLIO_SHOW_CHART_ATTRIBUTION`
-
-Set `PORTFOLIO_SHOW_CHART_ATTRIBUTION=false` on a private local container to hide the TradingView attribution logo on Lightweight Charts without rebuilding the image. For local Vite development, use `VITE_SHOW_CHART_ATTRIBUTION=false` in `apps/web/.env.local`.
-
-Portfolio vendors the framework-neutral `stock-ecosystem-ui` design-token contract under
-`apps/web/src/styles/vendor`. `source.json` pins the reviewed upstream commit and file hashes; application code uses
-only the public semantic/component roles through the local Tailwind adapter. Verify integrity, inventory and the
-private primitive boundary with `cd apps/web && npm run validate:tokens`.
-
-### OpenAPI UI
-
-- `PORTFOLIO_OPENAPI_UI_ENABLED`
-
-### Optional auth
-
-- `PORTFOLIO_AUTH_ENABLED`
-- `PORTFOLIO_AUTH_PASSWORD`
-- `PORTFOLIO_AUTH_SESSION_SECRET`
-- `PORTFOLIO_AUTH_SESSION_COOKIE_NAME`
-- `PORTFOLIO_AUTH_SECURE_COOKIE`
-- `PORTFOLIO_AUTH_SESSION_MAX_AGE_DAYS`
+Operational procedures and recovery checks live in the [runbook](docs/runbook.md). Treat `REPLACE`,
+restore and volume deletion as maintenance operations.
 
 ## Local verification
 
-API:
-
 ```bash
+python3 scripts/validate-supply-chain.py
+python3 scripts/validate-compatibility-manifest.py
+python3 scripts/validate-documentation.py
+
 cd apps/api
-./gradlew test detekt
-```
+./gradlew test detekt checkUpstreamContracts
 
-Web:
-
-```bash
-cd apps/web
+cd ../web
 npm run lint
 npm test
 npm run build
 ```
 
-## Screenshots
+CI additionally runs reproducible SBOM checks, vulnerability scans, Docker/SQLite smoke, generated
+OpenAPI drift checks and browser accessibility/offline flows.
 
-The README screenshots are generated with Playwright against a seeded instance:
+## Screenshot maintenance
+
+The screenshot suite temporarily replaces all canonical portfolio data. Run it only against a
+disposable loopback instance created for documentation; never point it at a personal or production
+database. The test refuses non-loopback targets and requires an explicit destructive opt-in:
 
 ```bash
 cd apps/web
-PORTFOLIO_E2E_BASE_URL=http://127.0.0.1:4174 npx playwright test e2e/screenshots.spec.ts
+PORTFOLIO_SCREENSHOTS_ALLOW_STATE_REPLACE=true \
+PORTFOLIO_E2E_BASE_URL=http://127.0.0.1:4174 \
+npx playwright test e2e/screenshots.spec.ts
 ```
 
-Output lands in `docs/screenshots/`. The script seeds a demo portfolio, captures screens in `en-GB` locale, then restores the original data.
+The suite exports the initial state and restores it from teardown, but a disposable database is
+still required because no test can recover data after process termination or host failure.
 
-## Docs
+## Documentation
 
-- [docs/architecture.md](./docs/architecture.md): system shape, runtime boundaries, verification model
-- [docs/domain-model.md](./docs/domain-model.md): canonical entities, derived models, and invariants
-- [docs/runbook.md](./docs/runbook.md): deployment, health checks, backup/restore, auth guardrails
-- [docs/roadmap.md](./docs/roadmap.md): short active priorities only
+- [Architecture](docs/architecture.md) — system shape and runtime boundaries
+- [Domain model](docs/domain-model.md) — canonical entities and invariants
+- [Financial methodology](docs/financial-methodology.md) — valuation, FX and return calculations
+- [Configuration](docs/configuration.md) — environment variables and defaults
+- [Operations runbook](docs/runbook.md) — rollout, backup, restore and verification
+- [Troubleshooting](docs/troubleshooting.md) — stale/partial data and startup failures
+- [Deployment compatibility](docs/deployment-compatibility.md) — digest hand-off and rollout gates
+- [Supply-chain controls](docs/supply-chain.md) — locks, SBOMs, scans and attestations
+- [Roadmap](docs/roadmap.md) — short active priorities

@@ -23,7 +23,7 @@ export STOCK_ANALYST_BACKEND_IMAGE_DIGEST='sha256:...'
 export STOCK_ANALYST_UI_IMAGE_DIGEST='sha256:...'
 export EDO_CALCULATOR_IMAGE_DIGEST='sha256:...'
 docker compose -f docker-compose.full-stack.yml config
-docker compose -f docker-compose.full-stack.yml up -d
+scripts/rollout-full-stack.sh
 ```
 
 Never roll these images out in arbitrary repository build order. Apply the stages recorded in
@@ -33,7 +33,7 @@ must contain both `/v1/quote/{stock}` and `/v1/history/{stock}`. This contract g
 which a new Portfolio consumer calls `/v1/*` while an older Stock Analyst still exposes only legacy aliases.
 EDO Calculator `/readyz` must also pass before Portfolio API is replaced.
 
-Use `scripts/rollout-full-stack.sh` for an existing deployment. It runs the staged update with `set -euo pipefail`,
+Use `scripts/rollout-full-stack.sh` for both a fresh full-stack deployment and an update. It runs the staged rollout with `set -euo pipefail`,
 bounded readiness polling and all provider gates in the same process, so a failed probe cannot fall through to the
 Portfolio API stage.
 

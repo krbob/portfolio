@@ -9,6 +9,7 @@ test.use({
 
 const SCREENSHOT_DIR = '../../docs/screenshots'
 const API = '/api/v1'
+const SCREENSHOT_BASE_URL = process.env.PORTFOLIO_E2E_BASE_URL ?? 'http://127.0.0.1:24177'
 
 let originalState: unknown
 
@@ -39,6 +40,20 @@ async function apiPost(page: Page, path: string, body: unknown) {
 async function waitForContent(page: Page) {
   await expect(page.locator('text=Loading')).toHaveCount(0, { timeout: 20_000 })
   await page.waitForTimeout(500)
+}
+
+function assertDisposableScreenshotTarget() {
+  if (process.env.PORTFOLIO_SCREENSHOTS_ALLOW_STATE_REPLACE !== 'true') {
+    throw new Error(
+      'Screenshot generation replaces all portfolio data. Set PORTFOLIO_SCREENSHOTS_ALLOW_STATE_REPLACE=true only for a disposable local instance.',
+    )
+  }
+
+  const target = new URL(SCREENSHOT_BASE_URL)
+  const loopbackHosts = new Set(['127.0.0.1', 'localhost', '[::1]'])
+  if (target.protocol !== 'http:' || !loopbackHosts.has(target.hostname)) {
+    throw new Error(`Screenshot generation is restricted to a loopback HTTP target, received: ${target.origin}`)
+  }
 }
 
 // ── demo data ────────────────────────────────────────────────────────
@@ -155,6 +170,28 @@ const transactions = [
 // ── test setup & teardown ────────────────────────────────────────
 
 test.describe.serial('generate README screenshots', () => {
+  test.beforeAll(() => {
+    assertDisposableScreenshotTarget()
+  })
+
+  test.afterAll(async ({ browser }) => {
+    if (!originalState) return
+
+    const context = await browser.newContext({ baseURL: SCREENSHOT_BASE_URL })
+    const page = await context.newPage()
+    try {
+      await page.goto('/')
+      const res = await apiPost(page, '/portfolio/state/import', {
+        mode: 'REPLACE',
+        confirmation: 'REPLACE',
+        snapshot: originalState,
+      })
+      expect(res.status).toBe(200)
+      await apiPost(page, '/portfolio/read-model-refresh/run', {})
+    } finally {
+      await context.close()
+    }
+  })
 
   test('seed demo data', async ({ page }) => {
     test.setTimeout(120_000)
@@ -162,6 +199,7 @@ test.describe.serial('generate README screenshots', () => {
 
     // Back up current state
     const exportRes = await apiPost(page, '/portfolio/state/export', {})
+    expect(exportRes.status).toBe(200)
     originalState = exportRes.body
 
     // Import demo snapshot
@@ -250,21 +288,5 @@ test.describe.serial('generate README screenshots', () => {
     await page.evaluate(() => document.querySelector('main')?.scrollBy(0, 800))
     await page.waitForTimeout(400)
     await page.screenshot({ path: `${SCREENSHOT_DIR}/transactions.png`, fullPage: false })
-  })
-
-  test('restore original data', async ({ page }) => {
-    if (!originalState) return
-    await page.goto('/')
-
-    const res = await apiPost(page, '/portfolio/state/import', {
-      mode: 'REPLACE',
-      confirmation: 'REPLACE',
-      snapshot: originalState,
-    })
-    expect(res.status).toBe(200)
-
-    // Refresh read model with original data
-    await apiPost(page, '/portfolio/read-model-refresh/run', {})
-    await page.waitForTimeout(3_000)
   })
 })

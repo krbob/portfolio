@@ -53,10 +53,13 @@ The core product rules are not negotiable:
 - `apps/web`: SPA, route screens, API client, UI primitives
 - `apps/api`: Ktor routes, persistence, integrations, operational services
 - `apps/api/portfolio-domain`: domain models, repositories, services, calculations
-- `docs`: short current architecture, domain, runbook, and roadmap notes
+- `docs`: current architecture, domain, financial methodology, configuration, operations,
+  troubleshooting, compatibility, supply-chain, and roadmap notes
 
 ## Documentation rule
 
-Keep `README.md`, `docs/architecture.md`, `docs/domain-model.md`, `docs/runbook.md`, and `docs/roadmap.md` aligned with the actual product.
+Keep `README.md` and every active document under `docs/` aligned with the actual product. OpenAPI,
+vendored upstream contracts, and compatibility manifests are sources of truth; do not duplicate
+their schemas or released digests manually in prose.
 
 Do not keep stale redesign plans or dead backlog documents in active docs. If something is no longer current, delete it and rely on Git history.
