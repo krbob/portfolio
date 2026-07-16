@@ -82,17 +82,19 @@ This development example uses moving image tags. It is not a production deployme
 
 ### Published-image deployment
 
-Production images must be supplied as six immutable OCI digests. After exporting all digest
-variables listed in [Deployment compatibility](docs/deployment-compatibility.md), use the staged
-rollout script:
+Production images must be supplied as six immutable OCI digests from one released compatibility
+manifest. Select that file, export the six values recorded in it and use the staged rollout script:
 
 ```bash
-python3 scripts/validate-compatibility-manifest.py
+export PORTFOLIO_COMPATIBILITY_MANIFEST=deployment/compatibility/<version>.json
+python3 scripts/validate-compatibility-manifest.py --require-released
 scripts/rollout-full-stack.sh
 ```
 
 Do not replace this command with a single `docker compose up -d` during an update. Provider
 readiness and the Stock Analyst `/v1` contract gate must pass before Portfolio API is replaced.
+The rollout script repeats the released-manifest check before its first Compose command and requires
+all six exported digest variables to match the selected manifest exactly.
 The repository manifest `1.0.0` is a reviewed candidate with unpublished digest placeholders, not
 a released set of images.
 
@@ -132,6 +134,7 @@ restore and volume deletion as maintenance operations.
 ```bash
 python3 scripts/validate-supply-chain.py
 python3 scripts/validate-compatibility-manifest.py
+python3 scripts/test-compatibility-release-gate.py
 python3 scripts/validate-documentation.py
 
 cd apps/api

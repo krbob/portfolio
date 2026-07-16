@@ -1,5 +1,5 @@
 x-ecosystem-compatibility:
-  manifest: deployment/compatibility/1.0.0.json
+  manifest: ${PORTFOLIO_COMPATIBILITY_MANIFEST:-deployment/compatibility/1.0.0.json}
 
 services:
   portfolio-api:

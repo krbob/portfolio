@@ -24,6 +24,9 @@ jobs:
       - name: Validate compatibility manifest
         run: python3 scripts/validate-compatibility-manifest.py
 
+      - name: Test released-manifest rollout gate
+        run: python3 scripts/test-compatibility-release-gate.py
+
       - name: Validate documentation
         run: python3 scripts/validate-documentation.py
 

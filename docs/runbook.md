@@ -6,24 +6,30 @@ The stages and gates are the same; only orchestration differs.
 
 ## Before every rollout
 
-1. Select one reviewed compatibility set with immutable digests for all six images.
-2. Record the currently deployed digest set for rollback.
-3. Confirm a recent canonical JSON backup and a separate copy outside the container volumes.
-4. Render every Compose project with `docker compose config` and check for empty secrets, moving
+1. Select one reviewed compatibility manifest with status `released` and immutable digests for all six images.
+2. Export its selected path and six exact digest values, then pass `--require-released` before any Compose command.
+3. Record the currently deployed digest set for rollback.
+4. Confirm a recent canonical JSON backup and a separate copy outside the container volumes.
+5. Render every Compose project with `docker compose config` and check for empty secrets, moving
    tags and unexpected public routes.
-5. Read release notes for contract, persistence and configuration changes.
+6. Read release notes for contract, persistence and configuration changes.
 
 Never invent a digest, replace one with zeros or substitute `main`/`latest` in a production stack.
 The candidate manifest in this repository deliberately contains null digests and is not a release.
 
 ## Repository full-stack rollout
 
-Export all six variables listed in [Deployment compatibility](deployment-compatibility.md), then:
+Export `PORTFOLIO_COMPATIBILITY_MANIFEST` with the repository-relative released-manifest path and copy all six
+digest variables exactly from that file, then:
 
 ```bash
-python3 scripts/validate-compatibility-manifest.py
+export PORTFOLIO_COMPATIBILITY_MANIFEST=deployment/compatibility/<version>.json
+python3 scripts/validate-compatibility-manifest.py --require-released
 scripts/rollout-full-stack.sh
 ```
+
+The script repeats this validation before its first Compose command. A candidate manifest, an unpublished image,
+a missing variable or one mismatched digest stops the rollout without pulling or replacing any container.
 
 The script pulls first, then applies these stages in one fail-closed process:
 

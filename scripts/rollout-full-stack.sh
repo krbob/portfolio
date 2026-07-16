@@ -5,8 +5,10 @@ set -euo pipefail
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
 PROJECT_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 COMPOSE_FILE=${PORTFOLIO_ROLLOUT_COMPOSE_FILE:-docker-compose.full-stack.yml}
+PORTFOLIO_COMPATIBILITY_MANIFEST=${PORTFOLIO_COMPATIBILITY_MANIFEST:-deployment/compatibility/1.0.0.json}
 WAIT_ATTEMPTS=${PORTFOLIO_ROLLOUT_WAIT_ATTEMPTS:-60}
 WAIT_SECONDS=${PORTFOLIO_ROLLOUT_WAIT_SECONDS:-2}
+export PORTFOLIO_COMPATIBILITY_MANIFEST
 
 compose() {
   (cd "$PROJECT_ROOT" && docker compose -f "$COMPOSE_FILE" "$@")
@@ -33,7 +35,7 @@ wait_from_service() {
 }
 
 cd "$PROJECT_ROOT"
-python3 scripts/validate-compatibility-manifest.py
+python3 scripts/validate-compatibility-manifest.py --require-released
 compose config >/dev/null
 compose pull
 

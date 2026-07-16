@@ -2,8 +2,12 @@
 
 """Validate deployment compatibility evidence and digest fail-closed wiring."""
 
+from __future__ import annotations
+
+import argparse
 import hashlib
 import json
+import os
 import pathlib
 import re
 import stat
@@ -11,7 +15,8 @@ import sys
 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-MANIFEST_PATH = ROOT / "deployment/compatibility/1.0.0.json"
+DEFAULT_MANIFEST_PATH = pathlib.Path("deployment/compatibility/1.0.0.json")
+MANIFEST_ENVIRONMENT = "PORTFOLIO_COMPATIBILITY_MANIFEST"
 PRODUCTION_COMPOSE_PATH = ROOT / "docker-compose.full-stack.yml"
 DEVELOPMENT_COMPOSE_PATH = ROOT / "docker-compose.full-stack.example.yml"
 SELF_HOSTED_COMPOSE_PATH = ROOT / "docker-compose.market-data.self-hosted.yml"
@@ -22,6 +27,14 @@ COMMIT = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
+EXPECTED_IMAGE_ENVIRONMENTS = {
+    "portfolio-api": "PORTFOLIO_API_IMAGE_DIGEST",
+    "portfolio-web": "PORTFOLIO_WEB_IMAGE_DIGEST",
+    "stock-analyst": "STOCK_ANALYST_IMAGE_DIGEST",
+    "stock-analyst-backend-yfinance": "STOCK_ANALYST_BACKEND_IMAGE_DIGEST",
+    "stock-analyst-ui": "STOCK_ANALYST_UI_IMAGE_DIGEST",
+    "edo-calculator": "EDO_CALCULATOR_IMAGE_DIGEST",
+}
 
 
 def fail(message: str) -> None:
@@ -29,11 +42,57 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Validate a versioned ecosystem compatibility manifest."
+    )
+    parser.add_argument(
+        "manifest",
+        nargs="?",
+        help=(
+            "manifest path; relative paths resolve from the repository "
+            f"(overrides {MANIFEST_ENVIRONMENT})"
+        ),
+    )
+    parser.add_argument(
+        "--require-released",
+        action="store_true",
+        help="require a released manifest whose image digests match the environment",
+    )
+    return parser.parse_args()
+
+
+def display_path(path: pathlib.Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def resolve_manifest_path(argument: str | None) -> pathlib.Path:
+    configured = (
+        argument
+        or os.environ.get(MANIFEST_ENVIRONMENT)
+        or str(DEFAULT_MANIFEST_PATH)
+    )
+    candidate = pathlib.Path(configured).expanduser()
+    if not candidate.is_absolute():
+        candidate = ROOT / candidate
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(ROOT)
+    except ValueError:
+        fail(f"manifest path must stay inside the repository: {configured}")
+    if not resolved.is_file():
+        fail(f"manifest file does not exist: {display_path(resolved)}")
+    return resolved
+
+
 def load_json(path: pathlib.Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exception:
-        fail(f"cannot read {path.relative_to(ROOT)}: {exception}")
+        fail(f"cannot read {display_path(path)}: {exception}")
 
 
 def file_sha256(relative_path: str) -> str:
@@ -103,18 +162,11 @@ def validate_contracts(manifest: dict) -> None:
         fail("design-token file hashes differ from source.json")
 
 
-def validate_images(manifest: dict) -> None:
+def validate_images(manifest: dict, require_released: bool) -> None:
     images = manifest.get("images", [])
-    expected = {
-        "portfolio-api",
-        "portfolio-web",
-        "stock-analyst",
-        "stock-analyst-backend-yfinance",
-        "stock-analyst-ui",
-        "edo-calculator",
-    }
+    expected = set(EXPECTED_IMAGE_ENVIRONMENTS)
     actual = {image.get("id") for image in images}
-    if actual != expected:
+    if actual != expected or len(images) != len(expected):
         fail(f"image inventory differs: {sorted(actual)}")
     if manifest.get("imagePolicy", {}).get("unpublishedDigest", "missing") is not None:
         fail("unpublished image digest sentinel must be JSON null")
@@ -123,12 +175,20 @@ def validate_images(manifest: dict) -> None:
     development_compose = DEVELOPMENT_COMPOSE_PATH.read_text(encoding="utf-8")
     self_hosted_compose = SELF_HOSTED_COMPOSE_PATH.read_text(encoding="utf-8")
     self_hosted_development_compose = SELF_HOSTED_DEVELOPMENT_COMPOSE_PATH.read_text(encoding="utf-8")
+    expected_manifest_reference = (
+        "manifest: ${PORTFOLIO_COMPATIBILITY_MANIFEST:-deployment/compatibility/1.0.0.json}"
+    )
+    if expected_manifest_reference not in production_compose:
+        fail("production Compose does not expose the selected compatibility manifest")
+
     for image in images:
         image_id = image["id"]
         digest = image.get("digest")
         status = image.get("status")
         variable = image.get("digestEnvironment", "")
         repository = image.get("repository", "")
+        if variable != EXPECTED_IMAGE_ENVIRONMENTS[image_id]:
+            fail(f"{image_id} uses an unexpected digest environment variable: {variable}")
         if status == "unpublished":
             if digest is not None:
                 fail(f"{image_id} is unpublished but contains a digest")
@@ -148,6 +208,20 @@ def validate_images(manifest: dict) -> None:
                 fail(f"self-hosted production override does not fail closed for {image_id}")
             if repository not in self_hosted_development_compose or f"${{{variable}" in self_hosted_development_compose:
                 fail(f"self-hosted development override is not tag based for {image_id}")
+
+    if manifest.get("status") == "released":
+        unpublished = sorted(image["id"] for image in images if image.get("status") != "published")
+        if unpublished:
+            fail(f"released manifest contains unpublished images: {', '.join(unpublished)}")
+
+    if require_released:
+        for image in images:
+            variable = image["digestEnvironment"]
+            configured_digest = os.environ.get(variable)
+            if configured_digest != image["digest"]:
+                if configured_digest is None:
+                    fail(f"released rollout is missing {variable}")
+                fail(f"{variable} does not match the selected release manifest")
 
     if re.search(r"image:\s*\S+:(?:latest|main)\s*$", self_hosted_compose, re.MULTILINE):
         fail("self-hosted production override contains a moving latest/main tag")
@@ -210,6 +284,9 @@ def validate_rollout_script() -> None:
 
     required_fragments = [
         "set -euo pipefail",
+        "export PORTFOLIO_COMPATIBILITY_MANIFEST",
+        "python3 scripts/validate-compatibility-manifest.py --require-released",
+        "compose config >/dev/null",
         "compose up -d stock-analyst-backend-yfinance",
         "compose up -d stock-analyst edo-calculator",
         "http://127.0.0.1:8080/readyz",
@@ -232,19 +309,37 @@ def validate_rollout_script() -> None:
 
 
 def main() -> None:
-    manifest = load_json(MANIFEST_PATH)
+    arguments = parse_arguments()
+    manifest_path = resolve_manifest_path(arguments.manifest)
+    manifest = load_json(manifest_path)
     if manifest.get("schemaVersion") != 1:
         fail("unsupported schemaVersion")
-    if not SEMVER.fullmatch(manifest.get("manifestVersion", "")):
+    manifest_version = manifest.get("manifestVersion", "")
+    if not SEMVER.fullmatch(manifest_version):
         fail("manifestVersion must be semantic x.y.z")
+    if manifest_path.name != f"{manifest_version}.json":
+        fail(
+            f"manifestVersion {manifest_version} does not match file name {manifest_path.name}"
+        )
     if manifest.get("status") not in {"candidate", "released"}:
         fail("status must be candidate or released")
+    if arguments.require_released and manifest.get("status") != "released":
+        fail("rollout requires a manifest with status released")
     validate_components(manifest)
     validate_contracts(manifest)
-    validate_images(manifest)
+    validate_images(manifest, require_released=arguments.require_released)
     validate_rollout_policy(manifest)
     validate_rollout_script()
-    print(f"Compatibility manifest {manifest['manifestVersion']} verified with pinned contracts and digest placeholders.")
+    if arguments.require_released:
+        print(
+            f"Released compatibility manifest {manifest_version} verified with "
+            f"{len(EXPECTED_IMAGE_ENVIRONMENTS)} matching image digests."
+        )
+    else:
+        print(
+            f"Compatibility manifest {manifest_version} verified with pinned contracts "
+            f"and {manifest['status']} image evidence."
+        )
 
 
 if __name__ == "__main__":
