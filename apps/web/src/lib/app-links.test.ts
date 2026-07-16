@@ -54,10 +54,10 @@ describe('Stock Analyst app links', () => {
     )).toBe('https://stocks.example/?uiTheme=dark&uiLocale=pl-PL&s=PLN%3DX')
   })
 
-  it('maps persisted UI preferences to the active Portfolio locale', () => {
+  it('maps the persisted theme and active document locale without reading a legacy saved locale', () => {
     window.localStorage.setItem('portfolio:ui-theme', 'light')
-    window.localStorage.setItem('portfolio:ui-locale', 'pl-pl')
-    document.documentElement.lang = 'en'
+    window.localStorage.setItem('portfolio:ui-locale', 'en-GB')
+    document.documentElement.lang = 'pl-PL'
 
     expect(currentAppLinkPreferences()).toEqual({ theme: 'light', locale: 'pl-PL' })
   })

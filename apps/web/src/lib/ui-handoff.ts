@@ -1,7 +1,7 @@
 export type UiThemePreference = 'system' | 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'portfolio:ui-theme'
-const LOCALE_STORAGE_KEY = 'portfolio:ui-locale'
+const LEGACY_LOCALE_STORAGE_KEY = 'portfolio:ui-locale'
 const UI_THEME_VALUES = new Set<UiThemePreference>(['system', 'light', 'dark'])
 
 export interface UiHandoffPreferences {
@@ -18,13 +18,14 @@ export function initializeUiHandoff(): UiHandoffPreferences {
   const queryLocale = parseUiLocale(url.searchParams.get('uiLocale'))
 
   if (queryTheme) writePreference(THEME_STORAGE_KEY, queryTheme)
-  if (queryLocale) writePreference(LOCALE_STORAGE_KEY, queryLocale)
+  removePreference(LEGACY_LOCALE_STORAGE_KEY)
 
   const theme = queryTheme ?? parseUiTheme(readPreference(THEME_STORAGE_KEY))
-  const locale = queryLocale ?? parseUiLocale(readPreference(LOCALE_STORAGE_KEY))
+  const locale = queryLocale
 
   if (theme) document.documentElement.dataset.uiTheme = theme
   if (locale) document.documentElement.dataset.uiLocale = locale
+  else delete document.documentElement.dataset.uiLocale
 
   if (hasThemeParameter || hasLocaleParameter) {
     url.searchParams.delete('uiTheme')
@@ -34,10 +35,6 @@ export function initializeUiHandoff(): UiHandoffPreferences {
   }
 
   return { theme, locale }
-}
-
-export function readUiLocalePreference(): string | null {
-  return parseUiLocale(readPreference(LOCALE_STORAGE_KEY))
 }
 
 export function readUiThemePreference(): UiThemePreference | null {
@@ -72,5 +69,13 @@ function writePreference(key: string, value: string) {
     window.localStorage.setItem(key, value)
   } catch {
     // The handoff remains valid for this page even when storage is unavailable.
+  }
+}
+
+function removePreference(key: string) {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // A blocked storage API must not prevent the transient handoff.
   }
 }

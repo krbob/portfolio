@@ -1,5 +1,4 @@
 import {
-  readUiLocalePreference,
   readUiThemePreference,
   type UiThemePreference,
 } from './ui-handoff'
@@ -23,10 +22,7 @@ export function appLinkPreferencesForLocale(locale: string): AppLinkPreferences 
 }
 
 export function currentAppLinkPreferences(): AppLinkPreferences {
-  const storedLocale = readUiLocalePreference()
-  const activeLocale = storedLocale
-    ? storedLocale.toLowerCase().startsWith('pl') ? 'pl-PL' : 'en-GB'
-    : document.documentElement.lang.trim() || navigator.language || 'en'
+  const activeLocale = document.documentElement.lang.trim() || navigator.language || 'en'
   return appLinkPreferencesForLocale(activeLocale)
 }
 

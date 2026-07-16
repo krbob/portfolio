@@ -10,7 +10,7 @@ import './app.css'
 
 const PRELOAD_RELOAD_KEY = 'portfolio:preload-reload-at'
 
-initializeUiHandoff()
+const uiHandoff = initializeUiHandoff()
 
 function shouldReloadAfterPreloadError() {
   const now = Date.now()
@@ -47,7 +47,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
+      <I18nProvider localeOverride={uiHandoff.locale}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
