@@ -1,17 +1,18 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../../../lib/i18n'
 import { createInitialTransactionForm } from '../transactions-helpers'
 import { TransactionJournalComposer } from './TransactionJournalComposer'
 
 describe('TransactionJournalComposer disposal guards', () => {
   beforeEach(() => {
-    cleanup()
     document.body.replaceChildren()
     Object.defineProperty(window.navigator, 'language', { configurable: true, value: 'en-GB' })
     Object.defineProperty(window.navigator, 'languages', { configurable: true, value: ['en-GB'] })
   })
+
+  afterEach(cleanup)
 
   it('shows sell availability and disables submit for an oversell', async () => {
     const initialForm = createInitialTransactionForm()
