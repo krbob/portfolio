@@ -9,6 +9,26 @@ test('renders generated Stock provenance as an accessible responsive status bar'
       body: JSON.stringify([
         {
           snapshotType: 'PRICE_SERIES',
+          identity: 'fx-history:USD',
+          cachedAt: '2026-03-20T20:04:00Z',
+          status: 'FRESH',
+          lastCheckedAt: '2026-03-20T20:04:00Z',
+          failureCount: 0,
+          provenance: {
+            source: 'YAHOO_FINANCE',
+            retrievedAt: '2026-03-20T20:04:00Z',
+            marketTimestamp: null,
+            marketDate: '2025-12-31',
+            currency: 'PLN',
+            unitScale: 1,
+            adjustment: 'SPLIT_ADJUSTED',
+            coverageFrom: '2025-01-01',
+            coverageTo: '2025-12-31',
+            status: 'STALE',
+          },
+        },
+        {
+          snapshotType: 'PRICE_SERIES',
           identity: 'stock-history:VWRA.L',
           cachedAt: '2026-03-20T20:03:00Z',
           status: 'FRESH',
@@ -40,6 +60,7 @@ test('renders generated Stock provenance as an accessible responsive status bar'
   await expect(statusBar).toContainText('×1')
   await expect(statusBar).toContainText(/korekta split|split adjusted/i)
   await expect(statusBar).toContainText(/świeże|fresh/i)
+  await expect(statusBar).not.toContainText(/nieaktualne|stale/i)
   await expect(statusBar.locator('time')).toHaveCount(4)
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })

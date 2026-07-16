@@ -127,11 +127,11 @@ class StockAnalystClientCompatibilityTest {
     }
 
     @Test
-    fun `all client instances share a three-request concurrency limit`() {
+    fun `all client instances share a two-request concurrency limit`() {
         val activeRequests = AtomicInteger()
         val maximumActiveRequests = AtomicInteger()
         val totalRequests = AtomicInteger()
-        val firstBatchStarted = CountDownLatch(3)
+        val firstBatchStarted = CountDownLatch(2)
         val releaseRequests = CountDownLatch(1)
         val server = FixtureServer {
             route("/v1/quote/") { exchange ->
@@ -162,8 +162,8 @@ class StockAnalystClientCompatibilityTest {
                 try {
                     assertTrue(firstBatchStarted.await(5, TimeUnit.SECONDS))
                     Thread.sleep(150)
-                    assertEquals(3, activeRequests.get())
-                    assertEquals(3, totalRequests.get())
+                    assertEquals(2, activeRequests.get())
+                    assertEquals(2, totalRequests.get())
                 } finally {
                     releaseRequests.countDown()
                 }
@@ -172,7 +172,7 @@ class StockAnalystClientCompatibilityTest {
 
             assertEquals(9, quotes.size)
             assertEquals(9, totalRequests.get())
-            assertEquals(3, maximumActiveRequests.get())
+            assertEquals(2, maximumActiveRequests.get())
         } finally {
             releaseRequests.countDown()
             server.close()

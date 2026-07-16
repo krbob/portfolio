@@ -49,6 +49,31 @@ describe('market data provenance', () => {
     const summary = summarizeMarketDataProvenance([snapshot({ status: 'NEW_STATUS' })])
     expect(summary?.status).toBe('UNKNOWN')
   })
+
+  it('does not let a bounded historical FX lookup degrade the live status', () => {
+    const historicalFx = snapshot({
+      marketTimestamp: null,
+      marketDate: '2026-05-07',
+      coverageFrom: '2026-02-11',
+      coverageTo: '2026-05-07',
+      status: 'STALE',
+    })
+    historicalFx.identity = 'fx-history:USD'
+
+    const summary = summarizeMarketDataProvenance([
+      historicalFx,
+      snapshot({
+        marketDate: '2026-07-16',
+        coverageFrom: '2026-07-01',
+        coverageTo: '2026-07-16',
+        status: 'FRESH',
+      }),
+    ])
+
+    expect(summary?.datasetCount).toBe(1)
+    expect(summary?.status).toBe('FRESH')
+    expect(summary?.coverageFrom).toBe('2026-07-01')
+  })
 })
 
 function snapshot(

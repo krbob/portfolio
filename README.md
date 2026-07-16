@@ -244,7 +244,9 @@ Portfolio; it does not check in a full generated client runtime.
 The Stock Analyst adapter keeps the upstream provenance object (`source`, retrieval and market timestamps,
 currency/unit scale, adjustment, coverage, and freshness status) beside quote/history values. Portfolio persists it
 in snapshot metadata, exposes it through the generated Portfolio API contract, and renders a shared Market data status
-bar without flattening provenance into individual price points.
+bar without flattening provenance into individual price points. The global bar is scoped to live quotes and reference
+series; bounded transaction-FX history remains available in Market data diagnostics but cannot degrade the live
+headline merely because its requested end date is in the past.
 
 ```bash
 cd apps/api
@@ -257,6 +259,10 @@ Timeouts form an explicit outer budget:
 | --- | ---: | ---: | ---: |
 | `stock-analyst` quote/history | 15 s | 20 s | 5 s |
 | `edo-calculator` value/history/inflation | 8 s | 10 s | 2 s |
+
+The Stock Analyst client admits at most two concurrent requests. A history call can fan out to
+metadata and price loaders inside Stock Analyst, so this cap stays within the backend's default
+four-loader bulkhead instead of turning a normal Portfolio refresh into retryable `503` responses.
 
 The shared transport issues one HTTP request and does not retry HTTP responses. On failure it preserves HTTP status,
 `error`, `errorCode`, `retryable`, `requestId`, `Retry-After`, and a bounded response preview in readiness and audit

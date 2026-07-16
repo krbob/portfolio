@@ -22,7 +22,8 @@ export function summarizeMarketDataProvenance(
   snapshots: MarketDataSnapshot[],
 ): MarketDataProvenanceSummary | null {
   const withProvenance = snapshots.filter(
-    (snapshot): snapshot is MarketDataSnapshot & { provenance: GeneratedProvenance } => snapshot.provenance != null,
+    (snapshot): snapshot is MarketDataSnapshot & { provenance: GeneratedProvenance } =>
+      snapshot.provenance != null && isLiveMarketSnapshot(snapshot),
   )
   if (withProvenance.length === 0) return null
 
@@ -46,6 +47,16 @@ export function summarizeMarketDataProvenance(
     status: worstStatus(provenance.map((item) => item.status)),
     refreshFailureCount: withProvenance.filter((snapshot) => snapshot.status === 'FAILED').length,
   }
+}
+
+/**
+ * The global bar describes data used for current valuations and live reference
+ * series. Transaction FX lookups are bounded historical requests: an old end
+ * date is expected there and must not degrade the live market-data headline.
+ * They remain visible in the detailed market-data diagnostics screen.
+ */
+function isLiveMarketSnapshot(snapshot: MarketDataSnapshot) {
+  return !snapshot.identity.startsWith('fx-history:')
 }
 
 function uniqueText(values: Array<string | null | undefined>) {

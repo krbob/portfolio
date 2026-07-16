@@ -173,7 +173,10 @@ class StockAnalystClient(
         const val STOCK_ANALYST = "stock-analyst"
         const val LEGACY_QUOTE_PATH = "/quote/{stock}"
         const val LEGACY_HISTORY_PATH = "/history/{stock}"
-        const val MAX_CONCURRENT_REQUESTS = 3
+        // One history request can fan out to two parallel yfinance loaders
+        // (metadata + prices). Keeping two requests in flight stays within the
+        // Stock Analyst backend's default four-loader bulkhead.
+        const val MAX_CONCURRENT_REQUESTS = 2
         val requestSemaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
     }
 }

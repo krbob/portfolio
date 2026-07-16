@@ -102,6 +102,8 @@ Operational interpretation:
 - `STALE` is acceptable as a temporary degraded mode
 - it is not acceptable if the product keeps staying stale without a known upstream reason
 - fallback snapshots should explain why the app is still usable
+- the global market-data bar covers live datasets; bounded transaction-FX history is inspected separately under
+  `System -> Market data` and must not by itself mark the live headline stale
 
 When investigating market-data issues:
 
