@@ -213,7 +213,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Scan API SBOM for HIGH or CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: sbom
           scan-ref: apps/api/build/reports/sbom/portfolio-api.cdx.json
@@ -224,7 +224,7 @@ jobs:
           cache-dir: ${{ runner.temp }}/trivy
 
       - name: Scan web SBOM for HIGH or CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: sbom
           scan-ref: apps/web/build/reports/sbom/portfolio-web.cdx.json
@@ -267,7 +267,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=portfolio-web-security
 
       - name: Scan API image for HIGH or CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: portfolio-api:security-scan
           scanners: vuln
@@ -277,7 +277,7 @@ jobs:
           cache-dir: ${{ runner.temp }}/trivy
 
       - name: Scan web image for HIGH or CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: portfolio-web:security-scan
           scanners: vuln
