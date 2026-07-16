@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:quality": "playwright test e2e/accessibility.spec.ts e2e/axe-accessibility.spec.ts e2e/offline-navigation.spec.ts",
+    "test:e2e:quality": "playwright test e2e/accessibility.spec.ts e2e/app-switcher.spec.ts e2e/axe-accessibility.spec.ts e2e/market-data-status.spec.ts e2e/offline-navigation.spec.ts",
     "lint": "eslint src scripts",
     "validate:tokens": "node scripts/validate-design-tokens.mjs",
     "sbom": "mkdir -p build/reports/sbom && npm sbom --package-lock-only --sbom-format=cyclonedx --sbom-type=application > build/reports/sbom/portfolio-web.raw.cdx.json && python3 ../../scripts/normalize-cyclonedx.py build/reports/sbom/portfolio-web.raw.cdx.json build/reports/sbom/portfolio-web.cdx.json && rm build/reports/sbom/portfolio-web.raw.cdx.json"

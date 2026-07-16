@@ -229,7 +229,9 @@ The two UIs use a small bidirectional handoff contract. Portfolio passes only `u
 for an explicit instrument analysis link, `s`. Stock Analyst receives `PORTFOLIO_URL` (set from
 `PORTFOLIO_PUBLIC_URL` in the example stacks) and passes back only `uiTheme` and `uiLocale`. Neither direction
 forwards authentication, portfolio state, account data, or arbitrary query parameters. Both applications validate
-the configured destination as a root-relative or absolute HTTP(S) URL before rendering a link.
+the configured destination as a root-relative or absolute HTTP(S) URL before rendering a link. `uiLocale` is a
+navigation hint for the destination page, not a durable user preference; without a current hint Portfolio resolves
+the language from the browser. `uiTheme` remains a persisted preference.
 
 #### Upstream API contracts and timeout budgets
 

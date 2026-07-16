@@ -322,7 +322,7 @@ jobs:
         working-directory: apps/web
         run: npm ci
 
-      - name: Run production browser smoke, accessibility.spec.ts, axe and offline tests
+      - name: Run production browser smoke, handoff, provenance, accessibility and recovery tests
         run: ./scripts/smoke-test-browser-stack.sh
 
       - name: Run auth Docker smoke test
