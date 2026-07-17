@@ -31,7 +31,7 @@
       "kind": "generated-openapi-client",
       "consumer": "portfolio-web",
       "path": "apps/web/src/api/generated/portfolio-api.d.ts",
-      "sha256": "1334c832cd15c235a3dbf05f63bbc584f416e71fa4b443ac34b3c5c3632c9758"
+      "sha256": "2c310044c07ec2a45f5631a6ba6eb59e5f4475d7f3d07a6e7e3fdab2ce799911"
     },
     {
       "id": "stock-analyst-v1",
