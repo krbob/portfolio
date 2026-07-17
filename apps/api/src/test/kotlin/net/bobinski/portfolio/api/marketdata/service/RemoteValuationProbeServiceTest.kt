@@ -11,6 +11,7 @@ import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
@@ -48,6 +49,7 @@ class RemoteValuationProbeServiceTest {
             }
             assertEquals(true, exception.message?.contains("VRWA.L"))
             assertEquals(true, exception.message?.contains("could not be verified"))
+            assertFalse(exception.message.orEmpty().contains("MANUAL", ignoreCase = true))
         } finally {
             server.stop(0)
         }
@@ -100,6 +102,7 @@ class RemoteValuationProbeServiceTest {
             runBlocking { service.verifyStockAnalystSymbol("VWRA.L") }
         }
         assertEquals(true, exception.message?.contains("Could not reach"))
+        assertFalse(exception.message.orEmpty().contains("MANUAL", ignoreCase = true))
     }
 
     @Test

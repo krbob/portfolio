@@ -18,10 +18,53 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionReposi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PortfolioTransferOperationalStateTest {
     private val clock = Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), ZoneOffset.UTC)
+
+    @Test
+    fun `legacy manual instrument remains importable and exportable without blocking`() = runBlocking {
+        val legacyInstrument = InstrumentSnapshot(
+            id = "31000000-0000-0000-0000-000000000001",
+            name = "Legacy manual ETF",
+            kind = "ETF",
+            assetClass = "EQUITIES",
+            symbol = "VWCE.DE",
+            currency = "EUR",
+            valuationSource = "MANUAL",
+            edoTerms = null,
+            isActive = true,
+            createdAt = "2026-03-20T10:00:00Z",
+            updatedAt = "2026-03-21T11:00:00Z"
+        )
+
+        ImportMode.entries.forEach { mode ->
+            val fixture = fixture()
+            val request = PortfolioImportRequest(
+                mode = mode,
+                snapshot = emptySnapshot(appPreferences = emptyList()).copy(
+                    instruments = listOf(legacyInstrument)
+                )
+            )
+
+            val preview = fixture.transferService.previewImport(request)
+
+            assertTrue(preview.isValid)
+            assertEquals(0, preview.blockingIssueCount)
+            assertEquals(1, preview.snapshotInstrumentCount)
+
+            val result = fixture.transferService.importState(request)
+
+            assertEquals(1, result.instrumentCount)
+            val imported = fixture.instrumentRepository.list().single()
+            assertEquals("ETF", imported.kind.name)
+            assertEquals("MANUAL", imported.valuationSource.name)
+            assertEquals("VWCE.DE", imported.symbol)
+            assertEquals(legacyInstrument, fixture.transferService.exportState().instruments.single())
+        }
+    }
 
     @Test
     fun `export and preview counts include user settings but exclude operational state`() = runBlocking {
@@ -126,15 +169,17 @@ class PortfolioTransferOperationalStateTest {
 
     private fun fixture(): Fixture {
         val appPreferenceRepository = InMemoryAppPreferenceRepository()
+        val instrumentRepository = InMemoryInstrumentRepository()
         val operationalStateRepository = InMemoryOperationalStateRepository()
         val auditLogService = AuditLogService(InMemoryAuditEventRepository(), clock)
         return Fixture(
             appPreferenceRepository = appPreferenceRepository,
+            instrumentRepository = instrumentRepository,
             operationalStateRepository = operationalStateRepository,
             transferService = PortfolioTransferService(
                 accountRepository = InMemoryAccountRepository(),
                 appPreferenceRepository = appPreferenceRepository,
-                instrumentRepository = InMemoryInstrumentRepository(),
+                instrumentRepository = instrumentRepository,
                 portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
                 transactionRepository = InMemoryTransactionRepository(),
                 transactionImportProfileRepository = InMemoryTransactionImportProfileRepository(),
@@ -170,6 +215,7 @@ class PortfolioTransferOperationalStateTest {
 
     private data class Fixture(
         val appPreferenceRepository: InMemoryAppPreferenceRepository,
+        val instrumentRepository: InMemoryInstrumentRepository,
         val operationalStateRepository: InMemoryOperationalStateRepository,
         val transferService: PortfolioTransferService
     )

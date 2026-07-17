@@ -22,6 +22,12 @@ class InstrumentService(
 
     suspend fun create(command: CreateInstrumentCommand): Instrument {
         val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
+        validateValuationConfiguration(
+            kind = command.kind,
+            requested = command.valuationSource,
+            symbol = symbol,
+            existing = null
+        )
         if (command.valuationSource == ValuationSource.STOCK_ANALYST && symbol != null) {
             valuationProbeService.verifyStockAnalystSymbol(symbol)
         }
@@ -63,6 +69,12 @@ class InstrumentService(
             ?: throw ResourceNotFoundException("Instrument not found: ${command.id}")
 
         val symbol = command.symbol?.trim()?.takeIf { it.isNotEmpty() }
+        validateValuationConfiguration(
+            kind = existing.kind,
+            requested = command.valuationSource,
+            symbol = symbol,
+            existing = existing
+        )
         if (shouldVerifySymbol(command.valuationSource, symbol, existing)) {
             valuationProbeService.verifyStockAnalystSymbol(symbol!!)
         }
@@ -90,6 +102,37 @@ class InstrumentService(
             }
         )
         return updated
+    }
+
+    private fun validateValuationConfiguration(
+        kind: InstrumentKind,
+        requested: ValuationSource,
+        symbol: String?,
+        existing: Instrument?
+    ) {
+        if (kind == InstrumentKind.BENCHMARK_GOLD) {
+            require(existing != null && requested == existing.valuationSource) {
+                "Gold benchmarks are configured separately and cannot be created as instruments."
+            }
+            return
+        }
+
+        val supported = when (kind) {
+            InstrumentKind.BOND_EDO -> ValuationSource.EDO_CALCULATOR
+            else -> ValuationSource.STOCK_ANALYST
+        }
+        if (requested == existing?.valuationSource && requested != supported) return
+        require(requested == supported) {
+            "${kind.name} instruments must use ${supported.name} valuation; " +
+                "${requested.name} is not supported."
+        }
+        if (supported == ValuationSource.STOCK_ANALYST) {
+            val retainsLegacyMissingSymbol = existing?.valuationSource == ValuationSource.STOCK_ANALYST &&
+                existing.symbol == null && symbol == null
+            require(symbol != null || retainsLegacyMissingSymbol) {
+                "${kind.name} instruments using STOCK_ANALYST valuation require a market symbol."
+            }
+        }
     }
 
     private fun shouldVerifySymbol(

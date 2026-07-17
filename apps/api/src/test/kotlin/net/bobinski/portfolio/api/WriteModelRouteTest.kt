@@ -11,6 +11,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -118,6 +119,90 @@ class WriteModelRouteTest {
     }
 
     @Test
+    fun `ordinary instruments cannot be created with manual valuation`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "VWRA",
+                  "kind": "ETF",
+                  "assetClass": "EQUITIES",
+                  "symbol": "VWRA.L",
+                  "currency": "USD",
+                  "valuationSource": "MANUAL"
+                }
+                """.trimIndent()
+            )
+        }
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(body.contains("\"errorCode\": \"INVALID_REQUEST\""), body)
+        assertTrue(body.contains("MANUAL is not supported"), body)
+    }
+
+    @Test
+    fun `stock analyst instruments require a market symbol`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Missing symbol",
+                  "kind": "ETF",
+                  "assetClass": "EQUITIES",
+                  "symbol": null,
+                  "currency": "USD",
+                  "valuationSource": "STOCK_ANALYST"
+                }
+                """.trimIndent()
+            )
+        }
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(body.contains("\"errorCode\": \"INVALID_REQUEST\""), body)
+        assertTrue(body.contains("require a market symbol"), body)
+    }
+
+    @Test
+    fun `gold benchmark cannot be created as an instrument`() = testApplication {
+        application {
+            module()
+        }
+
+        val response = client.post("/v1/instruments") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Gold benchmark",
+                  "kind": "BENCHMARK_GOLD",
+                  "assetClass": "BENCHMARK",
+                  "symbol": "GC=F",
+                  "currency": "USD",
+                  "valuationSource": "MANUAL"
+                }
+                """.trimIndent()
+            )
+        }
+        val body = response.bodyAsText()
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(body.contains("\"errorCode\": \"INVALID_REQUEST\""), body)
+        assertTrue(body.contains("Gold benchmarks are configured separately"), body)
+    }
+
+    @Test
     fun `instruments can be updated`() = testApplication {
         application {
             module()
@@ -133,7 +218,7 @@ class WriteModelRouteTest {
                   "name": "VWCE",
                   "symbol": "VWCE.DE",
                   "currency": "EUR",
-                  "valuationSource": "MANUAL"
+                  "valuationSource": "STOCK_ANALYST"
                 }
                 """.trimIndent()
             )
@@ -144,8 +229,45 @@ class WriteModelRouteTest {
         assertTrue(body.contains("\"name\": \"VWCE\""))
         assertTrue(body.contains("\"symbol\": \"VWCE.DE\""))
         assertTrue(body.contains("\"currency\": \"EUR\""))
-        assertTrue(body.contains("\"valuationSource\": \"MANUAL\""))
+        assertTrue(body.contains("\"valuationSource\": \"STOCK_ANALYST\""))
         assertTrue(body.contains("\"kind\": \"ETF\""))
+    }
+
+    @Test
+    fun `supported instruments cannot switch to manual valuation and remain unchanged`() = testApplication {
+        application {
+            module()
+        }
+
+        val instrumentId = createEtfInstrument()
+
+        val updateResponse = client.put("/v1/instruments/$instrumentId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "name": "Changed name",
+                  "symbol": "V80A.DE",
+                  "currency": "EUR",
+                  "valuationSource": "MANUAL"
+                }
+                """.trimIndent()
+            )
+        }
+        val updateBody = updateResponse.bodyAsText()
+        val listResponse = client.get("/v1/instruments")
+        val listBody = listResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.BadRequest, updateResponse.status)
+        assertTrue(updateBody.contains("\"errorCode\": \"INVALID_REQUEST\""), updateBody)
+        assertTrue(updateBody.contains("MANUAL is not supported"), updateBody)
+        assertEquals(HttpStatusCode.OK, listResponse.status)
+        assertTrue(listBody.contains("\"name\": \"VWRA\""), listBody)
+        assertTrue(listBody.contains("\"symbol\": \"VWRA.L\""), listBody)
+        assertTrue(listBody.contains("\"currency\": \"USD\""), listBody)
+        assertTrue(listBody.contains("\"valuationSource\": \"STOCK_ANALYST\""), listBody)
+        assertFalse(listBody.contains("Changed name"), listBody)
+        assertFalse(listBody.contains("V80A.DE"), listBody)
     }
 
     @Test

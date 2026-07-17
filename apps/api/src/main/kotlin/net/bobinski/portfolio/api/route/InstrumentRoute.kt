@@ -52,7 +52,9 @@ fun Route.instrumentRoute() {
         }.documented(
             operationId = "createInstrument",
             summary = "Create an instrument",
-            description = "Creates a new instrument definition, including valuation source and optional EDO terms.",
+            description = "Creates a supported instrument definition. ETF, stock, cash and FX instruments use " +
+                "stock-analyst and require a market symbol; EDO instruments use edo-calculator. Gold reference " +
+                "data is configured separately.",
             tag = "Instruments"
         )
 
@@ -74,7 +76,8 @@ fun Route.instrumentRoute() {
             }.documented(
                 operationId = "updateInstrument",
                 summary = "Update an instrument",
-                description = "Updates mutable properties of an existing instrument such as name, symbol, currency, valuation source and EDO terms.",
+                description = "Updates mutable properties of an existing instrument. A legacy valuation source may " +
+                    "be retained while editing metadata or migrated to the source supported by the instrument kind.",
                 tag = "Instruments"
             )
         }

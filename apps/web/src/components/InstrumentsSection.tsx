@@ -36,6 +36,14 @@ const initialForm = {
   marginBps: '200',
 }
 
+function supportedValuationSource(kind: string) {
+  if (kind === 'BENCHMARK_GOLD') {
+    return null
+  }
+
+  return kind === 'BOND_EDO' ? 'EDO_CALCULATOR' : 'STOCK_ANALYST'
+}
+
 export function InstrumentsSection() {
   const language = getActiveUiLanguage()
   const instrumentsQuery = useInstruments()
@@ -45,7 +53,22 @@ export function InstrumentsSection() {
   const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null)
 
   const isEditing = editingInstrumentId !== null
+  const editingInstrument = instrumentsQuery.data?.find(
+    (instrument) => instrument.id === editingInstrumentId,
+  )
   const isEdo = form.kind === 'BOND_EDO'
+  const supportedSource = supportedValuationSource(form.kind)
+  const hasLegacyValuationSource =
+    isEditing && supportedSource !== null && form.valuationSource !== supportedSource
+  const retainsLegacyMissingSymbol =
+    editingInstrument?.valuationSource === 'STOCK_ANALYST' &&
+    !editingInstrument.symbol &&
+    form.valuationSource === 'STOCK_ANALYST' &&
+    !form.symbol
+  const requiresMarketSymbol =
+    form.kind !== 'BENCHMARK_GOLD' &&
+    form.valuationSource === 'STOCK_ANALYST' &&
+    !retainsLegacyMissingSymbol
   const activeMutation = isEditing ? updateInstrumentMutation : createInstrumentMutation
 
   function handleKindChange(nextKind: string) {
@@ -62,11 +85,17 @@ export function InstrumentsSection() {
         }
       }
 
+      const leavingEdo = current.kind === 'BOND_EDO'
+      const defaultAssetClass = nextKind === 'CASH' ? 'CASH' : 'EQUITIES'
+      const defaultCurrency = nextKind === 'CASH' ? 'PLN' : 'USD'
       return {
         ...current,
+        name: leavingEdo ? '' : current.name,
         kind: nextKind,
-        assetClass: nextKind === 'BENCHMARK_GOLD' ? 'BENCHMARK' : current.assetClass,
-        valuationSource: nextKind === 'BENCHMARK_GOLD' ? 'MANUAL' : current.valuationSource,
+        assetClass: leavingEdo ? defaultAssetClass : current.assetClass,
+        currency: leavingEdo ? defaultCurrency : current.currency,
+        valuationSource: 'STOCK_ANALYST',
+        symbol: leavingEdo ? '' : current.symbol,
       }
     })
   }
@@ -154,6 +183,7 @@ export function InstrumentsSection() {
         <div>
           <span className={labelClass}>{t('instruments.name')}</span>
           <input
+            aria-label={t('instruments.name')}
             className={input}
             value={form.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -165,18 +195,29 @@ export function InstrumentsSection() {
 
         <div>
           <span className={labelClass}>{t('instruments.kind')}</span>
-          <select className={input} value={form.kind} onChange={(event) => handleKindChange(event.target.value)} disabled={isEditing}>
+          <select
+            aria-label={t('instruments.kind')}
+            className={input}
+            value={form.kind}
+            onChange={(event) => handleKindChange(event.target.value)}
+            disabled={isEditing}
+          >
             <option value="ETF">{labelInstrumentKind('ETF')}</option>
             <option value="STOCK">{labelInstrumentKind('STOCK')}</option>
             <option value="BOND_EDO">{labelInstrumentKind('BOND_EDO')}</option>
             <option value="CASH">{labelInstrumentKind('CASH')}</option>
-            <option value="BENCHMARK_GOLD">{labelInstrumentKind('BENCHMARK_GOLD')}</option>
+            {isEditing && form.kind === 'BENCHMARK_GOLD' && (
+              <option value="BENCHMARK_GOLD">
+                {labelInstrumentKind('BENCHMARK_GOLD')}
+              </option>
+            )}
           </select>
         </div>
 
         <div>
           <span className={labelClass}>{t('instruments.assetClass')}</span>
           <select
+            aria-label={t('instruments.assetClass')}
             className={input}
             value={form.assetClass}
             onChange={(event) =>
@@ -196,10 +237,12 @@ export function InstrumentsSection() {
           <div>
             <span className={labelClass}>{t('instruments.symbol')}</span>
             <input
+              aria-label={t('instruments.symbol')}
               className={input}
               value={form.symbol}
               onChange={(event) => setForm((current) => ({ ...current, symbol: event.target.value }))}
               placeholder="VWCE.DE"
+              required={requiresMarketSymbol}
             />
           </div>
         )}
@@ -207,6 +250,7 @@ export function InstrumentsSection() {
         <div>
           <span className={labelClass}>{t('instruments.currency')}</span>
           <input
+            aria-label={t('instruments.currency')}
             className={input}
             value={form.currency}
             onChange={(event) =>
@@ -219,17 +263,32 @@ export function InstrumentsSection() {
 
         <div>
           <span className={labelClass}>{t('instruments.valuationSource')}</span>
-          <select
-            className={input}
-            value={form.valuationSource}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, valuationSource: event.target.value }))
-            }
-          >
-            <option value="STOCK_ANALYST">{labelValuationSource('STOCK_ANALYST')}</option>
-            <option value="EDO_CALCULATOR">{labelValuationSource('EDO_CALCULATOR')}</option>
-            <option value="MANUAL">{labelValuationSource('MANUAL')}</option>
-          </select>
+          {hasLegacyValuationSource ? (
+            <>
+              <select
+                aria-label={t('instruments.valuationSource')}
+                className={input}
+                value={form.valuationSource}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, valuationSource: event.target.value }))
+                }
+              >
+                <option value={form.valuationSource} disabled>
+                  {labelValuationSource(form.valuationSource)}
+                </option>
+                <option value={supportedSource}>
+                  {labelValuationSource(supportedSource)}
+                </option>
+              </select>
+              <p className="mt-1.5 text-xs text-ui-text-muted">
+                {t('instruments.legacyValuationSource')}
+              </p>
+            </>
+          ) : (
+            <output aria-label={t('instruments.valuationSource')} className={`${input} block`}>
+              {labelValuationSource(form.valuationSource)}
+            </output>
+          )}
         </div>
 
         {isEdo && (

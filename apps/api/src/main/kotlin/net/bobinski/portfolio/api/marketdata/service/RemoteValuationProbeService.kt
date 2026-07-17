@@ -23,21 +23,21 @@ class RemoteValuationProbeService(
         } catch (e: MarketDataClientException) {
             throw IllegalArgumentException(
                 "Symbol '$symbol' could not be verified against stock-analyst. " +
-                    "Check that the symbol is correct or use MANUAL valuation source."
+                    "Check that the symbol is correct."
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             throw IllegalArgumentException(
                 "Could not reach stock-analyst to verify symbol '$symbol'. " +
-                    "Try again or use MANUAL valuation source."
+                    "Try again when stock-analyst is available."
             )
         }
 
         if (responded == null) {
             throw IllegalArgumentException(
                 "Valuation source did not respond in time while verifying symbol '$symbol'. " +
-                    "Try again or use MANUAL valuation source."
+                    "Try again when stock-analyst is available."
             )
         }
     }

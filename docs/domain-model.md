@@ -16,7 +16,11 @@ Represents something the portfolio can value or transact against.
 
 - ETFs and stocks map to market-data symbols
 - EDO stays modeled as a dedicated instrument type
-- cash and benchmark-like references stay explicit rather than implicit spreadsheet columns
+- cash stays explicit rather than becoming an implicit spreadsheet column
+- benchmark and gold reference series are configured separately from transactable instruments
+
+Legacy exports and databases may still contain `BENCHMARK_GOLD` or `MANUAL` instrument values. They
+remain readable and portable, but new instruments cannot select those unsupported configurations.
 
 ### Transaction
 

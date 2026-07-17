@@ -122,7 +122,7 @@ export const supportMessages = {
   'label.instrumentKindBenchmarkGold': { pl: 'Benchmark złota', en: 'Gold benchmark' },
   'label.valuationSourceStockAnalyst': { pl: 'stock-analyst', en: 'stock-analyst' },
   'label.valuationSourceEdoCalculator': { pl: 'edo-calculator', en: 'edo-calculator' },
-  'label.valuationSourceManual': { pl: 'Ręcznie', en: 'Manual' },
+  'label.valuationSourceManual': { pl: 'Ręcznie · nieobsługiwane', en: 'Manual · unsupported' },
   'label.valuationStatusMissingData': { pl: 'Brak danych', en: 'Unavailable' },
   'label.valuationStatusValued': { pl: 'Wycenione', en: 'Valued' },
   'label.valuationStatusStale': { pl: 'Opóźnione', en: 'Stale' },
