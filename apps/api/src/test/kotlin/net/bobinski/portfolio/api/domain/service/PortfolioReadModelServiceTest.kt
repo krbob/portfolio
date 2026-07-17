@@ -1,10 +1,10 @@
 package net.bobinski.portfolio.api.domain.service
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
@@ -74,8 +74,9 @@ class PortfolioReadModelServiceTest {
 
         val overview = async(Dispatchers.Default) { fixture.service.overview() }
         valuationStarted.await()
-        val holdings = async(Dispatchers.Default) { fixture.service.holdings() }
-        yield()
+        val holdings = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+            fixture.service.holdings()
+        }
         releaseValuation.complete(Unit)
 
         assertEquals(BigDecimal("2195.00"), overview.await().totalCurrentValuePln)
