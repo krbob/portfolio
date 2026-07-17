@@ -17,6 +17,7 @@ describe('MarketDataStatusBar', () => {
           unitScales: [1],
           adjustments: ['SPLIT_ADJUSTED'],
           status: 'FRESH',
+          limitedAnalyticsCount: 2,
           refreshFailureCount: 1,
         }}
         isRefreshing
@@ -29,6 +30,8 @@ describe('MarketDataStatusBar', () => {
     expect(region).toHaveTextContent(/×1/)
     expect(region).toHaveTextContent(/korekta split|split adjusted/i)
     expect(region).toHaveTextContent(/świeże|fresh/i)
+    expect(region).toHaveTextContent(/zestawy z błędem odświeżania: 1|datasets with refresh errors: 1/i)
+    expect(region).toHaveTextContent(/ograniczone statystyki instrumentów: 2|limited instrument statistics: 2/i)
     expect(screen.getByRole('status')).toHaveTextContent(/odświeżanie|refreshing/i)
     expect(region.querySelectorAll('time')).toHaveLength(4)
   })
@@ -47,6 +50,7 @@ describe('MarketDataStatusBar', () => {
           unitScales: [],
           adjustments: [],
           status: 'UNKNOWN',
+          limitedAnalyticsCount: 0,
           refreshFailureCount: 0,
         }}
       />,

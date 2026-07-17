@@ -15,6 +15,7 @@ export interface MarketDataProvenanceSummary {
   unitScales: number[]
   adjustments: string[]
   status: MarketProvenanceStatus
+  limitedAnalyticsCount: number
   refreshFailureCount: number
 }
 
@@ -33,6 +34,7 @@ export function summarizeMarketDataProvenance(
   const observations = provenance
     .map((item) => cleanInstant(item.marketTimestamp) ?? cleanDate(item.marketDate))
     .filter(isPresent)
+  const limitedAnalyticsCount = withProvenance.filter(hasLimitedQuoteAnalytics).length
 
   return {
     datasetCount: withProvenance.length,
@@ -44,7 +46,8 @@ export function summarizeMarketDataProvenance(
     currencies: uniqueText(provenance.map((item) => item.currency)),
     unitScales: [...new Set(provenance.map((item) => item.unitScale).filter(validUnitScale))].sort((a, b) => a - b),
     adjustments: uniqueText(provenance.map((item) => item.adjustment)),
-    status: worstStatus(provenance.map((item) => item.status)),
+    status: worstStatus(withProvenance.map(headlineProvenanceStatus)),
+    limitedAnalyticsCount,
     refreshFailureCount: withProvenance.filter((snapshot) => snapshot.status === 'FAILED').length,
   }
 }
@@ -57,6 +60,26 @@ export function summarizeMarketDataProvenance(
  */
 function isLiveMarketSnapshot(snapshot: MarketDataSnapshot) {
   return !snapshot.identity.startsWith('fx-history:')
+}
+
+/**
+ * Stock quote provenance covers both the current price and derived statistics
+ * such as the five-year gain. Portfolio consumes the current valuation fields,
+ * not those optional statistics. A PARTIAL quote therefore describes limited
+ * analytics, not a partial current valuation. The raw provenance remains
+ * unchanged in snapshot data, while the limitation is counted separately in
+ * the global bar.
+ */
+function hasLimitedQuoteAnalytics(
+  snapshot: MarketDataSnapshot & { provenance: GeneratedProvenance },
+) {
+  return snapshot.identity.startsWith('stock-quote:') && normalizeStatus(snapshot.provenance.status) === 'PARTIAL'
+}
+
+function headlineProvenanceStatus(
+  snapshot: MarketDataSnapshot & { provenance: GeneratedProvenance },
+): MarketProvenanceStatus {
+  return hasLimitedQuoteAnalytics(snapshot) ? 'FRESH' : normalizeStatus(snapshot.provenance.status)
 }
 
 function uniqueText(values: Array<string | null | undefined>) {

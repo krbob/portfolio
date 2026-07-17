@@ -24,7 +24,14 @@ export const supportMessages = {
   'marketStatus.stale': { pl: 'Nieaktualne', en: 'Stale' },
   'marketStatus.error': { pl: 'Błąd', en: 'Error' },
   'marketStatus.unknown': { pl: 'Nieznany', en: 'Unknown' },
-  'marketStatus.refreshFailures': { pl: 'Nieudane odświeżenia: {count}', en: 'Failed refreshes: {count}' },
+  'marketStatus.refreshFailures': {
+    pl: 'Zestawy z błędem odświeżania: {count}',
+    en: 'Datasets with refresh errors: {count}',
+  },
+  'marketStatus.limitedAnalytics': {
+    pl: 'Ograniczone statystyki instrumentów: {count}',
+    en: 'Limited instrument statistics: {count}',
+  },
   'marketStatus.refreshing': { pl: 'Odświeżanie…', en: 'Refreshing…' },
   'auditCopy.modePrefix': { pl: 'tryb', en: 'mode' },
   'auditCopy.triggerPrefix': { pl: 'uruchomienie:', en: 'trigger' },

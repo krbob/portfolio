@@ -63,6 +63,11 @@ export function MarketDataStatusBarContent({
             {formatMessage(t('marketStatus.refreshFailures'), { count: summary.refreshFailureCount })}
           </span>
         ) : null}
+        {summary.limitedAnalyticsCount > 0 ? (
+          <span className="font-medium text-ui-highlight">
+            {formatMessage(t('marketStatus.limitedAnalytics'), { count: summary.limitedAnalyticsCount })}
+          </span>
+        ) : null}
         {isRefreshing ? (
           <span role="status" className="font-medium text-ui-action">{t('marketStatus.refreshing')}</span>
         ) : null}

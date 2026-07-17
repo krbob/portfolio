@@ -37,6 +37,7 @@ describe('market data provenance', () => {
       unitScales: [1],
       adjustments: ['RAW', 'SPLIT_ADJUSTED'],
       status: 'PARTIAL',
+      limitedAnalyticsCount: 0,
       refreshFailureCount: 1,
     })
   })
@@ -73,6 +74,46 @@ describe('market data provenance', () => {
     expect(summary?.datasetCount).toBe(1)
     expect(summary?.status).toBe('FRESH')
     expect(summary?.coverageFrom).toBe('2026-07-01')
+  })
+
+  it('reports partial stock quote analytics without degrading current market-data health', () => {
+    const quote = snapshot({ status: 'PARTIAL' })
+    quote.identity = 'stock-quote:VWRA.L'
+
+    const summary = summarizeMarketDataProvenance([
+      quote,
+      snapshot({ status: 'FRESH' }),
+    ])
+
+    expect(summary?.status).toBe('FRESH')
+    expect(summary?.limitedAnalyticsCount).toBe(1)
+    expect(summary?.datasetCount).toBe(2)
+  })
+
+  it.each(['stock-history:VWRA.L', 'reference:VWRA.L:PLN'])(
+    'keeps a real partial analytical series visible for %s',
+    (identity) => {
+      const partialSeries = snapshot({ status: 'PARTIAL' })
+      partialSeries.identity = identity
+
+      const summary = summarizeMarketDataProvenance([partialSeries])
+
+      expect(summary?.status).toBe('PARTIAL')
+      expect(summary?.limitedAnalyticsCount).toBe(0)
+    },
+  )
+
+  it.each([
+    ['STALE', 'STALE'],
+    ['ERROR', 'ERROR'],
+  ])('does not suppress a real %s quote provenance status', (provenanceStatus, expectedStatus) => {
+    const quote = snapshot({ status: provenanceStatus })
+    quote.identity = 'stock-quote:VWRA.L'
+
+    const summary = summarizeMarketDataProvenance([quote])
+
+    expect(summary?.status).toBe(expectedStatus)
+    expect(summary?.limitedAnalyticsCount).toBe(0)
   })
 })
 
