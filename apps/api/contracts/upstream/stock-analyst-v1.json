@@ -112,7 +112,7 @@
             "name": "to",
             "in": "query",
             "required": false,
-            "description": "Inclusive end date. Must be provided together with `from`.",
+            "description": "Inclusive end date. Must be provided together with `from`. For a window ending before today, provenance freshness is assessed relative to this date.",
             "schema": { "type": "string", "format": "date" }
           }
         ],
@@ -528,7 +528,18 @@
           "adjustment": { "$ref": "#/components/schemas/DataAdjustment" },
           "coverageFrom": { "type": "string", "format": "date", "nullable": true },
           "coverageTo": { "type": "string", "format": "date", "nullable": true },
-          "status": { "$ref": "#/components/schemas/DataStatus" }
+          "status": { "$ref": "#/components/schemas/DataStatus" },
+          "priceStatus": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "analyticsStatus": {
+            "$ref": "#/components/schemas/AnalyticsStatus"
+          },
+          "analyticsLimitations": {
+            "type": "array",
+            "description": "Stable response paths for unavailable quote analytics, for example gain.fiveYear.",
+            "items": { "type": "string" }
+          }
         }
       },
       "MarketDataSource": {
@@ -542,6 +553,10 @@
       "DataStatus": {
         "type": "string",
         "enum": ["FRESH", "STALE", "PARTIAL", "ERROR"]
+      },
+      "AnalyticsStatus": {
+        "type": "string",
+        "enum": ["COMPLETE", "PARTIAL", "UNAVAILABLE"]
       },
       "SearchResult": {
         "type": "object",

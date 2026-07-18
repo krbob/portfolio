@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
@@ -16,10 +16,26 @@ import {
 } from '../api/read-model'
 import { useI18n } from '../lib/i18n'
 
+export const PORTFOLIO_OVERVIEW_QUERY_KEY = ['portfolio-overview'] as const
+export const MARKET_DATA_SNAPSHOTS_QUERY_KEY = ['portfolio-market-data-snapshots'] as const
+
 export function usePortfolioOverview() {
+  const queryClient = useQueryClient()
   return useQuery({
-    queryKey: ['portfolio-overview'],
-    queryFn: fetchPortfolioOverview,
+    queryKey: PORTFOLIO_OVERVIEW_QUERY_KEY,
+    queryFn: async () => {
+      const overview = await fetchPortfolioOverview()
+
+      // Fetching the overview can refresh upstream quotes and their persisted
+      // diagnostics. Cancel a snapshot request that started before the overview
+      // so its older response cannot win the race, then read the same state.
+      await queryClient.cancelQueries({ queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY })
+      void queryClient.invalidateQueries({
+        queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
+        refetchType: 'active',
+      })
+      return overview
+    },
   })
 }
 
@@ -100,7 +116,7 @@ export function useReadModelCacheSnapshots() {
 
 export function useMarketDataSnapshots() {
   return useQuery({
-    queryKey: ['portfolio-market-data-snapshots'],
-    queryFn: fetchMarketDataSnapshots,
+    queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
+    queryFn: ({ signal }) => fetchMarketDataSnapshots(signal),
   })
 }

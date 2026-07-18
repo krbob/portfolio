@@ -52,6 +52,33 @@ const marketDataSnapshotTypeLabels: Record<string, MessageKey> = {
   INFLATION_WINDOW: 'label.marketSnapshotInflationWindow',
 }
 
+const marketDataStatusLabels: Record<string, MessageKey> = {
+  FRESH: 'marketStatus.fresh',
+  PARTIAL: 'marketStatus.partial',
+  STALE: 'marketStatus.stale',
+  ERROR: 'marketStatus.error',
+  UNKNOWN: 'marketStatus.unknown',
+}
+
+const marketAnalyticsStatusLabels: Record<string, MessageKey> = {
+  COMPLETE: 'marketStatus.analyticsComplete',
+  PARTIAL: 'marketStatus.analyticsPartial',
+  UNAVAILABLE: 'marketStatus.analyticsUnavailable',
+  UNKNOWN: 'marketStatus.unknown',
+}
+
+const marketAnalyticsLimitationLabels: Record<string, MessageKey> = {
+  'gain.daily': 'marketStatus.analyticsGainDaily',
+  'gain.weekly': 'marketStatus.analyticsGainWeekly',
+  'gain.monthly': 'marketStatus.analyticsGainMonthly',
+  'gain.quarterly': 'marketStatus.analyticsGainQuarterly',
+  'gain.halfYearly': 'marketStatus.analyticsGainHalfYearly',
+  'gain.ytd': 'marketStatus.analyticsGainYtd',
+  'gain.yearly': 'marketStatus.analyticsGainYearly',
+  'gain.fiveYear': 'marketStatus.analyticsGain5y',
+  GAIN_5Y: 'marketStatus.analyticsGain5y',
+}
+
 const transactionTypeLabels: Record<string, MessageKey> = {
   DEPOSIT: 'label.transactionDeposit',
   WITHDRAWAL: 'label.transactionWithdrawal',
@@ -148,6 +175,18 @@ export function labelReadinessStatus(value: string) {
 
 export function labelMarketDataSnapshotType(value: string) {
   return labelFromMap(value, marketDataSnapshotTypeLabels)
+}
+
+export function labelMarketDataStatus(value: string) {
+  return labelFromMap(value, marketDataStatusLabels)
+}
+
+export function labelMarketAnalyticsStatus(value: string) {
+  return labelFromMap(value, marketAnalyticsStatusLabels)
+}
+
+export function labelMarketAnalyticsLimitation(value: string) {
+  return labelFromMap(value, marketAnalyticsLimitationLabels)
 }
 
 export function labelTransactionType(value: string) {

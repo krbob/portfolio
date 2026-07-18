@@ -87,6 +87,9 @@ export const settingsMessages = {
   'marketDataSnapshots.coverage': { pl: 'Zakres źródłowy', en: 'Source window' },
   'marketDataSnapshots.asOf': { pl: 'Stan na', en: 'As of' },
   'marketDataSnapshots.points': { pl: 'Punkty', en: 'Points' },
+  'marketDataSnapshots.priceStatus': { pl: 'Status ceny', en: 'Price status' },
+  'marketDataSnapshots.analyticsStatus': { pl: 'Status statystyk', en: 'Analytics status' },
+  'marketDataSnapshots.analyticsLimitations': { pl: 'Brakujące statystyki', en: 'Missing analytics' },
   'alertSettings.eyebrow': { pl: 'Alerty', en: 'Alerts' },
   'alertSettings.title': { pl: 'Konfiguracja alertów portfela', en: 'Portfolio alert settings' },
   'alertSettings.description': {

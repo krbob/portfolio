@@ -3,6 +3,12 @@ import type { MarketDataSnapshot } from '../api/read-model'
 type GeneratedProvenance = NonNullable<MarketDataSnapshot['provenance']>
 
 export type MarketProvenanceStatus = 'FRESH' | 'PARTIAL' | 'STALE' | 'ERROR' | 'UNKNOWN'
+export type MarketAnalyticsStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNKNOWN'
+
+export interface LimitedMarketAnalytics {
+  identity: string
+  limitations: string[]
+}
 
 export interface MarketDataProvenanceSummary {
   datasetCount: number
@@ -15,6 +21,7 @@ export interface MarketDataProvenanceSummary {
   unitScales: number[]
   adjustments: string[]
   status: MarketProvenanceStatus
+  limitedAnalytics: LimitedMarketAnalytics[]
   limitedAnalyticsCount: number
   refreshFailureCount: number
 }
@@ -34,7 +41,13 @@ export function summarizeMarketDataProvenance(
   const observations = provenance
     .map((item) => cleanInstant(item.marketTimestamp) ?? cleanDate(item.marketDate))
     .filter(isPresent)
-  const limitedAnalyticsCount = withProvenance.filter(hasLimitedQuoteAnalytics).length
+  const limitedAnalytics = withProvenance
+    .filter(hasLimitedQuoteAnalytics)
+    .map((snapshot) => ({
+      identity: snapshot.identity.replace(/^stock-quote:/, ''),
+      limitations: uniqueText(snapshot.provenance.analyticsLimitations ?? []),
+    }))
+    .sort((first, second) => first.identity.localeCompare(second.identity))
 
   return {
     datasetCount: withProvenance.length,
@@ -47,7 +60,8 @@ export function summarizeMarketDataProvenance(
     unitScales: [...new Set(provenance.map((item) => item.unitScale).filter(validUnitScale))].sort((a, b) => a - b),
     adjustments: uniqueText(provenance.map((item) => item.adjustment)),
     status: worstStatus(withProvenance.map(headlineProvenanceStatus)),
-    limitedAnalyticsCount,
+    limitedAnalytics,
+    limitedAnalyticsCount: limitedAnalytics.length,
     refreshFailureCount: withProvenance.filter((snapshot) => snapshot.status === 'FAILED').length,
   }
 }
@@ -71,14 +85,45 @@ function isLiveMarketSnapshot(snapshot: MarketDataSnapshot) {
  * the global bar.
  */
 function hasLimitedQuoteAnalytics(
-  snapshot: MarketDataSnapshot & { provenance: GeneratedProvenance },
+  snapshot: MarketDataSnapshot,
 ) {
-  return snapshot.identity.startsWith('stock-quote:') && normalizeStatus(snapshot.provenance.status) === 'PARTIAL'
+  const provenance = snapshot.provenance
+  if (!snapshot.identity.startsWith('stock-quote:') || !provenance) return false
+
+  const analyticsStatus = normalizeAnalyticsStatus(provenance.analyticsStatus)
+  if (analyticsStatus !== 'UNKNOWN') {
+    return analyticsStatus === 'PARTIAL' || analyticsStatus === 'UNAVAILABLE'
+  }
+
+  return normalizeStatus(provenance.status) === 'PARTIAL'
 }
 
 function headlineProvenanceStatus(
   snapshot: MarketDataSnapshot & { provenance: GeneratedProvenance },
 ): MarketProvenanceStatus {
+  if (snapshot.provenance.priceStatus) {
+    return normalizeStatus(snapshot.provenance.priceStatus)
+  }
+  return hasLimitedQuoteAnalytics(snapshot) ? 'FRESH' : normalizeStatus(snapshot.provenance.status)
+}
+
+export function marketAnalyticsStatus(snapshot: MarketDataSnapshot): MarketAnalyticsStatus | null {
+  if (!snapshot.identity.startsWith('stock-quote:') || !snapshot.provenance) return null
+
+  const explicitStatus = normalizeAnalyticsStatus(snapshot.provenance.analyticsStatus)
+  if (explicitStatus !== 'UNKNOWN') return explicitStatus
+
+  return normalizeStatus(snapshot.provenance.status) === 'PARTIAL' ? 'PARTIAL' : null
+}
+
+export function marketAnalyticsLimitations(snapshot: MarketDataSnapshot): string[] {
+  if (!snapshot.identity.startsWith('stock-quote:') || !snapshot.provenance) return []
+  return uniqueText(snapshot.provenance.analyticsLimitations ?? [])
+}
+
+export function marketPriceStatus(snapshot: MarketDataSnapshot): MarketProvenanceStatus | null {
+  if (!snapshot.identity.startsWith('stock-quote:') || !snapshot.provenance) return null
+  if (snapshot.provenance.priceStatus) return normalizeStatus(snapshot.provenance.priceStatus)
   return hasLimitedQuoteAnalytics(snapshot) ? 'FRESH' : normalizeStatus(snapshot.provenance.status)
 }
 
@@ -125,6 +170,13 @@ function worstStatus(values: string[]): MarketProvenanceStatus {
 function normalizeStatus(value: string): MarketProvenanceStatus {
   const normalized = value.trim().toUpperCase()
   return normalized === 'FRESH' || normalized === 'PARTIAL' || normalized === 'STALE' || normalized === 'ERROR'
+    ? normalized
+    : 'UNKNOWN'
+}
+
+function normalizeAnalyticsStatus(value: string | null | undefined): MarketAnalyticsStatus {
+  const normalized = value?.trim().toUpperCase()
+  return normalized === 'COMPLETE' || normalized === 'PARTIAL' || normalized === 'UNAVAILABLE'
     ? normalized
     : 'UNKNOWN'
 }

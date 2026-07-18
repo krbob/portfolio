@@ -1,7 +1,17 @@
 import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
 import { getActiveUiLanguage, type UiLanguage } from '../lib/i18n'
-import { labelMarketDataSnapshotType } from '../lib/labels'
+import {
+  labelMarketAnalyticsLimitation,
+  labelMarketAnalyticsStatus,
+  labelMarketDataSnapshotType,
+  labelMarketDataStatus,
+} from '../lib/labels'
+import {
+  marketAnalyticsLimitations,
+  marketAnalyticsStatus,
+  marketPriceStatus,
+} from '../lib/market-data-provenance'
 import { t } from '../lib/messages'
 import { badge, badgeVariants } from '../lib/styles'
 import { useMarketDataSnapshots } from '../hooks/use-read-model'
@@ -53,34 +63,60 @@ export function MarketDataSnapshotsSection() {
 
       {!snapshotsQuery.isLoading && !snapshotsQuery.isError && snapshots.length > 0 && (
         <div className="space-y-3">
-          {snapshots.map((snapshot) => (
-            <article key={`${snapshot.snapshotType}:${snapshot.identity}:${snapshot.cachedAt}`} className="rounded-lg border border-zinc-800/50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-zinc-100">{snapshot.identity}</h4>
-                  <p className="text-sm text-zinc-400">
-                    {t('marketDataSnapshots.cachedAt')} {formatDateTime(snapshot.cachedAt)}
-                  </p>
-                </div>
-                <span className={`${badge} ${badgeVariants.info}`}>{labelMarketDataSnapshotType(snapshot.snapshotType)}</span>
-              </div>
+          {snapshots.map((snapshot) => {
+            const priceStatus = marketPriceStatus(snapshot)
+            const analyticsStatus = marketAnalyticsStatus(snapshot)
+            const analyticsLimitations = marketAnalyticsLimitations(snapshot)
 
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-3">
-                <div>
-                  <dt className="text-zinc-400">{t('marketDataSnapshots.coverage')}</dt>
-                  <dd className="text-zinc-100">{formatCoverage(snapshot.sourceFrom, snapshot.sourceTo, language)}</dd>
+            return (
+              <article key={`${snapshot.snapshotType}:${snapshot.identity}:${snapshot.cachedAt}`} className="rounded-lg border border-zinc-800/50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-zinc-100">{snapshot.identity}</h4>
+                    <p className="text-sm text-zinc-400">
+                      {t('marketDataSnapshots.cachedAt')} {formatDateTime(snapshot.cachedAt)}
+                    </p>
+                  </div>
+                  <span className={`${badge} ${badgeVariants.info}`}>{labelMarketDataSnapshotType(snapshot.snapshotType)}</span>
                 </div>
-                <div>
-                  <dt className="text-zinc-400">{t('marketDataSnapshots.asOf')}</dt>
-                  <dd className="text-zinc-100">{snapshot.sourceAsOf ?? notApplicableLabel(language)}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-400">{t('marketDataSnapshots.points')}</dt>
-                  <dd className="text-zinc-100">{snapshot.pointCount ?? notApplicableLabel(language)}</dd>
-                </div>
-              </dl>
-            </article>
-          ))}
+
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-3">
+                  <div>
+                    <dt className="text-zinc-400">{t('marketDataSnapshots.coverage')}</dt>
+                    <dd className="text-zinc-100">{formatCoverage(snapshot.sourceFrom, snapshot.sourceTo, language)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-400">{t('marketDataSnapshots.asOf')}</dt>
+                    <dd className="text-zinc-100">{snapshot.sourceAsOf ?? notApplicableLabel(language)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-400">{t('marketDataSnapshots.points')}</dt>
+                    <dd className="text-zinc-100">{snapshot.pointCount ?? notApplicableLabel(language)}</dd>
+                  </div>
+                  {priceStatus ? (
+                    <div>
+                      <dt className="text-zinc-400">{t('marketDataSnapshots.priceStatus')}</dt>
+                      <dd className="text-zinc-100">{labelMarketDataStatus(priceStatus)}</dd>
+                    </div>
+                  ) : null}
+                  {analyticsStatus ? (
+                    <div>
+                      <dt className="text-zinc-400">{t('marketDataSnapshots.analyticsStatus')}</dt>
+                      <dd className="text-zinc-100">{labelMarketAnalyticsStatus(analyticsStatus)}</dd>
+                    </div>
+                  ) : null}
+                  {analyticsLimitations.length > 0 ? (
+                    <div>
+                      <dt className="text-zinc-400">{t('marketDataSnapshots.analyticsLimitations')}</dt>
+                      <dd className="text-zinc-100">
+                        {analyticsLimitations.map(labelMarketAnalyticsLimitation).join(', ')}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </article>
+            )
+          })}
         </div>
       )}
     </Card>

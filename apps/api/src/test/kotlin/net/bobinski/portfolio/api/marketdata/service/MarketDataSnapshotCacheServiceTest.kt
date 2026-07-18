@@ -29,6 +29,36 @@ import org.junit.jupiter.api.Test
 class MarketDataSnapshotCacheServiceTest {
 
     @Test
+    fun `quote quality survives snapshot persistence and a later failed refresh`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        snapshotCache.putQuote(
+            identity = "stock-quote:VWRA.L",
+            valuation = InstrumentValuation(
+                pricePerUnitPln = BigDecimal("512.34"),
+                valuedAt = LocalDate.parse("2026-03-20")
+            ),
+            provenance = stockProvenance().copy(
+                status = "PARTIAL",
+                priceStatus = "FRESH",
+                analyticsStatus = "PARTIAL",
+                analyticsLimitations = listOf("gain.fiveYear")
+            )
+        )
+        snapshotCache.recordQuoteFailure(
+            identity = "stock-quote:VWRA.L",
+            reason = "Rate limit exceeded."
+        )
+
+        val stored = snapshotCache.listSnapshots().single().provenance
+
+        assertNotNull(stored)
+        assertEquals("PARTIAL", stored?.status)
+        assertEquals("FRESH", stored?.priceStatus)
+        assertEquals("PARTIAL", stored?.analyticsStatus)
+        assertEquals(listOf("gain.fiveYear"), stored?.analyticsLimitations)
+    }
+
+    @Test
     fun `stock provenance survives snapshot persistence and a later failed refresh`() = runBlocking {
         val snapshotCache = snapshotCache()
         val provenance = stockProvenance()

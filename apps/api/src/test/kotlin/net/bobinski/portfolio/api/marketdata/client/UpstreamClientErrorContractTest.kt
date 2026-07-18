@@ -114,6 +114,54 @@ class UpstreamClientErrorContractTest {
     }
 
     @Test
+    fun `stock client preserves additive quote price and analytics quality`() {
+        val server = errorServer("/v1/quote/VWRA.L") { exchange ->
+            exchange.respond(
+                status = 200,
+                body = """
+                    {
+                      "symbol": "VWRA.L",
+                      "currency": "PLN",
+                      "date": "2026-03-20",
+                      "lastPrice": 512.34,
+                      "provenance": {
+                        "source": "YAHOO_FINANCE",
+                        "retrievedAt": "2026-03-20T20:01:02Z",
+                        "marketDate": "2026-03-20",
+                        "currency": "PLN",
+                        "unitScale": 1.0,
+                        "adjustment": "SPLIT_ADJUSTED",
+                        "coverageFrom": "2021-03-22",
+                        "coverageTo": "2026-03-20",
+                        "status": "PARTIAL",
+                        "priceStatus": "FRESH",
+                        "analyticsStatus": "PARTIAL",
+                        "analyticsLimitations": ["gain.fiveYear"]
+                      }
+                    }
+                """.trimIndent()
+            )
+        }
+
+        try {
+            val client = StockAnalystClient(
+                httpClient = HttpClient.newHttpClient(),
+                json = AppJsonFactory.create(),
+                baseUrl = server.baseUrl()
+            )
+
+            val result = runBlocking { client.quoteInPln("VWRA.L") }
+
+            assertEquals("PARTIAL", result.provenance.status)
+            assertEquals("FRESH", result.provenance.priceStatus)
+            assertEquals("PARTIAL", result.provenance.analyticsStatus)
+            assertEquals(listOf("gain.fiveYear"), result.provenance.analyticsLimitations)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
     fun `stock client preserves the common error envelope and never retries an HTTP response`() {
         val requests = AtomicInteger()
         val server = errorServer("/v1/quote/AAPL") { exchange ->

@@ -48,7 +48,10 @@ public final class UpstreamContractGenerator {
                     "adjustment",
                     "coverageFrom",
                     "coverageTo",
-                    "status"
+                    "status",
+                    "priceStatus",
+                    "analyticsStatus",
+                    "analyticsLimitations"
                 ),
                 projection("ApiError", "error", "errorCode", "retryable", "requestId")
             ),

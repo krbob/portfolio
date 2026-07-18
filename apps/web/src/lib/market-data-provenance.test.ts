@@ -37,6 +37,7 @@ describe('market data provenance', () => {
       unitScales: [1],
       adjustments: ['RAW', 'SPLIT_ADJUSTED'],
       status: 'PARTIAL',
+      limitedAnalytics: [],
       limitedAnalyticsCount: 0,
       refreshFailureCount: 1,
     })
@@ -86,8 +87,56 @@ describe('market data provenance', () => {
     ])
 
     expect(summary?.status).toBe('FRESH')
+    expect(summary?.limitedAnalytics).toEqual([{ identity: 'VWRA.L', limitations: [] }])
     expect(summary?.limitedAnalyticsCount).toBe(1)
     expect(summary?.datasetCount).toBe(2)
+  })
+
+  it('uses explicit price and analytics statuses when the additive quote quality contract is present', () => {
+    const quote = snapshot({
+      status: 'PARTIAL',
+      priceStatus: 'FRESH',
+      analyticsStatus: 'PARTIAL',
+      analyticsLimitations: ['gain.fiveYear'],
+    })
+    quote.identity = 'stock-quote:VWRA.L'
+
+    const summary = summarizeMarketDataProvenance([quote])
+
+    expect(summary?.status).toBe('FRESH')
+    expect(summary?.limitedAnalytics).toEqual([
+      { identity: 'VWRA.L', limitations: ['gain.fiveYear'] },
+    ])
+  })
+
+  it('does not carry a legacy partial status into analytics when the explicit status is complete', () => {
+    const quote = snapshot({
+      status: 'PARTIAL',
+      priceStatus: 'FRESH',
+      analyticsStatus: 'COMPLETE',
+      analyticsLimitations: [],
+    })
+    quote.identity = 'stock-quote:VWRA.L'
+
+    const summary = summarizeMarketDataProvenance([quote])
+
+    expect(summary?.status).toBe('FRESH')
+    expect(summary?.limitedAnalyticsCount).toBe(0)
+  })
+
+  it('never hides an explicit stale price behind an analytics-only status', () => {
+    const quote = snapshot({
+      status: 'PARTIAL',
+      priceStatus: 'STALE',
+      analyticsStatus: 'PARTIAL',
+      analyticsLimitations: ['gain.fiveYear'],
+    })
+    quote.identity = 'stock-quote:VWRA.L'
+
+    const summary = summarizeMarketDataProvenance([quote])
+
+    expect(summary?.status).toBe('STALE')
+    expect(summary?.limitedAnalyticsCount).toBe(1)
   })
 
   it.each(['stock-history:VWRA.L', 'reference:VWRA.L:PLN'])(

@@ -265,7 +265,10 @@ data class MarketDataProvenanceResponse(
     val adjustment: String,
     val coverageFrom: String? = null,
     val coverageTo: String? = null,
-    val status: String
+    val status: String,
+    val priceStatus: String? = null,
+    val analyticsStatus: String? = null,
+    val analyticsLimitations: List<String> = emptyList()
 )
 
 @Serializable
@@ -372,7 +375,10 @@ internal fun MarketDataSnapshotSummary.toResponse(): MarketDataSnapshotResponse 
             adjustment = upstream.adjustment,
             coverageFrom = upstream.coverageFrom,
             coverageTo = upstream.coverageTo,
-            status = upstream.status
+            status = upstream.status,
+            priceStatus = upstream.priceStatus,
+            analyticsStatus = upstream.analyticsStatus,
+            analyticsLimitations = upstream.analyticsLimitations
         )
     },
     status = status.name,

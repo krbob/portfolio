@@ -166,7 +166,10 @@ class StockAnalystClient(
         adjustment = adjustment,
         coverageFrom = coverageFrom?.let(LocalDate::parse),
         coverageTo = coverageTo?.let(LocalDate::parse),
-        status = status
+        status = status,
+        priceStatus = priceStatus,
+        analyticsStatus = analyticsStatus,
+        analyticsLimitations = analyticsLimitations.orEmpty()
     )
 
     private companion object {
@@ -278,5 +281,8 @@ data class StockAnalystDataProvenance(
     val adjustment: String,
     val coverageFrom: LocalDate?,
     val coverageTo: LocalDate?,
-    val status: String
+    val status: String,
+    val priceStatus: String? = null,
+    val analyticsStatus: String? = null,
+    val analyticsLimitations: List<String> = emptyList()
 )

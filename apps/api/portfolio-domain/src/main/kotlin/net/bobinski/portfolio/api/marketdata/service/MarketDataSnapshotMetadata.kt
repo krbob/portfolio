@@ -31,5 +31,8 @@ data class MarketDataProvenanceMetadata(
     val adjustment: String,
     val coverageFrom: String? = null,
     val coverageTo: String? = null,
-    val status: String
+    val status: String,
+    val priceStatus: String? = null,
+    val analyticsStatus: String? = null,
+    val analyticsLimitations: List<String> = emptyList()
 )

@@ -645,7 +645,10 @@ private fun StockAnalystDataProvenance.toMetadata() = MarketDataProvenanceMetada
     adjustment = adjustment,
     coverageFrom = coverageFrom?.toString(),
     coverageTo = coverageTo?.toString(),
-    status = status
+    status = status,
+    priceStatus = priceStatus,
+    analyticsStatus = analyticsStatus,
+    analyticsLimitations = analyticsLimitations
 )
 
 enum class MarketDataSnapshotStatus {

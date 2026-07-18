@@ -1617,6 +1617,9 @@ export interface components {
             coverageFrom?: string | null;
             coverageTo?: string | null;
             status: string;
+            priceStatus?: string | null;
+            analyticsStatus?: string | null;
+            analyticsLimitations?: string[];
         };
         /** MarketDataSnapshotResponse */
         MarketDataSnapshotResponse: {

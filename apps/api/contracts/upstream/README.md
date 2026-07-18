@@ -4,7 +4,7 @@ Portfolio vendors immutable API snapshots because its build and CI must work in 
 
 | Upstream | Source revision | Snapshot |
 | --- | --- | --- |
-| `stock-analyst` | `6a290a6` | `stock-analyst-v1.json` |
+| `stock-analyst` | `4172a83` | `stock-analyst-v1.json` |
 | `edo-calculator` | `20b098e` | `edo-calculator-v1.yaml` |
 
 `upstream-contracts.properties` pins the SHA-256 of each source file. `./gradlew checkUpstreamContracts`

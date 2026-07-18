@@ -143,6 +143,6 @@ export function fetchReadModelCacheSnapshots() {
   return requestJson<ReadModelCacheSnapshot[]>('/api/v1/portfolio/read-model-cache')
 }
 
-export function fetchMarketDataSnapshots() {
-  return requestJson<MarketDataSnapshot[]>('/api/v1/portfolio/market-data-snapshots')
+export function fetchMarketDataSnapshots(signal?: AbortSignal) {
+  return requestJson<MarketDataSnapshot[]>('/api/v1/portfolio/market-data-snapshots', { signal })
 }

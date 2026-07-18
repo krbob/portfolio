@@ -58,7 +58,10 @@ class UpstreamOpenApiConsumerContractTest {
                 "adjustment",
                 "coverageFrom",
                 "coverageTo",
-                "status"
+                "status",
+                "priceStatus",
+                "analyticsStatus",
+                "analyticsLimitations"
             ),
             StockAnalystDataProvenancePayload.serializer().descriptor.elementNames()
         )
@@ -96,7 +99,10 @@ class UpstreamOpenApiConsumerContractTest {
                 "adjustment",
                 "coverageFrom",
                 "coverageTo",
-                "status"
+                "status",
+                "priceStatus",
+                "analyticsStatus",
+                "analyticsLimitations"
             ),
             stockAnalyst.schemaProperties("DataProvenance")
         )
