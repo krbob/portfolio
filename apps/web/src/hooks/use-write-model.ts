@@ -19,9 +19,13 @@ import {
   getPortfolioRebalancingSettings,
   listInstruments,
   listPortfolioBackups,
+  listPortfolioTargetSchedule,
+  getPortfolioWithdrawalSettings,
+  previewPortfolioWithdrawalPlan,
   savePortfolioAlertSettings,
   savePortfolioBenchmarkSettings,
   savePortfolioRebalancingSettings,
+  savePortfolioWithdrawalSettings,
   listPortfolioTargets,
   listTransactionImportProfiles,
   listTransactions,
@@ -29,6 +33,7 @@ import {
   previewTransactionsImport,
   previewPortfolioStateImport,
   replacePortfolioTargets,
+  replacePortfolioTargetSchedule,
   restorePortfolioBackup,
   runReadModelRefresh,
   runPortfolioBackup,
@@ -46,13 +51,19 @@ import {
   type PortfolioBackupRecord,
   type PortfolioRebalancingSettings,
   type PortfolioTarget,
+  type PortfolioTargetSchedulePhase,
+  type PortfolioWithdrawalPlan,
+  type PortfolioWithdrawalPlanPayload,
+  type PortfolioWithdrawalSettings,
   type ReadModelCacheInvalidationResult,
   type SaveTransactionImportProfilePayload,
   type SavePortfolioAlertSettingsPayload,
   type SavePortfolioBenchmarkSettingsPayload,
   type SavePortfolioRebalancingSettingsPayload,
+  type SavePortfolioWithdrawalSettingsPayload,
   type PreviewPortfolioStateImportResult,
   type ReplacePortfolioTargetsPayload,
+  type ReplacePortfolioTargetSchedulePayload,
   type PortfolioStateSnapshot,
   type ReadModelRefreshRunResult,
   type RestorePortfolioBackupPayload,
@@ -276,6 +287,27 @@ export function usePortfolioTargets() {
   })
 }
 
+export function usePortfolioTargetSchedule() {
+  return useQuery({
+    queryKey: ['portfolio-target-schedule'],
+    queryFn: listPortfolioTargetSchedule,
+  })
+}
+
+export function usePortfolioWithdrawalSettings() {
+  return useQuery({
+    queryKey: ['portfolio-withdrawal-settings'],
+    queryFn: getPortfolioWithdrawalSettings,
+  })
+}
+
+export function usePreviewPortfolioWithdrawalPlan() {
+  return useMutation({
+    mutationFn: (payload: PortfolioWithdrawalPlanPayload): Promise<PortfolioWithdrawalPlan> =>
+      previewPortfolioWithdrawalPlan(payload),
+  })
+}
+
 export function useSavePortfolioBenchmarkSettings() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -316,10 +348,35 @@ export function useReplacePortfolioTargets() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['portfolio-targets'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-target-schedule'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation-contribution-plan'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
+  })
+}
+
+export function useReplacePortfolioTargetSchedule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      payload: ReplacePortfolioTargetSchedulePayload,
+    ): Promise<PortfolioTargetSchedulePhase[]> => replacePortfolioTargetSchedule(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-target-schedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-targets'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-allocation-contribution-plan'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
   })
@@ -335,6 +392,21 @@ export function useSavePortfolioRebalancingSettings() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['portfolio-rebalancing-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+      ])
+    },
+  })
+}
+
+export function useSavePortfolioWithdrawalSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      payload: SavePortfolioWithdrawalSettingsPayload,
+    ): Promise<PortfolioWithdrawalSettings> => savePortfolioWithdrawalSettings(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolio-withdrawal-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
       ])
     },
@@ -461,6 +533,11 @@ async function invalidateTransactionRelatedQueries(queryClient: ReturnType<typeo
     queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-allocation-contribution-plan'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-targets'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-target-schedule'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-withdrawal-settings'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-alert-settings'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),

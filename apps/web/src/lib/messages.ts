@@ -5,6 +5,7 @@ import { settingsMessages } from './messages/settings'
 import { supportMessages } from './messages/support'
 import { transactionMessages } from './messages/transactions'
 import type { MessageCatalog, MessageEntry } from './messages/types'
+import { withdrawalMessages } from './messages/withdrawals'
 
 const messages = {
   ...appMessages,
@@ -12,6 +13,7 @@ const messages = {
   ...settingsMessages,
   ...transactionMessages,
   ...supportMessages,
+  ...withdrawalMessages,
 } satisfies MessageCatalog
 
 export type MessageKey = keyof typeof messages

@@ -380,6 +380,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/allocation/withdrawal-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a portfolio withdrawal
+         * @description Returns a read-only withdrawal plan using the configured account priority and manual tax buffers. It does not create transactions.
+         */
+        post: operations["previewPortfolioWithdrawal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/alerts": {
         parameters: {
             query?: never;
@@ -468,6 +488,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/portfolio/target-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List target allocation schedule
+         * @description Returns effective-dated target allocation phases.
+         */
+        get: operations["listPortfolioTargetSchedule"];
+        put?: never;
+        /**
+         * Replace target allocation schedule
+         * @description Replaces all effective-dated target allocation phases. An empty list clears the schedule.
+         */
+        post: operations["replacePortfolioTargetSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portfolio/benchmark-settings": {
         parameters: {
             query?: never;
@@ -510,6 +554,30 @@ export interface paths {
          * @description Saves the portfolio tolerance band and rebalancing mode configuration.
          */
         post: operations["savePortfolioRebalancingSettings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portfolio/withdrawal-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get withdrawal planning settings
+         * @description Returns ordered account rules, tax-wrapper labels and user-supplied tax buffer estimates.
+         */
+        get: operations["getPortfolioWithdrawalSettings"];
+        put?: never;
+        /**
+         * Save withdrawal planning settings
+         * @description Saves account priority, participation, tax-wrapper labels and manual tax buffer estimates.
+         */
+        post: operations["savePortfolioWithdrawalSettings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1487,6 +1555,60 @@ export interface components {
             projected: components["schemas"]["PortfolioAllocationResponse"];
             buckets: components["schemas"]["PortfolioContributionPlanBucketResponse"][];
         };
+        /** PortfolioWithdrawalPlanRequest */
+        PortfolioWithdrawalPlanRequest: {
+            amountPln?: string | null;
+            portfolioPercentagePct?: string | null;
+        };
+        /** PortfolioWithdrawalAccountSaleResponse */
+        PortfolioWithdrawalAccountSaleResponse: {
+            assetClass: string;
+            amountPln: string;
+        };
+        /** PortfolioWithdrawalAccountPlanResponse */
+        PortfolioWithdrawalAccountPlanResponse: {
+            accountId: string;
+            accountName: string;
+            /** @enum {string} */
+            taxWrapper: "STANDARD" | "OKI" | "IKE" | "IKZE" | "NONE" | "CUSTOM";
+            taxBufferRatePct: string;
+            currentValuePln: string;
+            availableCashPln: string;
+            cashUsedPln: string;
+            grossSalesPln: string;
+            estimatedTaxBufferPln: string;
+            withdrawalPln: string;
+            projectedValuePln: string;
+            sales: components["schemas"]["PortfolioWithdrawalAccountSaleResponse"][];
+        };
+        /** PortfolioWithdrawalPlanBucketResponse */
+        PortfolioWithdrawalPlanBucketResponse: {
+            assetClass: string;
+            currentValuePln: string;
+            plannedSalePln: string;
+            projectedValuePln: string;
+            projectedWeightPct?: string | null;
+            targetWeightPct?: string | null;
+            projectedDriftPctPoints?: string | null;
+        };
+        /** PortfolioWithdrawalPlanResponse */
+        PortfolioWithdrawalPlanResponse: {
+            asOf: string;
+            valuationState: string;
+            requestedAmountPln?: string | null;
+            requestedPortfolioPercentagePct?: string | null;
+            requestedWithdrawalPln: string;
+            plannedWithdrawalPln: string;
+            feasible: boolean;
+            shortfallPln: string;
+            cashUsedPln: string;
+            grossSalesPln: string;
+            estimatedTaxBufferPln: string;
+            projectedTotalValuePln: string;
+            accountPlans: components["schemas"]["PortfolioWithdrawalAccountPlanResponse"][];
+            buckets: components["schemas"]["PortfolioWithdrawalPlanBucketResponse"][];
+            warnings: string[];
+        };
         /** PortfolioAlertResponse */
         PortfolioAlertResponse: {
             id: string;
@@ -1544,6 +1666,24 @@ export interface components {
         ReplacePortfolioTargetsRequest: {
             items: components["schemas"]["PortfolioTargetRequestItem"][];
         };
+        /** PortfolioTargetPhaseResponse */
+        PortfolioTargetPhaseResponse: {
+            id: string;
+            effectiveFrom: string;
+            items: components["schemas"]["PortfolioTargetResponse"][];
+            createdAt: string;
+            updatedAt: string;
+        };
+        /** ReplacePortfolioTargetPhaseRequest */
+        ReplacePortfolioTargetPhaseRequest: {
+            id?: string | null;
+            effectiveFrom: string;
+            items: components["schemas"]["PortfolioTargetRequestItem"][];
+        };
+        /** ReplacePortfolioTargetScheduleRequest */
+        ReplacePortfolioTargetScheduleRequest: {
+            phases: components["schemas"]["ReplacePortfolioTargetPhaseRequest"][];
+        };
         /** CustomBenchmarkResponse */
         CustomBenchmarkResponse: {
             key: string;
@@ -1588,6 +1728,30 @@ export interface components {
         SavePortfolioRebalancingSettingsRequest: {
             toleranceBandPctPoints: string;
             mode: string;
+        };
+        /** PortfolioWithdrawalAccountRuleResponse */
+        PortfolioWithdrawalAccountRuleResponse: {
+            accountId: string;
+            enabled: boolean;
+            /** @enum {string} */
+            taxWrapper: "STANDARD" | "OKI" | "IKE" | "IKZE" | "NONE" | "CUSTOM";
+            taxBufferRatePct: string;
+        };
+        /** PortfolioWithdrawalSettingsResponse */
+        PortfolioWithdrawalSettingsResponse: {
+            accountRules: components["schemas"]["PortfolioWithdrawalAccountRuleResponse"][];
+        };
+        /** SavePortfolioWithdrawalAccountRuleRequest */
+        SavePortfolioWithdrawalAccountRuleRequest: {
+            accountId: string;
+            enabled: boolean;
+            /** @enum {string} */
+            taxWrapper: "STANDARD" | "OKI" | "IKE" | "IKZE" | "NONE" | "CUSTOM";
+            taxBufferRatePct: string;
+        };
+        /** SavePortfolioWithdrawalSettingsRequest */
+        SavePortfolioWithdrawalSettingsRequest: {
+            accountRules: components["schemas"]["SavePortfolioWithdrawalAccountRuleRequest"][];
         };
         /** ReadModelCacheSnapshotResponse */
         ReadModelCacheSnapshotResponse: {
@@ -1768,6 +1932,14 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
+        /** PortfolioTargetPhaseSnapshotResponse */
+        PortfolioTargetPhaseSnapshotResponse: {
+            id: string;
+            effectiveFrom: string;
+            targets: components["schemas"]["PortfolioTargetSnapshotResponse"][];
+            createdAt: string;
+            updatedAt: string;
+        };
         /** TransactionImportHeaderMappingsResponse */
         TransactionImportHeaderMappingsResponse: {
             account?: string | null;
@@ -1830,6 +2002,7 @@ export interface components {
             appPreferences?: components["schemas"]["AppPreferenceSnapshotResponse"][];
             instruments: components["schemas"]["InstrumentSnapshotResponse"][];
             targets?: components["schemas"]["PortfolioTargetSnapshotResponse"][] | null;
+            targetSchedule?: components["schemas"]["PortfolioTargetPhaseSnapshotResponse"][] | null;
             importProfiles?: components["schemas"]["TransactionImportProfileSnapshotResponse"][];
             transactions: components["schemas"]["TransactionSnapshotResponse"][];
         };
@@ -2524,6 +2697,29 @@ export interface operations {
             };
         };
     };
+    previewPortfolioWithdrawal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PortfolioWithdrawalPlanRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioWithdrawalPlanResponse"];
+                };
+            };
+        };
+    };
     listPortfolioAlerts: {
         parameters: {
             query?: never;
@@ -2646,6 +2842,48 @@ export interface operations {
             };
         };
     };
+    listPortfolioTargetSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioTargetPhaseResponse"][];
+                };
+            };
+        };
+    };
+    replacePortfolioTargetSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReplacePortfolioTargetScheduleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioTargetPhaseResponse"][];
+                };
+            };
+        };
+    };
     getPortfolioBenchmarkSettings: {
         parameters: {
             query?: never;
@@ -2726,6 +2964,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioRebalancingSettingsResponse"];
+                };
+            };
+        };
+    };
+    getPortfolioWithdrawalSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioWithdrawalSettingsResponse"];
+                };
+            };
+        };
+    };
+    savePortfolioWithdrawalSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SavePortfolioWithdrawalSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioWithdrawalSettingsResponse"];
                 };
             };
         };

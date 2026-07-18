@@ -80,6 +80,12 @@ export function formatAuditEventMessage(event: AuditEventLike, language: UiLangu
         ? `Zapisano nową alokację docelową: ${summarizeMix(newMix)}.`
         : 'Zapisano nową alokację docelową.'
     }
+    case 'PORTFOLIO_TARGET_SCHEDULE_REPLACED': {
+      const phaseCount = event.metadata.newPhaseCount
+      return phaseCount
+        ? `Zapisano harmonogram alokacji docelowej (${phaseCount} faz).`
+        : 'Zapisano harmonogram alokacji docelowej.'
+    }
     case 'READ_MODEL_CACHE_INVALIDATED':
       return 'Wyczyszczono pamięć modeli odczytowych.'
     case 'READ_MODEL_REFRESH_COMPLETED':
@@ -88,6 +94,8 @@ export function formatAuditEventMessage(event: AuditEventLike, language: UiLangu
       return 'Nie udało się odświeżyć modeli odczytowych.'
     case 'REBALANCING_SETTINGS_UPDATED':
       return 'Zapisano zasady rebalansowania.'
+    case 'WITHDRAWAL_PLANNING_SETTINGS_UPDATED':
+      return 'Zapisano ustawienia planowania wypłat.'
     case 'TRANSACTION_BATCH_IMPORTED': {
       const createdCount = event.metadata.createdCount
       const source = formatAuditSource(event.metadata)
@@ -198,6 +206,9 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, lang
     appPreferenceCount: tFor('auditCopy.metaAppPreferenceCount', lang),
     instrumentCount: tFor('auditCopy.metaInstrumentCount', lang),
     targetCount: tFor('auditCopy.metaTargetCount', lang),
+    previousPhaseCount: tFor('auditCopy.metaPreviousPhaseCount', lang),
+    newPhaseCount: tFor('auditCopy.metaNewPhaseCount', lang),
+    effectiveDates: tFor('auditCopy.metaEffectiveDates', lang),
     previousMix: tFor('auditCopy.metaPreviousMix', lang),
     newMix: tFor('auditCopy.metaNewMix', lang),
     targetSum: tFor('auditCopy.metaTargetSum', lang),
@@ -368,6 +379,9 @@ function metadataSortOrder(key: string) {
     'newMix',
     'targetSum',
     'assetClasses',
+    'previousPhaseCount',
+    'newPhaseCount',
+    'effectiveDates',
     'reason',
     'failureMessage',
   ]

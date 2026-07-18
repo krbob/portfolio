@@ -1613,7 +1613,7 @@ describe('App', () => {
         )
       }
 
-      if (url.includes('/api/v1/portfolio/targets')) {
+      if (url.includes('/api/v1/portfolio/target-schedule')) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
 
@@ -1683,10 +1683,10 @@ describe('App', () => {
     )
 
     expect(await screen.findByRole('heading', { name: /portfolio strategy|strategia portfela/i })).toBeInTheDocument()
-    expect((await screen.findAllByRole('heading', { name: /target allocation|alokacja docelowa/i, level: 3 })).length).toBeGreaterThan(0)
-    expect(await screen.findByText(/edited mix|edytowany podział/i)).toBeInTheDocument()
+    expect((await screen.findAllByRole('heading', { name: /allocation schedule|harmonogram alokacji/i, level: 3 })).length).toBeGreaterThan(0)
+    expect(await screen.findByText(/no allocation schedule|brak zaplanowanej alokacji/i)).toBeInTheDocument()
     expect(
-      await screen.findByText(/no targets are saved yet|brak zapisanej alokacji docelowej/i),
+      await screen.findByText(/add the first phase|dodaj pierwszą fazę/i),
     ).toBeInTheDocument()
   })
 

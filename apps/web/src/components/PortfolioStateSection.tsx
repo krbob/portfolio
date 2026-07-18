@@ -39,12 +39,16 @@ export function PortfolioStateSection() {
     try {
       const snapshot = await exportMutation.mutateAsync()
       downloadSnapshot(snapshot)
+      const scheduledTargetCount = snapshot.targetSchedule?.reduce(
+        (count, phase) => count + phase.targets.length,
+        0,
+      )
       setImportFeedback(
         formatMessage(t('state.exportSummary'), {
           accounts: snapshot.accounts.length,
           appPreferences: snapshot.appPreferences?.length ?? 0,
           instruments: snapshot.instruments.length,
-          targets: snapshot.targets?.length ?? 0,
+          targets: scheduledTargetCount ?? snapshot.targets?.length ?? 0,
           transactions: snapshot.transactions.length,
           importProfiles: snapshot.importProfiles?.length ?? 0,
         }),

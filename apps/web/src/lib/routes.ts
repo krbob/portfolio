@@ -13,6 +13,7 @@ export const appRoutes = {
     instruments: '/strategy/instruments',
     targets: '/strategy/targets',
     benchmarks: '/strategy/benchmarks',
+    withdrawals: '/strategy/withdrawals',
   },
   data: {
     base: '/data',

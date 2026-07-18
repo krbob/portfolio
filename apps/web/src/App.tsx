@@ -71,6 +71,7 @@ export function App() {
               <Route path={appRoutes.strategy.instruments} element={<StrategyScreen />} />
               <Route path={appRoutes.strategy.targets} element={<StrategyScreen />} />
               <Route path={appRoutes.strategy.benchmarks} element={<StrategyScreen />} />
+              <Route path={appRoutes.strategy.withdrawals} element={<StrategyScreen />} />
               <Route path={appRoutes.data.base} element={<Navigate to={appRoutes.data.import} replace />} />
               <Route path={appRoutes.data.import} element={<DataScreen />} />
               <Route path={appRoutes.data.transfer} element={<DataScreen />} />

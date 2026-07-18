@@ -87,6 +87,39 @@ export type PortfolioTarget =
 export type ReplacePortfolioTargetsPayload =
   components['schemas']['ReplacePortfolioTargetsRequest']
 
+export type PortfolioTargetSchedulePhase =
+  components['schemas']['PortfolioTargetPhaseResponse']
+
+export type ReplacePortfolioTargetSchedulePayload =
+  components['schemas']['ReplacePortfolioTargetScheduleRequest']
+
+export type WithdrawalTaxWrapper =
+  components['schemas']['PortfolioWithdrawalAccountRuleResponse']['taxWrapper']
+
+export type PortfolioWithdrawalAccountRule =
+  components['schemas']['PortfolioWithdrawalAccountRuleResponse']
+
+export type PortfolioWithdrawalSettings =
+  components['schemas']['PortfolioWithdrawalSettingsResponse']
+
+export type SavePortfolioWithdrawalSettingsPayload =
+  components['schemas']['SavePortfolioWithdrawalSettingsRequest']
+
+export type PortfolioWithdrawalPlanPayload =
+  components['schemas']['PortfolioWithdrawalPlanRequest']
+
+export type PortfolioWithdrawalPlanSale =
+  components['schemas']['PortfolioWithdrawalAccountSaleResponse']
+
+export type PortfolioWithdrawalAccountPlan =
+  components['schemas']['PortfolioWithdrawalAccountPlanResponse']
+
+export type PortfolioWithdrawalPlanBucket =
+  components['schemas']['PortfolioWithdrawalPlanBucketResponse']
+
+export type PortfolioWithdrawalPlan =
+  components['schemas']['PortfolioWithdrawalPlanResponse']
+
 export type PortfolioBenchmarkSettings =
   components['schemas']['PortfolioBenchmarkSettingsResponse']
 
@@ -249,6 +282,35 @@ export function listPortfolioTargets() {
 
 export function replacePortfolioTargets(payload: ReplacePortfolioTargetsPayload) {
   return requestJson<PortfolioTarget[]>('/api/v1/portfolio/targets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listPortfolioTargetSchedule() {
+  return requestJson<PortfolioTargetSchedulePhase[]>('/api/v1/portfolio/target-schedule')
+}
+
+export function replacePortfolioTargetSchedule(payload: ReplacePortfolioTargetSchedulePayload) {
+  return requestJson<PortfolioTargetSchedulePhase[]>('/api/v1/portfolio/target-schedule', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getPortfolioWithdrawalSettings() {
+  return requestJson<PortfolioWithdrawalSettings>('/api/v1/portfolio/withdrawal-settings')
+}
+
+export function savePortfolioWithdrawalSettings(payload: SavePortfolioWithdrawalSettingsPayload) {
+  return requestJson<PortfolioWithdrawalSettings>('/api/v1/portfolio/withdrawal-settings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function previewPortfolioWithdrawalPlan(payload: PortfolioWithdrawalPlanPayload) {
+  return requestJson<PortfolioWithdrawalPlan>('/api/v1/portfolio/allocation/withdrawal-plan', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
