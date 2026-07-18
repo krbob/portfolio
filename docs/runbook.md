@@ -104,12 +104,14 @@ For any non-trivial state change:
 2. Run preview first.
 3. Read blocking issues and warnings, not only the summary badge.
 4. For `REPLACE`, confirm that the safety backup was created.
-5. After import, verify overview, holdings, transactions, targets and import profiles.
+5. After import, verify overview, holdings, transactions, the target schedule and import profiles.
 
 Important semantics:
 
-- in `MERGE`, omitted `targets` preserve current targets;
-- present `targets` replace the target allocation as one set;
+- in schema-version 5 `MERGE`, omitted `targetSchedule` preserves the schedule and a present
+  section replaces the complete schedule;
+- legacy schema-version 4 `targets` remain importable; a non-empty section updates the allocation
+  effective on the import date, while an explicitly empty section clears the schedule;
 - omitted `importProfiles` preserve current profiles;
 - present `importProfiles` merge by id and final names must remain unique;
 - market-data snapshots and active alert-dispatch state are excluded from transfer JSON and survive

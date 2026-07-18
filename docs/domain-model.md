@@ -43,13 +43,16 @@ produce a negative instrument quantity for any account and instrument pair. This
 resulting journal for individual writes, batch imports, and state imports, including backdated edits and deletion of
 earlier purchases.
 
-### Portfolio target
+### Portfolio target schedule
 
-Represents the desired strategic allocation.
+Represents the desired strategic allocation as explicit effective-dated phases.
 
 - supported asset classes are currently `EQUITIES`, `BONDS`, and `CASH`
-- the target set is validated as one allocation, not as unrelated rows
-- changes are auditable and surfaced in the UI as target history
+- every phase has a unique `effectiveFrom` date and one allocation whose weights sum to 100%
+- the target for a calculation date is the latest phase whose effective date is not later than that date
+- dates, intervals and direction of changes are user-defined; the 80/20 to 60/40 generator is only an editable shortcut
+- future phases do not change historical allocation calculations or the policy benchmark
+- schedule replacement and changes to historical phases are auditable
 
 ### App preference
 
@@ -58,6 +61,7 @@ Represents small persisted configuration payloads such as:
 - benchmark settings
 - rebalancing settings
 - alert settings
+- ordered withdrawal-planning account rules, classification labels, and manual tax buffers
 
 These are user-owned configuration, participate in export/import, and are counted as app preferences in transfer and
 backup responses.
@@ -83,6 +87,7 @@ The product derives several read models from canonical state:
 - allocation drift
 - daily history
 - returns and benchmark comparison
+- non-mutating withdrawal preview
 - readiness and data-quality summaries
 
 These views are rebuildable and must not become hidden source of truth.
@@ -107,7 +112,7 @@ backup entity counts. These models support observability and recovery, not portf
 - instrument quantities never become negative during canonical transaction replay
 - analytical snapshots must stay rebuildable
 - ambiguous import lookup must fail explicitly
-- target weights must form one valid allocation
+- every non-empty target phase must form one valid allocation and phase dates must be unique
 - import preview and real import must enforce the same business rules
 - JSON export/import must remain portable across environments
 

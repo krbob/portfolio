@@ -23,10 +23,11 @@ The core product rules are not negotiable:
 
 ## Domain and workflow rules
 
-- keep account, instrument, transaction, target, and import-profile semantics explicit
+- keep account, instrument, transaction, effective-dated target-schedule, and import-profile semantics explicit
 - EDO stays modeled as a dedicated instrument with typed terms, not a special-case blob
-- `MERGE` import must preserve omitted `targets` and omitted `importProfiles`
-- when `MERGE` includes a `targets` section, that section replaces the target set as one allocation
+- `MERGE` import must preserve an omitted `targetSchedule`, omitted legacy `targets`, and omitted `importProfiles`
+- a schema-version 5 `targetSchedule` replaces the complete schedule; legacy schema-version 4 `targets`
+  retain the compatibility behavior documented in the transfer runbook
 - preview and real import must share the same business validation path
 - ambiguous CSV lookup by account name, instrument name, or symbol must fail explicitly instead of guessing
 - destructive `REPLACE` flows require explicit confirmation and a safety backup first

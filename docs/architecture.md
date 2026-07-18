@@ -23,8 +23,8 @@ Portfolio is intentionally split into:
   - accounts
   - instruments
   - transactions
-  - targets
-  - user preferences (benchmark, rebalancing, and alert settings)
+  - effective-dated target allocation schedule
+  - user preferences (benchmark, rebalancing, alert, and withdrawal-planning settings)
   - transaction import profiles
 - analytical read models:
   - overview
@@ -61,9 +61,13 @@ Canonical state transfer is part of the product, while runtime operational state
 - backup and restore remain JSON-first workflows; backup files are staged, forced, and atomically published
 - audit events record state-changing operations
 
-Two semantics matter especially:
+Three semantics matter especially:
 
-- `targets` in `MERGE`: missing section means preserve current targets; present section means replace the target allocation set
+- `targetSchedule` in schema-version 5 `MERGE`: missing section means preserve the schedule; a present section replaces it completely, including when it is empty
+- legacy `targets` in schema-version 4 `MERGE`: missing section means preserve the schedule; a
+  non-empty section updates the allocation effective on the import date without discarding other
+  dated phases; an explicitly empty section clears the schedule for compatibility with the old
+  single-target-set contract
 - `importProfiles` in `MERGE`: missing section means preserve current profiles; present section merges by id, but final names must be unique
 
 ## Market-data resilience model

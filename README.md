@@ -6,8 +6,9 @@ models backed by SQLite.
 
 ## What it covers
 
-- accounts, instruments, transactions, targets and reusable CSV import profiles
+- accounts, instruments, transactions, effective-dated allocation schedules and reusable CSV import profiles
 - holdings, allocation drift and contribution-first rebalancing guidance
+- read-only withdrawal previews with explicit account priority and user-supplied tax buffers
 - daily history and performance in PLN, USD and gold
 - MWRR, TWR, inflation-adjusted return and benchmark comparisons
 - ETF, stock, FX and benchmark data through Stock Analyst
@@ -119,8 +120,10 @@ See [Architecture](docs/architecture.md), [Domain model](docs/domain-model.md) a
 
 Portfolio supports `MERGE` and destructive `REPLACE` imports:
 
-- `MERGE` upserts canonical entities and preserves omitted `targets` and `importProfiles`;
-- a present `targets` section replaces the target allocation as one set;
+- `MERGE` upserts canonical entities and preserves omitted `targetSchedule`, legacy `targets` and `importProfiles`;
+- a present `targetSchedule` replaces the complete effective-dated strategy; a non-empty legacy
+  `targets` section updates the allocation effective on the import date, while an explicitly empty
+  legacy section clears the schedule for schema-version 4 compatibility;
 - `REPLACE` requires explicit confirmation and creates a safety backup first;
 - preview and real import use the same business validation path;
 - market-data snapshots and active alert-dispatch state are excluded from portable JSON and survive

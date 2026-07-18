@@ -74,8 +74,10 @@ letting it override the browser indefinitely.
 
 - Always run preview first and read blocking issues as well as warnings.
 - `REPLACE` requires the literal confirmation and an automatically created safety backup.
-- In `MERGE`, omitted `targets` and `importProfiles` are preserved; a present target section replaces
-  the complete allocation.
+- In schema-version 5 `MERGE`, omitted `targetSchedule` and `importProfiles` are preserved; a present
+  schedule section replaces the complete effective-dated strategy. Legacy schema-version 4
+  `targets` remain supported: a non-empty section updates the allocation effective on the import
+  date, while an explicitly empty section clears the schedule.
 - A long-only replay violation identifies a transaction sequence that would create a negative
   quantity; fix the source data instead of bypassing it.
 

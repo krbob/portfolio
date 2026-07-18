@@ -2,7 +2,7 @@
 
 Keep this file short. Active priorities only.
 
-Last reviewed: 2026-07-16.
+Last reviewed: 2026-07-18.
 
 ## Current priorities
 
@@ -16,6 +16,7 @@ Last reviewed: 2026-07-16.
 
 - extend the shipped contribution planner from asset-class splits to account and instrument-level decisions
 - compare candidate contribution plans against current drift without mutating canonical history
+- use the shipped effective-dated allocation schedule as the policy baseline for future multi-date simulations
 - keep simulations clearly separated from real transactions and real audit history
 
 ### 3. Operational confidence

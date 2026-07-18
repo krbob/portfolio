@@ -84,8 +84,37 @@ If the inflation range is unavailable or invalid, real return is unavailable rat
 falling back to nominal return.
 
 Benchmark comparisons use the same selected period. Built-in and user-configured reference series
-are normalized to the period start. The synthetic target-mix benchmark uses configured allocation
-weights; it is not a record of trades that actually occurred.
+are normalized to the period start. The synthetic target-mix benchmark uses the allocation phase
+effective on each valuation date. Returns are chain-linked across phase changes, so a newly effective
+mix does not reset the index or rewrite earlier returns. Between phase changes the benchmark is a
+daily constant-mix blend of the configured equity and bond reference series; cash contributes a zero
+return. It remains a policy comparator, not a record of trades that actually occurred.
+
+## Withdrawal preview
+
+The withdrawal planner is a point-in-time, non-mutating scenario. It accepts either a PLN amount or
+a percentage of the current portfolio value. A value such as 4% means 4% of today's displayed
+portfolio; it is not a multi-year safe-withdrawal-rate simulation and does not model future inflation,
+returns, or longevity.
+
+Enabled, active accounts are considered in the user-defined order; an inactive account is always
+excluded even if an older saved preference enabled it. Within each account, positive cash is used
+first. Any remaining amount is funded by suggested equity or bond sales: classes above the active
+target are reduced first and the remaining need is split proportionally across available holdings.
+If an account has negative cash, net sale proceeds cover that balance before they can fund the
+withdrawal. The planner never proposes a negative holding and reports a shortfall when enabled
+assets are insufficient. Negative projected buckets remain visible; percentage allocation and drift
+are unavailable when those values would be misleading.
+
+Account classifications such as `OKI`, `IKE`, and `IKZE` are labels only. The application does not
+encode eligibility, withdrawal ages, tax bases, allowances, or current tax law. A manual percentage
+buffer, when configured, is applied to the gross suggested sale for that account. It is an explicit
+user estimate, not a calculation of tax due. The projected portfolio value subtracts both the funded
+withdrawal and that estimated buffer.
+
+The preview uses the same current valuation model as the portfolio screens. Missing market values
+may fall back to book value and always produce a warning; stale or incomplete valuation is also
+reported. Calculating a preview creates no transaction, audit event, or transaction draft.
 
 ## Rounding and presentation
 
