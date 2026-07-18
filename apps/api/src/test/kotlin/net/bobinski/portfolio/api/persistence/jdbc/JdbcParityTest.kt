@@ -18,6 +18,7 @@ import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
@@ -227,17 +228,26 @@ class JdbcParityTest {
                 )
             )
 
-            portfolioTargetRepository.replaceAll(
+            val targets = listOf(
+                target(
+                    id = UUID.fromString("72000000-0000-0000-0000-000000000001"),
+                    assetClass = AssetClass.EQUITIES,
+                    targetWeight = BigDecimal("0.80")
+                ),
+                target(
+                    id = UUID.fromString("72000000-0000-0000-0000-000000000002"),
+                    assetClass = AssetClass.BONDS,
+                    targetWeight = BigDecimal("0.20")
+                )
+            )
+            portfolioTargetRepository.replaceSchedule(
                 listOf(
-                    target(
-                        id = UUID.fromString("72000000-0000-0000-0000-000000000001"),
-                        assetClass = AssetClass.EQUITIES,
-                        targetWeight = BigDecimal("0.80")
-                    ),
-                    target(
-                        id = UUID.fromString("72000000-0000-0000-0000-000000000002"),
-                        assetClass = AssetClass.BONDS,
-                        targetWeight = BigDecimal("0.20")
+                    PortfolioTargetPhase(
+                        id = UUID.fromString("72000000-0000-0000-0000-000000000010"),
+                        effectiveFrom = LocalDate.parse("2026-03-15"),
+                        targets = targets,
+                        createdAt = Instant.parse("2026-03-15T12:00:00Z"),
+                        updatedAt = Instant.parse("2026-03-15T12:00:00Z")
                     )
                 )
             )

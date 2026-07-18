@@ -8,6 +8,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import java.time.LocalDate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -683,6 +684,213 @@ class PortfolioReadModelRouteTest {
         assertEquals(HttpStatusCode.OK, listResponse.status)
         assertTrue(body.contains("\"toleranceBandPctPoints\": \"3.50\""))
         assertTrue(body.contains("\"mode\": \"ALLOW_TRIMS\""))
+    }
+
+    @Test
+    fun `withdrawal planner uses saved account priority and remains read only`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val instrumentId = createInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "10000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$instrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "60",
+              "unitPrice": "100.00",
+              "grossAmount": "6000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        val defaultSettings = client.get("/v1/portfolio/withdrawal-settings")
+        assertEquals(HttpStatusCode.OK, defaultSettings.status)
+        assertTrue(defaultSettings.bodyAsText().contains("\"taxWrapper\": \"STANDARD\""))
+
+        val saveSettings = client.post("/v1/portfolio/withdrawal-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountRules": [
+                    {
+                      "accountId": "$accountId",
+                      "enabled": true,
+                      "taxWrapper": "STANDARD",
+                      "taxBufferRatePct": "20.00"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, saveSettings.status)
+
+        val planResponse = client.post("/v1/portfolio/allocation/withdrawal-plan") {
+            contentType(ContentType.Application.Json)
+            setBody("""{ "amountPln": "5000.00" }""")
+        }
+        val body = planResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, planResponse.status)
+        assertTrue(body.contains("\"requestedWithdrawalPln\": \"5000.00\""), body)
+        assertTrue(body.contains("\"plannedWithdrawalPln\": \"5000.00\""), body)
+        assertTrue(body.contains("\"cashUsedPln\": \"4000.00\""), body)
+        assertTrue(body.contains("\"grossSalesPln\": \"1250.00\""), body)
+        assertTrue(body.contains("\"estimatedTaxBufferPln\": \"250.00\""), body)
+        assertTrue(body.contains("\"projectedTotalValuePln\": \"4750.00\""), body)
+        assertTrue(body.contains("\"feasible\": true"), body)
+
+        val transactions = client.get("/v1/transactions").bodyAsText()
+        assertEquals(2, Regex("\\\"type\\\":").findAll(transactions).count())
+    }
+
+    @Test
+    fun `withdrawal planner uses the target phase active on overview date and ignores a future phase`() = testApplication {
+        application {
+            module()
+        }
+
+        val accountId = createAccount()
+        val equityInstrumentId = createInstrument()
+        val bondInstrumentId = createBondInstrument()
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "type": "DEPOSIT",
+              "tradeDate": "2026-03-01",
+              "settlementDate": "2026-03-01",
+              "grossAmount": "10000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$equityInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "60",
+              "unitPrice": "100.00",
+              "grossAmount": "6000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+        createTransaction(
+            """
+            {
+              "accountId": "$accountId",
+              "instrumentId": "$bondInstrumentId",
+              "type": "BUY",
+              "tradeDate": "2026-03-02",
+              "settlementDate": "2026-03-02",
+              "quantity": "40",
+              "unitPrice": "100.00",
+              "grossAmount": "4000.00",
+              "currency": "PLN"
+            }
+            """.trimIndent()
+        )
+
+        val overviewBody = client.get("/v1/portfolio/overview").bodyAsText()
+        val overviewAsOf = LocalDate.parse(
+            Regex("\"asOf\":\\s*\"([^\"]+)\"").find(overviewBody)!!.groupValues[1]
+        )
+        val scheduleResponse = client.post("/v1/portfolio/target-schedule") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "phases": [
+                    {
+                      "effectiveFrom": "${overviewAsOf.minusDays(1)}",
+                      "items": [
+                        { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                        { "assetClass": "BONDS", "targetWeight": "0.20" }
+                      ]
+                    },
+                    {
+                      "effectiveFrom": "${overviewAsOf.plusDays(1)}",
+                      "items": [
+                        { "assetClass": "EQUITIES", "targetWeight": "0.40" },
+                        { "assetClass": "BONDS", "targetWeight": "0.60" }
+                      ]
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, scheduleResponse.status, scheduleResponse.bodyAsText())
+
+        val settingsResponse = client.post("/v1/portfolio/withdrawal-settings") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "accountRules": [
+                    {
+                      "accountId": "$accountId",
+                      "enabled": true,
+                      "taxWrapper": "STANDARD",
+                      "taxBufferRatePct": "0.00"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, settingsResponse.status, settingsResponse.bodyAsText())
+
+        val planResponse = client.post("/v1/portfolio/allocation/withdrawal-plan") {
+            contentType(ContentType.Application.Json)
+            setBody("""{ "amountPln": "1000.00" }""")
+        }
+        val body = planResponse.bodyAsText()
+
+        assertEquals(HttpStatusCode.OK, planResponse.status, body)
+        assertTrue(body.contains("\"asOf\": \"$overviewAsOf\""), body)
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"BONDS\",\\s*\"amountPln\":\\s*\"1000.00\"").containsMatchIn(body),
+            body
+        )
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"EQUITIES\",\\s*\"amountPln\":\\s*\"0.00\"").containsMatchIn(body),
+            body
+        )
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"EQUITIES\"[\\s\\S]*?\"targetWeightPct\":\\s*\"80.00\"")
+                .containsMatchIn(body),
+            body
+        )
+        assertTrue(
+            Regex("\"assetClass\":\\s*\"BONDS\"[\\s\\S]*?\"targetWeightPct\":\\s*\"20.00\"")
+                .containsMatchIn(body),
+            body
+        )
     }
 
     private suspend fun io.ktor.server.testing.ApplicationTestBuilder.createAccount(

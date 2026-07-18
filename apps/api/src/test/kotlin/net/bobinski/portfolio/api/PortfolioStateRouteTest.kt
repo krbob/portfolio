@@ -160,9 +160,10 @@ class PortfolioStateRouteTest {
         val importProfilesResponse = client.get("/v1/transactions/import/profiles")
 
         assertEquals(HttpStatusCode.OK, exportResponse.status)
-        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 4"))
+        assertTrue(exportResponse.bodyAsText().contains("\"schemaVersion\": 5"))
         assertTrue(exportResponse.bodyAsText().contains("\"appPreferences\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"targets\": ["))
+        assertTrue(exportResponse.bodyAsText().contains("\"targetSchedule\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"importProfiles\": ["))
         assertTrue(exportResponse.bodyAsText().contains("\"name\": \"Primary\""))
         assertEquals(HttpStatusCode.OK, importResponse.status)
@@ -177,6 +178,70 @@ class PortfolioStateRouteTest {
         assertTrue(benchmarkSettingsResponse.bodyAsText().contains("\"symbol\": \"EXSA.DE\""))
         assertTrue(rebalancingSettingsResponse.bodyAsText().contains("\"mode\": \"ALLOW_TRIMS\""))
         assertTrue(importProfilesResponse.bodyAsText().contains("\"name\": \"Interactive Brokers CSV\""))
+    }
+
+    @Test
+    fun `state export and replace import preserve the complete target schedule`() = testApplication {
+        application {
+            module()
+        }
+
+        val scheduleResponse = client.post("/v1/portfolio/target-schedule") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "phases": [
+                    {
+                      "effectiveFrom": "2020-01-01",
+                      "items": [
+                        { "assetClass": "EQUITIES", "targetWeight": "0.80" },
+                        { "assetClass": "BONDS", "targetWeight": "0.20" }
+                      ]
+                    },
+                    {
+                      "effectiveFrom": "2031-01-01",
+                      "items": [
+                        { "assetClass": "EQUITIES", "targetWeight": "0.60" },
+                        { "assetClass": "BONDS", "targetWeight": "0.40" }
+                      ]
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, scheduleResponse.status, scheduleResponse.bodyAsText())
+
+        val exportResponse = client.get("/v1/portfolio/state/export")
+        val exportBody = exportResponse.bodyAsText()
+        assertTrue(exportBody.contains("\"targetSchedule\": ["), exportBody)
+        assertTrue(exportBody.contains("\"effectiveFrom\": \"2020-01-01\""), exportBody)
+        assertTrue(exportBody.contains("\"effectiveFrom\": \"2031-01-01\""), exportBody)
+
+        val clearResponse = client.post("/v1/portfolio/target-schedule") {
+            contentType(ContentType.Application.Json)
+            setBody("""{ "phases": [] }""")
+        }
+        assertEquals(HttpStatusCode.OK, clearResponse.status)
+
+        val importResponse = client.post("/v1/portfolio/state/import") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                  "mode": "REPLACE",
+                  "confirmation": "REPLACE",
+                  "snapshot": $exportBody
+                }
+                """.trimIndent()
+            )
+        }
+        assertEquals(HttpStatusCode.OK, importResponse.status, importResponse.bodyAsText())
+
+        val restored = client.get("/v1/portfolio/target-schedule").bodyAsText()
+        assertTrue(restored.contains("\"effectiveFrom\": \"2020-01-01\""), restored)
+        assertTrue(restored.contains("\"effectiveFrom\": \"2031-01-01\""), restored)
     }
 
     @Test

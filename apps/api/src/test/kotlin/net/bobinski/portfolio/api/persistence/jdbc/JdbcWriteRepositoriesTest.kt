@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -19,6 +20,7 @@ import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
@@ -30,6 +32,7 @@ import net.bobinski.portfolio.api.domain.service.ImportMode
 import net.bobinski.portfolio.api.domain.service.InstrumentSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioImportRequest
 import net.bobinski.portfolio.api.domain.service.PortfolioSnapshot
+import net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
 import net.bobinski.portfolio.api.domain.service.TransactionSnapshot
 import net.bobinski.portfolio.api.persistence.config.JournalMode
@@ -62,16 +65,41 @@ class JdbcWriteRepositoriesTest {
             accountRepository.save(account)
             instrumentRepository.save(instrument)
             transactionRepository.save(transaction)
-            portfolioTargetRepository.replaceAll(listOf(target))
+            val targetPhase = PortfolioTargetPhase(
+                id = UUID.fromString("50000000-0000-0000-0000-000000000010"),
+                effectiveFrom = LocalDate.ofInstant(target.createdAt, ZoneOffset.UTC),
+                targets = listOf(target),
+                createdAt = target.createdAt,
+                updatedAt = target.updatedAt
+            )
+            portfolioTargetRepository.replaceSchedule(listOf(targetPhase))
 
             assertEquals(listOf(account), accountRepository.list())
             assertEquals(instrument, instrumentRepository.get(instrument.id))
             assertEquals(transaction, transactionRepository.get(transaction.id))
-            assertEquals(listOf(target), portfolioTargetRepository.list())
+            assertEquals(listOf(targetPhase), portfolioTargetRepository.listPhases())
 
             assertTrue(transactionRepository.delete(transaction.id))
             assertNull(transactionRepository.get(transaction.id))
             assertFalse(transactionRepository.delete(transaction.id))
+        }
+    }
+
+    @Test
+    fun `sqlite target repository persists effective dated phases`() = runBlocking {
+        sqliteDatabase { dataSource ->
+            val repository = JdbcPortfolioTargetRepository(dataSource)
+            val phases = listOf(
+                portfolioTargetPhase("2026-01-01", "0.80", "0.20"),
+                portfolioTargetPhase("2031-01-01", "0.60", "0.40")
+            )
+
+            repository.replaceSchedule(phases)
+
+            assertEquals(
+                phases.map { phase -> phase.copy(targets = phase.targets.sortedBy { target -> target.assetClass.name }) },
+                repository.listPhases()
+            )
         }
     }
 
@@ -173,6 +201,82 @@ class JdbcWriteRepositoriesTest {
             assertEquals(listOf(initialAccount.id.toString()), snapshot.accounts.map { account -> account.id })
             assertTrue(snapshot.transactions.isEmpty())
             assertEquals(concurrentTransaction, writerTransactionRepository.get(concurrentTransaction.id))
+        }
+    }
+
+    @Test
+    fun `legacy merge remaps target ids already used by preserved sqlite phases`() = runBlocking {
+        sqliteDatabase { dataSource ->
+            val connectionManager = JdbcConnectionManager(dataSource)
+            val targetRepository = JdbcPortfolioTargetRepository(connectionManager)
+            val clock = Clock.fixed(Instant.parse("2026-07-18T12:00:00Z"), ZoneOffset.UTC)
+            val originalTargets = listOf(
+                portfolioTarget().copy(
+                    assetClass = AssetClass.EQUITIES,
+                    targetWeight = BigDecimal("0.80")
+                ),
+                portfolioTarget().copy(
+                    id = UUID.fromString("50000000-0000-0000-0000-000000000002"),
+                    targetWeight = BigDecimal("0.20")
+                )
+            )
+            targetRepository.replaceSchedule(
+                listOf(
+                    PortfolioTargetPhase(
+                        id = UUID.fromString("50000000-0000-0000-0000-000000000010"),
+                        effectiveFrom = LocalDate.parse("2020-01-01"),
+                        targets = originalTargets,
+                        createdAt = Instant.parse("2020-01-01T12:00:00Z"),
+                        updatedAt = Instant.parse("2020-01-01T12:00:00Z")
+                    )
+                )
+            )
+            val transferService = PortfolioTransferService(
+                accountRepository = JdbcAccountRepository(connectionManager),
+                appPreferenceRepository = JdbcAppPreferenceRepository(connectionManager),
+                instrumentRepository = JdbcInstrumentRepository(connectionManager),
+                portfolioTargetRepository = targetRepository,
+                transactionRepository = JdbcTransactionRepository(connectionManager),
+                transactionImportProfileRepository = JdbcTransactionImportProfileRepository(connectionManager, Json.Default),
+                transactionRunner = connectionManager,
+                auditLogService = AuditLogService(InMemoryAuditEventRepository(), clock),
+                clock = clock
+            )
+            val snapshotTargets = originalTargets.mapIndexed { index, target ->
+                PortfolioTargetSnapshot(
+                    id = target.id.toString(),
+                    assetClass = target.assetClass.name,
+                    targetWeight = if (index == 0) "0.70" else "0.30",
+                    createdAt = "2026-07-18T12:00:00Z",
+                    updatedAt = "2026-07-18T12:00:00Z"
+                )
+            }
+
+            val result = transferService.importState(
+                PortfolioImportRequest(
+                    mode = ImportMode.MERGE,
+                    snapshot = PortfolioSnapshot(
+                        schemaVersion = 4,
+                        exportedAt = Instant.parse("2026-07-18T12:00:00Z"),
+                        accounts = emptyList(),
+                        instruments = emptyList(),
+                        targets = snapshotTargets,
+                        transactions = emptyList()
+                    )
+                )
+            )
+            val schedule = targetRepository.listPhases()
+
+            assertEquals(2, result.targetCount)
+            assertEquals(listOf(LocalDate.parse("2020-01-01"), LocalDate.parse("2026-07-18")), schedule.map { it.effectiveFrom })
+            assertEquals(originalTargets.map { it.id }.toSet(), schedule.first().targets.map { it.id }.toSet())
+            assertEquals(4, schedule.flatMap { it.targets }.map { it.id }.toSet().size)
+            assertEquals(
+                mapOf(AssetClass.EQUITIES to BigDecimal("0.7"), AssetClass.BONDS to BigDecimal("0.3")),
+                schedule.last().targets.associate { target ->
+                    target.assetClass to target.targetWeight.stripTrailingZeros()
+                }
+            )
         }
     }
 
@@ -432,6 +536,28 @@ class JdbcWriteRepositoriesTest {
         id = UUID.fromString("50000000-0000-0000-0000-000000000001"),
         assetClass = AssetClass.BONDS,
         targetWeight = BigDecimal("0.20"),
+        createdAt = Instant.parse("2026-03-01T12:10:00Z"),
+        updatedAt = Instant.parse("2026-03-01T12:10:00Z")
+    )
+
+    private fun portfolioTargetPhase(
+        effectiveFrom: String,
+        equities: String,
+        bonds: String
+    ): PortfolioTargetPhase = PortfolioTargetPhase(
+        id = UUID.nameUUIDFromBytes("target-phase-$effectiveFrom".toByteArray()),
+        effectiveFrom = LocalDate.parse(effectiveFrom),
+        targets = listOf(
+            portfolioTarget().copy(
+                id = UUID.nameUUIDFromBytes("equities-$effectiveFrom".toByteArray()),
+                assetClass = AssetClass.EQUITIES,
+                targetWeight = BigDecimal(equities)
+            ),
+            portfolioTarget().copy(
+                id = UUID.nameUUIDFromBytes("bonds-$effectiveFrom".toByteArray()),
+                targetWeight = BigDecimal(bonds)
+            )
+        ),
         createdAt = Instant.parse("2026-03-01T12:10:00Z"),
         updatedAt = Instant.parse("2026-03-01T12:10:00Z")
     )

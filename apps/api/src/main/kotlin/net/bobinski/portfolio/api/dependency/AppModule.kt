@@ -27,6 +27,9 @@ import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsSer
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
 import net.bobinski.portfolio.api.domain.service.PortfolioTransferService
+import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalPlanningService
+import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalService
+import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalSettingsService
 import net.bobinski.portfolio.api.domain.service.PersistenceTransactionRunner
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelComputationCoordinator
@@ -282,7 +285,8 @@ fun appModule(
         PortfolioTargetService(
             portfolioTargetRepository = get(),
             auditLogService = get(),
-            clock = get()
+            clock = get(),
+            readModelCacheService = get()
         )
     }
     single {
@@ -300,6 +304,15 @@ fun appModule(
             clock = get()
         )
     }
+    single {
+        PortfolioWithdrawalSettingsService(
+            appPreferenceService = get(),
+            accountRepository = get(),
+            auditLogService = get(),
+            clock = get()
+        )
+    }
+    single { PortfolioWithdrawalPlanningService() }
     single {
         PortfolioReadModelService(
             accountRepository = get(),
@@ -342,6 +355,14 @@ fun appModule(
             portfolioTargetRepository = get(),
             portfolioReadModelService = get(),
             rebalancingSettingsService = get()
+        )
+    }
+    single {
+        PortfolioWithdrawalService(
+            portfolioReadModelService = get(),
+            portfolioTargetService = get(),
+            portfolioWithdrawalSettingsService = get(),
+            portfolioWithdrawalPlanningService = get()
         )
     }
     single {
@@ -404,7 +425,8 @@ fun appModule(
             transactionImportProfileRepository = get(),
             transactionRunner = get(),
             auditLogService = get(),
-            clock = get()
+            clock = get(),
+            readModelCacheService = get()
         )
     }
     single {

@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.domain.model
 
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 data class PortfolioTarget(
@@ -15,6 +16,18 @@ data class PortfolioTarget(
         require(targetWeight >= BigDecimal.ZERO && targetWeight <= BigDecimal.ONE) {
             "Target weight must be within 0..1."
         }
+        require(updatedAt >= createdAt) { "Updated timestamp must not be before created timestamp." }
+    }
+}
+
+data class PortfolioTargetPhase(
+    val id: UUID,
+    val effectiveFrom: LocalDate,
+    val targets: List<PortfolioTarget>,
+    val createdAt: Instant,
+    val updatedAt: Instant
+) {
+    init {
         require(updatedAt >= createdAt) { "Updated timestamp must not be before created timestamp." }
     }
 }

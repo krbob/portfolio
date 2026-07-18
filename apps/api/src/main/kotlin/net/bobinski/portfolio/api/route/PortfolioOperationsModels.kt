@@ -25,6 +25,7 @@ data class PortfolioSnapshotResponse(
     val appPreferences: List<AppPreferenceSnapshotResponse> = emptyList(),
     val instruments: List<InstrumentSnapshotResponse>,
     val targets: List<PortfolioTargetSnapshotResponse>? = null,
+    val targetSchedule: List<PortfolioTargetPhaseSnapshotResponse>? = null,
     val importProfiles: List<TransactionImportProfileSnapshotResponse> = emptyList(),
     val transactions: List<TransactionSnapshotResponse>
 )
@@ -89,6 +90,15 @@ data class PortfolioTargetSnapshotResponse(
     val id: String,
     val assetClass: String,
     val targetWeight: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class PortfolioTargetPhaseSnapshotResponse(
+    val id: String,
+    val effectiveFrom: String,
+    val targets: List<PortfolioTargetSnapshotResponse>,
     val createdAt: String,
     val updatedAt: String
 )
@@ -448,6 +458,7 @@ internal fun PortfolioSnapshot.toResponse(): PortfolioSnapshotResponse = Portfol
     appPreferences = appPreferences.map(net.bobinski.portfolio.api.domain.service.AppPreferenceSnapshot::toResponse),
     instruments = instruments.map(net.bobinski.portfolio.api.domain.service.InstrumentSnapshot::toResponse),
     targets = targets.map(net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot::toResponse),
+    targetSchedule = targetSchedule.map(net.bobinski.portfolio.api.domain.service.PortfolioTargetPhaseSnapshot::toResponse),
     importProfiles = importProfiles.map(net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot::toResponse),
     transactions = transactions.map(net.bobinski.portfolio.api.domain.service.TransactionSnapshot::toResponse)
 )
@@ -473,6 +484,15 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot.to
     id = id, assetClass = assetClass, targetWeight = targetWeight,
     createdAt = createdAt, updatedAt = updatedAt
 )
+
+private fun net.bobinski.portfolio.api.domain.service.PortfolioTargetPhaseSnapshot.toResponse() =
+    PortfolioTargetPhaseSnapshotResponse(
+        id = id,
+        effectiveFrom = effectiveFrom,
+        targets = targets.map(net.bobinski.portfolio.api.domain.service.PortfolioTargetSnapshot::toResponse),
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
 
 private fun net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot.toResponse() = TransactionImportProfileSnapshotResponse(
     id = id, name = name, description = description,
@@ -513,6 +533,8 @@ internal fun ImportPortfolioStateRequest.toDomain(): PortfolioImportRequest = Po
         instruments = snapshot.instruments.map(InstrumentSnapshotResponse::toDomain),
         targets = snapshot.targets.orEmpty().map(PortfolioTargetSnapshotResponse::toDomain),
         targetsSectionPresent = snapshot.targets != null,
+        targetSchedule = snapshot.targetSchedule.orEmpty().map(PortfolioTargetPhaseSnapshotResponse::toDomain),
+        targetScheduleSectionPresent = snapshot.targetSchedule != null,
         importProfiles = snapshot.importProfiles.map(TransactionImportProfileSnapshotResponse::toDomain),
         transactions = snapshot.transactions.map(TransactionSnapshotResponse::toDomain)
     )
@@ -541,6 +563,15 @@ private fun PortfolioTargetSnapshotResponse.toDomain() = net.bobinski.portfolio.
     id = id, assetClass = assetClass, targetWeight = targetWeight,
     createdAt = createdAt, updatedAt = updatedAt
 )
+
+private fun PortfolioTargetPhaseSnapshotResponse.toDomain() =
+    net.bobinski.portfolio.api.domain.service.PortfolioTargetPhaseSnapshot(
+        id = id,
+        effectiveFrom = effectiveFrom,
+        targets = targets.map(PortfolioTargetSnapshotResponse::toDomain),
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
 
 private fun TransactionImportProfileSnapshotResponse.toDomain() = net.bobinski.portfolio.api.domain.service.TransactionImportProfileSnapshot(
     id = id, name = name, description = description,

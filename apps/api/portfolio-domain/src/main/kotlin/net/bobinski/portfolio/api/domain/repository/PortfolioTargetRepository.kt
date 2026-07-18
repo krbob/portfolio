@@ -1,9 +1,10 @@
 package net.bobinski.portfolio.api.domain.repository
 
-import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 
 interface PortfolioTargetRepository {
-    suspend fun list(): List<PortfolioTarget>
-    suspend fun replaceAll(targets: List<PortfolioTarget>)
+    suspend fun listPhases(): List<PortfolioTargetPhase>
+    suspend fun replaceSchedule(phases: List<PortfolioTargetPhase>)
+    suspend fun savePhase(phase: PortfolioTargetPhase): PortfolioTargetPhase
     suspend fun deleteAll()
 }

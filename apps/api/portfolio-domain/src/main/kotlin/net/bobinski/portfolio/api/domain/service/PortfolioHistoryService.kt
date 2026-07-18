@@ -8,6 +8,7 @@ import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.toLotTerms
@@ -487,13 +488,13 @@ class PortfolioHistoryService(
     ): BenchmarkLoads = coroutineScope {
         val equityDeferred = async { referenceSeriesProvider.equityBenchmarkPln(from = from, to = until) }
         val bondDeferred = async { referenceSeriesProvider.bondBenchmarkPln(from = from, to = until) }
-        val targetsDeferred = async { portfolioTargetRepository.list() }
+        val targetPhasesDeferred = async { portfolioTargetRepository.listPhases() }
         val inflationDeferred = async { loadInflationBenchmark(from = from, until = until) }
         val settingsDeferred = async { benchmarkSettingsService.settings() }
 
         val equity = equityDeferred.await()
         val bond = bondDeferred.await()
-        val targets = targetsDeferred.await()
+        val targetPhases = targetPhasesDeferred.await()
         val inflation = inflationDeferred.await()
         val settings = settingsDeferred.await()
         val benchmarkStatuses = mutableListOf<BenchmarkSeriesHealth>()
@@ -536,7 +537,7 @@ class PortfolioHistoryService(
         val targetMixLookup = buildTargetMixIndexLookup(
             from = from,
             until = until,
-            targets = targets,
+            targetPhases = targetPhases,
             equityBenchmark = equityLookup,
             bondBenchmark = bondLookup,
             equityStatus = equityHealth.status,
@@ -737,100 +738,41 @@ class PortfolioHistoryService(
     private fun buildTargetMixIndexLookup(
         from: LocalDate,
         until: LocalDate,
-        targets: List<net.bobinski.portfolio.api.domain.model.PortfolioTarget>,
+        targetPhases: List<PortfolioTargetPhase>,
         equityBenchmark: TreeMap<LocalDate, BigDecimal>,
         bondBenchmark: TreeMap<LocalDate, BigDecimal>,
         equityStatus: BenchmarkSeriesStatus,
         bondStatus: BenchmarkSeriesStatus
     ): TargetMixBenchmarkLoad {
-        if (targets.isEmpty()) {
+        if (targetPhases.isEmpty()) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), health = null)
         }
 
-        val weightsByAssetClass = targets.associate { target -> target.assetClass to target.targetWeight.toDouble() }
-        val equityWeight = weightsByAssetClass[AssetClass.EQUITIES] ?: 0.0
-        val bondWeight = weightsByAssetClass[AssetClass.BONDS] ?: 0.0
-        val cashWeight = weightsByAssetClass[AssetClass.CASH] ?: 0.0
-
-        val effectiveFromCandidates = mutableListOf(from)
-        if (equityWeight > 0.0) {
-            val firstEquityDate = equityBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
-                lookup = TreeMap(),
-                health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX.name,
-                    label = "Configured target mix",
-                    status = BenchmarkSeriesStatus.UNAVAILABLE,
-                    issue = "Target-mix benchmark is missing equity benchmark coverage."
-                )
-            )
-            effectiveFromCandidates += firstEquityDate
-        }
-        if (bondWeight > 0.0) {
-            val firstBondDate = bondBenchmark.firstEntry()?.key ?: return TargetMixBenchmarkLoad(
-                lookup = TreeMap(),
-                health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX.name,
-                    label = "Configured target mix",
-                    status = BenchmarkSeriesStatus.UNAVAILABLE,
-                    issue = "Target-mix benchmark is missing bond benchmark coverage."
-                )
-            )
-            effectiveFromCandidates += firstBondDate
-        }
-
-        val effectiveFrom = effectiveFromCandidates.maxOrNull() ?: from
-        if (effectiveFrom.isAfter(until)) {
-            return TargetMixBenchmarkLoad(
-                lookup = TreeMap(),
-                health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX.name,
-                    label = "Configured target mix",
-                    status = BenchmarkSeriesStatus.UNAVAILABLE,
-                    issue = "Target-mix benchmark does not cover the selected period."
-                )
-            )
-        }
+        val sortedPhases = targetPhases.sortedBy(PortfolioTargetPhase::effectiveFrom)
+        val firstEffectiveDate = findTargetMixStart(
+            from = from,
+            until = until,
+            phases = sortedPhases,
+            equityBenchmark = equityBenchmark,
+            bondBenchmark = bondBenchmark
+        ) ?: return unavailableTargetMix("Target-mix benchmark does not cover the selected period.")
 
         val lookup = TreeMap<LocalDate, BigDecimal>()
         var index = BASE_INDEX
-        lookup[effectiveFrom] = index
-        var previousDate = effectiveFrom
-        var date = effectiveFrom.plusDays(1)
+        lookup[firstEffectiveDate] = index
+        var previousDate = firstEffectiveDate
+        var date = firstEffectiveDate.plusDays(1)
 
         while (!date.isAfter(until)) {
-            val equityFactor = dailyIndexFactor(
-                lookup = equityBenchmark,
+            val weights = targetMixWeightsOn(date, sortedPhases)
+                ?: return unavailableTargetMix("Target-mix benchmark has no allocation for part of the selected period.")
+            val mixFactor = targetMixDailyFactor(
                 previousDate = previousDate,
                 currentDate = date,
-                weight = equityWeight
-            ) ?: return TargetMixBenchmarkLoad(
-                lookup = TreeMap(),
-                health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX.name,
-                    label = "Configured target mix",
-                    status = BenchmarkSeriesStatus.UNAVAILABLE,
-                    issue = "Target-mix benchmark is missing equity data inside the selected period."
-                )
-            )
-            val bondFactor = dailyIndexFactor(
-                lookup = bondBenchmark,
-                previousDate = previousDate,
-                currentDate = date,
-                weight = bondWeight
-            ) ?: return TargetMixBenchmarkLoad(
-                lookup = TreeMap(),
-                health = BenchmarkSeriesHealth(
-                    key = BenchmarkKey.TARGET_MIX.name,
-                    label = "Configured target mix",
-                    status = BenchmarkSeriesStatus.UNAVAILABLE,
-                    issue = "Target-mix benchmark is missing bond data inside the selected period."
-                )
-            )
-
-            val mixFactor = 1.0 +
-                equityWeight * (equityFactor - 1.0) +
-                bondWeight * (bondFactor - 1.0) +
-                cashWeight * 0.0
+                weights = weights,
+                equityBenchmark = equityBenchmark,
+                bondBenchmark = bondBenchmark
+            ) ?: return unavailableTargetMix("Target-mix benchmark is missing component data inside the selected period.")
             index = BigDecimal.valueOf(index.toDouble() * mixFactor).index()
             lookup[date] = index
 
@@ -838,11 +780,7 @@ class PortfolioHistoryService(
             date = date.plusDays(1)
         }
 
-        val status = when {
-            equityStatus == BenchmarkSeriesStatus.STALE || bondStatus == BenchmarkSeriesStatus.STALE ->
-                BenchmarkSeriesStatus.STALE
-            else -> BenchmarkSeriesStatus.HEALTHY
-        }
+        val status = targetMixStatus(sortedPhases, firstEffectiveDate, until, equityStatus, bondStatus)
         return TargetMixBenchmarkLoad(
             lookup = lookup,
             health = BenchmarkSeriesHealth(
@@ -856,6 +794,97 @@ class PortfolioHistoryService(
             )
         )
     }
+
+    private fun findTargetMixStart(
+        from: LocalDate,
+        until: LocalDate,
+        phases: List<PortfolioTargetPhase>,
+        equityBenchmark: TreeMap<LocalDate, BigDecimal>,
+        bondBenchmark: TreeMap<LocalDate, BigDecimal>
+    ): LocalDate? {
+        var candidate = from
+        while (!candidate.isAfter(until)) {
+            val weights = targetMixWeightsOn(candidate, phases)
+            val equityCovered = weights == null || weights.equity == 0.0 || equityBenchmark.lookupOn(candidate) != null
+            val bondsCovered = weights == null || weights.bonds == 0.0 || bondBenchmark.lookupOn(candidate) != null
+            if (weights != null && equityCovered && bondsCovered) {
+                return candidate
+            }
+            candidate = candidate.plusDays(1)
+        }
+        return null
+    }
+
+    private fun targetMixWeightsOn(
+        date: LocalDate,
+        phases: List<PortfolioTargetPhase>
+    ): TargetMixWeights? = phases
+        .lastOrNull { phase -> !phase.effectiveFrom.isAfter(date) }
+        ?.targets
+        ?.associate { target -> target.assetClass to target.targetWeight.toDouble() }
+        ?.let { weights ->
+            TargetMixWeights(
+                equity = weights[AssetClass.EQUITIES] ?: 0.0,
+                bonds = weights[AssetClass.BONDS] ?: 0.0,
+                cash = weights[AssetClass.CASH] ?: 0.0
+            )
+        }
+
+    private fun targetMixDailyFactor(
+        previousDate: LocalDate,
+        currentDate: LocalDate,
+        weights: TargetMixWeights,
+        equityBenchmark: TreeMap<LocalDate, BigDecimal>,
+        bondBenchmark: TreeMap<LocalDate, BigDecimal>
+    ): Double? {
+        val equityFactor = dailyIndexFactor(equityBenchmark, previousDate, currentDate, weights.equity) ?: return null
+        val bondFactor = dailyIndexFactor(bondBenchmark, previousDate, currentDate, weights.bonds) ?: return null
+        return 1.0 +
+            weights.equity * (equityFactor - 1.0) +
+            weights.bonds * (bondFactor - 1.0) +
+            weights.cash * 0.0
+    }
+
+    private fun targetMixStatus(
+        phases: List<PortfolioTargetPhase>,
+        from: LocalDate,
+        until: LocalDate,
+        equityStatus: BenchmarkSeriesStatus,
+        bondStatus: BenchmarkSeriesStatus
+    ): BenchmarkSeriesStatus {
+        val activeAtStart = phases.lastOrNull { phase -> !phase.effectiveFrom.isAfter(from) }
+        val changesInsidePeriod = phases.filter { phase -> phase.effectiveFrom > from && !phase.effectiveFrom.isAfter(until) }
+        val targets = listOfNotNull(activeAtStart).plus(changesInsidePeriod).flatMap(PortfolioTargetPhase::targets)
+        val usesEquity = targets.any { target ->
+            target.assetClass == AssetClass.EQUITIES && target.targetWeight.signum() > 0
+        }
+        val usesBonds = targets.any { target ->
+            target.assetClass == AssetClass.BONDS && target.targetWeight.signum() > 0
+        }
+        val equityIsStale = usesEquity && equityStatus == BenchmarkSeriesStatus.STALE
+        val bondsAreStale = usesBonds && bondStatus == BenchmarkSeriesStatus.STALE
+        return if (equityIsStale || bondsAreStale) {
+            BenchmarkSeriesStatus.STALE
+        } else {
+            BenchmarkSeriesStatus.HEALTHY
+        }
+    }
+
+    private fun unavailableTargetMix(issue: String): TargetMixBenchmarkLoad = TargetMixBenchmarkLoad(
+        lookup = TreeMap(),
+        health = BenchmarkSeriesHealth(
+            key = BenchmarkKey.TARGET_MIX.name,
+            label = "Configured target mix",
+            status = BenchmarkSeriesStatus.UNAVAILABLE,
+            issue = issue
+        )
+    )
+
+    private data class TargetMixWeights(
+        val equity: Double,
+        val bonds: Double,
+        val cash: Double
+    )
 
     private fun referenceBenchmarkHealth(
         key: String,

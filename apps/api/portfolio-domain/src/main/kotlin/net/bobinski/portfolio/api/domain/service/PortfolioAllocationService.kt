@@ -264,7 +264,10 @@ class PortfolioAllocationService(
     }
 
     private suspend fun loadContext(overview: PortfolioOverview): AllocationContext {
-        val targets = portfolioTargetRepository.list()
+        val targets = portfolioTargetRepository.listPhases()
+            .lastOrNull { phase -> !phase.effectiveFrom.isAfter(overview.asOf) }
+            ?.targets
+            .orEmpty()
         return AllocationContext(
             overview = overview,
             targets = targets,

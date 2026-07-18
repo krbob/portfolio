@@ -12,8 +12,11 @@ import net.bobinski.portfolio.api.domain.service.BenchmarkOptionKind
 import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioRebalancingSettingsService
 import net.bobinski.portfolio.api.domain.service.PortfolioTargetService
+import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalSettingsService
 import net.bobinski.portfolio.api.domain.service.RebalancingMode
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
+import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetPhase
+import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetScheduleCommand
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioRebalancingSettingsCommand
@@ -23,6 +26,7 @@ fun Route.portfolioSettingsRoute() {
     val portfolioTargetService: PortfolioTargetService by inject()
     val portfolioBenchmarkSettingsService: PortfolioBenchmarkSettingsService by inject()
     val portfolioRebalancingSettingsService: PortfolioRebalancingSettingsService by inject()
+    val portfolioWithdrawalSettingsService: PortfolioWithdrawalSettingsService by inject()
 
     route("/v1/portfolio") {
         get("/targets") {
@@ -41,6 +45,25 @@ fun Route.portfolioSettingsRoute() {
             operationId = "replacePortfolioTargets",
             summary = "Replace target allocation weights",
             description = "Replaces the saved portfolio target allocation with the provided set of weights.",
+            tag = "Portfolio"
+        )
+
+        get("/target-schedule") {
+            call.respond(portfolioTargetService.schedule().map { it.toResponse() })
+        }.documented(
+            operationId = "listPortfolioTargetSchedule",
+            summary = "List target allocation schedule",
+            description = "Returns effective-dated target allocation phases.",
+            tag = "Portfolio"
+        )
+
+        post("/target-schedule") {
+            val request = call.receive<ReplacePortfolioTargetScheduleRequest>()
+            call.respond(portfolioTargetService.replaceSchedule(request.toDomain()).map { it.toResponse() })
+        }.documented(
+            operationId = "replacePortfolioTargetSchedule",
+            summary = "Replace target allocation schedule",
+            description = "Replaces all effective-dated target allocation phases. An empty list clears the schedule.",
             tag = "Portfolio"
         )
 
@@ -81,6 +104,8 @@ fun Route.portfolioSettingsRoute() {
             description = "Saves the portfolio tolerance band and rebalancing mode configuration.",
             tag = "Portfolio"
         )
+
+        registerPortfolioWithdrawalSettingsRoutes(portfolioWithdrawalSettingsService)
     }
 }
 
@@ -102,6 +127,27 @@ data class ReplacePortfolioTargetsRequest(
 data class PortfolioTargetRequestItem(
     val assetClass: String,
     val targetWeight: String
+)
+
+@Serializable
+data class PortfolioTargetPhaseResponse(
+    val id: String,
+    val effectiveFrom: String,
+    val items: List<PortfolioTargetResponse>,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class ReplacePortfolioTargetScheduleRequest(
+    val phases: List<ReplacePortfolioTargetPhaseRequest>
+)
+
+@Serializable
+data class ReplacePortfolioTargetPhaseRequest(
+    val id: String? = null,
+    val effectiveFrom: String,
+    val items: List<PortfolioTargetRequestItem>
 )
 
 @Serializable
@@ -165,11 +211,35 @@ private fun net.bobinski.portfolio.api.domain.model.PortfolioTarget.toResponse()
         updatedAt = updatedAt.toString()
     )
 
+private fun net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase.toResponse(): PortfolioTargetPhaseResponse =
+    PortfolioTargetPhaseResponse(
+        id = id.toString(),
+        effectiveFrom = effectiveFrom.toString(),
+        items = targets.map { target -> target.toResponse() },
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt.toString()
+    )
+
 private fun ReplacePortfolioTargetsRequest.toDomain() = ReplacePortfolioTargetsCommand(
     items = items.map { item ->
         ReplacePortfolioTargetItem(
             assetClass = AssetClass.valueOf(item.assetClass),
             targetWeight = item.targetWeight.toBigDecimal()
+        )
+    }
+)
+
+private fun ReplacePortfolioTargetScheduleRequest.toDomain() = ReplacePortfolioTargetScheduleCommand(
+    phases = phases.map { phase ->
+        ReplacePortfolioTargetPhase(
+            id = phase.id?.let(java.util.UUID::fromString),
+            effectiveFrom = java.time.LocalDate.parse(phase.effectiveFrom),
+            items = phase.items.map { item ->
+                ReplacePortfolioTargetItem(
+                    assetClass = AssetClass.valueOf(item.assetClass),
+                    targetWeight = item.targetWeight.toBigDecimal()
+                )
+            }
         )
     }
 )

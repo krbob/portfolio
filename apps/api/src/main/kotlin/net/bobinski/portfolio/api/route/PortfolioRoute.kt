@@ -7,6 +7,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
+import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalService
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import org.koin.ktor.ext.inject
 
@@ -17,6 +18,7 @@ fun Route.portfolioRoute() {
     val portfolioAllocationService: PortfolioAllocationService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
     val portfolioReturnsService: PortfolioReturnsService by inject()
+    val portfolioWithdrawalService: PortfolioWithdrawalService by inject()
 
     route("/v1/portfolio") {
         registerPortfolioReadModelRoutes(
@@ -29,5 +31,6 @@ fun Route.portfolioRoute() {
             portfolioHistoryService = portfolioHistoryService,
             portfolioReturnsService = portfolioReturnsService,
         )
+        registerPortfolioWithdrawalPlanRoute(portfolioWithdrawalService)
     }
 }

@@ -8,6 +8,7 @@ import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionImportProfile
 import net.bobinski.portfolio.api.domain.model.TransactionType
@@ -27,6 +28,7 @@ import java.util.UUID
 import kotlinx.serialization.Serializable
 import net.bobinski.portfolio.api.domain.model.AuditEventCategory
 
+@Suppress("LongParameterList")
 class PortfolioTransferService(
     private val accountRepository: AccountRepository,
     private val appPreferenceRepository: AppPreferenceRepository,
@@ -36,14 +38,20 @@ class PortfolioTransferService(
     private val transactionImportProfileRepository: TransactionImportProfileRepository,
     private val transactionRunner: PersistenceTransactionRunner,
     private val auditLogService: AuditLogService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val readModelCacheService: ReadModelCacheService? = null
 ) {
     suspend fun exportState(): PortfolioSnapshot = transactionRunner.inTransaction {
         val accounts = accountRepository.list()
             .sortedWith(compareBy<Account>({ it.createdAt }, { it.name.lowercase() }))
         val appPreferences = userPreferences().sortedBy(AppPreference::key)
         val instruments = instrumentRepository.list().sortedBy(Instrument::createdAt)
-        val targets = portfolioTargetRepository.list()
+        val targetSchedule = portfolioTargetRepository.listPhases()
+            .sortedBy(PortfolioTargetPhase::effectiveFrom)
+        val targets = targetSchedule
+            .lastOrNull { phase -> !phase.effectiveFrom.isAfter(LocalDate.now(clock)) }
+            ?.targets
+            .orEmpty()
             .sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
         val transactions = transactionRepository.list()
             .sortedWith(TransactionLedger.order)
@@ -57,6 +65,8 @@ class PortfolioTransferService(
             appPreferences = appPreferences.map { it.toSnapshot() },
             instruments = instruments.map { it.toSnapshot() },
             targets = targets.map { it.toSnapshot() },
+            targetSchedule = targetSchedule.map { it.toSnapshot() },
+            targetScheduleSectionPresent = true,
             importProfiles = importProfiles.map { it.toSnapshot() },
             transactions = transactions.map { it.toSnapshot() }
         )
@@ -106,9 +116,7 @@ class PortfolioTransferService(
             when (val targetPlan = prepared.targetPlan) {
                 PreparedTargetImportPlan.Preserve -> Unit
                 is PreparedTargetImportPlan.Replace -> {
-                    portfolioTargetRepository.replaceAll(
-                        targetPlan.targets.sortedWith(compareBy<PortfolioTarget>({ it.createdAt }, { it.assetClass.name }))
-                    )
+                    portfolioTargetRepository.replaceSchedule(targetPlan.phases)
                 }
             }
 
@@ -138,6 +146,7 @@ class PortfolioTransferService(
                 importProfileCount = prepared.importProfilesPlan.importedCount
             )
         }
+        readModelCacheService?.clearAll()
         auditLogService.record(
             category = AuditEventCategory.IMPORTS,
             action = "PORTFOLIO_STATE_IMPORTED",
@@ -160,7 +169,8 @@ class PortfolioTransferService(
         val existingAccounts = accountRepository.list()
         val existingAppPreferences = userPreferences()
         val existingInstruments = instrumentRepository.list()
-        val existingTargets = portfolioTargetRepository.list()
+        val existingTargetSchedule = portfolioTargetRepository.listPhases()
+        val existingTargets = targetsAt(existingTargetSchedule, LocalDate.now(clock))
         val existingTransactions = transactionRepository.list()
         val existingImportProfiles = transactionImportProfileRepository.list()
         val issues = mutableListOf<PortfolioImportIssue>()
@@ -176,6 +186,11 @@ class PortfolioTransferService(
         issues += duplicateIdIssues("account", request.snapshot.accounts.map(AccountSnapshot::id))
         issues += duplicateIdIssues("instrument", request.snapshot.instruments.map(InstrumentSnapshot::id))
         issues += duplicateIdIssues("target", request.snapshot.targets.map(PortfolioTargetSnapshot::id))
+        issues += duplicateIdIssues("target phase", request.snapshot.targetSchedule.map(PortfolioTargetPhaseSnapshot::id))
+        issues += duplicateIdIssues(
+            "scheduled target",
+            request.snapshot.targetSchedule.flatMap(PortfolioTargetPhaseSnapshot::targets).map(PortfolioTargetSnapshot::id)
+        )
         val snapshotUserPreferences = request.snapshot.appPreferences
             .filterNot { preference -> OperationalStateKeys.isLegacyPreference(preference.key) }
         issues += duplicateStringIssues("app preference", snapshotUserPreferences.map(AppPreferenceSnapshot::key))
@@ -210,6 +225,13 @@ class PortfolioTransferService(
             issues = issues,
             convert = { snapshot -> snapshot.toDomain() }
         )
+        val snapshotTargetSchedule = parseSnapshots(
+            snapshots = request.snapshot.targetSchedule,
+            entityName = "target phase",
+            entityId = PortfolioTargetPhaseSnapshot::id,
+            issues = issues,
+            convert = { snapshot -> snapshot.toDomain() }
+        )
         val snapshotTransactions = parseSnapshots(
             snapshots = request.snapshot.transactions,
             entityName = "transaction",
@@ -232,6 +254,16 @@ class PortfolioTransferService(
                         entityName = "target",
                         entityId = "targets",
                         message = exception.message ?: "Invalid target snapshot set."
+                    )
+                }
+        }
+        if (snapshotTargetSchedule.isNotEmpty()) {
+            runCatching { PortfolioTargetService.validateSchedule(snapshotTargetSchedule) }
+                .onFailure { exception ->
+                    issues += invalidSnapshotIssue(
+                        entityName = "target schedule",
+                        entityId = "targetSchedule",
+                        message = exception.message ?: "Invalid target schedule snapshot."
                     )
                 }
         }
@@ -304,9 +336,14 @@ class PortfolioTransferService(
 
         val targetPlan = prepareTargetPlan(
             mode = request.mode,
-            existingTargets = existingTargets,
-            snapshotTargets = snapshotTargets,
-            targetsSectionPresent = request.snapshot.targetsSectionPresent,
+            existing = ExistingTargetState(schedule = existingTargetSchedule, activeTargets = existingTargets),
+            incoming = IncomingTargetState(
+                schedule = snapshotTargetSchedule,
+                scheduleSectionPresent = request.snapshot.targetScheduleSectionPresent,
+                legacyTargets = snapshotTargets,
+                legacySectionPresent = request.snapshot.targetsSectionPresent,
+                transactions = snapshotTransactions
+            ),
             issues = issues
         )
         val importProfilesPlan = prepareImportProfilesPlan(
@@ -347,14 +384,25 @@ class PortfolioTransferService(
                     deletedCount = 0,
                     sectionSkipped = true
                 )
-                is PreparedTargetImportPlan.Replace -> buildEntityDiff(
-                    mode = request.mode,
-                    existing = existingTargets,
-                    incoming = targetPlan.targets,
-                    keySelector = PortfolioTarget::assetClass,
-                    signatureSelector = { target -> target.toSnapshot() },
-                    allowDeletionInMerge = request.mode == ImportMode.MERGE
-                )
+                is PreparedTargetImportPlan.Replace -> if (request.snapshot.targetScheduleSectionPresent) {
+                    buildEntityDiff(
+                        mode = request.mode,
+                        existing = existingTargetSchedule.toDiffEntries(),
+                        incoming = targetPlan.phases.toDiffEntries(),
+                        keySelector = { target -> target.effectiveFrom to target.assetClass },
+                        signatureSelector = { target -> target.targetWeight.setScale(6, java.math.RoundingMode.HALF_UP) },
+                        allowDeletionInMerge = true
+                    )
+                } else {
+                    buildEntityDiff(
+                        mode = request.mode,
+                        existing = existingTargets,
+                        incoming = targetsAt(targetPlan.phases, LocalDate.now(clock)),
+                        keySelector = PortfolioTarget::assetClass,
+                        signatureSelector = { target -> target.toSnapshot() },
+                        allowDeletionInMerge = request.mode == ImportMode.MERGE
+                    )
+                }
             },
             transactions = buildEntityDiff(
                 mode = request.mode,
@@ -404,13 +452,21 @@ class PortfolioTransferService(
                 snapshotAccountCount = request.snapshot.accounts.size,
                 snapshotAppPreferenceCount = snapshotUserPreferences.size,
                 snapshotInstrumentCount = request.snapshot.instruments.size,
-                snapshotTargetCount = request.snapshot.targets.size,
+                snapshotTargetCount = if (request.snapshot.targetScheduleSectionPresent) {
+                    request.snapshot.targetSchedule.sumOf { phase -> phase.targets.size }
+                } else {
+                    request.snapshot.targets.size
+                },
                 snapshotTransactionCount = request.snapshot.transactions.size,
                 snapshotImportProfileCount = request.snapshot.importProfiles.size,
                 existingAccountCount = existingAccounts.size,
                 existingAppPreferenceCount = existingAppPreferences.size,
                 existingInstrumentCount = existingInstruments.size,
-                existingTargetCount = existingTargets.size,
+                existingTargetCount = if (request.snapshot.targetScheduleSectionPresent) {
+                    existingTargetSchedule.sumOf { phase -> phase.targets.size }
+                } else {
+                    existingTargets.size
+                },
                 existingTransactionCount = existingTransactions.size,
                 existingImportProfileCount = existingImportProfiles.size,
                 matchingAccountCount = diff.accounts.matchingCount,
@@ -456,13 +512,23 @@ class PortfolioTransferService(
 
     private fun prepareTargetPlan(
         mode: ImportMode,
-        existingTargets: List<PortfolioTarget>,
-        snapshotTargets: List<PortfolioTarget>,
-        targetsSectionPresent: Boolean,
+        existing: ExistingTargetState,
+        incoming: IncomingTargetState,
         issues: MutableList<PortfolioImportIssue>
     ): PreparedTargetImportPlan {
-        if (mode == ImportMode.MERGE && !targetsSectionPresent) {
-            if (existingTargets.isNotEmpty()) {
+        if (incoming.scheduleSectionPresent) {
+            if (mode == ImportMode.MERGE && existing.schedule.isNotEmpty()) {
+                issues += PortfolioImportIssue(
+                    severity = ImportIssueSeverity.WARNING,
+                    code = "TARGET_SCHEDULE_REPLACED",
+                    message = "MERGE will replace the complete target allocation schedule from the snapshot."
+                )
+            }
+            return PreparedTargetImportPlan.Replace(incoming.schedule)
+        }
+
+        if (mode == ImportMode.MERGE && !incoming.legacySectionPresent) {
+            if (existing.activeTargets.isNotEmpty()) {
                 issues += PortfolioImportIssue(
                     severity = ImportIssueSeverity.WARNING,
                     code = "TARGETS_SECTION_SKIPPED",
@@ -472,15 +538,85 @@ class PortfolioTransferService(
             return PreparedTargetImportPlan.Preserve
         }
 
-        if (mode == ImportMode.MERGE && targetsSectionPresent && existingTargets.isNotEmpty()) {
+        return prepareLegacyTargetPlan(mode, existing, incoming, issues)
+    }
+
+    private fun prepareLegacyTargetPlan(
+        mode: ImportMode,
+        existing: ExistingTargetState,
+        incoming: IncomingTargetState,
+        issues: MutableList<PortfolioImportIssue>
+    ): PreparedTargetImportPlan {
+        if (mode == ImportMode.MERGE && existing.activeTargets.isNotEmpty()) {
             issues += PortfolioImportIssue(
                 severity = ImportIssueSeverity.WARNING,
                 code = "TARGETS_SECTION_REPLACED",
-                message = "MERGE will replace the current target allocation with the snapshot target set."
+                message = "MERGE will replace today's target allocation with the legacy snapshot target set."
             )
         }
 
-        return PreparedTargetImportPlan.Replace(snapshotTargets)
+        if (incoming.legacyTargets.isEmpty()) {
+            return PreparedTargetImportPlan.Replace(emptyList(), appliedCount = 0)
+        }
+
+        val effectiveFrom = when (mode) {
+            ImportMode.MERGE -> LocalDate.now(clock)
+            ImportMode.REPLACE -> incoming.transactions.minOfOrNull(Transaction::tradeDate) ?: LocalDate.now(clock)
+        }
+        val existingPhase = existing.schedule.find { phase -> phase.effectiveFrom == effectiveFrom }
+        val importedTargets = remapLegacyTargetIds(
+            existingSchedule = existing.schedule,
+            replacedEffectiveFrom = effectiveFrom,
+            targets = incoming.legacyTargets
+        )
+        val createdAt = existingPhase?.createdAt ?: incoming.legacyTargets.minOf(PortfolioTarget::createdAt)
+        val updatedAt = incoming.legacyTargets.maxOf(PortfolioTarget::updatedAt)
+        val importedPhase = PortfolioTargetPhase(
+            id = existingPhase?.id ?: UUID.nameUUIDFromBytes(
+                "legacy-target-phase-$effectiveFrom-${incoming.legacyTargets.joinToString { target -> target.id.toString() }}".toByteArray()
+            ),
+            effectiveFrom = effectiveFrom,
+            targets = importedTargets,
+            createdAt = createdAt,
+            updatedAt = maxOf(createdAt, updatedAt)
+        )
+        val phases = when (mode) {
+            ImportMode.REPLACE -> listOf(importedPhase)
+            ImportMode.MERGE -> existing.schedule
+                .filterNot { phase -> phase.effectiveFrom == effectiveFrom }
+                .plus(importedPhase)
+                .sortedBy(PortfolioTargetPhase::effectiveFrom)
+        }
+        return PreparedTargetImportPlan.Replace(phases, appliedCount = incoming.legacyTargets.size)
+    }
+
+    private fun remapLegacyTargetIds(
+        existingSchedule: List<PortfolioTargetPhase>,
+        replacedEffectiveFrom: LocalDate,
+        targets: List<PortfolioTarget>
+    ): List<PortfolioTarget> {
+        val claimedIds = existingSchedule
+            .asSequence()
+            .filterNot { phase -> phase.effectiveFrom == replacedEffectiveFrom }
+            .flatMap { phase -> phase.targets.asSequence() }
+            .mapTo(mutableSetOf(), PortfolioTarget::id)
+
+        return targets.mapIndexed { index, target ->
+            if (claimedIds.add(target.id)) {
+                target
+            } else {
+                var attempt = 0
+                var remappedId: UUID
+                do {
+                    remappedId = UUID.nameUUIDFromBytes(
+                        "legacy-target-$replacedEffectiveFrom-${target.id}-${target.assetClass}-$index-$attempt"
+                            .toByteArray(Charsets.UTF_8)
+                    )
+                    attempt += 1
+                } while (!claimedIds.add(remappedId))
+                target.copy(id = remappedId)
+            }
+        }
     }
 
     private fun prepareImportProfilesPlan(
@@ -586,10 +722,30 @@ class PortfolioTransferService(
             override val appliedCount: Int = 0
         }
 
-        data class Replace(val targets: List<PortfolioTarget>) : PreparedTargetImportPlan {
-            override val appliedCount: Int = targets.size
-        }
+        data class Replace(
+            val phases: List<PortfolioTargetPhase>,
+            override val appliedCount: Int = phases.sumOf { phase -> phase.targets.size }
+        ) : PreparedTargetImportPlan
     }
+
+    private data class ExistingTargetState(
+        val schedule: List<PortfolioTargetPhase>,
+        val activeTargets: List<PortfolioTarget>
+    )
+
+    private data class TargetScheduleDiffEntry(
+        val effectiveFrom: LocalDate,
+        val assetClass: AssetClass,
+        val targetWeight: BigDecimal
+    )
+
+    private data class IncomingTargetState(
+        val schedule: List<PortfolioTargetPhase>,
+        val scheduleSectionPresent: Boolean,
+        val legacyTargets: List<PortfolioTarget>,
+        val legacySectionPresent: Boolean,
+        val transactions: List<Transaction>
+    )
 
     private sealed interface PreparedImportProfilesPlan {
         val importedCount: Int
@@ -692,6 +848,14 @@ class PortfolioTransferService(
         updatedAt = updatedAt.toString()
     )
 
+    private fun PortfolioTargetPhase.toSnapshot(): PortfolioTargetPhaseSnapshot = PortfolioTargetPhaseSnapshot(
+        id = id.toString(),
+        effectiveFrom = effectiveFrom.toString(),
+        targets = targets.map { target -> target.toSnapshot() },
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt.toString()
+    )
+
     private fun AppPreference.toSnapshot(): AppPreferenceSnapshot = AppPreferenceSnapshot(
         key = key,
         valueJson = valueJson,
@@ -764,6 +928,14 @@ class PortfolioTransferService(
         updatedAt = Instant.parse(updatedAt)
     )
 
+    private fun PortfolioTargetPhaseSnapshot.toDomain(): PortfolioTargetPhase = PortfolioTargetPhase(
+        id = UUID.fromString(id),
+        effectiveFrom = LocalDate.parse(effectiveFrom),
+        targets = targets.map { target -> target.toDomain() },
+        createdAt = Instant.parse(createdAt),
+        updatedAt = Instant.parse(updatedAt)
+    )
+
     private fun AppPreferenceSnapshot.toDomain(): AppPreference {
         require(key.isNotBlank()) { "App preference key must not be blank." }
         return AppPreference(
@@ -816,8 +988,23 @@ class PortfolioTransferService(
     }
 
     private companion object {
-        const val CURRENT_SCHEMA_VERSION = 4
-        val SUPPORTED_SCHEMA_VERSIONS = setOf(4)
+        const val CURRENT_SCHEMA_VERSION = 5
+        val SUPPORTED_SCHEMA_VERSIONS = setOf(4, 5)
+    }
+
+    private fun targetsAt(phases: List<PortfolioTargetPhase>, date: LocalDate): List<PortfolioTarget> = phases
+        .lastOrNull { phase -> !phase.effectiveFrom.isAfter(date) }
+        ?.targets
+        .orEmpty()
+
+    private fun List<PortfolioTargetPhase>.toDiffEntries(): List<TargetScheduleDiffEntry> = flatMap { phase ->
+        phase.targets.map { target ->
+            TargetScheduleDiffEntry(
+                effectiveFrom = phase.effectiveFrom,
+                assetClass = target.assetClass,
+                targetWeight = target.targetWeight
+            )
+        }
     }
 }
 
@@ -829,6 +1016,8 @@ data class PortfolioSnapshot(
     val instruments: List<InstrumentSnapshot>,
     val targets: List<PortfolioTargetSnapshot> = emptyList(),
     val targetsSectionPresent: Boolean = true,
+    val targetSchedule: List<PortfolioTargetPhaseSnapshot> = emptyList(),
+    val targetScheduleSectionPresent: Boolean = false,
     val importProfiles: List<TransactionImportProfileSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
@@ -893,6 +1082,15 @@ data class PortfolioTargetSnapshot(
     val id: String,
     val assetClass: String,
     val targetWeight: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+@Serializable
+data class PortfolioTargetPhaseSnapshot(
+    val id: String,
+    val effectiveFrom: String,
+    val targets: List<PortfolioTargetSnapshot>,
     val createdAt: String,
     val updatedAt: String
 )

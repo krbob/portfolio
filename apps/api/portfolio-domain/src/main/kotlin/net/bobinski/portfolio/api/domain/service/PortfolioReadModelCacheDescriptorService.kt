@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
@@ -40,7 +41,7 @@ class PortfolioReadModelCacheDescriptorService(
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
-        modelVersion = 10,
+        modelVersion = 11,
         preferenceUpdatedAt = preferenceUpdatedAt(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
     )
 
@@ -61,7 +62,12 @@ class PortfolioReadModelCacheDescriptorService(
     ): ReadModelCacheDescriptor {
         val accounts = accountRepository.list()
         val instruments = instrumentRepository.list()
-        val targets = if (includeTargets) portfolioTargetRepository.list() else emptyList()
+        val targetPhases = if (includeTargets) portfolioTargetRepository.listPhases() else emptyList()
+        val targets = if (includeTargets) {
+            targetPhases.flatMap { phase -> phase.targets }
+        } else {
+            emptyList()
+        }
         val transactions = transactionRepository.list()
         val marketDataSnapshotUpdatedAt = marketDataSnapshotCanonicalUpdatedAt()
         val today = LocalDate.now(clock)
@@ -69,6 +75,7 @@ class PortfolioReadModelCacheDescriptorService(
             accounts = accounts,
             instruments = instruments,
             targets = targets,
+            targetPhases = targetPhases,
             transactions = transactions,
             preferenceUpdatedAt = preferenceUpdatedAt
         )
@@ -131,6 +138,7 @@ class PortfolioReadModelCacheDescriptorService(
         accounts: List<Account>,
         instruments: List<Instrument>,
         targets: List<PortfolioTarget>,
+        targetPhases: List<PortfolioTargetPhase>,
         transactions: List<Transaction>,
         preferenceUpdatedAt: Instant? = null,
         marketDataSnapshotUpdatedAt: Instant? = null
@@ -138,6 +146,7 @@ class PortfolioReadModelCacheDescriptorService(
         accounts.maxOfOrNull(Account::updatedAt),
         instruments.maxOfOrNull(Instrument::updatedAt),
         targets.maxOfOrNull(PortfolioTarget::updatedAt),
+        targetPhases.maxOfOrNull(PortfolioTargetPhase::updatedAt),
         transactions.maxOfOrNull(Transaction::updatedAt),
         preferenceUpdatedAt,
         marketDataSnapshotUpdatedAt

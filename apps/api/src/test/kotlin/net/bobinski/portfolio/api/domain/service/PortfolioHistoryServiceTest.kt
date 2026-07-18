@@ -8,6 +8,7 @@ import net.bobinski.portfolio.api.domain.model.EdoTerms
 import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.InstrumentKind
 import net.bobinski.portfolio.api.domain.model.PortfolioTarget
+import net.bobinski.portfolio.api.domain.model.PortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.model.Transaction
 import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
@@ -290,23 +291,8 @@ class PortfolioHistoryServiceTest {
                 multiplier = BigDecimal("1.02")
             )
         )
-        fixture.portfolioTargetRepository.replaceAll(
-            listOf(
-                PortfolioTarget(
-                    id = UUID.nameUUIDFromBytes("equities-target".toByteArray()),
-                    assetClass = AssetClass.EQUITIES,
-                    targetWeight = BigDecimal("0.80"),
-                    createdAt = CREATED_AT,
-                    updatedAt = CREATED_AT
-                ),
-                PortfolioTarget(
-                    id = UUID.nameUUIDFromBytes("bonds-target".toByteArray()),
-                    assetClass = AssetClass.BONDS,
-                    targetWeight = BigDecimal("0.20"),
-                    createdAt = CREATED_AT,
-                    updatedAt = CREATED_AT
-                )
-            )
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "0.80", bonds = "0.20"))
         )
 
         val history = fixture.service.dailyHistory()
@@ -353,23 +339,8 @@ class PortfolioHistoryServiceTest {
                 pricePoint("2026-03-03", "110.25")
             )
         )
-        fixture.portfolioTargetRepository.replaceAll(
-            listOf(
-                PortfolioTarget(
-                    id = UUID.nameUUIDFromBytes("equities-target-delayed".toByteArray()),
-                    assetClass = AssetClass.EQUITIES,
-                    targetWeight = BigDecimal("0.80"),
-                    createdAt = CREATED_AT,
-                    updatedAt = CREATED_AT
-                ),
-                PortfolioTarget(
-                    id = UUID.nameUUIDFromBytes("bonds-target-delayed".toByteArray()),
-                    assetClass = AssetClass.BONDS,
-                    targetWeight = BigDecimal("0.20"),
-                    createdAt = CREATED_AT,
-                    updatedAt = CREATED_AT
-                )
-            )
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "0.80", bonds = "0.20"))
         )
 
         val history = fixture.service.dailyHistory()
@@ -377,6 +348,80 @@ class PortfolioHistoryServiceTest {
         assertEquals(null, history.points.first().benchmarkIndices["TARGET_MIX"])
         assertTrue(history.points[1].benchmarkIndices["TARGET_MIX"]!!.compareTo(BigDecimal("100")) == 0)
         assertNotNull(history.points.last().benchmarkIndices["TARGET_MIX"])
+    }
+
+    @Test
+    fun `daily history applies target phases without rewriting earlier benchmark returns`() = runBlocking {
+        val fixture = historyFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "4.00")))
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(prices = listOf(pricePoint("2026-03-01", "12000.00")))
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "110.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "105.00"),
+                pricePoint("2026-03-03", "110.25")
+            )
+        )
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(
+                targetPhase("2026-03-01", equities = "1.00", bonds = "0.00"),
+                targetPhase("2026-03-03", equities = "0.00", bonds = "1.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertTrue(history.points[0].benchmarkIndices[BenchmarkKey.TARGET_MIX.name]!!.compareTo(BigDecimal("100")) == 0)
+        assertTrue(history.points[1].benchmarkIndices[BenchmarkKey.TARGET_MIX.name]!!.compareTo(BigDecimal("110")) == 0)
+        assertTrue(history.points[2].benchmarkIndices[BenchmarkKey.TARGET_MIX.name]!!.compareTo(BigDecimal("115.5")) == 0)
+    }
+
+    @Test
+    fun `target mix health ignores a stale component used only before the history range`() = runBlocking {
+        val fixture = historyFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.referenceProvider.usd = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-01", "4.00"))
+        )
+        fixture.referenceProvider.gold = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-01", "12000.00"))
+        )
+        fixture.referenceProvider.equity = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "101.00"),
+                pricePoint("2026-03-03", "102.00")
+            ),
+            fromCache = true
+        )
+        fixture.referenceProvider.bond = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "101.00"),
+                pricePoint("2026-03-03", "102.00")
+            )
+        )
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(
+                targetPhase("2025-01-01", equities = "1.00", bonds = "0.00"),
+                targetPhase("2026-02-01", equities = "0.00", bonds = "1.00")
+            )
+        )
+
+        val targetMixHealth = fixture.service.dailyHistory().benchmarkStatuses
+            .single { status -> status.key == BenchmarkKey.TARGET_MIX.name }
+
+        assertEquals(BenchmarkSeriesStatus.HEALTHY, targetMixHealth.status)
     }
 
     @Test
@@ -623,6 +668,36 @@ class PortfolioHistoryServiceTest {
             date = LocalDate.parse(date),
             closePricePln = BigDecimal(closePricePln)
         )
+
+    private fun targetPhase(
+        effectiveFrom: String,
+        equities: String,
+        bonds: String
+    ): PortfolioTargetPhase {
+        val date = LocalDate.parse(effectiveFrom)
+        return PortfolioTargetPhase(
+            id = UUID.nameUUIDFromBytes("target-phase-$effectiveFrom".toByteArray()),
+            effectiveFrom = date,
+            targets = listOf(
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("target-equities-$effectiveFrom".toByteArray()),
+                    assetClass = AssetClass.EQUITIES,
+                    targetWeight = BigDecimal(equities),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                ),
+                PortfolioTarget(
+                    id = UUID.nameUUIDFromBytes("target-bonds-$effectiveFrom".toByteArray()),
+                    assetClass = AssetClass.BONDS,
+                    targetWeight = BigDecimal(bonds),
+                    createdAt = CREATED_AT,
+                    updatedAt = CREATED_AT
+                )
+            ),
+            createdAt = CREATED_AT,
+            updatedAt = CREATED_AT
+        )
+    }
 
     private data class HistoryFixture(
         val service: PortfolioHistoryService,

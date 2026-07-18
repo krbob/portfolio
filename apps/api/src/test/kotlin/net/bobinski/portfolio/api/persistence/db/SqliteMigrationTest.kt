@@ -21,12 +21,13 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(12, appliedMigrationCount(connection))
+                    assertEquals(13, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
                     assertTrue(tableExists(connection, "transactions"))
                     assertTrue(tableExists(connection, "portfolio_targets"))
+                    assertTrue(tableExists(connection, "portfolio_target_phases"))
                     assertTrue(tableExists(connection, "audit_events"))
                     assertTrue(tableExists(connection, "read_model_snapshots"))
                     assertTrue(tableExists(connection, "transaction_import_profiles"))
@@ -84,6 +85,27 @@ class SqliteMigrationTest {
         }
     }
 
+    @Test
+    fun `target schedule migration seeds legacy targets from earliest transaction date`() {
+        val directory = createTempDirectory("portfolio-target-schedule-migration-test")
+        val databasePath = directory.resolve("portfolio.db")
+        val dataSource = DataSourceFactory.create(sqlitePersistenceConfig(databasePath.toString()))
+
+        try {
+            migrateToVersion12(dataSource)
+            seedLegacyTargetsAndTransaction(dataSource)
+
+            DatabaseMigrator.migrate(dataSource)
+            assertMigratedTargetSchedule(dataSource)
+        } finally {
+            (dataSource as? AutoCloseable)?.close()
+            (directory / "portfolio.db").deleteIfExists()
+            (directory / "portfolio.db-shm").deleteIfExists()
+            (directory / "portfolio.db-wal").deleteIfExists()
+            directory.deleteIfExists()
+        }
+    }
+
     private fun migrateToVersion10(dataSource: javax.sql.DataSource) {
         Flyway.configure()
             .dataSource(dataSource)
@@ -100,6 +122,77 @@ class SqliteMigrationTest {
             .target("11")
             .load()
             .migrate()
+    }
+
+    private fun migrateToVersion12(dataSource: javax.sql.DataSource) {
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .target("12")
+            .load()
+            .migrate()
+    }
+
+    private fun seedLegacyTargetsAndTransaction(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeUpdate(
+                    """
+                    insert into accounts (
+                        id, name, institution, type, base_currency, is_active, created_at, updated_at
+                    ) values (
+                        '10000000-0000-0000-0000-000000000001', 'Brokerage', 'Broker', 'BROKERAGE',
+                        'PLN', 1, '2024-02-01T12:00:00Z', '2024-02-01T12:00:00Z'
+                    )
+                    """.trimIndent()
+                )
+                statement.executeUpdate(
+                    """
+                    insert into transactions (
+                        id, account_id, instrument_id, type, trade_date, settlement_date, quantity, unit_price,
+                        gross_amount, fee_amount, tax_amount, currency, fx_rate_to_pln, notes, created_at, updated_at
+                    ) values (
+                        '20000000-0000-0000-0000-000000000001',
+                        '10000000-0000-0000-0000-000000000001', null, 'DEPOSIT', '2024-02-03', '2024-02-03',
+                        null, null, '1000.00', '0.00', '0.00', 'PLN', null, '',
+                        '2024-02-03T12:00:00Z', '2024-02-03T12:00:00Z'
+                    )
+                    """.trimIndent()
+                )
+                statement.executeUpdate(
+                    """
+                    insert into portfolio_targets (id, asset_class, target_weight, created_at, updated_at) values
+                        ('30000000-0000-0000-0000-000000000001', 'EQUITIES', '0.80', '2024-02-04T12:00:00Z', '2024-02-04T12:00:00Z'),
+                        ('30000000-0000-0000-0000-000000000002', 'BONDS', '0.20', '2024-02-04T12:00:00Z', '2024-02-04T12:00:00Z')
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    private fun assertMigratedTargetSchedule(dataSource: javax.sql.DataSource) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                select phase.effective_from, target.id, target.asset_class, target.target_weight
+                from portfolio_target_phases phase
+                join portfolio_targets target on target.phase_id = phase.id
+                order by target.asset_class
+                """.trimIndent()
+            ).use { statement ->
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    assertEquals("2024-02-03", resultSet.getString("effective_from"))
+                    assertEquals("30000000-0000-0000-0000-000000000002", resultSet.getString("id"))
+                    assertEquals("BONDS", resultSet.getString("asset_class"))
+                    assertEquals("0.20", resultSet.getString("target_weight"))
+                    assertTrue(resultSet.next())
+                    assertEquals("30000000-0000-0000-0000-000000000001", resultSet.getString("id"))
+                    assertEquals("EQUITIES", resultSet.getString("asset_class"))
+                    assertEquals("0.80", resultSet.getString("target_weight"))
+                }
+            }
+        }
     }
 
     private fun seedLegacyWebPushSubscription(dataSource: javax.sql.DataSource) {
@@ -124,7 +217,7 @@ class SqliteMigrationTest {
 
     private fun assertLegacyWebPushLocale(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(12, appliedMigrationCount(connection))
+            assertEquals(13, appliedMigrationCount(connection))
             connection.prepareStatement(
                 "select locale from web_push_subscriptions where endpoint = ?"
             ).use { statement ->
@@ -164,7 +257,7 @@ class SqliteMigrationTest {
 
     private fun assertOperationalStateMigration(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(12, appliedMigrationCount(connection))
+            assertEquals(13, appliedMigrationCount(connection))
             assertEquals(
                 listOf("portfolio.benchmark-settings"),
                 storedKeys(connection, table = "app_preferences", keyColumn = "preference_key")

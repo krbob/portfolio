@@ -191,7 +191,7 @@ class PortfolioBackupService(
         val latestBackup = listBackupsUnlocked().firstOrNull()
         if (latestBackup != null) {
             val age = java.time.Duration.between(latestBackup.createdAt, clock.instant())
-            if (age < java.time.Duration.ofMinutes(config.intervalMinutes.toLong())) {
+            if (age < java.time.Duration.ofMinutes(config.intervalMinutes)) {
                 return@withLock null
             }
         }
@@ -256,7 +256,9 @@ class PortfolioBackupService(
                     !OperationalStateKeys.isLegacyPreference(preference.key)
                 },
                 instrumentCount = snapshot.instruments.size,
-                targetCount = snapshot.targets.orEmpty().size,
+                targetCount = snapshot.targetSchedule
+                    ?.sumOf { phase -> phase.targets.size }
+                    ?: snapshot.targets.orEmpty().size,
                 transactionCount = snapshot.transactions.size,
                 importProfileCount = snapshot.importProfiles.size,
                 isReadable = true,
@@ -380,6 +382,7 @@ private data class StoredPortfolioSnapshot(
     val appPreferences: List<AppPreferenceSnapshot> = emptyList(),
     val instruments: List<InstrumentSnapshot>,
     val targets: List<PortfolioTargetSnapshot>? = null,
+    val targetSchedule: List<PortfolioTargetPhaseSnapshot>? = null,
     val importProfiles: List<TransactionImportProfileSnapshot> = emptyList(),
     val transactions: List<TransactionSnapshot>
 )
@@ -393,6 +396,7 @@ private fun PortfolioSnapshot.toStored(): StoredPortfolioSnapshot = StoredPortfo
     },
     instruments = instruments,
     targets = targets,
+    targetSchedule = targetSchedule,
     importProfiles = importProfiles,
     transactions = transactions
 )
@@ -407,6 +411,8 @@ private fun StoredPortfolioSnapshot.toDomain(): PortfolioSnapshot = PortfolioSna
     instruments = instruments,
     targets = targets.orEmpty(),
     targetsSectionPresent = targets != null,
+    targetSchedule = targetSchedule.orEmpty(),
+    targetScheduleSectionPresent = targetSchedule != null,
     importProfiles = importProfiles,
     transactions = transactions
 )
