@@ -30,6 +30,14 @@ jobs:
       - name: Validate documentation
         run: python3 scripts/validate-documentation.py
 
+      - name: Validate development Compose examples
+        run: |
+          docker compose -f docker-compose.full-stack.example.yml config --quiet
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.market-data.self-hosted.dev.example.yml \
+            --profile app config --quiet
+
       - name: Verify production Compose fails without image digests
         run: |
           if env \
