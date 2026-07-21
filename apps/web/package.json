@@ -2,10 +2,10 @@
   "name": "portfolio-web",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "npm@11.16.0",
+  "packageManager": "npm@11.18.0",
   "engines": {
     "node": "24.18.0",
-    "npm": "11.16.0"
+    "npm": "11.18.0"
   },
   "type": "module",
   "scripts": {
