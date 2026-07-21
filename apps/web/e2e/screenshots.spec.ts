@@ -37,6 +37,13 @@ async function apiPost(page: Page, path: string, body: unknown) {
   )
 }
 
+async function apiGet(page: Page, path: string) {
+  return page.evaluate(async (url) => {
+    const res = await fetch(url)
+    return { status: res.status, body: await res.json().catch(() => null) }
+  }, API + path)
+}
+
 async function waitForContent(page: Page) {
   await expect(page.locator('text=Loading')).toHaveCount(0, { timeout: 20_000 })
   await page.waitForTimeout(500)
@@ -93,9 +100,19 @@ const instruments = [
 ]
 
 const targets = [
-  { id: id(), assetClass: 'EQUITIES', targetWeight: '0.60', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
-  { id: id(), assetClass: 'BONDS', targetWeight: '0.35', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
-  { id: id(), assetClass: 'CASH', targetWeight: '0.05', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
+  { id: id(), assetClass: 'EQUITIES', targetWeight: '0.32', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
+  { id: id(), assetClass: 'BONDS', targetWeight: '0.46', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
+  { id: id(), assetClass: 'CASH', targetWeight: '0.22', createdAt: ts('2024-01-01'), updatedAt: ts('2024-01-01') },
+]
+
+const targetSchedule = [
+  {
+    id: id(),
+    effectiveFrom: '2024-01-01',
+    targets,
+    createdAt: ts('2024-01-01'),
+    updatedAt: ts('2024-01-01'),
+  },
 ]
 
 function txn(overrides: Record<string, unknown>) {
@@ -198,18 +215,19 @@ test.describe.serial('generate README screenshots', () => {
     await page.goto('/')
 
     // Back up current state
-    const exportRes = await apiPost(page, '/portfolio/state/export', {})
+    const exportRes = await apiGet(page, '/portfolio/state/export')
     expect(exportRes.status).toBe(200)
     originalState = exportRes.body
 
     // Import demo snapshot
     const snapshot = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportedAt: new Date().toISOString(),
       accounts,
       instruments,
       transactions,
       targets,
+      targetSchedule,
       importProfiles: [],
       appPreferences: [],
     }

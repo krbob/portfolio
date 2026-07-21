@@ -168,7 +168,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
     @staticmethod
     def provenance(currency: str, start: dt.date, end: dt.date) -> dict:
         return {
-            "source": "YAHOO_FINANCE",
+            "source": "CONTRACT_FIXTURE",
             "retrievedAt": f"{end.isoformat()}T12:00:00Z",
             "marketTimestamp": f"{end.isoformat()}T12:00:00Z",
             "marketDate": end.isoformat(),

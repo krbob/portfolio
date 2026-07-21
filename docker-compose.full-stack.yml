@@ -68,7 +68,7 @@ services:
     ports:
       - "4174:4174"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4174/healthz"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4174/healthz"]
       interval: 10s
       timeout: 3s
       retries: 12

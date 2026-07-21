@@ -104,6 +104,19 @@ def validate_safety_contracts() -> list[str]:
         errors.append("README/screenshot suite: destructive screenshot opt-in is not enforced")
     if "loopbackHosts" not in screenshot_spec:
         errors.append("screenshot suite: loopback target restriction is missing")
+    if "apiGet(page, '/portfolio/state/export')" not in screenshot_spec:
+        errors.append("screenshot suite: state backup must use the export endpoint's GET contract")
+
+    web_healthcheck = "http://127.0.0.1:4174/healthz"
+    for compose_path in (
+        ROOT / "docker-compose.yml",
+        ROOT / "docker-compose.full-stack.example.yml",
+        ROOT / "docker-compose.full-stack.yml",
+    ):
+        if web_healthcheck not in compose_path.read_text(encoding="utf-8"):
+            errors.append(
+                f"{compose_path.relative_to(ROOT)}: web healthcheck must use the IPv4 loopback address"
+            )
 
     private_domain_sources = [
         ROOT / "README.md",
