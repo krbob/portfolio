@@ -60,6 +60,13 @@ describe('StatCard', () => {
     expect(screen.getByRole('link', { name: /YTD TWRR/i })).toHaveAttribute('href', '/performance')
   })
 
+  it('reduces long hero values at the tight five-column breakpoint', () => {
+    render(<StatCard label="Portfolio value" value="PLN 660,350.14" hero />)
+
+    const valueEl = screen.getByText('PLN 660,350.14')
+    expect(valueEl).toHaveClass('sm:text-2xl', 'xl:text-lg', '2xl:text-2xl')
+  })
+
   describe('zero detection with numericValue', () => {
     it('detects zero via numericValue prop', () => {
       render(<StatCard label="Value" value="0,00 PLN" numericValue={0} />)

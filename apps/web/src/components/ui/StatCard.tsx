@@ -40,7 +40,12 @@ export function StatCard({ label, value, numericValue, subtitle, change, dot, he
           'mt-2 max-w-full overflow-hidden text-ellipsis font-bold leading-tight tabular-nums',
           loading && 'animate-pulse',
           hero
-            ? [isLong ? 'text-xl sm:text-2xl' : 'text-[1.85rem] sm:text-3xl', 'text-ui-text']
+            ? [
+                isLong
+                  ? 'text-xl sm:text-2xl xl:text-lg 2xl:text-2xl'
+                  : 'text-[1.85rem] sm:text-3xl',
+                'text-ui-text',
+              ]
             : isLong ? 'text-lg sm:text-xl' : 'text-[1.5rem] sm:text-2xl',
           isZero
             ? 'text-ui-text-muted'
