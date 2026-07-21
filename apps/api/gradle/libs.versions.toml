@@ -2,7 +2,7 @@
 kotlin = "2.3.21"
 ktor = "3.5.0"
 koin = "4.2.2"
-logback = "1.5.37"
+logback = "1.5.38"
 hikaricp = "7.1.0"
 flyway = "12.10.0"
 sqlite = "3.53.2.0"
