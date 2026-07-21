@@ -20,7 +20,7 @@ cyclonedx = "3.2.4"
 jackson = "2.21.4"
 handlebars = "4.5.2"
 jose4j = "0.9.6"
-netty = "4.2.15.Final"
+netty = "4.2.16.Final"
 
 [libraries]
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
