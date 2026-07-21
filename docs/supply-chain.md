@@ -54,11 +54,11 @@ require `id-token: write` and `attestations: write`; build arguments are not use
 ## Maintenance policy
 
 All external GitHub Actions use full commit SHAs and all CI helper containers use immutable digests. Renovate creates
-mature dependency pull requests in a bounded weekly window, while security alerts may open immediately. Existing
-branches stay current throughout the month. Every update type is eligible for squash automerge after required CI is
-green, but Renovate performs merges only during the first three days of each month. GitHub platform automerge remains
-disabled so it cannot bypass that window. Releases with trustworthy timestamps are held for seven days; missing
-timestamps do not block an update indefinitely.
+mature dependency pull requests continuously and without concurrent or hourly limits. Existing branches stay current
+throughout the month. Every update type is eligible for squash automerge after required CI is green, but Renovate
+performs merges only during the first three days of each month. GitHub platform automerge remains disabled so it
+cannot bypass that window. Releases with trustworthy timestamps are held for seven days; missing timestamps do not
+block an update indefinitely.
 
 Run the local structural validator after editing Dockerfiles, workflows, tool versions, locks, or Renovate policy:
 

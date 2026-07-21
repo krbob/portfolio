@@ -318,14 +318,15 @@ def validate_renovate() -> None:
         fail("Renovate updates without release timestamps must remain eligible")
     if "helpers:pinGitHubActionDigests" not in config.get("extends", []):
         fail("Renovate must retain GitHub Action digest maintenance")
-    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != ["* 0-8 * * 1"]:
-        fail("Renovate must create dependency pull requests in the weekly Warsaw maintenance window")
+    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != ["at any time"]:
+        fail("Renovate must create mature dependency pull requests continuously")
     if (
-        config.get("prConcurrentLimit") != 10
-        or config.get("branchConcurrentLimit") != 10
-        or config.get("prHourlyLimit") != 2
+        config.get("commitHourlyLimit") != 0
+        or config.get("prConcurrentLimit") != 0
+        or config.get("branchConcurrentLimit") != 0
+        or config.get("prHourlyLimit") != 0
     ):
-        fail("Renovate must retain the shared branch and pull-request limits")
+        fail("Renovate branch and pull-request creation must remain unlimited")
     if config.get("lockFileMaintenance", {}).get("automerge") is not True:
         fail("Renovate lockfile maintenance must follow the automerge policy")
     if config.get("vulnerabilityAlerts", {}).get("automerge") is not True:
