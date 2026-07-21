@@ -6,24 +6,38 @@
   ],
   "timezone": "Europe/Warsaw",
   "dependencyDashboard": true,
-  "automerge": false,
+  "branchPrefix": "renovate/",
+  "prCreation": "immediate",
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
   "platformAutomerge": false,
+  "ignoreTests": false,
+  "automergeSchedule": [
+    "* * 1-3 * *"
+  ],
   "minimumReleaseAge": "7 days",
-  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
   "rebaseWhen": "behind-base-branch",
   "schedule": [
-    "* 0-5 1-7 * 1"
+    "* 0-8 * * 1"
   ],
-  "updateNotScheduled": false,
-  "prConcurrentLimit": 5,
-  "branchConcurrentLimit": 5,
+  "updateNotScheduled": true,
+  "prConcurrentLimit": 10,
+  "branchConcurrentLimit": 10,
   "prHourlyLimit": 2,
-  "labels": [
-    "dependencies"
-  ],
+  "separateMajorMinor": true,
+  "separateMultipleMajor": false,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "* 0-8 * * 1"
+    ],
+    "automerge": true
+  },
   "vulnerabilityAlerts": {
     "enabled": true,
-    "automerge": false,
+    "automerge": true,
     "schedule": [
       "at any time"
     ]

@@ -298,16 +298,40 @@ def validate_ci_toolchains() -> None:
 
 def validate_renovate() -> None:
     config = json.loads(require_file("renovate.json").read_text(encoding="utf-8"))
-    if config.get("automerge") is not False or config.get("platformAutomerge") is not False:
-        fail("Renovate automerge must remain disabled")
-    if config.get("minimumReleaseAgeBehaviour") != "timestamp-required":
-        fail("Renovate must fail closed for dependencies without release timestamps")
+    if config.get("branchPrefix") != "renovate/" or config.get("prCreation") != "immediate":
+        fail("Renovate must use explicit dependency branches and pull requests")
+    if config.get("automerge") is not True or config.get("automergeType") != "pr":
+        fail("Every Renovate update must be eligible for pull-request automerge")
+    if config.get("automergeStrategy") != "squash":
+        fail("Renovate must squash dependency pull requests")
+    if config.get("platformAutomerge") is not False:
+        fail("GitHub platform automerge must stay disabled to enforce the monthly window")
+    if config.get("ignoreTests") is not False:
+        fail("Renovate automerge must require passing tests")
+    if config.get("automergeSchedule") != ["* * 1-3 * *"]:
+        fail("Renovate may automerge only during the first three days of each month")
+    if config.get("rebaseWhen") != "behind-base-branch" or config.get("updateNotScheduled") is not True:
+        fail("Renovate branches must stay current outside the creation window")
+    if config.get("minimumReleaseAge") != "7 days":
+        fail("Renovate updates must retain a seven-day maturity delay")
+    if config.get("minimumReleaseAgeBehaviour") != "timestamp-optional":
+        fail("Renovate updates without release timestamps must remain eligible")
     if "helpers:pinGitHubActionDigests" not in config.get("extends", []):
         fail("Renovate must retain GitHub Action digest maintenance")
-    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != [
-        "* 0-5 1-7 * 1",
-    ]:
-        fail("Renovate must run before 06:00 Europe/Warsaw on the first Monday of each month")
+    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != ["* 0-8 * * 1"]:
+        fail("Renovate must create dependency pull requests in the weekly Warsaw maintenance window")
+    if (
+        config.get("prConcurrentLimit") != 10
+        or config.get("branchConcurrentLimit") != 10
+        or config.get("prHourlyLimit") != 2
+    ):
+        fail("Renovate must retain the shared branch and pull-request limits")
+    if config.get("lockFileMaintenance", {}).get("automerge") is not True:
+        fail("Renovate lockfile maintenance must follow the automerge policy")
+    if config.get("vulnerabilityAlerts", {}).get("automerge") is not True:
+        fail("Renovate security updates must follow the automerge policy")
+    if any(rule.get("automerge") is False for rule in config.get("packageRules", [])):
+        fail("Renovate package rules must not disable automerge")
 
 
 def main() -> None:
