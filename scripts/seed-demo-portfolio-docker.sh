@@ -14,3 +14,9 @@ curl -sSf \
   "$API_BASE_URL/v1/portfolio/state/import"
 
 printf '\n'
+
+curl -sSf \
+  -X POST \
+  "$API_BASE_URL/v1/portfolio/read-model-refresh/run"
+
+printf '\n'

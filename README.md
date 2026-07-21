@@ -4,6 +4,8 @@ Portfolio is a self-hosted portfolio tracker for a single long-term investor. Tr
 canonical source of truth; holdings, allocation, performance and diagnostics are rebuildable read
 models backed by SQLite.
 
+<a href="docs/screenshots/dashboard.png"><img src="docs/screenshots/dashboard.png" width="720" alt="Portfolio dashboard with synthetic demo data"></a>
+
 ## What it covers
 
 - accounts, instruments, transactions, effective-dated allocation schedules and reusable CSV import profiles
@@ -33,6 +35,27 @@ portfolio/
 ```
 
 ## Quick start
+
+### Complete disposable ecosystem
+
+The [full-stack Compose example](docker-compose.full-stack.example.yml) starts Portfolio, Stock Analyst and EDO
+Calculator as six connected services:
+
+```bash
+docker compose -f docker-compose.full-stack.example.yml \
+  up --detach --pull always --wait
+sh scripts/seed-demo-portfolio-docker.sh
+```
+
+Open Portfolio at <http://127.0.0.1:4174> or Stock Analyst at <http://127.0.0.1:18083>. The seed contains only
+synthetic demo data and performs a destructive `REPLACE` import, so use it only with this disposable stack.
+
+The example intentionally uses moving image tags for evaluation, not production. Remove its containers and named
+volumes when finished:
+
+```bash
+docker compose -f docker-compose.full-stack.example.yml down --volumes
+```
 
 ### Local application
 
@@ -69,17 +92,6 @@ docker compose \
   -f docker-compose.market-data.remote.yml \
   --profile app up -d --build
 ```
-
-### Disposable full ecosystem
-
-```bash
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.market-data.self-hosted.dev.example.yml \
-  --profile app up -d --build
-```
-
-This development example uses moving image tags. It is not a production deployment input.
 
 ### Published-image deployment
 

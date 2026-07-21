@@ -14,6 +14,7 @@ MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 HTML_LINK = re.compile(r'<(?:a|img)\b[^>]*(?:href|src)="([^"]+)"', re.IGNORECASE)
 ENV_LITERAL = re.compile(r'"(PORTFOLIO_[A-Z0-9_]+)"')
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "data:", "#")
+PRIVATE_DEPLOYMENT_DOMAIN = re.compile(r"\bbobinski\.net\b", re.IGNORECASE)
 
 
 def owned_markdown_files() -> list[Path]:
@@ -80,6 +81,17 @@ def validate_safety_contracts() -> list[str]:
         if path not in readme:
             errors.append(f"README.md: active document is not indexed: {path}")
 
+    required_readme_fragments = (
+        'href="docs/screenshots/dashboard.png"',
+        'src="docs/screenshots/dashboard.png"',
+        "](docker-compose.full-stack.example.yml)",
+        "sh scripts/seed-demo-portfolio-docker.sh",
+        "down --volumes",
+    )
+    for fragment in required_readme_fragments:
+        if fragment not in readme:
+            errors.append(f"README.md: missing quick-start contract {fragment!r}")
+
     forbidden_rollout = "docker compose -f docker-compose.full-stack.yml up -d"
     for source in [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]:
         if forbidden_rollout in source.read_text(encoding="utf-8"):
@@ -92,6 +104,17 @@ def validate_safety_contracts() -> list[str]:
         errors.append("README/screenshot suite: destructive screenshot opt-in is not enforced")
     if "loopbackHosts" not in screenshot_spec:
         errors.append("screenshot suite: loopback target restriction is missing")
+
+    private_domain_sources = [
+        ROOT / "README.md",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted(ROOT.glob("docker-compose*.yml")),
+    ]
+    for source in private_domain_sources:
+        if PRIVATE_DEPLOYMENT_DOMAIN.search(source.read_text(encoding="utf-8")):
+            errors.append(
+                f"{source.relative_to(ROOT)}: public project material references a private deployment domain"
+            )
     return errors
 
 
