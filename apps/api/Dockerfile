@@ -3,9 +3,7 @@ FROM gradle:9.6.1-jdk21@sha256:210bbd2656b56a7191a2e9e9f55e193f7a355f0c5565ac839
 WORKDIR /workspace
 
 COPY settings.gradle.kts settings.gradle.kts
-COPY settings-gradle.lockfile settings-gradle.lockfile
 COPY build.gradle.kts build.gradle.kts
-COPY gradle.lockfile gradle.lockfile
 COPY gradle gradle
 COPY portfolio-domain portfolio-domain
 COPY contracts contracts

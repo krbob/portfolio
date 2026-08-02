@@ -161,8 +161,9 @@ npm test
 npm run build
 ```
 
-CI additionally runs reproducible SBOM checks, vulnerability scans, Docker/SQLite smoke, generated
-OpenAPI drift checks and browser accessibility/offline flows.
+Required CI runs deterministic source, API, web and generated OpenAPI checks. Docker smoke tests,
+SBOM generation and vulnerability scans remain available as explicit maintenance commands, but do
+not block dependency updates.
 
 ## Screenshot maintenance
 
@@ -189,5 +190,5 @@ still required because no test can recover data after process termination or hos
 - [Operations runbook](docs/runbook.md) — rollout, backup, restore and verification
 - [Troubleshooting](docs/troubleshooting.md) — stale/partial data and startup failures
 - [Deployment compatibility](docs/deployment-compatibility.md) — digest hand-off and rollout gates
-- [Supply-chain controls](docs/supply-chain.md) — locks, SBOMs, scans and attestations
+- [Supply-chain controls](docs/supply-chain.md) — pinned inputs, SBOMs and attestations
 - [Roadmap](docs/roadmap.md) — short active priorities

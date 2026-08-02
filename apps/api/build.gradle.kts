@@ -2,7 +2,6 @@ import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cyclonedx.gradle.CyclonedxDirectTask
 import org.cyclonedx.model.Component
-import org.gradle.api.artifacts.dsl.LockMode
 import java.security.MessageDigest
 import java.util.Properties
 
@@ -19,11 +18,6 @@ version = "0.1.0"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
-}
-
-dependencyLocking {
-    lockAllConfigurations()
-    lockMode.set(LockMode.STRICT)
 }
 
 val contractGeneratorSourceSet = sourceSets.create("contractGenerator")
@@ -238,11 +232,6 @@ kotlin {
 
 subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
-
-    dependencyLocking {
-        lockAllConfigurations()
-        lockMode.set(LockMode.STRICT)
-    }
 
     extensions.configure<DetektExtension> {
         buildUponDefaultConfig = true
