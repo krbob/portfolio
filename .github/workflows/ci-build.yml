@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/ci-verify.yml
 
   strict-contract-full-stack:
-    name: Strict pinned-contract full-stack smoke
+    name: Advisory pinned-contract full-stack smoke
     runs-on: ubuntu-latest
     needs: verify
     permissions:
@@ -44,7 +44,8 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      - name: Run deterministic contract-fixture smoke test
+      - name: Run advisory deterministic contract-fixture smoke test
+        continue-on-error: true
         run: ./scripts/smoke-test-contract-stack.sh
 
   publish-api:

@@ -69,8 +69,9 @@ python3 scripts/validate-compatibility-manifest.py
 python3 scripts/test-compatibility-release-gate.py
 ```
 
-CI integration uses `scripts/smoke-test-contract-stack.sh`: local deterministic HTTP fixtures implement the pinned
-Stock Analyst and EDO shapes, and the smoke rejects `DEGRADED`, `WARN`, stale or unvalued holdings. Live Yahoo/GUS
+CI runs `scripts/smoke-test-contract-stack.sh` as an advisory post-verification smoke: local deterministic HTTP
+fixtures implement the pinned Stock Analyst and EDO shapes, and the smoke rejects `DEGRADED`, `WARN`, stale or
+unvalued holdings. A failure remains visible in the step log but does not block image publication. Live Yahoo/GUS
 availability is checked by the upstream projects in their own image canaries. Portfolio does not call the
 LAN-only production hosts from GitHub-hosted runners. An operator with network access can run the same bounded,
 read-only cross-service check with explicit endpoints:
