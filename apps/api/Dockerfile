@@ -12,7 +12,7 @@ COPY src src
 RUN --mount=type=cache,target=/home/gradle/.gradle,uid=1000,gid=1000 \
     gradle --no-daemon installDist
 
-FROM eclipse-temurin:21.0.11_10-jre-noble@sha256:373787d1d45a87f084fda43e7de0e9acf5eedee049446efac738f13587ec4c64
+FROM eclipse-temurin:25.0.2_10-jre-noble@sha256:a051234f864d7ab78bf0188c3c540ac06c711a3b566f00f246be37073cc99dce
 
 WORKDIR /app
 
