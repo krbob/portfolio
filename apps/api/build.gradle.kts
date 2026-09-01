@@ -18,6 +18,7 @@ version = "0.1.0"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
+    applicationDefaultJvmArgs = listOf("-Dlogback.configurationFile=portfolio-logback.xml")
 }
 
 val contractGeneratorSourceSet = sourceSets.create("contractGenerator")
@@ -203,6 +204,10 @@ tasks.withType<Detekt>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    systemProperty(
+        "logback.configurationFile",
+        layout.projectDirectory.file("src/main/resources/portfolio-logback.xml").asFile.absolutePath
+    )
 }
 
 tasks.register<Test>("exportOpenApiSpec") {

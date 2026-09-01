@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.notification
 
 import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
+import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.Security
 import java.security.spec.PKCS8EncodedKeySpec
@@ -56,6 +57,7 @@ class WebPushNotificationService(
         var removed = 0
 
         subscriptions.forEach { subscription ->
+            val subscriptionId = webPushSubscriptionId(subscription.endpoint)
             val payload = json.encodeToString(
                 alerts.toPushPayload(locale = subscription.locale, timestamp = Instant.now(clock))
             )
@@ -65,7 +67,11 @@ class WebPushNotificationService(
                 if (error is CancellationException) {
                     throw error
                 }
-                logger.warn("Web push failed for endpoint={}", subscription.endpoint, error)
+                logger.warn(
+                    "Web push failed for subscriptionId={} errorType={}",
+                    subscriptionId,
+                    error.javaClass.name
+                )
                 failed += 1
                 return@forEach
             }
@@ -79,7 +85,7 @@ class WebPushNotificationService(
                 }
                 else -> {
                     failed += 1
-                    logger.warn("Web push returned HTTP {} for endpoint={}", statusCode, subscription.endpoint)
+                    logger.warn("Web push returned HTTP {} for subscriptionId={}", statusCode, subscriptionId)
                 }
             }
         }
@@ -184,6 +190,17 @@ class WebPushNotificationService(
             .build()
     }
 }
+
+internal fun webPushSubscriptionId(endpoint: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+        .digest(endpoint.toByteArray(StandardCharsets.UTF_8))
+    return Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(digest)
+        .take(WEB_PUSH_SUBSCRIPTION_ID_LENGTH)
+}
+
+private const val WEB_PUSH_SUBSCRIPTION_ID_LENGTH = 12
 
 internal fun List<PortfolioAlert>.toPushPayload(
     locale: PortfolioLocale,

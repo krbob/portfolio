@@ -8,10 +8,11 @@ import org.slf4j.LoggerFactory
 
 fun Application.configurePersistenceLifecycle() {
     val logger = LoggerFactory.getLogger("PersistenceLifecycle")
+    val persistenceResources = get<PersistenceResources>()
 
     monitor.subscribe(ApplicationStopped) {
         runCatching {
-            get<PersistenceResources>().close()
+            persistenceResources.close()
         }.onFailure { exception ->
             logger.warn("Failed to close persistence resources cleanly.", exception)
         }

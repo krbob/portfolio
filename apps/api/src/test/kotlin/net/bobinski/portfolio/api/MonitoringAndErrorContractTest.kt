@@ -1,5 +1,11 @@
 package net.bobinski.portfolio.api
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.ConsoleAppender
+import ch.qos.logback.core.read.ListAppender
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -12,12 +18,85 @@ import io.ktor.http.contentType
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import net.bobinski.portfolio.api.plugins.RequestMetricsRegistry
+import net.bobinski.portfolio.api.plugins.formatAccessLog
+import net.bobinski.portfolio.api.plugins.shouldLogAccessPath
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 
 class MonitoringAndErrorContractTest {
+    @Test
+    fun `logback uses explicit UTC stdout format with request correlation and full exceptions`() {
+        val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
+        val stdoutAppender = requireNotNull(rootLogger.getAppender("STDOUT")) as ConsoleAppender<*>
+        val encoder = stdoutAppender.encoder as PatternLayoutEncoder
+
+        assertEquals(Level.INFO, rootLogger.level)
+        assertEquals("System.out", stdoutAppender.target)
+        assertTrue(encoder.pattern.contains(",UTC}"), encoder.pattern)
+        assertTrue(encoder.pattern.contains("requestId=%X{requestId:-none}"), encoder.pattern)
+        assertTrue(encoder.pattern.contains("%ex{full}"), encoder.pattern)
+    }
+
+    @Test
+    fun `access log format is bounded to request metadata and escapes untrusted path characters`() {
+        val message = formatAccessLog(
+            method = "GET",
+            path = "/v1/example/\"line\nnext",
+            status = 200,
+            durationMillis = -1
+        )
+
+        assertEquals(
+            "event=http_request method=\"GET\" path=\"/v1/example/\\\"line\\nnext\" status=200 durationMs=0",
+            message
+        )
+        assertFalse(shouldLogAccessPath("/v1/health"))
+        assertFalse(shouldLogAccessPath("/metrics"))
+        assertTrue(shouldLogAccessPath("/v1/readiness"))
+    }
+
+    @Test
+    fun `call logging records safe request metadata with request id and suppresses probe paths`() {
+        val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        rootLogger.addAppender(appender)
+
+        try {
+            testApplication {
+                application { module() }
+
+                client.get("/v1/health")
+                client.get("/metrics")
+                client.get("/v1/meta?secret=must-not-be-logged") {
+                    header(HttpHeaders.XRequestId, "access-log-request")
+                }
+            }
+
+            val accessEvents = appender.list.filter { event ->
+                event.formattedMessage.startsWith("event=http_request")
+            }
+            val metaEvent = accessEvents.single { event ->
+                event.formattedMessage.contains("path=\"/v1/meta\"")
+            }
+
+            assertEquals(Level.INFO, metaEvent.level)
+            assertEquals("access-log-request", metaEvent.mdcPropertyMap["requestId"])
+            assertTrue(metaEvent.formattedMessage.contains("method=\"GET\""), metaEvent.formattedMessage)
+            assertTrue(metaEvent.formattedMessage.contains("status=200"), metaEvent.formattedMessage)
+            assertTrue(metaEvent.formattedMessage.contains("durationMs="), metaEvent.formattedMessage)
+            assertFalse(metaEvent.formattedMessage.contains("secret"), metaEvent.formattedMessage)
+            assertFalse(accessEvents.any { it.formattedMessage.contains("path=\"/v1/health\"") })
+            assertFalse(accessEvents.any { it.formattedMessage.contains("path=\"/metrics\"") })
+        } finally {
+            rootLogger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
     @Test
     fun `request id is preserved when valid and replaced when invalid`() = testApplication {
         application { module() }
