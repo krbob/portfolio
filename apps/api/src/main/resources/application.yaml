@@ -20,6 +20,11 @@ portfolio:
     directory: "./data/backups"
     intervalMinutes: 1440
     retentionCount: 30
+    postChangeEnabled: true
+    postChangeDebounceSeconds: 120
+    postChangeMaxDelaySeconds: 600
+    postChangeRetentionCount: 10
+    safetyRetentionDays: 30
   readModelRefresh:
     enabled: false
     intervalMinutes: 720

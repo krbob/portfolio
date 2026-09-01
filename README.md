@@ -16,7 +16,7 @@ models backed by SQLite.
 - ETF, stock, FX and benchmark data through Stock Analyst
 - Polish EDO bond valuation through EDO Calculator
 - explicit fresh, stale, partial and unavailable market-data states
-- JSON export/import, scheduled backups, restore preview and an audit trail
+- JSON export/import, scheduled and post-change backups, restore preview and an audit trail
 - optional single-user password authentication and an installable PWA
 
 The calculation rules and data-quality boundaries are documented in
@@ -67,7 +67,17 @@ curl -fsS http://127.0.0.1:4174/healthz
 
 The UI is available at `http://127.0.0.1:4174` and the API at
 `http://127.0.0.1:18082`. Live market data, OpenAPI UI and authentication are disabled in this
-mode. SQLite data and JSON backups use separate named volumes.
+mode. SQLite data and JSON backups use separate named volumes. Compose bounds container logs with
+five rotated 10 MiB files; Portfolio API emits UTC console logs while omitting request bodies, query
+strings and routine health/metrics probes.
+
+With the Compose defaults, canonical changes are coalesced into a JSON backup after two quiet
+minutes, with a ten-minute due threshold from the first still-unprotected change. The worker checks
+due work at least every 30 seconds, so under normal operation publication may follow that threshold
+by one polling interval plus file-write time. The protection checkpoint and its timing are stored
+in SQLite, so an API restart does not forget pending work.
+Current protection state, the next due threshold and each file's trigger/retention class are shown
+under `Data -> Backups` and returned by `GET /v1/portfolio/backups`.
 
 The API image runs as UID/GID `10001:10001`. Deployments created with an older root-running image
 may need a one-time ownership repair before the updated API starts:
@@ -137,6 +147,11 @@ Portfolio supports `MERGE` and destructive `REPLACE` imports:
   `targets` section updates the allocation effective on the import date, while an explicitly empty
   legacy section clears the schedule for schema-version 4 compatibility;
 - `REPLACE` requires explicit confirmation and creates a safety backup first;
+- canonical writes advance a durable SQLite backup revision; the post-change worker checkpoints it
+  only after a readable JSON file has been atomically published;
+- periodic, post-change and pre-`REPLACE` safety backups have separate retention policies;
+- backups created with the legacy file name remain compatible, while unrelated JSON files in the
+  backup directory are never removed by managed retention;
 - preview and real import use the same business validation path;
 - market-data snapshots and active alert-dispatch state are excluded from portable JSON and survive
   both modes.

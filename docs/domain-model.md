@@ -101,10 +101,23 @@ Separately from canonical entities, the product persists operational state for r
 - market-data snapshots
 - active alert-dispatch state
 - backup records
+- durable backup change/checkpoint state
 
 Market-data snapshots and active alert state use the typed operational-state repository, not app preferences. They are
 preserved across `MERGE`, `REPLACE`, and restore, but are deliberately absent from portable JSON, preview diffs, and
 backup entity counts. These models support observability and recovery, not portfolio accounting itself.
+
+Backup change state records the current canonical revision, the revision, file and SHA-256 last
+protected, the first/most recent unprotected-change timestamps, and whether startup reconciliation
+is needed.
+Canonical-table writes update this state in their SQLite transaction. Read-model refreshes,
+market-data snapshots, audit events and backup bookkeeping do not create another canonical change.
+
+A backup record exposes its creation trigger and one retention class: `PERIODIC`, `POST_CHANGE`,
+`SAFETY` or `UNMANAGED`. Manual and scheduled backups, plus exact legacy backup names, are periodic;
+pre-`REPLACE` import/restore backups are safety files. Unmanaged JSON may be inspected and downloaded
+but never participates in automatic deletion. The API and `Data -> Backups` also expose whether the
+current revision is protected and, when pending, its first-change and next-backup timestamps.
 
 ## Invariants
 

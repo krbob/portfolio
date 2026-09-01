@@ -78,7 +78,12 @@ Local reference stack:
 curl -fsS http://127.0.0.1:18082/v1/health
 curl -fsS http://127.0.0.1:18082/v1/readiness
 curl -fsS http://127.0.0.1:4174/api/v1/meta
+docker compose logs --tail=100 portfolio-api
 ```
+
+The API log should contain UTC startup output and a safe access entry for the metadata request with
+its `requestId`, status and duration. Liveness and metrics probes are intentionally filtered. The
+supplied Compose stacks retain at most five 10 MiB local-driver log files per container.
 
 Then verify read-only product state:
 
@@ -120,11 +125,29 @@ Important semantics:
 
 ## Backup and recovery posture
 
-- Scheduled JSON backups are the first server-side recovery path.
+- Scheduled and post-change JSON backups are the first server-side recovery path.
 - Canonical export/import is the portability path between installations.
-- A listed `.json` backup has been fully written and atomically published; abandoned temporary files
-  are not candidates.
+- A backup produced by the API has been fully written and atomically published; abandoned temporary
+  files are not candidates. Administratively supplied JSON may also be listed as unmanaged.
+- Canonical writes persist an unprotected revision and its timing in SQLite. The checkpoint advances
+  only after the API atomically publishes and re-reads a JSON backup, and stores that file's SHA-256,
+  so restart does not discard pending work or silently accept a replaced checkpoint file.
+- The default post-change policy waits for 120 quiet seconds to coalesce related writes. Continuing
+  writes make the backup due at the 600-second threshold from the first still-unprotected change;
+  the worker polls at least every 30 seconds, then still needs time to publish and verify the file.
+- Periodic files (manual, scheduled and exact legacy names) keep the newest configured count of
+  readable files; post-change files have their own count, and unreadable managed entries are bounded
+  separately. Pre-`REPLACE` safety files expire by age. Retention protects the current checkpoint and
+  the restore source during the operation.
+- Legacy `portfolio-backup-<timestamp>.json` files remain readable, downloadable and restorable.
+  Other JSON files are marked unmanaged and are never deleted by Portfolio retention.
 - Restore does not roll market-data cache or active alert-delivery state backward.
+
+Inspect `Data -> Backups` or `GET /v1/portfolio/backups` after a write. The status reports whether
+changes are protected, `pendingSince`, `nextPostChangeBackupAt`, scheduler settings, the last
+success/failure and each file's trigger and retention class. A brief pending state inside the
+debounce window is expected. Pending state beyond the reported time plus a normal polling and
+file-write interval, or any reported failure, requires a volume-permission and API-log/audit check.
 
 Preferred recovery sequence:
 

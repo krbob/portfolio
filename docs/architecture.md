@@ -59,7 +59,21 @@ Canonical state transfer is part of the product, while runtime operational state
 - `REPLACE` is destructive and must be guarded by confirmation plus safety backup
 - neither import mode imports, clears, or counts market-data snapshots or active alert-dispatch state
 - backup and restore remain JSON-first workflows; backup files are staged, forced, and atomically published
+- every canonical write advances a backup revision and pending timestamps transactionally in SQLite;
+  a readable, published JSON backup checkpoints the captured revision
+- the post-change worker coalesces a write burst with a quiet-period debounce and a maximum-delay
+  due threshold, observed by a polling loop at least every 30 seconds;
+  persisted revision/checkpoint state keeps pending work visible across process restarts
+- periodic, post-change and pre-`REPLACE` safety files have independent retention lanes; exact legacy
+  names remain periodic, while unrelated JSON files are unmanaged and never pruned
 - audit events record state-changing operations
+
+On first start after the backup-checkpoint migration, the API compares canonical state with the
+latest readable JSON backup in the configured directory. It checkpoints a match; otherwise it
+preserves the state as unprotected and schedules a post-change backup. Later starts also mark state
+unprotected if the file recorded by the checkpoint has disappeared, is unreadable or no longer
+matches the SHA-256 stored with the checkpoint. This makes the SQLite checkpoint a durable progress
+marker without pretending that a missing or replaced JSON artifact still protects data.
 
 Three semantics matter especially:
 

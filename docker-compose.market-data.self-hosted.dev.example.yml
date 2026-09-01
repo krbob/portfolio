@@ -1,3 +1,9 @@
+x-default-logging: &default-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   portfolio-api:
     environment:
@@ -5,11 +11,17 @@ services:
       PORTFOLIO_STOCK_ANALYST_API_URL: "http://stock-analyst:8080"
       PORTFOLIO_STOCK_ANALYST_UI_URL: "${PORTFOLIO_STOCK_ANALYST_UI_URL:-http://127.0.0.1:18083}"
       PORTFOLIO_EDO_CALCULATOR_API_URL: "http://edo-calculator:8080"
+      PORTFOLIO_BACKUPS_POST_CHANGE_ENABLED: "${PORTFOLIO_BACKUPS_POST_CHANGE_ENABLED:-true}"
+      PORTFOLIO_BACKUPS_POST_CHANGE_DEBOUNCE_SECONDS: "${PORTFOLIO_BACKUPS_POST_CHANGE_DEBOUNCE_SECONDS:-120}"
+      PORTFOLIO_BACKUPS_POST_CHANGE_MAX_DELAY_SECONDS: "${PORTFOLIO_BACKUPS_POST_CHANGE_MAX_DELAY_SECONDS:-600}"
+      PORTFOLIO_BACKUPS_POST_CHANGE_RETENTION_COUNT: "${PORTFOLIO_BACKUPS_POST_CHANGE_RETENTION_COUNT:-10}"
+      PORTFOLIO_BACKUPS_SAFETY_RETENTION_DAYS: "${PORTFOLIO_BACKUPS_SAFETY_RETENTION_DAYS:-30}"
     depends_on:
       stock-analyst:
         condition: service_healthy
       edo-calculator:
         condition: service_started
+    logging: *default-logging
 
   stock-analyst:
     image: ghcr.io/krbob/stock-analyst:main
@@ -24,6 +36,7 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   stock-analyst-backend-yfinance:
@@ -34,6 +47,7 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   stock-analyst-ui:
@@ -52,8 +66,10 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   edo-calculator:
     image: ghcr.io/krbob/edo-calculator:latest
+    logging: *default-logging
     restart: unless-stopped

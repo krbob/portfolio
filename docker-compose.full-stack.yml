@@ -1,6 +1,12 @@
 x-ecosystem-compatibility:
   manifest: ${PORTFOLIO_COMPATIBILITY_MANIFEST:-deployment/compatibility/1.0.0.json}
 
+x-default-logging: &default-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   portfolio-api:
     image: ghcr.io/krbob/portfolio-api@${PORTFOLIO_API_IMAGE_DIGEST:?Set PORTFOLIO_API_IMAGE_DIGEST to sha256:<64 hex>}
@@ -20,6 +26,11 @@ services:
       PORTFOLIO_BACKUPS_DIRECTORY: /srv/portfolio/backups
       PORTFOLIO_BACKUPS_INTERVAL_MINUTES: 1440
       PORTFOLIO_BACKUPS_RETENTION_COUNT: 30
+      PORTFOLIO_BACKUPS_POST_CHANGE_ENABLED: "true"
+      PORTFOLIO_BACKUPS_POST_CHANGE_DEBOUNCE_SECONDS: 120
+      PORTFOLIO_BACKUPS_POST_CHANGE_MAX_DELAY_SECONDS: 600
+      PORTFOLIO_BACKUPS_POST_CHANGE_RETENTION_COUNT: 10
+      PORTFOLIO_BACKUPS_SAFETY_RETENTION_DAYS: 30
       PORTFOLIO_READ_MODEL_REFRESH_ENABLED: "true"
       PORTFOLIO_READ_MODEL_REFRESH_INTERVAL_MINUTES: 720
       PORTFOLIO_READ_MODEL_REFRESH_RUN_ON_START: "true"
@@ -55,6 +66,7 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   portfolio-web:
@@ -73,6 +85,7 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   stock-analyst:
@@ -81,10 +94,12 @@ services:
       - stock-analyst-backend-yfinance
     environment:
       BACKEND_URL: http://stock-analyst-backend-yfinance:8081
+    logging: *default-logging
     restart: unless-stopped
 
   stock-analyst-backend-yfinance:
     image: ghcr.io/krbob/stock-analyst-backend-yfinance@${STOCK_ANALYST_BACKEND_IMAGE_DIGEST:?Set STOCK_ANALYST_BACKEND_IMAGE_DIGEST to sha256:<64 hex>}
+    logging: *default-logging
     restart: unless-stopped
 
   stock-analyst-ui:
@@ -102,10 +117,12 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+    logging: *default-logging
     restart: unless-stopped
 
   edo-calculator:
     image: ghcr.io/krbob/edo-calculator@${EDO_CALCULATOR_IMAGE_DIGEST:?Set EDO_CALCULATOR_IMAGE_DIGEST to sha256:<64 hex>}
+    logging: *default-logging
     restart: unless-stopped
 
 volumes:

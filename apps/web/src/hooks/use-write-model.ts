@@ -92,6 +92,7 @@ export function useCreateAccount() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -114,6 +115,7 @@ export function useCreateInstrument() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -130,6 +132,7 @@ export function useUpdateInstrument() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -202,7 +205,10 @@ export function useCreateTransactionImportProfile() {
     mutationFn: (payload: SaveTransactionImportProfilePayload): Promise<TransactionImportProfile> =>
       createTransactionImportProfile(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+      ])
     },
   })
 }
@@ -214,7 +220,10 @@ export function useUpdateTransactionImportProfile() {
       payload: UpdateTransactionImportProfilePayload,
     ): Promise<TransactionImportProfile> => updateTransactionImportProfile(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+      ])
     },
   })
 }
@@ -224,7 +233,10 @@ export function useDeleteTransactionImportProfile() {
   return useMutation({
     mutationFn: (id: string) => deleteTransactionImportProfile(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['transaction-import-profiles'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
+      ])
     },
   })
 }
@@ -256,6 +268,12 @@ export function usePortfolioBackups() {
   return useQuery({
     queryKey: ['portfolio-backups'],
     queryFn: listPortfolioBackups,
+    refetchInterval: (query) => {
+      const status = query.state.data
+      return status?.running || (status?.postChangeEnabled && status.hasUnprotectedChanges)
+        ? 5_000
+        : 30_000
+    },
   })
 }
 
@@ -320,6 +338,7 @@ export function useSavePortfolioBenchmarkSettings() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -335,6 +354,7 @@ export function useSavePortfolioAlertSettings() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-alert-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-alerts'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -355,6 +375,7 @@ export function useReplacePortfolioTargets() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -377,6 +398,7 @@ export function useReplacePortfolioTargetSchedule() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-read-model-cache'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -393,6 +415,7 @@ export function useSavePortfolioRebalancingSettings() {
         queryClient.invalidateQueries({ queryKey: ['portfolio-rebalancing-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-allocation'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -408,6 +431,7 @@ export function useSavePortfolioWithdrawalSettings() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['portfolio-withdrawal-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['portfolio-audit-events'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
       ])
     },
   })
@@ -542,5 +566,6 @@ async function invalidateTransactionRelatedQueries(queryClient: ReturnType<typeo
     queryClient.invalidateQueries({ queryKey: ['portfolio-holdings'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-daily-history'] }),
     queryClient.invalidateQueries({ queryKey: ['portfolio-returns'] }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio-backups'] }),
   ])
 }

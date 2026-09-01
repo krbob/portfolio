@@ -192,6 +192,8 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, lang
     exceptionType: tFor('auditCopy.metaExceptionType', lang),
     mode: tFor('auditCopy.metaMode', lang),
     trigger: tFor('auditCopy.metaTrigger', lang),
+    retentionClass: tFor('auditCopy.metaRetentionClass', lang),
+    revision: tFor('auditCopy.metaRevision', lang),
     sourceLabel: tFor('auditCopy.metaSourceLabel', lang),
     sourceFileName: tFor('auditCopy.metaSourceFileName', lang),
     profileName: tFor('auditCopy.metaProfileName', lang),
@@ -215,6 +217,9 @@ export function buildAuditMetadataEntries(metadata: Record<string, string>, lang
     assetClasses: tFor('auditCopy.metaAssetClasses', lang),
     importProfileCount: tFor('auditCopy.metaImportProfileCount', lang),
     retentionCount: tFor('auditCopy.metaRetentionCount', lang),
+    scheduledRetentionCount: tFor('auditCopy.metaScheduledRetentionCount', lang),
+    postChangeRetentionCount: tFor('auditCopy.metaPostChangeRetentionCount', lang),
+    safetyRetentionDays: tFor('auditCopy.metaSafetyRetentionDays', lang),
     safetyBackupFileName: tFor('auditCopy.metaSafetyBackupFileName', lang),
     error: tFor('auditCopy.metaError', lang),
     failureMessage: tFor('auditCopy.metaFailureMessage', lang),
@@ -278,12 +283,31 @@ function labelAuditTrigger(trigger: string, language: UiLanguage) {
       return tFor('auditCopy.triggerManual', language)
     case 'SCHEDULED':
       return tFor('auditCopy.triggerScheduled', language)
+    case 'POST_CHANGE':
+      return tFor('auditCopy.triggerPostChange', language)
     case 'STARTUP':
       return tFor('auditCopy.triggerStartup', language)
     case 'PRE_RESTORE_REPLACE':
       return tFor('auditCopy.triggerPreRestoreReplace', language)
+    case 'PRE_IMPORT_REPLACE':
+      return tFor('auditCopy.triggerPreImportReplace', language)
     default:
       return trigger
+  }
+}
+
+function labelAuditRetentionClass(retentionClass: string, language: UiLanguage) {
+  switch (retentionClass) {
+    case 'PERIODIC':
+      return tFor('auditCopy.retentionPeriodic', language)
+    case 'POST_CHANGE':
+      return tFor('auditCopy.retentionPostChange', language)
+    case 'SAFETY':
+      return tFor('auditCopy.retentionSafety', language)
+    case 'UNMANAGED':
+      return tFor('auditCopy.retentionUnmanaged', language)
+    default:
+      return retentionClass
   }
 }
 
@@ -301,13 +325,17 @@ function labelUpstream(upstream: string) {
 }
 
 function translateMetadataValue(key: string, value: string, language: UiLanguage) {
+  if (key === 'trigger') {
+    return labelAuditTrigger(value, language)
+  }
+  if (key === 'retentionClass') {
+    return labelAuditRetentionClass(value, language)
+  }
   if (language === 'en') {
     return value
   }
 
   switch (key) {
-    case 'trigger':
-      return labelAuditTrigger(value, language)
     case 'type':
       return labelTransactionType(value)
     case 'kind':
@@ -372,6 +400,8 @@ function metadataSortOrder(key: string) {
     'responseBodyPreview',
     'mode',
     'trigger',
+    'retentionClass',
+    'revision',
     'sourceLabel',
     'sourceFileName',
     'profileName',

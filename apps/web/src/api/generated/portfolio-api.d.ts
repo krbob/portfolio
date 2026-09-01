@@ -1842,6 +1842,8 @@ export interface components {
         /** PortfolioBackupRecordResponse */
         PortfolioBackupRecordResponse: {
             fileName: string;
+            trigger?: string | null;
+            retentionClass: string;
             createdAt: string;
             exportedAt?: string | null;
             sizeBytes: number;
@@ -1861,6 +1863,14 @@ export interface components {
             directory: string;
             intervalMinutes: number;
             retentionCount: number;
+            postChangeEnabled: boolean;
+            postChangeDebounceSeconds: number;
+            postChangeMaxDelaySeconds: number;
+            postChangeRetentionCount: number;
+            safetyRetentionDays: number;
+            hasUnprotectedChanges: boolean;
+            pendingSince?: string | null;
+            nextPostChangeBackupAt?: string | null;
             running: boolean;
             lastRunAt?: string | null;
             lastSuccessAt?: string | null;

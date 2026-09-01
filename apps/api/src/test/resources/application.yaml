@@ -20,6 +20,11 @@ portfolio:
     directory: "./build/test-backups"
     intervalMinutes: 1440
     retentionCount: 30
+    postChangeEnabled: true
+    postChangeDebounceSeconds: 120
+    postChangeMaxDelaySeconds: 600
+    postChangeRetentionCount: 10
+    safetyRetentionDays: 30
   auth:
     enabled: false
     password: ""

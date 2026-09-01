@@ -60,6 +60,28 @@ curl -fsS http://127.0.0.1:4174/api/v1/meta
 For a remote deployment, use the corresponding protected public URLs. A rolling update must not
 start Portfolio until both providers and the Stock Analyst versioned route gate pass.
 
+## Portfolio API logs are empty or too noisy
+
+Use the same Compose file set as the running deployment, then inspect recent output:
+
+```bash
+docker compose logs --tail=100 portfolio-api
+curl -fsS http://127.0.0.1:18082/v1/meta >/dev/null
+docker compose logs --since=1m portfolio-api
+```
+
+The metadata request should produce an `event=http_request` line with `method`, `path`, `status`,
+`durationMs` and a correlated `requestId`. The request body and query string must not appear. Routine
+`/v1/health` and `/metrics` probes are intentionally absent, so an otherwise idle healthy API can be
+quiet after its startup messages.
+
+If the metadata request still produces no line, verify that the inspected container belongs to the
+active Compose project and that its configured log driver supports `docker compose logs`. Recreate
+the API from the reviewed image after checking the rendered configuration; do not add a log file
+inside the container. Supplied Compose stacks use bounded `local`-driver rotation (five 10 MiB files
+per container), so persistent high volume should be investigated at its originating logger rather
+than handled by increasing retention.
+
 ## Unexpected interface language
 
 Without a current navigation hint, Portfolio resolves language from `navigator.languages` and
@@ -103,6 +125,25 @@ rate-limited upstream.
 - keep one API process per database file;
 - do not copy a live SQLite database file as the primary backup workflow—use canonical JSON backup
   or an SQLite-aware snapshot.
+
+If `Data -> Backups` or `GET /v1/portfolio/backups` reports unprotected changes:
+
+1. Compare `pendingSince` and `nextPostChangeBackupAt` with the current time. The default policy
+   intentionally waits for 120 quiet seconds and marks a continuing burst due after 600 seconds.
+   The worker checks at least every 30 seconds, so allow one polling interval plus file-write time
+   after the reported due timestamp before treating the delay itself as a failure.
+2. Confirm both `schedulerEnabled` and `postChangeEnabled`; disabling either leaves automatic
+   post-change protection off, although an on-demand backup is still available.
+3. Check `lastFailureAt`/`lastFailureMessage`, API logs and `BACKUP_CREATE_FAILED` audit events, then
+   verify free space and write permissions on the backup volume.
+4. Do not rely on restarting the API to clear the warning. The canonical revision, checkpoint and
+   pending timestamps are durable SQLite state and the worker resumes/reconciles them after restart.
+5. If the checkpointed JSON was moved, deleted, became unreadable or no longer matches its stored
+   SHA-256, restore the exact file or create a new on-demand backup; Portfolio deliberately marks
+   that revision unprotected.
+
+Old `portfolio-backup-<timestamp>.json` files remain in the periodic retention lane. JSON with any
+other unrecognized name is shown as unmanaged and is never deleted automatically.
 
 Never run `docker compose down --volumes` while investigating unless permanent deletion of the
 database and server-backup volumes is intentional and a separate recovery copy has been verified.

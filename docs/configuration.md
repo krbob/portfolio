@@ -21,18 +21,75 @@ disabled. Always inspect the rendered deployment with `docker compose config`.
 One API process must own one database file. The production container expects persistent data under
 `/srv/portfolio/data` and runs as UID/GID `10001:10001`.
 
+## Runtime logs
+
+Portfolio API writes application and access logs to standard output through an explicit Logback
+console appender. Each line uses a UTC timestamp and includes severity, service, logger, thread and
+the request ID when one is active. Exceptions retain their full stack trace.
+
+Access-log messages contain only request method, path, response status and elapsed milliseconds.
+They do not contain request or response bodies, cookies, authorization values or query strings.
+Routine `/v1/health` and `/metrics` requests are excluded; `/v1/readiness` remains visible because a
+degraded readiness result requires investigation.
+
+All supplied Compose stacks use Docker's `local` logging driver with five 10 MiB rotated files per
+container. Rotation belongs to the container runtime; do not add an application file appender or
+mount a second log directory into the API container. Inspect current output with:
+
+```bash
+docker compose logs --tail=100 portfolio-api
+```
+
+Domain audit events remain in SQLite and are available in the application. Process logs complement
+that audit trail; they do not replace it and deliberately omit portfolio transaction details.
+
 ## Backups
 
 | Variable | Application default | Purpose |
 | --- | --- | --- |
-| `PORTFOLIO_BACKUPS_ENABLED` | `false` | Enable scheduled canonical JSON backups |
+| `PORTFOLIO_BACKUPS_ENABLED` | `false` | Enable periodic and post-change canonical JSON backups |
 | `PORTFOLIO_BACKUPS_DIRECTORY` | `./data/backups` | Backup destination |
 | `PORTFOLIO_BACKUPS_INTERVAL_MINUTES` | `1440` | Schedule interval |
-| `PORTFOLIO_BACKUPS_RETENTION_COUNT` | `30` | Number of completed backups retained |
+| `PORTFOLIO_BACKUPS_RETENTION_COUNT` | `30` | Number of managed periodic backups retained |
+| `PORTFOLIO_BACKUPS_POST_CHANGE_ENABLED` | `true` | Create a backup after canonical changes settle |
+| `PORTFOLIO_BACKUPS_POST_CHANGE_DEBOUNCE_SECONDS` | `120` | Quiet period after the latest canonical change |
+| `PORTFOLIO_BACKUPS_POST_CHANGE_MAX_DELAY_SECONDS` | `600` | Due threshold from the first still-unprotected change |
+| `PORTFOLIO_BACKUPS_POST_CHANGE_RETENTION_COUNT` | `10` | Number of managed post-change backups retained |
+| `PORTFOLIO_BACKUPS_SAFETY_RETENTION_DAYS` | `30` | Minimum age before a managed pre-`REPLACE` safety backup may be pruned |
 
 The local application Compose profile enables backups and mounts a dedicated named volume at
 `/srv/portfolio/backups`. A backup contains portable canonical state and user preferences, not
 market-data cache or active alert-delivery state.
+
+`PORTFOLIO_BACKUPS_ENABLED` controls both the periodic scheduler and the post-change worker; manual
+backups remain available. Post-change backup is effective only when both enable switches are true.
+The debounce coalesces a burst of writes, while the maximum delay defines when the first
+unprotected change becomes due even if writes continue. The maximum delay must be at least the
+debounce delay. The worker polls at least every 30 seconds, so `nextPostChangeBackupAt` is the due
+threshold rather than an exact completion promise; normal publication can follow it by one polling
+interval plus file-write time.
+
+Canonical writes advance a revision and update the pending timestamps in the same SQLite
+transaction. A successfully published and re-read JSON file advances the durable checkpoint and
+records that file's SHA-256. Those values survive an API restart; startup reconciles an upgraded
+database, and a missing, unreadable or checksum-mismatched checkpoint file is treated as
+unprotected state rather than silently accepted.
+
+Retention is applied independently:
+
+- `retentionCount` bounds the periodic lane, which contains manual, scheduled and recognized legacy
+  `portfolio-backup-<timestamp>.json` files;
+- `postChangeRetentionCount` bounds files created by the post-change worker;
+- pre-import and pre-restore `REPLACE` safety files are eligible only after `safetyRetentionDays`;
+- JSON files that do not match a managed or legacy Portfolio backup name are `UNMANAGED` and are
+  never deleted by retention.
+
+Within each count-based lane, readable backups and unreadable managed entries are bounded
+separately. A corrupt file therefore does not consume the quota intended for restorable copies.
+
+The backup endpoint `GET /v1/portfolio/backups` exposes these settings, protection state,
+`pendingSince`, `nextPostChangeBackupAt`, failures and per-file trigger/retention class. The same
+information is summarized in `Data -> Backups`.
 
 ## Market data
 

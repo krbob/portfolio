@@ -69,11 +69,41 @@ export type PreviewPortfolioStateImportResult =
 export type ImportPortfolioStateResult =
   components['schemas']['PortfolioImportResultResponse']
 
-export type PortfolioBackupRecord =
+type GeneratedPortfolioBackupRecord =
   components['schemas']['PortfolioBackupRecordResponse']
 
-export type PortfolioBackupStatus =
+export type PortfolioBackupRecord = Omit<GeneratedPortfolioBackupRecord, 'trigger' | 'retentionClass'> & {
+  /** Optional while the web app and API may briefly run different versions during deployment. */
+  trigger?: string | null
+  retentionClass?: string | null
+}
+
+type GeneratedPortfolioBackupStatus =
   components['schemas']['PortfolioBackupStatusResponse']
+
+export type PortfolioBackupStatus = Omit<
+  GeneratedPortfolioBackupStatus,
+  | 'backups'
+  | 'postChangeEnabled'
+  | 'postChangeDebounceSeconds'
+  | 'postChangeMaxDelaySeconds'
+  | 'postChangeRetentionCount'
+  | 'safetyRetentionDays'
+  | 'hasUnprotectedChanges'
+  | 'pendingSince'
+  | 'nextPostChangeBackupAt'
+> & {
+  /** These fields are optional only to tolerate a rolling deployment with an older API. */
+  postChangeEnabled?: boolean
+  postChangeDebounceSeconds?: number
+  postChangeMaxDelaySeconds?: number
+  postChangeRetentionCount?: number
+  safetyRetentionDays?: number
+  hasUnprotectedChanges?: boolean
+  pendingSince?: string | null
+  nextPostChangeBackupAt?: string | null
+  backups: PortfolioBackupRecord[]
+}
 
 export type RestorePortfolioBackupPayload =
   components['schemas']['RestorePortfolioBackupRequest']

@@ -7,11 +7,22 @@ data class BackupConfig(
     val enabled: Boolean,
     val directory: String,
     val intervalMinutes: Long,
-    val retentionCount: Int
+    val retentionCount: Int,
+    val postChangeEnabled: Boolean = true,
+    val postChangeDebounceSeconds: Long = 120,
+    val postChangeMaxDelaySeconds: Long = 600,
+    val postChangeRetentionCount: Int = 10,
+    val safetyRetentionDays: Long = 30
 ) {
     init {
         require(intervalMinutes > 0) { "Backup interval must be positive." }
         require(retentionCount > 0) { "Backup retention count must be positive." }
+        require(postChangeDebounceSeconds > 0) { "Post-change backup debounce must be positive." }
+        require(postChangeMaxDelaySeconds >= postChangeDebounceSeconds) {
+            "Post-change backup maximum delay must be at least the debounce delay."
+        }
+        require(postChangeRetentionCount > 0) { "Post-change backup retention count must be positive." }
+        require(safetyRetentionDays > 0) { "Safety backup retention must be positive." }
     }
 
     companion object {
@@ -32,6 +43,36 @@ data class BackupConfig(
                 config,
                 "portfolio.backups.retentionCount"
             )?.toIntOrNull()
+                ?: 30,
+            postChangeEnabled = readSetting(
+                "PORTFOLIO_BACKUPS_POST_CHANGE_ENABLED",
+                config,
+                "portfolio.backups.postChangeEnabled"
+            )?.let(::toBooleanStrictOrNullSafe)
+                ?: true,
+            postChangeDebounceSeconds = readSetting(
+                "PORTFOLIO_BACKUPS_POST_CHANGE_DEBOUNCE_SECONDS",
+                config,
+                "portfolio.backups.postChangeDebounceSeconds"
+            )?.toLongOrNull()
+                ?: 120,
+            postChangeMaxDelaySeconds = readSetting(
+                "PORTFOLIO_BACKUPS_POST_CHANGE_MAX_DELAY_SECONDS",
+                config,
+                "portfolio.backups.postChangeMaxDelaySeconds"
+            )?.toLongOrNull()
+                ?: 600,
+            postChangeRetentionCount = readSetting(
+                "PORTFOLIO_BACKUPS_POST_CHANGE_RETENTION_COUNT",
+                config,
+                "portfolio.backups.postChangeRetentionCount"
+            )?.toIntOrNull()
+                ?: 10,
+            safetyRetentionDays = readSetting(
+                "PORTFOLIO_BACKUPS_SAFETY_RETENTION_DAYS",
+                config,
+                "portfolio.backups.safetyRetentionDays"
+            )?.toLongOrNull()
                 ?: 30
         )
 

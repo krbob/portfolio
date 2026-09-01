@@ -21,7 +21,7 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(13, appliedMigrationCount(connection))
+                    assertEquals(14, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
@@ -34,6 +34,9 @@ class SqliteMigrationTest {
                     assertTrue(tableExists(connection, "app_preferences"))
                     assertTrue(tableExists(connection, "web_push_subscriptions"))
                     assertTrue(tableExists(connection, "operational_state"))
+                    assertTrue(tableExists(connection, "backup_change_state"))
+                    assertEquals(24, backupRevisionTriggerCount(connection))
+                    assertBackupChangeStateInitialized(connection)
                 }
             }
         } finally {
@@ -217,7 +220,7 @@ class SqliteMigrationTest {
 
     private fun assertLegacyWebPushLocale(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(13, appliedMigrationCount(connection))
+            assertEquals(14, appliedMigrationCount(connection))
             connection.prepareStatement(
                 "select locale from web_push_subscriptions where endpoint = ?"
             ).use { statement ->
@@ -257,7 +260,7 @@ class SqliteMigrationTest {
 
     private fun assertOperationalStateMigration(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(13, appliedMigrationCount(connection))
+            assertEquals(14, appliedMigrationCount(connection))
             assertEquals(
                 listOf("portfolio.benchmark-settings"),
                 storedKeys(connection, table = "app_preferences", keyColumn = "preference_key")
@@ -281,6 +284,34 @@ class SqliteMigrationTest {
                 resultSet.getInt(1)
             }
         }
+
+    private fun backupRevisionTriggerCount(connection: java.sql.Connection): Int =
+        connection.prepareStatement(
+            "select count(*) from sqlite_master where type = 'trigger' and name like 'backup_revision_%'"
+        ).use { statement ->
+            statement.executeQuery().use { resultSet ->
+                resultSet.next()
+                resultSet.getInt(1)
+            }
+        }
+
+    private fun assertBackupChangeStateInitialized(connection: java.sql.Connection) {
+        connection.prepareStatement(
+            """
+            select current_revision, checkpoint_revision, checkpoint_file_sha256,
+                   reconciliation_required
+            from backup_change_state
+            """.trimIndent()
+        ).use { statement ->
+            statement.executeQuery().use { resultSet ->
+                assertTrue(resultSet.next())
+                assertEquals(0, resultSet.getLong("current_revision"))
+                assertEquals(0, resultSet.getLong("checkpoint_revision"))
+                assertEquals(null, resultSet.getString("checkpoint_file_sha256"))
+                assertEquals(0, resultSet.getInt("reconciliation_required"))
+            }
+        }
+    }
 
     private fun tableExists(connection: java.sql.Connection, tableName: String): Boolean =
         connection.prepareStatement(

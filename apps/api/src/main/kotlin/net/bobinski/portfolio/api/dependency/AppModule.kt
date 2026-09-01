@@ -15,6 +15,7 @@ import net.bobinski.portfolio.api.domain.repository.TransactionImportProfileRepo
 import net.bobinski.portfolio.api.domain.service.AccountService
 import net.bobinski.portfolio.api.domain.service.AppPreferenceService
 import net.bobinski.portfolio.api.domain.service.AuditLogService
+import net.bobinski.portfolio.api.domain.service.BackupChangeStateRepository
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.OperationalStateService
 import net.bobinski.portfolio.api.domain.service.PortfolioAllocationService
@@ -73,6 +74,7 @@ import net.bobinski.portfolio.api.readmodel.config.ReadModelRefreshConfig
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.inmemory.InMemoryBackupChangeStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
@@ -83,6 +85,7 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryWebPushSubscripti
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAuditEventRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAccountRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcAppPreferenceRepository
+import net.bobinski.portfolio.api.persistence.jdbc.JdbcBackupChangeStateRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcInstrumentRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcOperationalStateRepository
 import net.bobinski.portfolio.api.persistence.jdbc.JdbcConnectionManager
@@ -184,6 +187,7 @@ fun appModule(
         single<DataSource> { get<PersistenceResources>().dataSource }
         single { JdbcConnectionManager(dataSource = get()) }
         single<PersistenceTransactionRunner> { get<JdbcConnectionManager>() }
+        single<BackupChangeStateRepository> { JdbcBackupChangeStateRepository(connectionManager = get()) }
         single<AppPreferenceRepository> { JdbcAppPreferenceRepository(connectionManager = get()) }
         single<OperationalStateRepository> { JdbcOperationalStateRepository(connectionManager = get()) }
         single<AuditEventRepository> { JdbcAuditEventRepository(dataSource = get(), json = get()) }
@@ -200,6 +204,7 @@ fun appModule(
                 override suspend fun <T> inTransaction(block: suspend () -> T): T = block()
             }
         }
+        single<BackupChangeStateRepository> { InMemoryBackupChangeStateRepository() }
         single<AppPreferenceRepository> { InMemoryAppPreferenceRepository() }
         single<OperationalStateRepository> { InMemoryOperationalStateRepository() }
         single<AuditEventRepository> { InMemoryAuditEventRepository() }
@@ -433,6 +438,8 @@ fun appModule(
         PortfolioBackupService(
             config = get(),
             transferService = get(),
+            transactionRunner = get(),
+            changeStateRepository = get(),
             auditLogService = get(),
             json = get(),
             clock = get()

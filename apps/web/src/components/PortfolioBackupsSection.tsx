@@ -14,6 +14,9 @@ import { formatAuditEventMessage, formatAuditEventTitle } from '../lib/audit-cop
 import { labelAuditOutcome } from '../lib/labels'
 import { formatMessage, t } from '../lib/messages'
 import { label as labelClass, btnPrimary, btnSecondary, badge, badgeVariants, filterInput } from '../lib/styles'
+import type { PortfolioBackupStatus } from '../api/write-model'
+
+type BackupProtectionState = 'PROTECTED' | 'PENDING' | 'UNPROTECTED' | 'UNKNOWN'
 
 export function PortfolioBackupsSection() {
   const { language } = useI18n()
@@ -92,10 +95,28 @@ export function PortfolioBackupsSection() {
     }
   }
 
-  const backups = backupsQuery.data?.backups ?? []
+  const backupStatus = backupsQuery.data
+  const backups = backupStatus?.backups ?? []
   const backupEvents = backupEventsQuery.data ?? []
   const visibleBackupEvents =
     backupOutcomeFilter === 'ALL' ? backupEvents : backupEvents.filter((event) => event.outcome === backupOutcomeFilter)
+  const protectionState = getBackupProtectionState(backupStatus)
+  const protectionLabel = labelBackupProtectionState(protectionState)
+  const protectionDescription = describeBackupProtection(backupStatus, protectionState)
+  const protectionBadgeVariant = backupProtectionBadgeVariant(protectionState)
+  const postChangeTiming = backupStatus?.postChangeDebounceSeconds != null && backupStatus.postChangeMaxDelaySeconds != null
+    ? formatMessage(t('backups.postChangeTiming'), {
+        debounce: formatBackupDelay(backupStatus.postChangeDebounceSeconds),
+        maxDelay: formatBackupDelay(backupStatus.postChangeMaxDelaySeconds),
+      })
+    : null
+  const retentionSummary = backupStatus?.postChangeRetentionCount != null && backupStatus.safetyRetentionDays != null
+    ? formatMessage(t('backups.retentionBreakdown'), {
+        periodic: backupStatus.retentionCount,
+        postChange: backupStatus.postChangeRetentionCount,
+        safetyDays: backupStatus.safetyRetentionDays,
+      })
+    : backupStatus ? `${backupStatus.retentionCount} ${t('backups.files')}` : '...'
 
   return (
     <Card>
@@ -105,24 +126,66 @@ export function PortfolioBackupsSection() {
         description={t('backups.description')}
       />
 
-      <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-5">
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-400">{t('backups.scheduler')}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data?.schedulerEnabled ? t('backups.schedulerEnabled') : t('backups.schedulerManual')}</strong>
+          <span className="text-xs text-zinc-400">{t('backups.protection')}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">
+            {backupStatus ? (
+              <span className={`${badge} ${protectionBadgeVariant}`}>{protectionLabel}</span>
+            ) : '...'}
+          </strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
-          <span className="text-xs text-zinc-400">{t('backups.interval')}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.intervalMinutes} min` : '...'}</strong>
+          <span className="text-xs text-zinc-400">{t('backups.scheduler')}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">
+            {backupStatus
+              ? backupStatus.schedulerEnabled ? t('backups.schedulerEnabled') : t('backups.schedulerManual')
+              : '...'}
+          </strong>
+          {backupStatus && (
+            <span className="mt-1 block text-xs text-zinc-400">
+              {t('backups.interval')}: {`${backupStatus.intervalMinutes} min`}
+            </span>
+          )}
+        </article>
+        <article className="rounded-lg border border-zinc-800/50 p-4">
+          <span className="text-xs text-zinc-400">{t('backups.postChange')}</span>
+          <strong className="mt-1 block text-sm text-zinc-100">
+            {backupStatus
+              ? backupStatus.postChangeEnabled ? t('backups.postChangeEnabled') : t('backups.postChangeDisabled')
+              : '...'}
+          </strong>
+          {postChangeTiming && <span className="mt-1 block text-xs text-zinc-400">{postChangeTiming}</span>}
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-400">{t('backups.retention')}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? `${backupsQuery.data.retentionCount} ${t('backups.files')}` : '...'}</strong>
+          <strong className="mt-1 block text-sm text-zinc-100">{retentionSummary}</strong>
         </article>
         <article className="rounded-lg border border-zinc-800/50 p-4">
           <span className="text-xs text-zinc-400">{t('backups.storedBackups')}</span>
-          <strong className="mt-1 block text-sm text-zinc-100">{backupsQuery.data ? backups.length : '...'}</strong>
+          <strong className="mt-1 block text-sm text-zinc-100">{backupStatus ? backups.length : '...'}</strong>
         </article>
       </div>
+
+      {backupStatus && (
+        <div
+          aria-live="polite"
+          className={`mb-4 rounded-lg border p-4 ${
+            protectionState === 'PROTECTED'
+              ? 'border-ui-positive/30 bg-ui-positive/5'
+              : protectionState === 'UNKNOWN'
+                ? 'border-ui-border bg-ui-surface'
+                : 'border-ui-highlight/30 bg-ui-highlight/5'
+          }`}
+          role="status"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`${badge} ${protectionBadgeVariant}`}>{protectionLabel}</span>
+            <strong className="text-sm text-zinc-100">{t('backups.protection')}</strong>
+          </div>
+          <p className="mt-2 text-sm text-zinc-300">{protectionDescription}</p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
@@ -159,21 +222,21 @@ export function PortfolioBackupsSection() {
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="text-sm text-zinc-400">{t('backups.directory')}: {backupsQuery.data?.directory ?? `${t('common.loading')}...`}</p>
+        <p className="text-sm text-zinc-400">{t('backups.directory')}: {backupStatus?.directory ?? `${t('common.loading')}...`}</p>
         <p className="text-sm text-zinc-400">
           {t('backups.replaceNotice')}
         </p>
         <p className="text-sm text-zinc-400">
           {t('backups.lastSuccess')}:{' '}
-          {backupsQuery.data?.lastSuccessAt
-            ? formatDateTime(backupsQuery.data.lastSuccessAt)
+          {backupStatus?.lastSuccessAt
+            ? formatDateTime(backupStatus.lastSuccessAt)
             : t('backups.noSuccessYet')}
         </p>
-        {backupsQuery.data?.lastFailureMessage && (
+        {backupStatus?.lastFailureMessage && (
           <p className="text-sm text-red-400">
             {t('backups.lastFailure')}:{' '}
-            {backupsQuery.data.lastFailureAt ? `${formatDateTime(backupsQuery.data.lastFailureAt)}: ` : ''}
-            {backupsQuery.data.lastFailureMessage}
+            {backupStatus.lastFailureAt ? `${formatDateTime(backupStatus.lastFailureAt)}: ` : ''}
+            {backupStatus.lastFailureMessage}
           </p>
         )}
       </div>
@@ -195,9 +258,19 @@ export function PortfolioBackupsSection() {
                   </p>
                 </div>
 
-                <span className={`${badge} ${backup.isReadable ? badgeVariants.success : badgeVariants.error}`}>
-                  {backup.isReadable ? t('backups.ready') : t('backups.broken')}
-                </span>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <span className={`${badge} ${badgeVariants.info}`}>
+                    {labelBackupTrigger(backup.trigger, backup.retentionClass)}
+                  </span>
+                  {backup.retentionClass && (
+                    <span className={`${badge} ${badgeVariants.default}`}>
+                      {labelBackupRetentionClass(backup.retentionClass)}
+                    </span>
+                  )}
+                  <span className={`${badge} ${backup.isReadable ? badgeVariants.success : badgeVariants.error}`}>
+                    {backup.isReadable ? t('backups.ready') : t('backups.broken')}
+                  </span>
+                </div>
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm lg:grid-cols-8">
@@ -327,4 +400,102 @@ export function PortfolioBackupsSection() {
       )}
     </Card>
   )
+}
+
+function getBackupProtectionState(status: PortfolioBackupStatus | undefined): BackupProtectionState {
+  if (status?.hasUnprotectedChanges == null) {
+    return 'UNKNOWN'
+  }
+  if (!status.hasUnprotectedChanges) {
+    return 'PROTECTED'
+  }
+  return status.postChangeEnabled ? 'PENDING' : 'UNPROTECTED'
+}
+
+function labelBackupProtectionState(state: BackupProtectionState) {
+  switch (state) {
+    case 'PROTECTED':
+      return t('backups.protected')
+    case 'PENDING':
+      return t('backups.pending')
+    case 'UNPROTECTED':
+      return t('backups.unprotected')
+    case 'UNKNOWN':
+      return t('backups.protectionUnknown')
+  }
+}
+
+function describeBackupProtection(status: PortfolioBackupStatus | undefined, state: BackupProtectionState) {
+  switch (state) {
+    case 'PROTECTED':
+      return status?.lastSuccessAt == null
+        ? t('backups.noUnprotectedChangesDescription')
+        : t('backups.protectedDescription')
+    case 'PENDING':
+      return status?.pendingSince && status.nextPostChangeBackupAt
+        ? formatMessage(t('backups.pendingDescription'), {
+            pendingSince: formatDateTime(status.pendingSince),
+            nextBackupAt: formatDateTime(status.nextPostChangeBackupAt),
+          })
+        : t('backups.pendingDescriptionNoDate')
+    case 'UNPROTECTED':
+      return t('backups.disabledDescription')
+    case 'UNKNOWN':
+      return t('backups.protectionUnknownDescription')
+  }
+}
+
+function backupProtectionBadgeVariant(state: BackupProtectionState) {
+  switch (state) {
+    case 'PROTECTED':
+      return badgeVariants.success
+    case 'PENDING':
+      return badgeVariants.warning
+    case 'UNPROTECTED':
+      return badgeVariants.error
+    case 'UNKNOWN':
+      return badgeVariants.default
+  }
+}
+
+function formatBackupDelay(seconds: number) {
+  return seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`
+}
+
+function labelBackupTrigger(trigger: string | null | undefined, retentionClass: string | null | undefined) {
+  switch (trigger) {
+    case 'MANUAL':
+      return t('backups.triggerManual')
+    case 'SCHEDULED':
+      return t('backups.triggerScheduled')
+    case 'POST_CHANGE':
+      return t('backups.triggerPostChange')
+    case 'PRE_RESTORE_REPLACE':
+      return t('backups.triggerPreRestore')
+    case 'PRE_IMPORT_REPLACE':
+      return t('backups.triggerPreImport')
+    default:
+      if (retentionClass === 'PERIODIC') {
+        return t('backups.triggerLegacy')
+      }
+      if (retentionClass === 'UNMANAGED') {
+        return t('backups.triggerUnmanaged')
+      }
+      return t('backups.triggerUnknown')
+  }
+}
+
+function labelBackupRetentionClass(retentionClass: string) {
+  switch (retentionClass) {
+    case 'PERIODIC':
+      return t('backups.retentionPeriodic')
+    case 'POST_CHANGE':
+      return t('backups.retentionPostChange')
+    case 'SAFETY':
+      return t('backups.retentionSafety')
+    case 'UNMANAGED':
+      return t('backups.retentionUnmanaged')
+    default:
+      return retentionClass
+  }
 }
