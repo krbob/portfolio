@@ -104,7 +104,7 @@ information is summarized in `Data -> Backups`.
 | `PORTFOLIO_MARKET_DATA_STALE_AFTER_DAYS` | `3` | Portfolio snapshot age threshold |
 | `PORTFOLIO_USDPLN_SYMBOL` | `PLN=X` | Stock Analyst symbol used for USD/PLN |
 | `PORTFOLIO_GOLD_BENCHMARK_SYMBOL` | `GC=F` | Gold reference series |
-| `PORTFOLIO_EQUITY_BENCHMARK_SYMBOL` | `VWRA.L` | Built-in equity reference series |
+| `PORTFOLIO_EQUITY_BENCHMARK_SYMBOL` | `VWRA.L` | Default base phase for the global-equity benchmark schedule when no schedule has been saved |
 | `PORTFOLIO_BOND_BENCHMARK_SYMBOL` | `ETFBTBSP.WA` | Built-in bond reference series |
 
 Base URLs may contain a deployment prefix such as `/api`, but must not include an operation path.

@@ -303,7 +303,7 @@ function benchmarkLabel(
   lang: UiLanguage,
 ): string {
   const labels: Record<string, { pl: string; en: string }> = {
-    VWRA: { pl: 'VWRA', en: 'VWRA' },
+    VWRA: { pl: 'globalny benchmark akcyjny', en: 'global equity benchmark' },
     INFLATION: { pl: 'Inflacja', en: 'Inflation' },
     TARGET_MIX: { pl: 'Miks docelowy', en: 'Target mix' },
     V80A: { pl: 'V80A', en: 'V80A' },

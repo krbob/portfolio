@@ -486,11 +486,20 @@ class PortfolioHistoryService(
         from: LocalDate,
         until: LocalDate
     ): BenchmarkLoads = coroutineScope {
-        val equityDeferred = async { referenceSeriesProvider.equityBenchmarkPln(from = from, to = until) }
         val bondDeferred = async { referenceSeriesProvider.bondBenchmarkPln(from = from, to = until) }
         val targetPhasesDeferred = async { portfolioTargetRepository.listPhases() }
         val inflationDeferred = async { loadInflationBenchmark(from = from, until = until) }
         val settingsDeferred = async { benchmarkSettingsService.settings() }
+        val equityDeferred = async {
+            val settings = settingsDeferred.await()
+            loadEquityBenchmarkSchedule(
+                schedule = settings.equityBenchmarkSchedule,
+                from = from,
+                until = until,
+                label = settings.options.find { option -> option.key == BenchmarkKey.VWRA.name }?.label
+                    ?: BenchmarkKey.VWRA.name
+            )
+        }
 
         val equity = equityDeferred.await()
         val bond = bondDeferred.await()
@@ -500,23 +509,8 @@ class PortfolioHistoryService(
         val benchmarkStatuses = mutableListOf<BenchmarkSeriesHealth>()
         fun labelFor(key: BenchmarkKey): String =
             settings.options.find { option -> option.key == key.name }?.label ?: key.name
-        val equityLookup = when (equity) {
-            is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
-                from = from,
-                until = until,
-                prices = equity.prices.toLookup()
-            )
-
-            is ReferenceSeriesResult.Failure -> TreeMap()
-        }
-        val equityHealth = referenceBenchmarkHealth(
-            key = BenchmarkKey.VWRA.name,
-            label = labelFor(BenchmarkKey.VWRA),
-            result = equity,
-            lookup = equityLookup,
-            unavailableIssue = "VWRA benchmark series is unavailable.",
-            staleIssue = "VWRA benchmark series was served from cache."
-        )
+        val equityLookup = equity.lookup
+        val equityHealth = equity.health
         val bondLookup = when (bond) {
             is ReferenceSeriesResult.Success -> buildNormalizedIndexLookup(
                 from = from,
@@ -538,10 +532,16 @@ class PortfolioHistoryService(
             from = from,
             until = until,
             targetPhases = targetPhases,
-            equityBenchmark = equityLookup,
-            bondBenchmark = bondLookup,
-            equityStatus = equityHealth.status,
-            bondStatus = bondHealth.status
+            equity = TargetMixBenchmarkComponent(
+                lookup = equityLookup,
+                status = equityHealth.status,
+                issue = equityHealth.issue
+            ),
+            bonds = TargetMixBenchmarkComponent(
+                lookup = bondLookup,
+                status = bondHealth.status,
+                issue = bondHealth.issue
+            )
         )
 
         val indices = mutableMapOf<String, TreeMap<LocalDate, BigDecimal>>()
@@ -596,6 +596,227 @@ class PortfolioHistoryService(
             statuses = benchmarkStatuses
         )
     }
+
+    private suspend fun loadEquityBenchmarkSchedule(
+        schedule: List<EquityBenchmarkPhase>,
+        from: LocalDate,
+        until: LocalDate,
+        label: String
+    ): ScheduledBenchmarkLoad = coroutineScope {
+        val relevantPhases = relevantEquityBenchmarkPhases(schedule = schedule, from = from, until = until)
+        val phaseWindows = equityBenchmarkPhaseWindows(
+            phases = relevantPhases,
+            from = from,
+            until = until
+        )
+        val phaseResults = phaseWindows
+            .map { window ->
+                async {
+                    ScheduledBenchmarkPhaseResult(
+                        window = window,
+                        result = referenceSeriesProvider.benchmarkPln(
+                            symbol = window.phase.symbol,
+                            from = window.from,
+                            to = window.until
+                        )
+                    )
+                }
+            }
+            .awaitAll()
+        val failedPhase = phaseResults.firstOrNull { load -> load.result is ReferenceSeriesResult.Failure }
+        if (failedPhase != null) {
+            val failure = failedPhase.result as ReferenceSeriesResult.Failure
+            val failureContext = "Equity benchmark ${failedPhase.window.phase.symbol} is unavailable for " +
+                "${failedPhase.window.from}..${failedPhase.window.until}."
+            return@coroutineScope unavailableScheduledBenchmark(
+                label = label,
+                issue = failure.reason
+                    .takeIf(String::isNotBlank)
+                    ?.let { reason -> "$failureContext $reason" }
+                    ?: failureContext
+            )
+        }
+
+        val phaseLoads = phaseResults.map { phaseResult ->
+            val result = phaseResult.result as ReferenceSeriesResult.Success
+            ScheduledBenchmarkPhaseLoad(
+                window = phaseResult.window,
+                prices = result.prices.toLookup(),
+                fromCache = result.fromCache
+            )
+        }
+        equityBenchmarkCoverageIssue(
+            from = from,
+            until = until,
+            phaseLoads = phaseLoads
+        )?.let { issue ->
+            return@coroutineScope unavailableScheduledBenchmark(label = label, issue = issue)
+        }
+        val lookup = buildChainLinkedIndexLookup(
+            from = from,
+            until = until,
+            phaseLoads = phaseLoads
+        ) ?: return@coroutineScope unavailableScheduledBenchmark(
+            label = label,
+            issue = "Equity benchmark schedule contains an unusable price inside the selected period."
+        )
+        val stale = phaseLoads.any(ScheduledBenchmarkPhaseLoad::fromCache)
+        ScheduledBenchmarkLoad(
+            lookup = lookup,
+            health = BenchmarkSeriesHealth(
+                key = BenchmarkKey.VWRA.name,
+                label = label,
+                status = if (stale) BenchmarkSeriesStatus.STALE else BenchmarkSeriesStatus.HEALTHY,
+                issue = if (stale) "Equity benchmark schedule includes a series served from cache." else null
+            )
+        )
+    }
+
+    private fun relevantEquityBenchmarkPhases(
+        schedule: List<EquityBenchmarkPhase>,
+        from: LocalDate,
+        until: LocalDate
+    ): List<EquityBenchmarkPhase> {
+        val activeAtStartIndex = schedule.indexOfLast { phase ->
+            phase.effectiveFrom == null || !phase.effectiveFrom.isAfter(from)
+        }.coerceAtLeast(0)
+        return schedule
+            .drop(activeAtStartIndex)
+            .takeWhile { phase -> phase.effectiveFrom == null || !phase.effectiveFrom.isAfter(until) }
+    }
+
+    private fun equityBenchmarkPhaseWindows(
+        phases: List<EquityBenchmarkPhase>,
+        from: LocalDate,
+        until: LocalDate
+    ): List<ScheduledBenchmarkPhaseWindow> = phases.mapIndexed { index, phase ->
+        val requestFrom = if (index == 0) {
+            from
+        } else {
+            maxOf(from, requireNotNull(phase.effectiveFrom).minusDays(EQUITY_BENCHMARK_OVERLAP_DAYS))
+        }
+        val requestUntil = phases
+            .getOrNull(index + 1)
+            ?.effectiveFrom
+            ?.minusDays(1)
+            ?.let { phaseEnd -> minOf(phaseEnd, until) }
+            ?: until
+        ScheduledBenchmarkPhaseWindow(
+            phase = phase,
+            from = requestFrom,
+            until = requestUntil
+        )
+    }
+
+    private fun buildChainLinkedIndexLookup(
+        from: LocalDate,
+        until: LocalDate,
+        phaseLoads: List<ScheduledBenchmarkPhaseLoad>
+    ): TreeMap<LocalDate, BigDecimal>? {
+        val initialPhase = phaseLoads.firstOrNull() ?: return null
+        var date = findChainStart(
+            from = from,
+            until = until,
+            nextPhaseDate = phaseLoads.getOrNull(1)?.window?.phase?.effectiveFrom,
+            prices = initialPhase.prices
+        ) ?: return null
+
+        val lookup = TreeMap<LocalDate, BigDecimal>()
+        var indexLevel = BASE_INDEX
+        lookup[date] = indexLevel.index()
+        var previousDate = date
+        date = date.plusDays(1)
+
+        while (!date.isAfter(until)) {
+            val activePhase = phaseLoads.last { phaseLoad ->
+                phaseLoad.window.phase.effectiveFrom == null ||
+                    !phaseLoad.window.phase.effectiveFrom.isAfter(date)
+            }
+            val previousPrice = activePhase.prices.lookupOn(previousDate) ?: return null
+            val currentPrice = activePhase.prices.lookupOn(date) ?: return null
+            if (previousPrice.signum() <= 0 || currentPrice.signum() <= 0) {
+                return null
+            }
+            indexLevel = indexLevel.multiply(currentPrice.divide(previousPrice, MONEY_CONTEXT), MONEY_CONTEXT)
+            lookup[date] = indexLevel.index()
+            previousDate = date
+            date = date.plusDays(1)
+        }
+        return lookup
+    }
+
+    private fun equityBenchmarkCoverageIssue(
+        from: LocalDate,
+        until: LocalDate,
+        phaseLoads: List<ScheduledBenchmarkPhaseLoad>
+    ): String? {
+        val initialPhase = phaseLoads.firstOrNull()
+            ?: return "Equity benchmark schedule has no phase for the selected period."
+        val start = findChainStart(
+            from = from,
+            until = until,
+            nextPhaseDate = phaseLoads.getOrNull(1)?.window?.phase?.effectiveFrom,
+            prices = initialPhase.prices
+        )
+        if (start == null) {
+            return "Equity benchmark ${initialPhase.window.phase.symbol} has no usable price before " +
+                "its phase ends on ${initialPhase.window.until}."
+        }
+
+        phaseLoads.drop(1).forEach { phaseLoad ->
+            val phase = phaseLoad.window.phase
+            val switchDate = requireNotNull(phase.effectiveFrom)
+            val previousDate = switchDate.minusDays(1)
+            val previousPrice = phaseLoad.prices.lookupOn(previousDate)
+            if (!previousPrice.isUsableBenchmarkPrice()) {
+                return "Equity benchmark ${phase.symbol} is missing usable overlap for the switch on $switchDate " +
+                    "(a price on or before $previousDate is required)."
+            }
+            val observationDeadline = minOf(
+                phaseLoad.window.until,
+                switchDate.plusDays(EQUITY_BENCHMARK_OBSERVATION_DAYS)
+            )
+            val firstPhaseObservation = phaseLoad.prices.ceilingEntry(switchDate)
+                ?.takeIf { observation -> !observation.key.isAfter(observationDeadline) }
+            if (!firstPhaseObservation?.value.isUsableBenchmarkPrice()) {
+                return "Equity benchmark ${phase.symbol} has no usable price on or after its switch on $switchDate " +
+                    "through $observationDeadline."
+            }
+        }
+        return null
+    }
+
+    private fun findChainStart(
+        from: LocalDate,
+        until: LocalDate,
+        nextPhaseDate: LocalDate?,
+        prices: TreeMap<LocalDate, BigDecimal>
+    ): LocalDate? {
+        val lastCandidate = nextPhaseDate
+            ?.minusDays(1)
+            ?.let { dayBeforeNextPhase -> minOf(dayBeforeNextPhase, until) }
+            ?: until
+        var candidate = from
+        while (!candidate.isAfter(lastCandidate)) {
+            val price = prices.lookupOn(candidate)
+            if (price != null && price.signum() > 0) {
+                return candidate
+            }
+            candidate = candidate.plusDays(1)
+        }
+        return null
+    }
+
+    private fun unavailableScheduledBenchmark(label: String, issue: String): ScheduledBenchmarkLoad =
+        ScheduledBenchmarkLoad(
+            lookup = TreeMap(),
+            health = BenchmarkSeriesHealth(
+                key = BenchmarkKey.VWRA.name,
+                label = label,
+                status = BenchmarkSeriesStatus.UNAVAILABLE,
+                issue = issue
+            )
+        )
 
     private suspend fun loadInflationBenchmark(
         from: LocalDate,
@@ -739,22 +960,31 @@ class PortfolioHistoryService(
         from: LocalDate,
         until: LocalDate,
         targetPhases: List<PortfolioTargetPhase>,
-        equityBenchmark: TreeMap<LocalDate, BigDecimal>,
-        bondBenchmark: TreeMap<LocalDate, BigDecimal>,
-        equityStatus: BenchmarkSeriesStatus,
-        bondStatus: BenchmarkSeriesStatus
+        equity: TargetMixBenchmarkComponent,
+        bonds: TargetMixBenchmarkComponent
     ): TargetMixBenchmarkLoad {
         if (targetPhases.isEmpty()) {
             return TargetMixBenchmarkLoad(lookup = TreeMap(), health = null)
         }
 
         val sortedPhases = targetPhases.sortedBy(PortfolioTargetPhase::effectiveFrom)
+        val componentUsage = targetMixComponentUsage(
+            phases = sortedPhases,
+            from = from,
+            until = until
+        )
+        if (componentUsage.usesEquity && equity.status == BenchmarkSeriesStatus.UNAVAILABLE) {
+            return unavailableTargetMix(equity.issue ?: "Target-mix equity benchmark is unavailable.")
+        }
+        if (componentUsage.usesBonds && bonds.status == BenchmarkSeriesStatus.UNAVAILABLE) {
+            return unavailableTargetMix(bonds.issue ?: "Target-mix bond benchmark is unavailable.")
+        }
         val firstEffectiveDate = findTargetMixStart(
             from = from,
             until = until,
             phases = sortedPhases,
-            equityBenchmark = equityBenchmark,
-            bondBenchmark = bondBenchmark
+            equityBenchmark = equity.lookup,
+            bondBenchmark = bonds.lookup
         ) ?: return unavailableTargetMix("Target-mix benchmark does not cover the selected period.")
 
         val lookup = TreeMap<LocalDate, BigDecimal>()
@@ -770,8 +1000,8 @@ class PortfolioHistoryService(
                 previousDate = previousDate,
                 currentDate = date,
                 weights = weights,
-                equityBenchmark = equityBenchmark,
-                bondBenchmark = bondBenchmark
+                equityBenchmark = equity.lookup,
+                bondBenchmark = bonds.lookup
             ) ?: return unavailableTargetMix("Target-mix benchmark is missing component data inside the selected period.")
             index = BigDecimal.valueOf(index.toDouble() * mixFactor).index()
             lookup[date] = index
@@ -780,7 +1010,7 @@ class PortfolioHistoryService(
             date = date.plusDays(1)
         }
 
-        val status = targetMixStatus(sortedPhases, firstEffectiveDate, until, equityStatus, bondStatus)
+        val status = targetMixStatus(sortedPhases, firstEffectiveDate, until, equity.status, bonds.status)
         return TargetMixBenchmarkLoad(
             lookup = lookup,
             health = BenchmarkSeriesHealth(
@@ -870,6 +1100,24 @@ class PortfolioHistoryService(
         }
     }
 
+    private fun targetMixComponentUsage(
+        phases: List<PortfolioTargetPhase>,
+        from: LocalDate,
+        until: LocalDate
+    ): TargetMixComponentUsage {
+        val activeAtStart = phases.lastOrNull { phase -> !phase.effectiveFrom.isAfter(from) }
+        val changesInsidePeriod = phases.filter { phase -> phase.effectiveFrom > from && !phase.effectiveFrom.isAfter(until) }
+        val targets = listOfNotNull(activeAtStart).plus(changesInsidePeriod).flatMap(PortfolioTargetPhase::targets)
+        return TargetMixComponentUsage(
+            usesEquity = targets.any { target ->
+                target.assetClass == AssetClass.EQUITIES && target.targetWeight.signum() > 0
+            },
+            usesBonds = targets.any { target ->
+                target.assetClass == AssetClass.BONDS && target.targetWeight.signum() > 0
+            }
+        )
+    }
+
     private fun unavailableTargetMix(issue: String): TargetMixBenchmarkLoad = TargetMixBenchmarkLoad(
         lookup = TreeMap(),
         health = BenchmarkSeriesHealth(
@@ -884,6 +1132,17 @@ class PortfolioHistoryService(
         val equity: Double,
         val bonds: Double,
         val cash: Double
+    )
+
+    private data class TargetMixComponentUsage(
+        val usesEquity: Boolean,
+        val usesBonds: Boolean
+    )
+
+    private data class TargetMixBenchmarkComponent(
+        val lookup: TreeMap<LocalDate, BigDecimal>,
+        val status: BenchmarkSeriesStatus,
+        val issue: String?
     )
 
     private fun referenceBenchmarkHealth(
@@ -963,6 +1222,8 @@ class PortfolioHistoryService(
 
     private fun TreeMap<LocalDate, BigDecimal>.lookupOn(date: LocalDate): BigDecimal? =
         floorEntry(date)?.value
+
+    private fun BigDecimal?.isUsableBenchmarkPrice(): Boolean = this != null && signum() > 0
 
     private fun MutableHolding.isValuedOn(date: LocalDate, historyLoads: HistoricalLoads): Boolean =
         if (instrument.kind == InstrumentKind.BOND_EDO) {
@@ -1153,6 +1414,28 @@ class PortfolioHistoryService(
         val health: BenchmarkSeriesHealth?
     )
 
+    private data class ScheduledBenchmarkLoad(
+        val lookup: TreeMap<LocalDate, BigDecimal>,
+        val health: BenchmarkSeriesHealth
+    )
+
+    private data class ScheduledBenchmarkPhaseWindow(
+        val phase: EquityBenchmarkPhase,
+        val from: LocalDate,
+        val until: LocalDate
+    )
+
+    private data class ScheduledBenchmarkPhaseResult(
+        val window: ScheduledBenchmarkPhaseWindow,
+        val result: ReferenceSeriesResult
+    )
+
+    private data class ScheduledBenchmarkPhaseLoad(
+        val window: ScheduledBenchmarkPhaseWindow,
+        val prices: TreeMap<LocalDate, BigDecimal>,
+        val fromCache: Boolean
+    )
+
     private data class TargetMixBenchmarkLoad(
         val lookup: TreeMap<LocalDate, BigDecimal>,
         val health: BenchmarkSeriesHealth?
@@ -1161,6 +1444,8 @@ class PortfolioHistoryService(
     private companion object {
         val MONEY_CONTEXT: MathContext = MathContext.DECIMAL64
         val BASE_INDEX: BigDecimal = BigDecimal("100.0000")
+        const val EQUITY_BENCHMARK_OVERLAP_DAYS = 7L
+        const val EQUITY_BENCHMARK_OBSERVATION_DAYS = 14L
     }
 }
 

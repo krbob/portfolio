@@ -728,7 +728,8 @@ class PortfolioReturnsServiceTest {
         override suspend fun bondBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = bond
 
         override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
-            benchmarksBySymbol[symbol] ?: ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
+            benchmarksBySymbol[symbol]
+                ?: if (symbol == "VWRA.L") equity else ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
     }
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {

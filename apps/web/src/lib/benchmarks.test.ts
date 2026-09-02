@@ -9,6 +9,9 @@ describe('benchmarks helpers', () => {
       customBenchmarks: [
         { key: 'CUSTOM_1', label: 'Europa 600', symbol: 'EXSA.DE' },
       ],
+      equityBenchmarkSchedule: [
+        { effectiveFrom: null, symbol: 'VWRA.L' },
+      ],
       options: [
         { key: 'VWRA', label: 'VWRA benchmark', symbol: 'VWRA.L', kind: 'ETF', configurable: true, defaultEnabled: true, defaultPinned: true },
         { key: 'TARGET_MIX', label: 'Configured target mix', symbol: null, kind: 'SYSTEM', configurable: false, defaultEnabled: true, defaultPinned: false },

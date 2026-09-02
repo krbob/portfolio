@@ -467,6 +467,40 @@ export const settingsMessages = {
   'benchmarks.saveBenchmarks': { pl: 'Zapisz benchmarki', en: 'Save benchmarks' },
   'benchmarks.saveFailed': { pl: 'Nie udało się zapisać benchmarków.', en: 'Saving benchmarks failed.' },
   'benchmarks.loading': { pl: 'Ładowanie konfiguracji benchmarków...', en: 'Loading benchmark settings...' },
+  'benchmarks.equityScheduleTitle': {
+    pl: 'Harmonogram globalnego benchmarku akcyjnego',
+    en: 'Global equity benchmark schedule',
+  },
+  'benchmarks.equityScheduleDescription': {
+    pl: 'Pierwsza faza obejmuje całą wcześniejszą historię. Każda kolejna zmienia symbol od wskazanej daty.',
+    en: 'The first phase covers all earlier history. Each following phase changes the symbol from its effective date.',
+  },
+  'benchmarks.equitySchedulePhase': { pl: 'Faza benchmarku', en: 'Benchmark phase' },
+  'benchmarks.equityScheduleEffectiveFrom': { pl: 'Obowiązuje od', en: 'Effective from' },
+  'benchmarks.equityScheduleFromBeginning': { pl: 'Od początku', en: 'From the beginning' },
+  'benchmarks.equityScheduleSymbol': { pl: 'Symbol benchmarku akcyjnego', en: 'Equity benchmark symbol' },
+  'benchmarks.equityScheduleAdd': { pl: 'Dodaj zmianę symbolu', en: 'Add symbol change' },
+  'benchmarks.equityScheduleRemove': { pl: 'Usuń zmianę', en: 'Remove change' },
+  'benchmarks.equityScheduleHint': {
+    pl: 'Daty muszą rosnąć, a nowy ETF musi mieć notowanie przed zmianą oraz w pierwszej późniejszej sesji. Harmonogram zasila porównanie globalnych akcji i część akcyjną benchmarku docelowego.',
+    en: 'Dates must increase, and the new ETF needs prices before the switch and in the first later trading session. The schedule feeds both the global-equity comparison and the equity leg of the target benchmark.',
+  },
+  'benchmarks.equityScheduleSymbolRequired': {
+    pl: 'Podaj symbol benchmarku akcyjnego.',
+    en: 'Enter an equity benchmark symbol.',
+  },
+  'benchmarks.equityScheduleDateRequired': {
+    pl: 'Podaj prawidłową datę rozpoczęcia fazy.',
+    en: 'Enter a valid phase start date.',
+  },
+  'benchmarks.equityScheduleDatesIncreasing': {
+    pl: 'Data musi być późniejsza niż data poprzedniej fazy.',
+    en: 'The date must be later than the previous phase date.',
+  },
+  'benchmarks.equityScheduleValidationFailed': {
+    pl: 'Popraw harmonogram globalnego benchmarku akcyjnego przed zapisem.',
+    en: 'Fix the global equity benchmark schedule before saving.',
+  },
   'benchmarks.listTitle': { pl: 'Lista benchmarków', en: 'Benchmark list' },
   'benchmarks.listDescription': {
     pl: 'Benchmarki domyślne można wyłączać i przypinać, ale nie można ich usuwać. Własne benchmarki działają tak samo, tylko dodatkowo można je edytować i usuwać.',
@@ -501,6 +535,10 @@ export const settingsMessages = {
   'benchmarks.off': { pl: 'Wyłączony', en: 'Off' },
   'benchmarks.enabledCount': { pl: 'Aktywne', en: 'Enabled' },
   'benchmarks.pinnedCount': { pl: 'Przypięte', en: 'Pinned' },
+  'benchmarks.translateGlobalEquity': {
+    pl: 'Globalny benchmark akcyjny',
+    en: 'Global equity benchmark',
+  },
   'benchmarks.translateVwra': { pl: 'Benchmark VWRA', en: 'VWRA benchmark' },
   'benchmarks.translateInflation': { pl: 'Benchmark inflacji', en: 'Inflation benchmark' },
   'benchmarks.translateTargetMix': { pl: 'Skonfigurowany podział docelowy', en: 'Configured target mix' },

@@ -58,13 +58,18 @@ Represents the desired strategic allocation as explicit effective-dated phases.
 
 Represents small persisted configuration payloads such as:
 
-- benchmark settings
+- benchmark settings, including an effective-dated global-equity symbol schedule
 - rebalancing settings
 - alert settings
 - ordered withdrawal-planning account rules, classification labels, and manual tax buffers
 
 These are user-owned configuration, participate in export/import, and are counted as app preferences in transfer and
 backup responses.
+
+The global-equity benchmark schedule always starts with one undated base phase. Later phases have
+strictly increasing effective dates and explicit market-data symbols. It changes the investable
+proxy used from that date onward without changing the identity of the built-in benchmark or
+rewriting earlier comparison history.
 
 ### Transaction import profile
 

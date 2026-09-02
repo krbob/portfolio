@@ -133,7 +133,7 @@ class PortfolioReadModelCacheDescriptorServiceTest {
             descriptorService(marketDataCacheFingerprint = "enabled=true").returnsDescriptor()
         }
 
-        assertEquals(8, descriptor.modelVersion / CACHE_VERSION_MODULUS)
+        assertEquals(9, descriptor.modelVersion / CACHE_VERSION_MODULUS)
     }
 
     @Test

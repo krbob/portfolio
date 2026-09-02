@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import type { BenchmarkOption, PortfolioBenchmarkSettings } from '../api/write-model'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import type {
+  BenchmarkOption,
+  EquityBenchmarkSchedulePhase,
+  PortfolioBenchmarkSettings,
+} from '../api/write-model'
 import { usePortfolioBenchmarkSettings, useSavePortfolioBenchmarkSettings } from '../hooks/use-write-model'
+import {
+  isValidBenchmarkSymbol,
+  normalizeBenchmarkSymbol,
+  validateEquityBenchmarkSchedule,
+  type EquityBenchmarkScheduleDateError,
+  type EquityBenchmarkSchedulePhaseValidation,
+  type EquityBenchmarkScheduleSymbolError,
+} from '../lib/equity-benchmark-schedule'
 import { useI18n } from '../lib/i18n'
 import { translateBenchmarkLabel } from '../lib/labels'
 import { t } from '../lib/messages'
@@ -17,7 +29,6 @@ import { Card, SectionHeader } from './ui'
 import { IconPlus } from './ui/icons'
 
 const CUSTOM_KIND = 'CUSTOM'
-const SYMBOL_FORMAT_PATTERN = /^[A-Z0-9._-]+$/
 
 type BenchmarkFormRow = {
   key: string
@@ -29,21 +40,39 @@ type BenchmarkFormRow = {
   removable: boolean
 }
 
+type EquityBenchmarkScheduleFormRow = {
+  key: string
+  effectiveFrom: string
+  symbol: string
+}
+
+let equityBenchmarkScheduleKeySequence = 0
+
 export function PortfolioBenchmarkSettingsSection() {
   const { language } = useI18n()
   const settingsQuery = usePortfolioBenchmarkSettings()
   const saveMutation = useSavePortfolioBenchmarkSettings()
 
   const [rows, setRows] = useState<BenchmarkFormRow[]>([])
+  const [equityBenchmarkSchedule, setEquityBenchmarkSchedule] = useState<EquityBenchmarkScheduleFormRow[]>([])
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const equityBenchmarkScheduleDirtyRef = useRef(false)
 
   useEffect(() => {
     if (!settingsQuery.data) {
       return
     }
     setRows(buildBenchmarkRows(settingsQuery.data))
+    if (!equityBenchmarkScheduleDirtyRef.current) {
+      setEquityBenchmarkSchedule(buildEquityBenchmarkScheduleRows(equityBenchmarkScheduleFrom(settingsQuery.data)))
+    }
   }, [settingsQuery.data])
+
+  const equityBenchmarkScheduleValidations = useMemo(() => {
+    const validations = validateEquityBenchmarkSchedule(equityBenchmarkSchedule)
+    return new Map(equityBenchmarkSchedule.map((phase, index) => [phase.key, validations[index]]))
+  }, [equityBenchmarkSchedule])
 
   const counts = useMemo(() => {
     const enabledCount = rows.filter((row) => row.enabled).length
@@ -115,6 +144,42 @@ export function PortfolioBenchmarkSettingsSection() {
     setRows((current) => current.filter((row) => row.key !== key))
   }
 
+  function updateEquityBenchmarkSchedulePhase(
+    key: string,
+    field: 'effectiveFrom' | 'symbol',
+    value: string,
+  ) {
+    setFeedback(null)
+    setActionError(null)
+    equityBenchmarkScheduleDirtyRef.current = true
+    setEquityBenchmarkSchedule((current) => current.map((phase) => (
+      phase.key === key
+        ? { ...phase, [field]: field === 'symbol' ? normalizeBenchmarkSymbol(value) : value }
+        : phase
+    )))
+  }
+
+  function addEquityBenchmarkSchedulePhase() {
+    setFeedback(null)
+    setActionError(null)
+    equityBenchmarkScheduleDirtyRef.current = true
+    setEquityBenchmarkSchedule((current) => [
+      ...current,
+      {
+        key: nextEquityBenchmarkScheduleKey(),
+        effectiveFrom: '',
+        symbol: '',
+      },
+    ])
+  }
+
+  function removeEquityBenchmarkSchedulePhase(key: string) {
+    setFeedback(null)
+    setActionError(null)
+    equityBenchmarkScheduleDirtyRef.current = true
+    setEquityBenchmarkSchedule((current) => current.filter((phase, index) => index === 0 || phase.key !== key))
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFeedback(null)
@@ -127,6 +192,10 @@ export function PortfolioBenchmarkSettingsSection() {
     }
     if (customRowStates.some((state) => state.kind === 'incomplete')) {
       setActionError(t('benchmarks.rowIncompleteGlobal'))
+      return
+    }
+    if ([...equityBenchmarkScheduleValidations.values()].some((validation) => !validation?.valid)) {
+      setActionError(t('benchmarks.equityScheduleValidationFailed'))
       return
     }
 
@@ -142,8 +211,14 @@ export function PortfolioBenchmarkSettingsSection() {
             symbol: row.symbol.trim().toUpperCase(),
           }))
           .filter((row) => row.label.length > 0 || row.symbol.length > 0),
+        equityBenchmarkSchedule: equityBenchmarkSchedule.map((phase, index) => ({
+          effectiveFrom: index === 0 ? null : phase.effectiveFrom,
+          symbol: phase.symbol.trim().toUpperCase(),
+        })),
       })
       setRows(buildBenchmarkRows(result))
+      equityBenchmarkScheduleDirtyRef.current = false
+      setEquityBenchmarkSchedule(buildEquityBenchmarkScheduleRows(equityBenchmarkScheduleFrom(result)))
       setFeedback(
         language
           ? `Zapisano ${result.enabledKeys.length} aktywnych benchmarków i ${result.pinnedKeys.length} przypiętych.`
@@ -178,6 +253,15 @@ export function PortfolioBenchmarkSettingsSection() {
         <p className="text-sm text-red-400">{settingsQuery.error.message}</p>
       ) : (
         <form id="portfolio-benchmark-settings-form" className="space-y-6" onSubmit={handleSubmit}>
+          <EquityBenchmarkScheduleFields
+            phases={equityBenchmarkSchedule}
+            validations={equityBenchmarkScheduleValidations}
+            disabled={saveMutation.isPending}
+            onAdd={addEquityBenchmarkSchedulePhase}
+            onRemove={removeEquityBenchmarkSchedulePhase}
+            onUpdate={updateEquityBenchmarkSchedulePhase}
+          />
+
           <BenchmarkGroup
             title={t('benchmarks.system')}
             description={t('benchmarks.systemDescription')}
@@ -238,6 +322,119 @@ export function PortfolioBenchmarkSettingsSection() {
         </form>
       )}
     </Card>
+  )
+}
+
+function EquityBenchmarkScheduleFields({
+  phases,
+  validations,
+  disabled,
+  onAdd,
+  onRemove,
+  onUpdate,
+}: {
+  phases: EquityBenchmarkScheduleFormRow[]
+  validations: Map<string, EquityBenchmarkSchedulePhaseValidation | undefined>
+  disabled: boolean
+  onAdd: () => void
+  onRemove: (key: string) => void
+  onUpdate: (key: string, field: 'effectiveFrom' | 'symbol', value: string) => void
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-800/50 p-4">
+      <div className="mb-4">
+        <h4 className="text-sm font-semibold text-zinc-100">{t('benchmarks.equityScheduleTitle')}</h4>
+        <p className="mt-1 text-sm text-zinc-400">{t('benchmarks.equityScheduleDescription')}</p>
+      </div>
+
+      <div className="space-y-3">
+        {phases.map((phase, index) => {
+          const validation = validations.get(phase.key)
+          const dateErrorId = `${phase.key}-equity-benchmark-date-error`
+          const symbolErrorId = `${phase.key}-equity-benchmark-symbol-error`
+          return (
+            <article key={phase.key} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h5 className="text-sm font-semibold text-zinc-100">
+                  {t('benchmarks.equitySchedulePhase')} {index + 1}
+                </h5>
+                {index > 0 ? (
+                  <button
+                    type="button"
+                    className={btnDanger}
+                    disabled={disabled}
+                    onClick={() => onRemove(phase.key)}
+                  >
+                    {t('benchmarks.equityScheduleRemove')}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                {index === 0 ? (
+                  <div>
+                    <span className={labelClass}>{t('benchmarks.equityScheduleEffectiveFrom')}</span>
+                    <p className="flex min-h-10 items-center text-sm font-medium text-zinc-100">
+                      {t('benchmarks.equityScheduleFromBeginning')}
+                    </p>
+                  </div>
+                ) : (
+                  <label>
+                    <span className={labelClass}>{t('benchmarks.equityScheduleEffectiveFrom')}</span>
+                    <input
+                      type="date"
+                      className={input}
+                      value={phase.effectiveFrom}
+                      disabled={disabled}
+                      aria-invalid={Boolean(validation?.dateError)}
+                      aria-describedby={validation?.dateError ? dateErrorId : undefined}
+                      onChange={(event) => onUpdate(phase.key, 'effectiveFrom', event.target.value)}
+                    />
+                    {validation?.dateError ? (
+                      <p id={dateErrorId} className="mt-1.5 text-xs text-red-400">
+                        {equityBenchmarkDateErrorMessage(validation.dateError)}
+                      </p>
+                    ) : null}
+                  </label>
+                )}
+
+                <label>
+                  <span className={labelClass}>{t('benchmarks.equityScheduleSymbol')}</span>
+                  <input
+                    className={input}
+                    value={phase.symbol}
+                    disabled={disabled}
+                    placeholder={index === 0 ? 'VWRA.L' : 'VGLA.DE'}
+                    autoCapitalize="characters"
+                    aria-invalid={Boolean(validation?.symbolError)}
+                    aria-describedby={validation?.symbolError ? symbolErrorId : undefined}
+                    onChange={(event) => onUpdate(phase.key, 'symbol', event.target.value)}
+                  />
+                  {validation?.symbolError ? (
+                    <p id={symbolErrorId} className="mt-1.5 text-xs text-red-400">
+                      {equityBenchmarkSymbolErrorMessage(validation.symbolError)}
+                    </p>
+                  ) : null}
+                </label>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          className={`${btnSecondary} inline-flex items-center gap-2`}
+          disabled={disabled}
+          onClick={onAdd}
+        >
+          <IconPlus className="h-4 w-4" />
+          {t('benchmarks.equityScheduleAdd')}
+        </button>
+        <span className="text-xs text-zinc-400">{t('benchmarks.equityScheduleHint')}</span>
+      </div>
+    </div>
   )
 }
 
@@ -439,6 +636,51 @@ function buildBenchmarkRows(settings: PortfolioBenchmarkSettings): BenchmarkForm
   return [...builtInRows, ...customRows]
 }
 
+function buildEquityBenchmarkScheduleRows(
+  schedule: EquityBenchmarkSchedulePhase[],
+): EquityBenchmarkScheduleFormRow[] {
+  const phases = schedule.map((phase) => ({
+    key: nextEquityBenchmarkScheduleKey(),
+    effectiveFrom: phase.effectiveFrom ?? '',
+    symbol: normalizeBenchmarkSymbol(phase.symbol),
+  }))
+  return phases.length > 0 ? phases : [{
+    key: nextEquityBenchmarkScheduleKey(),
+    effectiveFrom: '',
+    symbol: '',
+  }]
+}
+
+function equityBenchmarkScheduleFrom(
+  settings: PortfolioBenchmarkSettings,
+): EquityBenchmarkSchedulePhase[] {
+  if (Array.isArray(settings.equityBenchmarkSchedule) && settings.equityBenchmarkSchedule.length > 0) {
+    return settings.equityBenchmarkSchedule
+  }
+  const legacySymbol = settings.options
+    .find((option) => option.key === 'VWRA')
+    ?.symbol
+    ?.trim()
+  return [{ effectiveFrom: null, symbol: legacySymbol || 'VWRA.L' }]
+}
+
+function nextEquityBenchmarkScheduleKey(): string {
+  equityBenchmarkScheduleKeySequence += 1
+  return `equity-benchmark-phase-${equityBenchmarkScheduleKeySequence}`
+}
+
+function equityBenchmarkDateErrorMessage(error: Exclude<EquityBenchmarkScheduleDateError, null>): string {
+  return error === 'REQUIRED'
+    ? t('benchmarks.equityScheduleDateRequired')
+    : t('benchmarks.equityScheduleDatesIncreasing')
+}
+
+function equityBenchmarkSymbolErrorMessage(error: Exclude<EquityBenchmarkScheduleSymbolError, null>): string {
+  return error === 'REQUIRED'
+    ? t('benchmarks.equityScheduleSymbolRequired')
+    : t('benchmarks.symbolFormatInvalid')
+}
+
 function buildBuiltInRow(option: BenchmarkOption, enabledKeys: Set<string>, pinnedKeys: Set<string>): BenchmarkFormRow {
   return {
     key: option.key,
@@ -475,7 +717,7 @@ function nextCustomBenchmarkKey(existingKeys: Set<string>): string {
 }
 
 function isValidCustomSymbol(symbol: string) {
-  return SYMBOL_FORMAT_PATTERN.test(symbol.trim().toUpperCase())
+  return isValidBenchmarkSymbol(symbol)
 }
 
 type CustomRowState =

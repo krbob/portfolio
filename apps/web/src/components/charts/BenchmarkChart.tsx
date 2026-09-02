@@ -11,7 +11,7 @@ import { PerformanceIndexChart, type PerformanceIndexSeriesConfig } from './Perf
 import { SegmentedControl } from '../ui'
 
 const BENCHMARK_LABELS: Record<string, { pl: string; en: string }> = {
-  VWRA: { pl: 'VWRA (akcje globalne)', en: 'VWRA (global equity)' },
+  VWRA: { pl: 'Globalne akcje', en: 'Global equity' },
   INFLATION: { pl: 'Inflacja', en: 'Inflation' },
   TARGET_MIX: { pl: 'Miks docelowy', en: 'Target mix' },
   V80A: { pl: 'V80A (80/20)', en: 'V80A (80/20)' },

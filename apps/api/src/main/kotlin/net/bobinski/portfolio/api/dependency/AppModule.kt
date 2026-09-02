@@ -251,7 +251,8 @@ fun appModule(
         single<ValuationProbeService> {
             RemoteValuationProbeService(
                 marketDataConfig = get(),
-                stockAnalystClient = get()
+                stockAnalystClient = get(),
+                clock = get()
             )
         }
     } else {
@@ -299,6 +300,7 @@ fun appModule(
             appPreferenceService = get(),
             auditLogService = get(),
             clock = get(),
+            defaultEquityBenchmarkSymbol = marketDataConfig.equityBenchmarkSymbol,
             valuationProbeService = get()
         )
     }

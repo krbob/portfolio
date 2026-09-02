@@ -50,6 +50,15 @@ inflation ranges needed by the requested window. Successful historical snapshots
 inclusive ranges separately from sparse trading-day observations. A partial overlap is not treated
 as complete coverage.
 
+Each successful fresh ranged market-data response replaces cached observations inside the requested
+inclusive range. This lets an upstream correction remove a previously published bad trading-day
+point instead of leaving it in the rebuilt history; partial and stale responses cannot delete prior
+points. For a split-adjusted series with non-positive prices or an adjacent short-window change by a
+factor of at least 50, Portfolio first reloads a bounded window around the suspect point and splices
+that authoritative result into the response only when it bridges the suspect interval. If the result
+remains implausible, it uses a compatible and independently revalidated last-known-good snapshot when
+one exists rather than treating that move as an investment return.
+
 Calendar gaps such as weekends are expected. A missing requested range, missing FX conversion or
 unvalued holding is a data-quality issue and can make a currency view or return metric unavailable.
 
@@ -89,6 +98,22 @@ effective on each valuation date. Returns are chain-linked across phase changes,
 mix does not reset the index or rewrite earlier returns. Between phase changes the benchmark is a
 daily constant-mix blend of the configured equity and bond reference series; cash contributes a zero
 return. It remains a policy comparator, not a record of trades that actually occurred.
+
+The global-equity reference may itself use an effective-dated symbol schedule. The phase active on
+the current valuation date supplies that day's return, and the replacement series must overlap the
+preceding valuation date and publish an actual observation on or after the switch so the index can
+be chain-linked without a level jump. A weekend switch may use the first later trading session. A
+switch therefore preserves the earlier proxy and uses the new investable benchmark only from its explicit effective
+date; it never waits for an arbitrary history length or rewrites old periods automatically. The same
+scheduled equity reference feeds both the global-equity comparison and the equity leg of the target
+mix. Saving a newly added or changed phase verifies this historical overlap, while unchanged old
+phases are not re-probed. Runtime requests are bounded to each phase, so a later observation cannot
+invalidate a proxy after that proxy has stopped contributing to the chain.
+
+An accumulating ETF is preferred here over a price-only index when the intended comparison includes
+reinvested distributions: those distributions are reflected in the ETF's adjusted price history.
+This is why switching the investable proxy is modeled explicitly instead of silently substituting a
+longer but economically different index series.
 
 ## Withdrawal preview
 

@@ -18,6 +18,7 @@ import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetItem
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetPhase
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetScheduleCommand
 import net.bobinski.portfolio.api.domain.service.ReplacePortfolioTargetsCommand
+import net.bobinski.portfolio.api.domain.service.SaveEquityBenchmarkPhaseCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioBenchmarkSettingsCommand
 import net.bobinski.portfolio.api.domain.service.SavePortfolioRebalancingSettingsCommand
 import org.koin.ktor.ext.inject
@@ -72,7 +73,7 @@ fun Route.portfolioSettingsRoute() {
         }.documented(
             operationId = "getPortfolioBenchmarkSettings",
             summary = "Get benchmark settings",
-            description = "Returns enabled, pinned and custom benchmark settings for the portfolio.",
+            description = "Returns enabled, pinned, custom and effective-dated equity benchmark settings.",
             tag = "Portfolio"
         )
 
@@ -82,7 +83,7 @@ fun Route.portfolioSettingsRoute() {
         }.documented(
             operationId = "savePortfolioBenchmarkSettings",
             summary = "Save benchmark settings",
-            description = "Saves enabled, pinned and optional custom benchmark configuration.",
+            description = "Saves enabled, pinned, custom and optional effective-dated equity benchmark configuration.",
             tag = "Portfolio"
         )
 
@@ -155,7 +156,14 @@ data class PortfolioBenchmarkSettingsResponse(
     val enabledKeys: List<String>,
     val pinnedKeys: List<String>,
     val customBenchmarks: List<CustomBenchmarkResponse>,
+    val equityBenchmarkSchedule: List<EquityBenchmarkPhaseResponse>,
     val options: List<BenchmarkOptionResponse>
+)
+
+@Serializable
+data class EquityBenchmarkPhaseResponse(
+    val effectiveFrom: String?,
+    val symbol: String
 )
 
 @Serializable
@@ -180,7 +188,14 @@ data class BenchmarkOptionResponse(
 data class SavePortfolioBenchmarkSettingsRequest(
     val enabledKeys: List<String>,
     val pinnedKeys: List<String>,
-    val customBenchmarks: List<SaveCustomBenchmarkRequest> = emptyList()
+    val customBenchmarks: List<SaveCustomBenchmarkRequest> = emptyList(),
+    val equityBenchmarkSchedule: List<SaveEquityBenchmarkPhaseRequest>? = null
+)
+
+@Serializable
+data class SaveEquityBenchmarkPhaseRequest(
+    val effectiveFrom: String?,
+    val symbol: String
 )
 
 @Serializable
@@ -255,6 +270,12 @@ private fun net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettings
                 symbol = benchmark.symbol
             )
         },
+        equityBenchmarkSchedule = equityBenchmarkSchedule.map { phase ->
+            EquityBenchmarkPhaseResponse(
+                effectiveFrom = phase.effectiveFrom?.toString(),
+                symbol = phase.symbol
+            )
+        },
         options = options.map { option ->
             BenchmarkOptionResponse(
                 key = option.key,
@@ -289,6 +310,12 @@ private fun SavePortfolioBenchmarkSettingsRequest.toDomain(): SavePortfolioBench
                 key = benchmark.key,
                 label = benchmark.label,
                 symbol = benchmark.symbol
+            )
+        },
+        equityBenchmarkSchedule = equityBenchmarkSchedule?.map { phase ->
+            SaveEquityBenchmarkPhaseCommand(
+                effectiveFrom = phase.effectiveFrom?.let(java.time.LocalDate::parse),
+                symbol = phase.symbol
             )
         }
     )

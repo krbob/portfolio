@@ -311,6 +311,450 @@ class PortfolioHistoryServiceTest {
     }
 
     @Test
+    fun `daily history chain-links scheduled equity benchmarks and reuses the chain in target mix`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "1.00", bonds = "0.00"))
+        )
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name, BenchmarkKey.TARGET_MIX.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-02", "110.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-03", "200.00"),
+                pricePoint("2026-03-04", "220.00"),
+                pricePoint("2026-03-05", "242.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+        val equityIndex = history.points.map { point -> point.benchmarkIndices[BenchmarkKey.VWRA.name] }
+        val targetMixIndex = history.points.map { point -> point.benchmarkIndices[BenchmarkKey.TARGET_MIX.name] }
+
+        assertEquals(
+            listOf("100", "110", "121", "133.1", "146.41"),
+            equityIndex.map { value -> value?.stripTrailingZeros()?.toPlainString() }
+        )
+        assertEquals(
+            equityIndex.map { value -> value?.stripTrailingZeros() },
+            targetMixIndex.map { value -> value?.stripTrailingZeros() }
+        )
+        assertEquals(setOf("OLD.EX", "NEW.EX"), fixture.referenceProvider.requestedBenchmarkSymbols.toSet())
+        assertEquals(
+            BenchmarkSeriesStatus.HEALTHY,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+        assertEquals(
+            BenchmarkSeriesStatus.HEALTHY,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.TARGET_MIX.name }.status
+        )
+    }
+
+    @Test
+    fun `scheduled equity benchmark isolates repeated-symbol phases to their actual ranges`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-15T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "SAME.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-06"),
+                        symbol = "MIDDLE.EX"
+                    ),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-11"),
+                        symbol = "SAME.EX"
+                    )
+                )
+            )
+        )
+        val expectedRequests = listOf(
+            BenchmarkRequest("SAME.EX", "2026-03-01", "2026-03-05"),
+            BenchmarkRequest("MIDDLE.EX", "2026-03-01", "2026-03-10"),
+            BenchmarkRequest("SAME.EX", "2026-03-04", "2026-03-15")
+        )
+        fixture.referenceProvider.benchmarkResultsByRequest[expectedRequests[0]] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-05", "110.00")
+            )
+        )
+        fixture.referenceProvider.benchmarkResultsByRequest[expectedRequests[1]] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-05", "200.00"),
+                pricePoint("2026-03-06", "220.00"),
+                pricePoint("2026-03-10", "242.00")
+            )
+        )
+        fixture.referenceProvider.benchmarkResultsByRequest[expectedRequests[2]] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-10", "300.00"),
+                pricePoint("2026-03-11", "330.00"),
+                pricePoint("2026-03-15", "363.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["SAME.EX"] =
+            ReferenceSeriesResult.Failure("A later observation is invalid.")
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(expectedRequests, fixture.referenceProvider.requestedBenchmarkRequests)
+        assertEquals(
+            "161.051",
+            history.points.last().benchmarkIndices[BenchmarkKey.VWRA.name]
+                ?.stripTrailingZeros()
+                ?.toPlainString()
+        )
+        assertEquals(
+            BenchmarkSeriesStatus.HEALTHY,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+    }
+
+    @Test
+    fun `scheduled equity benchmark is unavailable when replacement lacks previous-day overlap`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "1.00", bonds = "0.00"))
+        )
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name, BenchmarkKey.TARGET_MIX.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-04", "220.00"),
+                pricePoint("2026-03-05", "242.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertTrue(history.points.all { point -> BenchmarkKey.VWRA.name !in point.benchmarkIndices })
+        assertTrue(history.points.all { point -> BenchmarkKey.TARGET_MIX.name !in point.benchmarkIndices })
+        assertEquals(
+            BenchmarkSeriesStatus.UNAVAILABLE,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+        val equityIssue = history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.issue.orEmpty()
+        assertTrue(equityIssue.contains("NEW.EX"))
+        assertTrue(equityIssue.contains("2026-03-04"))
+        assertEquals(
+            BenchmarkSeriesStatus.UNAVAILABLE,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.TARGET_MIX.name }.status
+        )
+    }
+
+    @Test
+    fun `scheduled equity benchmark is unavailable when replacement has only pre-switch observations`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-03", "200.00"))
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertTrue(history.points.all { point -> BenchmarkKey.VWRA.name !in point.benchmarkIndices })
+        val health = history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }
+        assertEquals(BenchmarkSeriesStatus.UNAVAILABLE, health.status)
+        assertTrue(health.issue.orEmpty().contains("NEW.EX"))
+        assertTrue(health.issue.orEmpty().contains("on or after"))
+    }
+
+    @Test
+    fun `scheduled equity benchmark accepts the first trading observation after a weekend switch`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-09T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-07"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-06", "110.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-06", "200.00"),
+                pricePoint("2026-03-09", "220.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(
+            "121",
+            history.points.last().benchmarkIndices[BenchmarkKey.VWRA.name]
+                ?.stripTrailingZeros()
+                ?.toPlainString()
+        )
+        assertEquals(
+            BenchmarkSeriesStatus.HEALTHY,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+    }
+
+    @Test
+    fun `target mix preserves scheduled equity symbol and switch date in its issue`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "1.00", bonds = "0.00"))
+        )
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.TARGET_MIX.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-01", "100.00"))
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(pricePoint("2026-03-04", "220.00"))
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertTrue(history.points.all { point -> BenchmarkKey.TARGET_MIX.name !in point.benchmarkIndices })
+        assertTrue(history.benchmarkStatuses.none { status -> status.key == BenchmarkKey.VWRA.name })
+        val targetMixHealth = history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.TARGET_MIX.name }
+        assertEquals(BenchmarkSeriesStatus.UNAVAILABLE, targetMixHealth.status)
+        assertTrue(targetMixHealth.issue.orEmpty().contains("NEW.EX"))
+        assertTrue(targetMixHealth.issue.orEmpty().contains("2026-03-04"))
+    }
+
+    @Test
+    fun `scheduled equity benchmark does not rebase onto a later phase when its starting phase is empty`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(prices = emptyList())
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-03", "200.00"),
+                pricePoint("2026-03-04", "220.00"),
+                pricePoint("2026-03-05", "242.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertTrue(history.points.all { point -> BenchmarkKey.VWRA.name !in point.benchmarkIndices })
+        assertEquals(
+            BenchmarkSeriesStatus.UNAVAILABLE,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+    }
+
+    @Test
+    fun `scheduled equity benchmark and target mix are stale when an active phase comes from cache`() = runBlocking {
+        val fixture = historyFixture(
+            clock = Clock.fixed(Instant.parse("2026-03-05T12:00:00Z"), ZoneOffset.UTC)
+        )
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.portfolioTargetRepository.replaceSchedule(
+            listOf(targetPhase("2026-03-01", equities = "1.00", bonds = "0.00"))
+        )
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name, BenchmarkKey.TARGET_MIX.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "OLD.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-03-04"),
+                        symbol = "NEW.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["OLD.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["NEW.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-03", "200.00"),
+                pricePoint("2026-03-05", "242.00")
+            ),
+            fromCache = true
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertNotNull(history.points.last().benchmarkIndices[BenchmarkKey.VWRA.name])
+        assertNotNull(history.points.last().benchmarkIndices[BenchmarkKey.TARGET_MIX.name])
+        assertEquals(
+            BenchmarkSeriesStatus.STALE,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+        assertEquals(
+            BenchmarkSeriesStatus.STALE,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.TARGET_MIX.name }.status
+        )
+    }
+
+    @Test
+    fun `scheduled equity benchmark ignores phases outside the history range`() = runBlocking {
+        val fixture = historyFixture()
+        fixture.accountRepository.save(account())
+        fixture.transactionRepository.save(depositTransaction())
+        fixture.benchmarkSettingsService.update(
+            SavePortfolioBenchmarkSettingsCommand(
+                enabledKeys = listOf(BenchmarkKey.VWRA.name),
+                pinnedKeys = emptyList(),
+                customBenchmarks = emptyList(),
+                equityBenchmarkSchedule = listOf(
+                    SaveEquityBenchmarkPhaseCommand(effectiveFrom = null, symbol = "PAST.EX"),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-02-01"),
+                        symbol = "CURRENT.EX"
+                    ),
+                    SaveEquityBenchmarkPhaseCommand(
+                        effectiveFrom = LocalDate.parse("2026-04-01"),
+                        symbol = "FUTURE.EX"
+                    )
+                )
+            )
+        )
+        fixture.referenceProvider.benchmarksBySymbol["CURRENT.EX"] = ReferenceSeriesResult.Success(
+            prices = listOf(
+                pricePoint("2026-03-01", "100.00"),
+                pricePoint("2026-03-03", "121.00")
+            )
+        )
+
+        val history = fixture.service.dailyHistory()
+
+        assertEquals(listOf("CURRENT.EX"), fixture.referenceProvider.requestedBenchmarkSymbols)
+        assertTrue(history.points.last().benchmarkIndices[BenchmarkKey.VWRA.name]!!.compareTo(BigDecimal("121")) == 0)
+        assertEquals(
+            BenchmarkSeriesStatus.HEALTHY,
+            history.benchmarkStatuses.single { status -> status.key == BenchmarkKey.VWRA.name }.status
+        )
+    }
+
+    @Test
     fun `daily history starts target mix when required benchmark leg becomes available`() = runBlocking {
         val fixture = historyFixture()
         val instrument = etfInstrument()
@@ -542,7 +986,8 @@ class PortfolioHistoryServiceTest {
             edoLotValuationProvider = edoLotValuationProvider,
             referenceProvider = referenceProvider,
             fxRateProvider = fxRateProvider,
-            inflationProvider = inflationProvider
+            inflationProvider = inflationProvider,
+            benchmarkSettingsService = benchmarkSettingsService
         )
     }
 
@@ -709,8 +1154,21 @@ class PortfolioHistoryServiceTest {
         val edoLotValuationProvider: FakeEdoLotValuationProvider,
         val referenceProvider: FakeReferenceSeriesProvider,
         val fxRateProvider: FakeFxRateHistoryProvider,
-        val inflationProvider: FakeInflationAdjustmentProvider
+        val inflationProvider: FakeInflationAdjustmentProvider,
+        val benchmarkSettingsService: PortfolioBenchmarkSettingsService
     )
+
+    private data class BenchmarkRequest(
+        val symbol: String,
+        val from: LocalDate,
+        val to: LocalDate
+    ) {
+        constructor(symbol: String, from: String, to: String) : this(
+            symbol = symbol,
+            from = LocalDate.parse(from),
+            to = LocalDate.parse(to)
+        )
+    }
 
     private class FakeHistoricalInstrumentValuationProvider : HistoricalInstrumentValuationProvider {
         val values: MutableMap<UUID, HistoricalInstrumentValuationResult> = linkedMapOf()
@@ -749,6 +1207,9 @@ class PortfolioHistoryServiceTest {
         var equity: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Equity benchmark not set.")
         var bond: ReferenceSeriesResult = ReferenceSeriesResult.Failure("Bond benchmark not set.")
         val benchmarksBySymbol: MutableMap<String, ReferenceSeriesResult> = linkedMapOf()
+        val benchmarkResultsByRequest: MutableMap<BenchmarkRequest, ReferenceSeriesResult> = linkedMapOf()
+        val requestedBenchmarkSymbols: MutableList<String> = mutableListOf()
+        val requestedBenchmarkRequests: MutableList<BenchmarkRequest> = mutableListOf()
 
         override suspend fun usdPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = usd
 
@@ -758,8 +1219,14 @@ class PortfolioHistoryServiceTest {
 
         override suspend fun bondBenchmarkPln(from: LocalDate, to: LocalDate): ReferenceSeriesResult = bond
 
-        override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult =
-            benchmarksBySymbol[symbol] ?: ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
+        override suspend fun benchmarkPln(symbol: String, from: LocalDate, to: LocalDate): ReferenceSeriesResult {
+            val request = BenchmarkRequest(symbol = symbol, from = from, to = to)
+            requestedBenchmarkSymbols += symbol
+            requestedBenchmarkRequests += request
+            return benchmarkResultsByRequest[request]
+                ?: benchmarksBySymbol[symbol]
+                ?: if (symbol == "VWRA.L") equity else ReferenceSeriesResult.Failure("No fake benchmark for $symbol.")
+        }
     }
 
     private class FakeFxRateHistoryProvider : FxRateHistoryProvider {

@@ -217,6 +217,8 @@ export function labelImportRowStatus(value: string) {
 
 export function translateBenchmarkLabel(label: string): string {
   switch (label) {
+    case 'Global equity benchmark':
+      return t('benchmarks.translateGlobalEquity')
     case 'VWRA benchmark':
       return t('benchmarks.translateVwra')
     case 'Inflation benchmark':

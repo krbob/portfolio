@@ -3,6 +3,10 @@ package net.bobinski.portfolio.api.marketdata.service
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
@@ -50,6 +54,89 @@ class RemoteValuationProbeServiceTest {
             assertEquals(true, exception.message?.contains("VRWA.L"))
             assertEquals(true, exception.message?.contains("could not be verified"))
             assertFalse(exception.message.orEmpty().contains("MANUAL", ignoreCase = true))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `dated benchmark phase accepts the first trading observation after a weekend switch`() = runBlocking {
+        val server = startFakeStockAnalyst { exchange ->
+            val response =
+                """{"prices":[{"date":"2026-08-28","close":18.70},{"date":"2026-08-31","close":18.60}]}"""
+                    .withStockAnalystProvenance()
+            exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(response.toByteArray()) }
+        }
+
+        try {
+            val service = buildService(server.address.port)
+
+            assertDoesNotThrow {
+                runBlocking {
+                    service.verifyStockAnalystBenchmarkPhase(
+                        symbol = "VGLA.DE",
+                        effectiveFrom = LocalDate.parse("2026-08-30")
+                    )
+                }
+            }
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `dated benchmark phase rejects a symbol with only pre-switch observations`() = runBlocking {
+        val server = startFakeStockAnalyst { exchange ->
+            val response = """{"prices":[{"date":"2026-08-31","close":18.70}]}"""
+                .withStockAnalystProvenance()
+            exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(response.toByteArray()) }
+        }
+
+        try {
+            val service = buildService(server.address.port)
+
+            val exception = assertThrows(IllegalArgumentException::class.java) {
+                runBlocking {
+                    service.verifyStockAnalystBenchmarkPhase(
+                        symbol = "VGLA.DE",
+                        effectiveFrom = LocalDate.parse("2026-09-01")
+                    )
+                }
+            }
+
+            assertEquals(true, exception.message?.contains("VGLA.DE"))
+            assertEquals(true, exception.message?.contains("on or after"))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `dated benchmark phase rejects a symbol without historical overlap`() = runBlocking {
+        val server = startFakeStockAnalyst { exchange ->
+            val response = """{"prices":[{"date":"2026-09-01","close":18.60}]}"""
+                .withStockAnalystProvenance()
+            exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(response.toByteArray()) }
+        }
+
+        try {
+            val service = buildService(server.address.port)
+
+            val exception = assertThrows(IllegalArgumentException::class.java) {
+                runBlocking {
+                    service.verifyStockAnalystBenchmarkPhase(
+                        symbol = "VGLA.DE",
+                        effectiveFrom = LocalDate.parse("2026-09-01")
+                    )
+                }
+            }
+
+            assertEquals(true, exception.message?.contains("VGLA.DE"))
+            assertEquals(true, exception.message?.contains("2026-09-01"))
+            assertEquals(true, exception.message?.contains("overlap"))
         } finally {
             server.stop(0)
         }
@@ -140,7 +227,11 @@ class RemoteValuationProbeServiceTest {
             json = AppJsonFactory.create(),
             baseUrl = baseUrl
         )
-        return RemoteValuationProbeService(config, client)
+        return RemoteValuationProbeService(
+            marketDataConfig = config,
+            stockAnalystClient = client,
+            clock = Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC)
+        )
     }
 
     private fun startFakeStockAnalyst(handler: (com.sun.net.httpserver.HttpExchange) -> Unit): HttpServer {

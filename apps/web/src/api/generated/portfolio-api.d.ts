@@ -521,13 +521,13 @@ export interface paths {
         };
         /**
          * Get benchmark settings
-         * @description Returns enabled, pinned and custom benchmark settings for the portfolio.
+         * @description Returns enabled, pinned, custom and effective-dated equity benchmark settings.
          */
         get: operations["getPortfolioBenchmarkSettings"];
         put?: never;
         /**
          * Save benchmark settings
-         * @description Saves enabled, pinned and optional custom benchmark configuration.
+         * @description Saves enabled, pinned, custom and optional effective-dated equity benchmark configuration.
          */
         post: operations["savePortfolioBenchmarkSettings"];
         delete?: never;
@@ -1690,6 +1690,11 @@ export interface components {
             label: string;
             symbol: string;
         };
+        /** EquityBenchmarkPhaseResponse */
+        EquityBenchmarkPhaseResponse: {
+            effectiveFrom?: string | null;
+            symbol: string;
+        };
         /** BenchmarkOptionResponse */
         BenchmarkOptionResponse: {
             key: string;
@@ -1705,6 +1710,7 @@ export interface components {
             enabledKeys: string[];
             pinnedKeys: string[];
             customBenchmarks: components["schemas"]["CustomBenchmarkResponse"][];
+            equityBenchmarkSchedule: components["schemas"]["EquityBenchmarkPhaseResponse"][];
             options: components["schemas"]["BenchmarkOptionResponse"][];
         };
         /** SaveCustomBenchmarkRequest */
@@ -1713,11 +1719,17 @@ export interface components {
             label: string;
             symbol: string;
         };
+        /** SaveEquityBenchmarkPhaseRequest */
+        SaveEquityBenchmarkPhaseRequest: {
+            effectiveFrom?: string | null;
+            symbol: string;
+        };
         /** SavePortfolioBenchmarkSettingsRequest */
         SavePortfolioBenchmarkSettingsRequest: {
             enabledKeys: string[];
             pinnedKeys: string[];
             customBenchmarks?: components["schemas"]["SaveCustomBenchmarkRequest"][];
+            equityBenchmarkSchedule?: components["schemas"]["SaveEquityBenchmarkPhaseRequest"][] | null;
         };
         /** PortfolioRebalancingSettingsResponse */
         PortfolioRebalancingSettingsResponse: {

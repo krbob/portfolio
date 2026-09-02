@@ -153,6 +153,9 @@ export type PortfolioWithdrawalPlan =
 export type PortfolioBenchmarkSettings =
   components['schemas']['PortfolioBenchmarkSettingsResponse']
 
+export type EquityBenchmarkSchedulePhase =
+  components['schemas']['EquityBenchmarkPhaseResponse']
+
 export type BenchmarkOption =
   components['schemas']['BenchmarkOptionResponse']
 

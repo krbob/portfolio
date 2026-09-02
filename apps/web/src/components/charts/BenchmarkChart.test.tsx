@@ -122,6 +122,6 @@ describe('BenchmarkChart', () => {
     expect(screen.getByRole('button', { name: 'Porównaj' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByLabelText('Wybierz benchmark')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Europa 600' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /vwra/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /globalne akcje/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
