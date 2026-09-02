@@ -31,15 +31,6 @@ export const supportMessages = {
     pl: 'Zestawy z błędem odświeżania: {count}',
     en: 'Datasets with refresh errors: {count}',
   },
-  'marketStatus.limitedAnalytics': {
-    pl: 'Statystyki: niepełne ({count})',
-    en: 'Analytics: incomplete ({count})',
-  },
-  'marketStatus.limitedAnalyticsDetails': {
-    pl: 'Niepełne statystyki: {details}. Otwórz szczegóły danych rynkowych.',
-    en: 'Incomplete analytics: {details}. Open market-data details.',
-  },
-  'marketStatus.analyticsLimitationUnknown': { pl: 'nieokreślony zakres', en: 'scope not reported' },
   'marketStatus.analyticsGainDaily': { pl: 'zwrot dzienny', en: 'daily return' },
   'marketStatus.analyticsGainWeekly': { pl: 'zwrot tygodniowy', en: 'weekly return' },
   'marketStatus.analyticsGainMonthly': { pl: 'zwrot miesięczny', en: 'monthly return' },

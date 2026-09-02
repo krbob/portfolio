@@ -18,11 +18,6 @@ describe('MarketDataStatusBar', () => {
           unitScales: [1],
           adjustments: ['SPLIT_ADJUSTED'],
           status: 'FRESH',
-          limitedAnalytics: [
-            { identity: 'DTLA.L', limitations: ['gain.fiveYear'] },
-            { identity: 'VWRA.L', limitations: [] },
-          ],
-          limitedAnalyticsCount: 2,
           refreshFailureCount: 1,
         }}
         isRefreshing
@@ -36,12 +31,7 @@ describe('MarketDataStatusBar', () => {
     expect(region).toHaveTextContent(/korekta split|split adjusted/i)
     expect(region).toHaveTextContent(/świeże|fresh/i)
     expect(region).toHaveTextContent(/zestawy z błędem odświeżania: 1|datasets with refresh errors: 1/i)
-    const analyticsLink = screen.getByRole('link', {
-      name: /(?:statystyki: niepełne \(2\)|analytics: incomplete \(2\)).*DTLA\.L.*VWRA\.L/i,
-    })
-    expect(analyticsLink).toHaveTextContent(/statystyki: niepełne \(2\)|analytics: incomplete \(2\)/i)
-    expect(analyticsLink).toHaveAttribute('href', '/system/market-data')
-    expect(analyticsLink).toHaveAttribute('title', expect.stringMatching(/DTLA\.L.*5-letni|DTLA\.L.*5-year/i))
+    expect(region).not.toHaveTextContent(/statystyki: niepełne|analytics: incomplete/i)
     expect(screen.getByRole('status')).toHaveTextContent(/odświeżanie|refreshing/i)
     expect(region.querySelectorAll('time')).toHaveLength(4)
   })
@@ -60,8 +50,6 @@ describe('MarketDataStatusBar', () => {
           unitScales: [],
           adjustments: [],
           status: 'UNKNOWN',
-          limitedAnalytics: [],
-          limitedAnalyticsCount: 0,
           refreshFailureCount: 0,
         }}
       />

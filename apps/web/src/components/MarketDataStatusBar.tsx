@@ -1,15 +1,12 @@
 import { useMemo, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { useMarketDataSnapshots } from '../hooks/use-read-model'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
-import { labelMarketAnalyticsLimitation } from '../lib/labels'
 import { formatMessage, t } from '../lib/messages'
 import {
   summarizeMarketDataProvenance,
   type MarketDataProvenanceSummary,
   type MarketProvenanceStatus,
 } from '../lib/market-data-provenance'
-import { appRoutes } from '../lib/routes'
 
 export function MarketDataStatusBar() {
   const snapshotsQuery = useMarketDataSnapshots()
@@ -66,35 +63,12 @@ export function MarketDataStatusBarContent({
             {formatMessage(t('marketStatus.refreshFailures'), { count: summary.refreshFailureCount })}
           </span>
         ) : null}
-        {summary.limitedAnalyticsCount > 0 ? (
-          <Link
-            to={appRoutes.system.marketData}
-            className="font-medium text-ui-highlight underline decoration-ui-highlight/50 underline-offset-2 hover:decoration-ui-highlight"
-            title={formatLimitedAnalyticsDetails(summary)}
-            aria-label={`${formatMessage(t('marketStatus.limitedAnalytics'), {
-              count: summary.limitedAnalyticsCount,
-            })}. ${formatMessage(t('marketStatus.limitedAnalyticsDetails'), {
-              details: formatLimitedAnalyticsDetails(summary),
-            })}`}
-          >
-            {formatMessage(t('marketStatus.limitedAnalytics'), { count: summary.limitedAnalyticsCount })}
-          </Link>
-        ) : null}
         {isRefreshing ? (
           <span role="status" className="font-medium text-ui-action">{t('marketStatus.refreshing')}</span>
         ) : null}
       </div>
     </section>
   )
-}
-
-function formatLimitedAnalyticsDetails(summary: MarketDataProvenanceSummary) {
-  return summary.limitedAnalytics.map(({ identity, limitations }) => {
-    const labels = limitations.length > 0
-      ? limitations.map(labelMarketAnalyticsLimitation).join(', ')
-      : t('marketStatus.analyticsLimitationUnknown')
-    return `${identity}: ${labels}`
-  }).join('; ')
 }
 
 function DataPoint({ label, value, children }: { label: string; value?: string; children?: ReactNode }) {

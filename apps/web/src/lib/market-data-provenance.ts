@@ -5,11 +5,6 @@ type GeneratedProvenance = NonNullable<MarketDataSnapshot['provenance']>
 export type MarketProvenanceStatus = 'FRESH' | 'PARTIAL' | 'STALE' | 'ERROR' | 'UNKNOWN'
 export type MarketAnalyticsStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNKNOWN'
 
-export interface LimitedMarketAnalytics {
-  identity: string
-  limitations: string[]
-}
-
 export interface MarketDataProvenanceSummary {
   datasetCount: number
   sources: string[]
@@ -21,8 +16,6 @@ export interface MarketDataProvenanceSummary {
   unitScales: number[]
   adjustments: string[]
   status: MarketProvenanceStatus
-  limitedAnalytics: LimitedMarketAnalytics[]
-  limitedAnalyticsCount: number
   refreshFailureCount: number
 }
 
@@ -41,14 +34,6 @@ export function summarizeMarketDataProvenance(
   const observations = provenance
     .map((item) => cleanInstant(item.marketTimestamp) ?? cleanDate(item.marketDate))
     .filter(isPresent)
-  const limitedAnalytics = withProvenance
-    .filter(hasLimitedQuoteAnalytics)
-    .map((snapshot) => ({
-      identity: snapshot.identity.replace(/^stock-quote:/, ''),
-      limitations: uniqueText(snapshot.provenance.analyticsLimitations ?? []),
-    }))
-    .sort((first, second) => first.identity.localeCompare(second.identity))
-
   return {
     datasetCount: withProvenance.length,
     sources: uniqueText(provenance.map((item) => item.source)),
@@ -60,8 +45,6 @@ export function summarizeMarketDataProvenance(
     unitScales: [...new Set(provenance.map((item) => item.unitScale).filter(validUnitScale))].sort((a, b) => a - b),
     adjustments: uniqueText(provenance.map((item) => item.adjustment)),
     status: worstStatus(withProvenance.map(headlineProvenanceStatus)),
-    limitedAnalytics,
-    limitedAnalyticsCount: limitedAnalytics.length,
     refreshFailureCount: withProvenance.filter((snapshot) => snapshot.status === 'FAILED').length,
   }
 }
@@ -81,8 +64,8 @@ function isLiveMarketSnapshot(snapshot: MarketDataSnapshot) {
  * such as the five-year gain. Portfolio consumes the current valuation fields,
  * not those optional statistics. A PARTIAL quote therefore describes limited
  * analytics, not a partial current valuation. The raw provenance remains
- * unchanged in snapshot data, while the limitation is counted separately in
- * the global bar.
+ * unchanged in snapshot data and remains available on the detailed market-data
+ * screen without degrading the global operational headline.
  */
 function hasLimitedQuoteAnalytics(
   snapshot: MarketDataSnapshot,

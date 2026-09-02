@@ -37,8 +37,6 @@ describe('market data provenance', () => {
       unitScales: [1],
       adjustments: ['RAW', 'SPLIT_ADJUSTED'],
       status: 'PARTIAL',
-      limitedAnalytics: [],
-      limitedAnalyticsCount: 0,
       refreshFailureCount: 1,
     })
   })
@@ -77,7 +75,7 @@ describe('market data provenance', () => {
     expect(summary?.coverageFrom).toBe('2026-07-01')
   })
 
-  it('reports partial stock quote analytics without degrading current market-data health', () => {
+  it('keeps optional stock quote analytics out of the global market-data summary', () => {
     const quote = snapshot({ status: 'PARTIAL' })
     quote.identity = 'stock-quote:VWRA.L'
 
@@ -87,9 +85,9 @@ describe('market data provenance', () => {
     ])
 
     expect(summary?.status).toBe('FRESH')
-    expect(summary?.limitedAnalytics).toEqual([{ identity: 'VWRA.L', limitations: [] }])
-    expect(summary?.limitedAnalyticsCount).toBe(1)
     expect(summary?.datasetCount).toBe(2)
+    expect(summary).not.toHaveProperty('limitedAnalytics')
+    expect(summary).not.toHaveProperty('limitedAnalyticsCount')
   })
 
   it('uses explicit price and analytics statuses when the additive quote quality contract is present', () => {
@@ -104,9 +102,7 @@ describe('market data provenance', () => {
     const summary = summarizeMarketDataProvenance([quote])
 
     expect(summary?.status).toBe('FRESH')
-    expect(summary?.limitedAnalytics).toEqual([
-      { identity: 'VWRA.L', limitations: ['gain.fiveYear'] },
-    ])
+    expect(summary).not.toHaveProperty('limitedAnalytics')
   })
 
   it('does not carry a legacy partial status into analytics when the explicit status is complete', () => {
@@ -121,7 +117,6 @@ describe('market data provenance', () => {
     const summary = summarizeMarketDataProvenance([quote])
 
     expect(summary?.status).toBe('FRESH')
-    expect(summary?.limitedAnalyticsCount).toBe(0)
   })
 
   it('never hides an explicit stale price behind an analytics-only status', () => {
@@ -136,7 +131,6 @@ describe('market data provenance', () => {
     const summary = summarizeMarketDataProvenance([quote])
 
     expect(summary?.status).toBe('STALE')
-    expect(summary?.limitedAnalyticsCount).toBe(1)
   })
 
   it.each(['stock-history:VWRA.L', 'reference:VWRA.L:PLN'])(
@@ -148,7 +142,6 @@ describe('market data provenance', () => {
       const summary = summarizeMarketDataProvenance([partialSeries])
 
       expect(summary?.status).toBe('PARTIAL')
-      expect(summary?.limitedAnalyticsCount).toBe(0)
     },
   )
 
@@ -162,7 +155,6 @@ describe('market data provenance', () => {
     const summary = summarizeMarketDataProvenance([quote])
 
     expect(summary?.status).toBe(expectedStatus)
-    expect(summary?.limitedAnalyticsCount).toBe(0)
   })
 })
 

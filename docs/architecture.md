@@ -105,6 +105,21 @@ fallback is usable only when the union of those ranges fully covers the request;
 success. This preserves valid trading-calendar gaps while making pre-instrument history and old point-only snapshots
 explicit and safe.
 
+A successful fresh ranged refresh is authoritative inside its inclusive request window: cached observations in that
+window are replaced, including removal of a point no longer returned by the provider. Observations outside the
+refreshed window remain intact. A partial or stale response may add or update points but cannot delete last-known-good
+ones, and it records only the coverage declared by the provider. Before a split-adjusted Stock Analyst series reaches
+either a read model or this cache, Portfolio detects non-positive prices and adjacent short-window jumps of 50x or
+more. It first retries a bounded window around the suspect observation and accepts that repair only when fresh,
+compatible data bridge both sides of the suspect interval. If the repaired series is still implausible, Portfolio
+rejects it as a retryable upstream-quality failure. Cached fallback series pass the same plausibility check, so a
+snapshot written by an older release cannot reintroduce the rejected discontinuity. Rejections remain visible in
+logs, audit and snapshot failure metadata.
+
+Optional quote analytics such as a five-year gain remain visible in `System -> Market data`, but do not degrade the
+global market-data headline when the current price itself is fresh. The headline is reserved for data quality that can
+change a Portfolio valuation or another active read model.
+
 This is why readiness, data-quality panels, and market-data snapshot views are part of the operational UI surface under `System` and the dashboard.
 
 ## Runtime modes
