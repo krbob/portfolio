@@ -4,6 +4,7 @@ import net.bobinski.portfolio.api.domain.model.Instrument
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.seriesQualityIssue
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import kotlinx.coroutines.CancellationException
@@ -145,6 +146,18 @@ class RemoteHistoricalInstrumentValuationProvider(
         val symbol = instrument.symbol ?: return null
         val cached = snapshotCacheService.lookupSeries(identity = stockHistoryIdentity(symbol), from = from, to = to)
         if (!cached.coversFullRangeOrCompletePrefix()) {
+            return null
+        }
+        cached.prices.seriesQualityIssue()?.let { issue ->
+            logger.warn(
+                "Refusing cached historical valuation fallback for symbol {} in {}..{} because it failed " +
+                    "series quality validation: {}. Run the read-model refresh after upstream recovery to " +
+                    "replace the affected range.",
+                symbol,
+                from,
+                to,
+                issue.description
+            )
             return null
         }
         return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)

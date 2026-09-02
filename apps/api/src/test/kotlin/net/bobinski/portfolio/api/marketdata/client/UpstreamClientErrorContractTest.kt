@@ -114,6 +114,195 @@ class UpstreamClientErrorContractTest {
     }
 
     @Test
+    fun `stock client rejects an implausible split-adjusted history before consumers can cache it`() {
+        val server = errorServer("/v1/history/VWRA.L") { exchange ->
+            exchange.respond(
+                status = 200,
+                body = """
+                    {
+                      "prices": [
+                        {"date":"2026-08-28","close":726.63},
+                        {"date":"2026-09-01","close":7.19}
+                      ],
+                      "provenance": {
+                        "source": "YAHOO_FINANCE",
+                        "retrievedAt": "2026-09-01T20:01:02Z",
+                        "marketDate": "2026-09-01",
+                        "currency": "PLN",
+                        "unitScale": 1.0,
+                        "adjustment": "SPLIT_ADJUSTED",
+                        "coverageFrom": "2026-08-28",
+                        "coverageTo": "2026-09-01",
+                        "status": "FRESH"
+                      }
+                    }
+                """.trimIndent()
+            )
+        }
+
+        try {
+            val client = StockAnalystClient(
+                httpClient = HttpClient.newHttpClient(),
+                json = AppJsonFactory.create(),
+                baseUrl = server.baseUrl()
+            )
+
+            val exception = assertThrows<MarketDataClientException> {
+                runBlocking {
+                    client.history(
+                        symbol = "VWRA.L",
+                        from = LocalDate.parse("2026-08-28"),
+                        to = LocalDate.parse("2026-09-01")
+                    )
+                }
+            }
+
+            assertEquals("IMPLAUSIBLE_SPLIT_ADJUSTED_SERIES", exception.errorCode)
+            assertEquals(true, exception.retryable)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `stock client repairs an implausible point with a bounded authoritative retry`() {
+        val requests = AtomicInteger()
+        val server = errorServer("/v1/history/VWRA.L") { exchange ->
+            requests.incrementAndGet()
+            val isRepairWindow = exchange.requestURI.rawQuery.contains("from=2026-08-21")
+            val prices = if (isRepairWindow) {
+                """
+                    {"date":"2026-08-21","close":700.00},
+                    {"date":"2026-08-28","close":726.63},
+                    {"date":"2026-09-02","close":719.84}
+                """.trimIndent()
+            } else {
+                """
+                    {"date":"2026-01-02","close":650.00},
+                    {"date":"2026-08-28","close":726.63},
+                    {"date":"2026-09-01","close":7.19}
+                """.trimIndent()
+            }
+            exchange.respond(
+                status = 200,
+                body = """
+                    {
+                      "prices": [$prices],
+                      "provenance": {
+                        "source": "YAHOO_FINANCE",
+                        "retrievedAt": "2026-09-02T20:01:02Z",
+                        "marketDate": "2026-09-02",
+                        "currency": "PLN",
+                        "unitScale": 1.0,
+                        "adjustment": "SPLIT_ADJUSTED",
+                        "coverageFrom": "2026-01-02",
+                        "coverageTo": "2026-09-02",
+                        "status": "FRESH"
+                      }
+                    }
+                """.trimIndent()
+            )
+        }
+
+        try {
+            val client = StockAnalystClient(
+                httpClient = HttpClient.newHttpClient(),
+                json = AppJsonFactory.create(),
+                baseUrl = server.baseUrl()
+            )
+
+            val history = runBlocking {
+                client.history(
+                    symbol = "VWRA.L",
+                    currency = "PLN",
+                    from = LocalDate.parse("2025-11-07"),
+                    to = LocalDate.parse("2026-09-02")
+                )
+            }
+
+            assertEquals(2, requests.get())
+            assertEquals(
+                listOf("2026-01-02", "2026-08-21", "2026-08-28", "2026-09-02"),
+                history.prices.map { point -> point.date.toString() }
+            )
+            assertEquals(LocalDate.parse("2026-09-02"), history.provenance.coverageTo)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `stock client rejects an empty or one-sided bounded repair`() {
+        val repairPayloads = listOf(
+            "empty" to "",
+            "one-sided" to """
+                {"date":"2026-08-21","close":700.00},
+                {"date":"2026-08-28","close":726.63}
+            """.trimIndent()
+        )
+
+        repairPayloads.forEach { (caseName, repairPrices) ->
+            val requests = AtomicInteger()
+            val server = errorServer("/v1/history/VWRA.L") { exchange ->
+                requests.incrementAndGet()
+                val isRepairWindow = exchange.requestURI.rawQuery.contains("from=2026-08-21")
+                val prices = if (isRepairWindow) {
+                    repairPrices
+                } else {
+                    """
+                        {"date":"2026-01-02","close":650.00},
+                        {"date":"2026-08-28","close":726.63},
+                        {"date":"2026-09-01","close":7.19}
+                    """.trimIndent()
+                }
+                exchange.respond(
+                    status = 200,
+                    body = """
+                        {
+                          "prices": [$prices],
+                          "provenance": {
+                            "source": "YAHOO_FINANCE",
+                            "retrievedAt": "2026-09-02T20:01:02Z",
+                            "marketDate": "2026-09-02",
+                            "currency": "PLN",
+                            "unitScale": 1.0,
+                            "adjustment": "SPLIT_ADJUSTED",
+                            "coverageFrom": "2026-08-21",
+                            "coverageTo": "2026-09-02",
+                            "status": "FRESH"
+                          }
+                        }
+                    """.trimIndent()
+                )
+            }
+
+            try {
+                val client = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl()
+                )
+
+                val exception = assertThrows<MarketDataClientException>(caseName) {
+                    runBlocking {
+                        client.history(
+                            symbol = "VWRA.L",
+                            currency = "PLN",
+                            from = LocalDate.parse("2025-11-07"),
+                            to = LocalDate.parse("2026-09-02")
+                        )
+                    }
+                }
+
+                assertEquals("IMPLAUSIBLE_SPLIT_ADJUSTED_SERIES", exception.errorCode, caseName)
+                assertEquals(2, requests.get(), caseName)
+            } finally {
+                server.stop(0)
+            }
+        }
+    }
+
+    @Test
     fun `stock client preserves additive quote price and analytics quality`() {
         val server = errorServer("/v1/quote/VWRA.L") { exchange ->
             exchange.respond(

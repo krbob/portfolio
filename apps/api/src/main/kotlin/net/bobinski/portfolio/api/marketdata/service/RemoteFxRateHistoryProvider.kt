@@ -2,6 +2,7 @@ package net.bobinski.portfolio.api.marketdata.service
 
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.seriesQualityIssue
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
@@ -64,6 +65,18 @@ class RemoteFxRateHistoryProvider(
     ): FxRateHistoryResult.Success? {
         val cached = snapshotCacheService.lookupSeries(identity = fxHistoryIdentity(currency), from = from, to = to)
         if (!cached.coversFullRangeOrCompletePrefix(maxMissingTailDays = MAX_CACHED_FX_TAIL_DAYS)) {
+            return null
+        }
+        cached.prices.seriesQualityIssue()?.let { issue ->
+            logger.warn(
+                "Refusing cached FX history fallback for {} in {}..{} because it failed series quality " +
+                    "validation: {}. Run the read-model refresh after upstream recovery to replace the " +
+                    "affected range.",
+                currency,
+                from,
+                to,
+                issue.description
+            )
             return null
         }
         return FxRateHistoryResult.Success(prices = cached.prices, fromCache = true)

@@ -151,6 +151,239 @@ class MarketDataSnapshotCacheServiceTest {
     }
 
     @Test
+    fun `ranged refresh replaces its points and removes dates omitted by the source`() = runBlocking {
+        val repository = InMemoryOperationalStateRepository()
+        val identity = "reference:VWRA.L:PLN"
+
+        snapshotCacheAt(repository, "2026-03-27T12:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = listOf(
+                price("2026-03-01", "100.00"),
+                price("2026-03-02", "1.01"),
+                price("2026-03-03", "102.00"),
+                price("2026-03-04", "104.00")
+            )
+        )
+
+        snapshotCacheAt(repository, "2026-03-27T13:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-02"),
+            to = LocalDate.parse("2026-03-03"),
+            prices = listOf(price("2026-03-03", "103.50"))
+        )
+
+        val cache = snapshotCacheAt(repository, "2026-03-27T14:00:00Z")
+        val lookup = cache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-04")
+        )
+        val summary = cache.getSeriesSnapshotSummary(identity)
+
+        assertEquals(
+            listOf(
+                LocalDate.parse("2026-03-01") to BigDecimal("100.00"),
+                LocalDate.parse("2026-03-03") to BigDecimal("103.50"),
+                LocalDate.parse("2026-03-04") to BigDecimal("104.00")
+            ),
+            lookup.prices.map { point -> point.date to point.closePricePln }
+        )
+        assertEquals(3, summary?.pointCount)
+        assertEquals(Instant.parse("2026-03-27T13:00:00Z"), summary?.canonicalUpdatedAt)
+    }
+
+    @Test
+    fun `successful empty ranged refresh removes only points inside its range`() = runBlocking {
+        val repository = InMemoryOperationalStateRepository()
+        val identity = "stock-history:VWRA.L"
+        snapshotCacheAt(repository, "2026-03-27T12:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-05"),
+            prices = listOf(
+                price("2026-03-01", "100.00"),
+                price("2026-03-02", "101.00"),
+                price("2026-03-04", "103.00"),
+                price("2026-03-05", "104.00")
+            )
+        )
+
+        snapshotCacheAt(repository, "2026-03-27T13:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-02"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = emptyList()
+        )
+
+        val snapshotCache = snapshotCacheAt(repository, "2026-03-27T14:00:00Z")
+        val lookup = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-05")
+        )
+        val summary = snapshotCache.getSeriesSnapshotSummary(identity)
+
+        assertEquals(
+            listOf(LocalDate.parse("2026-03-01"), LocalDate.parse("2026-03-05")),
+            lookup.prices.map(HistoricalPricePoint::date)
+        )
+        assertEquals(2, summary?.pointCount)
+        assertEquals(Instant.parse("2026-03-27T13:00:00Z"), summary?.canonicalUpdatedAt)
+    }
+
+    @Test
+    fun `partial empty ranged refresh cannot delete last-known-good points`() = runBlocking {
+        val repository = InMemoryOperationalStateRepository()
+        val identity = "stock-history:VWRA.L"
+        snapshotCacheAt(repository, "2026-03-27T12:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = listOf(
+                price("2026-03-02", "101.00"),
+                price("2026-03-03", "102.00")
+            ),
+            provenance = stockProvenance()
+        )
+
+        snapshotCacheAt(repository, "2026-03-27T13:00:00Z").putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = emptyList(),
+            provenance = stockProvenance().copy(
+                status = "PARTIAL",
+                coverageFrom = LocalDate.parse("2026-03-02"),
+                coverageTo = LocalDate.parse("2026-03-03")
+            )
+        )
+
+        val cached = snapshotCacheAt(repository, "2026-03-27T14:00:00Z").lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-04")
+        )
+
+        assertEquals(
+            listOf(LocalDate.parse("2026-03-02"), LocalDate.parse("2026-03-03")),
+            cached.prices.map(HistoricalPricePoint::date)
+        )
+    }
+
+    @Test
+    fun `partial ranged response records only its declared source coverage`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "stock-history:NEW.EX"
+
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-10"),
+            prices = listOf(
+                price("2026-03-04", "10.00"),
+                price("2026-03-05", "10.10")
+            ),
+            provenance = stockProvenance().copy(
+                status = "PARTIAL",
+                coverageFrom = LocalDate.parse("2026-03-04"),
+                coverageTo = LocalDate.parse("2026-03-05")
+            )
+        )
+
+        val cached = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-10")
+        )
+
+        assertEquals(MarketDataSnapshotCoverage.PARTIAL, cached.coverage)
+        assertEquals(
+            listOf(MarketDataCoverageRange(LocalDate.parse("2026-03-04"), LocalDate.parse("2026-03-05"))),
+            cached.coveredRanges
+        )
+        assertFalse(cached.coversFullRangeOrCompletePrefix())
+    }
+
+    @Test
+    fun `ranged refresh ignores observations outside the requested interval`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "reference:VWRA.L:PLN"
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-05"),
+            prices = listOf(
+                price("2026-03-01", "100.00"),
+                price("2026-03-05", "105.00")
+            )
+        )
+
+        snapshotCache.putSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-02"),
+            to = LocalDate.parse("2026-03-04"),
+            prices = listOf(
+                price("2026-03-01", "1.00"),
+                price("2026-03-03", "103.00"),
+                price("2026-03-05", "5.00")
+            )
+        )
+
+        val cached = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-05")
+        )
+
+        assertEquals(
+            listOf(
+                LocalDate.parse("2026-03-01") to BigDecimal("100.00"),
+                LocalDate.parse("2026-03-03") to BigDecimal("103.00"),
+                LocalDate.parse("2026-03-05") to BigDecimal("105.00")
+            ),
+            cached.prices.map { point -> point.date to point.closePricePln }
+        )
+    }
+
+    @Test
+    fun `legacy series writes keep points outside the incoming payload`() = runBlocking {
+        val snapshotCache = snapshotCache()
+        val identity = "stock-history:legacy"
+        snapshotCache.putSeries(
+            identity = identity,
+            prices = listOf(
+                price("2026-03-01", "100.00"),
+                price("2026-03-02", "101.00")
+            )
+        )
+
+        snapshotCache.putSeries(
+            identity = identity,
+            prices = listOf(
+                price("2026-03-02", "102.00"),
+                price("2026-03-03", "103.00")
+            )
+        )
+
+        val lookup = snapshotCache.lookupSeries(
+            identity = identity,
+            from = LocalDate.parse("2026-03-01"),
+            to = LocalDate.parse("2026-03-03")
+        )
+
+        assertEquals(
+            listOf(
+                LocalDate.parse("2026-03-01") to BigDecimal("100.00"),
+                LocalDate.parse("2026-03-02") to BigDecimal("102.00"),
+                LocalDate.parse("2026-03-03") to BigDecimal("103.00")
+            ),
+            lookup.prices.map { point -> point.date to point.closePricePln }
+        )
+    }
+
+    @Test
     fun `separate successful ranges stay partial across a gap until the gap is covered`() = runBlocking {
         val snapshotCache = snapshotCache()
         val identity = "reference:VWRA.L:PLN"
@@ -476,6 +709,21 @@ class MarketDataSnapshotCacheServiceTest {
     }
 
     private fun fixedClock(instant: String): Clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)
+
+    private fun snapshotCacheAt(
+        repository: OperationalStateRepository,
+        instant: String
+    ): MarketDataSnapshotCacheService {
+        val clock = fixedClock(instant)
+        return MarketDataSnapshotCacheService(
+            operationalStateService = OperationalStateService(
+                repository = repository,
+                json = AppJsonFactory.create(),
+                clock = clock
+            ),
+            clock = clock
+        )
+    }
 
     private fun snapshotCache(
         repository: OperationalStateRepository = InMemoryOperationalStateRepository()

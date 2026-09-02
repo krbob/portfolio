@@ -210,9 +210,21 @@ class MarketDataSnapshotCacheService(
         provenance: StockAnalystDataProvenance?
     ) = seriesMutationMutex(identity).withLock {
         val existing = getStoredSeries(identity)
+        val existingPoints = existing?.points.orEmpty()
+        val authoritativeRange = coveredRange?.takeIf { provenance.allowsAuthoritativeReplacement() }
+        // A successful ranged response is authoritative for the requested interval. In
+        // particular, an omitted trading-day point may be an upstream correction and
+        // must not be resurrected from the previous snapshot. Partial or stale upstream
+        // payloads may add/update observations, but cannot delete last-known-good data.
+        val pointsToMerge = authoritativeRange?.let { range ->
+            existingPoints.filterNot { point -> point.isWithin(range) }
+        } ?: existingPoints
+        val incomingPrices = coveredRange?.let { range ->
+            prices.filter { point -> point.isWithin(range) }
+        } ?: prices
         val mergedPoints = mergeSeriesPoints(
-            existing = existing?.points.orEmpty(),
-            incoming = prices.map { point ->
+            existing = pointsToMerge,
+            incoming = incomingPrices.map { point ->
                 StoredPricePoint(
                     date = point.date.toString(),
                     closePricePln = point.closePricePln.toPlainString()
@@ -224,7 +236,7 @@ class MarketDataSnapshotCacheService(
             points = mergedPoints,
             coverageRanges = mergeStoredCoverageRanges(
                 existing = existing?.coverageRanges.orEmpty(),
-                incoming = listOfNotNull(coveredRange?.toStored())
+                incoming = listOfNotNull(coveredRange?.recordedCoverage(provenance)?.toStored())
             )
         )
 
@@ -580,6 +592,28 @@ class MarketDataSnapshotCacheService(
         .toSortedMap()
         .values
         .toList()
+
+    private fun StoredPricePoint.isWithin(range: MarketDataCoverageRange): Boolean {
+        val pointDate = LocalDate.parse(date)
+        return !pointDate.isBefore(range.from) && !pointDate.isAfter(range.to)
+    }
+
+    private fun HistoricalPricePoint.isWithin(range: MarketDataCoverageRange): Boolean =
+        !date.isBefore(range.from) && !date.isAfter(range.to)
+
+    private fun MarketDataCoverageRange.recordedCoverage(
+        provenance: StockAnalystDataProvenance?
+    ): MarketDataCoverageRange? {
+        if (provenance.allowsAuthoritativeReplacement()) {
+            return this
+        }
+        val sourceFrom = provenance?.coverageFrom ?: return null
+        val sourceTo = provenance.coverageTo ?: return null
+        return intersection(MarketDataCoverageRange(from = sourceFrom, to = sourceTo))
+    }
+
+    private fun StockAnalystDataProvenance?.allowsAuthoritativeReplacement(): Boolean =
+        this == null || status.equals("FRESH", ignoreCase = true)
 
     private fun mergeStoredCoverageRanges(
         existing: List<StoredCoverageRange>,

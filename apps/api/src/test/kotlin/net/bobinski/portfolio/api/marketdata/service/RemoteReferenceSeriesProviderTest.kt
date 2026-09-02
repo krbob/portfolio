@@ -20,6 +20,7 @@ import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.client.withStockAnalystProvenance
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
+import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAuditEventRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -476,6 +477,68 @@ class RemoteReferenceSeriesProviderTest {
             assertEquals(BigDecimal("3.85"), result.prices[0].closePricePln)
         } finally {
             failingServer.close()
+        }
+    }
+
+    @Test
+    fun `reference series failure does not expose an implausible cached snapshot`() = runBlocking {
+        val snapshotCacheService = MarketDataSnapshotCacheService(
+            operationalStateService = OperationalStateService(
+                repository = InMemoryOperationalStateRepository(),
+                json = AppJsonFactory.create(),
+                clock = Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC)
+            )
+        )
+        snapshotCacheService.putSeries(
+            identity = "reference:usd-pln",
+            from = LocalDate.parse("2026-08-28"),
+            to = LocalDate.parse("2026-09-01"),
+            prices = listOf(
+                HistoricalPricePoint(LocalDate.parse("2026-08-28"), BigDecimal("385.00")),
+                HistoricalPricePoint(LocalDate.parse("2026-09-01"), BigDecimal("3.85"))
+            )
+        )
+        val server = FakeReferenceSeriesServer(failUsdHistory = true)
+        server.start()
+
+        try {
+            val result = RemoteReferenceSeriesProvider(
+                config = MarketDataConfig(
+                    enabled = true,
+                    stockAnalystApiUrl = server.baseUrl,
+                    edoCalculatorApiUrl = "http://127.0.0.1:9",
+                    goldApiUrl = server.baseUrl,
+                    goldApiKey = null,
+                    usdPlnSymbol = "PLN=X",
+                    goldBenchmarkSymbol = "GC=F",
+                    equityBenchmarkSymbol = "VWRA.L",
+                    bondBenchmarkSymbol = "ETFBTBSP.WA"
+                ),
+                stockAnalystClient = StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                goldApiClient = GoldApiClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl
+                ),
+                marketDataFailureAuditService = MarketDataFailureAuditService(
+                    auditLogService = AuditLogService(
+                        auditEventRepository = InMemoryAuditEventRepository(),
+                        clock = Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC)
+                    )
+                ),
+                snapshotCacheService = snapshotCacheService
+            ).usdPln(
+                from = LocalDate.parse("2026-08-28"),
+                to = LocalDate.parse("2026-09-01")
+            )
+
+            assertTrue(result is ReferenceSeriesResult.Failure)
+        } finally {
+            server.close()
         }
     }
 }

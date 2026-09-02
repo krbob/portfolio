@@ -15,6 +15,7 @@ import java.math.BigDecimal
 import java.net.http.HttpClient
 import java.time.Instant
 import java.time.LocalDate
+import org.slf4j.LoggerFactory
 
 class StockAnalystClient(
     httpClient: HttpClient,
@@ -57,6 +58,53 @@ class StockAnalystClient(
         from: LocalDate? = null,
         to: LocalDate? = null
     ): StockAnalystHistory {
+        val initial = loadHistory(symbol = symbol, currency = currency, from = from, to = to)
+        val qualityIssue = initial.splitAdjustedSeriesQualityIssue() ?: return initial
+        if (from == null || to == null) {
+            return initial.requirePlausibleSplitAdjustedSeries(symbol)
+        }
+
+        val repairFrom = maxOf(from, qualityIssue.firstDate.minusDays(QUALITY_REPAIR_PADDING_DAYS))
+        val repairTo = minOf(to, qualityIssue.secondDate.plusDays(QUALITY_REPAIR_PADDING_DAYS))
+        if (repairFrom == from && repairTo == to) {
+            return initial.requirePlausibleSplitAdjustedSeries(symbol)
+        }
+
+        val repairedWindow = loadHistory(
+            symbol = symbol,
+            currency = currency,
+            from = repairFrom,
+            to = repairTo
+        )
+            .requirePlausibleSplitAdjustedSeries(symbol)
+            .requireAuthoritativeRepairFor(
+                original = initial,
+                issue = qualityIssue,
+                from = repairFrom,
+                to = repairTo,
+                symbol = symbol
+            )
+        val repaired = initial.replaceWindow(
+            from = repairFrom,
+            to = repairTo,
+            replacement = repairedWindow
+        ).requirePlausibleSplitAdjustedSeries(symbol)
+        logger.warn(
+            "Repaired implausible split-adjusted history for {} ({}) with authoritative retry {}..{}",
+            symbol,
+            qualityIssue.description,
+            repairFrom,
+            repairTo
+        )
+        return repaired
+    }
+
+    private suspend fun loadHistory(
+        symbol: String,
+        currency: String?,
+        from: LocalDate?,
+        to: LocalDate?
+    ): StockAnalystHistory {
         val payload = getWithLegacyRouteFallback(
             versionedPath = StockAnalystContractPaths.HISTORY,
             legacyPath = LEGACY_HISTORY_PATH,
@@ -84,9 +132,12 @@ class StockAnalystClient(
                     date = LocalDate.parse(price.date),
                     closePricePln = BigDecimal.valueOf(price.close)
                 )
+            }.filter { point ->
+                (from == null || !point.date.isBefore(from)) &&
+                    (to == null || !point.date.isAfter(to))
             },
             provenance = payload.provenance.toDomain()
-        )
+        ).requireAcceptedHistoryStatus(symbol)
     }
 
     suspend fun historyInPln(
@@ -180,8 +231,88 @@ class StockAnalystClient(
         // (metadata + prices). Keeping two requests in flight stays within the
         // Stock Analyst backend's default four-loader bulkhead.
         const val MAX_CONCURRENT_REQUESTS = 2
+        const val QUALITY_REPAIR_PADDING_DAYS = 7L
         val requestSemaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
+        val logger = LoggerFactory.getLogger(StockAnalystClient::class.java)
     }
+}
+
+private fun StockAnalystHistory.replaceWindow(
+    from: LocalDate,
+    to: LocalDate,
+    replacement: StockAnalystHistory
+): StockAnalystHistory {
+    val mergedPrices = (prices.filterNot { point -> !point.date.isBefore(from) && !point.date.isAfter(to) } +
+        replacement.prices.filter { point -> !point.date.isBefore(from) && !point.date.isAfter(to) })
+        .associateBy { point -> point.date }
+        .toSortedMap()
+        .values
+        .toList()
+    val latestMarketTimestamp = listOfNotNull(provenance.marketTimestamp, replacement.provenance.marketTimestamp)
+        .maxOrNull()
+    val latestMarketDate = listOfNotNull(provenance.marketDate, replacement.provenance.marketDate).maxOrNull()
+    val combinedCoverageFrom = listOfNotNull(provenance.coverageFrom, replacement.provenance.coverageFrom).minOrNull()
+    val combinedCoverageTo = listOfNotNull(provenance.coverageTo, replacement.provenance.coverageTo).maxOrNull()
+    return StockAnalystHistory(
+        prices = mergedPrices,
+        provenance = provenance.copy(
+            retrievedAt = maxOf(provenance.retrievedAt, replacement.provenance.retrievedAt),
+            marketTimestamp = latestMarketTimestamp,
+            marketDate = latestMarketDate,
+            coverageFrom = combinedCoverageFrom,
+            coverageTo = combinedCoverageTo,
+            status = worstProvenanceStatus(provenance.status, replacement.provenance.status)
+        )
+    )
+}
+
+private fun StockAnalystHistory.requireAcceptedHistoryStatus(symbol: String): StockAnalystHistory {
+    if (provenance.status.equals("ERROR", ignoreCase = true)) {
+        throw MarketDataClientException(
+            message = "stock-analyst returned an unusable history status for $symbol: ${provenance.status}.",
+            upstream = "stock-analyst",
+            operation = "history",
+            symbol = symbol,
+            errorCode = "UNUSABLE_HISTORY_RESPONSE",
+            retryable = true
+        )
+    }
+    return this
+}
+
+private fun StockAnalystHistory.requireAuthoritativeRepairFor(
+    original: StockAnalystHistory,
+    issue: StockAnalystSeriesQualityIssue,
+    from: LocalDate,
+    to: LocalDate,
+    symbol: String
+): StockAnalystHistory {
+    val compatible = provenance.source == original.provenance.source &&
+        provenance.currency == original.provenance.currency &&
+        provenance.unitScale == original.provenance.unitScale &&
+        provenance.adjustment.equals(original.provenance.adjustment, ignoreCase = true)
+    if (!compatible || !provenance.status.equals("FRESH", ignoreCase = true)) {
+        throw implausibleSeriesException(
+            symbol = symbol,
+            reason = "bounded repair did not return compatible fresh provenance"
+        )
+    }
+
+    val boundedPrices = prices.filter { point -> !point.date.isBefore(from) && !point.date.isAfter(to) }
+    val coversLeftEdge = boundedPrices.any { point -> !point.date.isAfter(issue.firstDate) }
+    val coversRightEdge = boundedPrices.any { point -> !point.date.isBefore(issue.secondDate) }
+    if (!coversLeftEdge || !coversRightEdge) {
+        throw implausibleSeriesException(
+            symbol = symbol,
+            reason = "bounded repair did not bridge the suspect interval ${issue.firstDate}..${issue.secondDate}"
+        )
+    }
+    return copy(prices = boundedPrices)
+}
+
+private fun worstProvenanceStatus(first: String, second: String): String {
+    val priorities = mapOf("FRESH" to 0, "PARTIAL" to 1, "STALE" to 2, "ERROR" to 4)
+    return listOf(first, second).maxBy { status -> priorities[status.uppercase()] ?: 3 }
 }
 
 private fun MarketDataClientException.isRouteNotFound(): Boolean =

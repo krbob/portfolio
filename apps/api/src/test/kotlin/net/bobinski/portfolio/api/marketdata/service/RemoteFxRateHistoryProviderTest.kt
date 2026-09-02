@@ -124,6 +124,40 @@ class RemoteFxRateHistoryProviderTest {
     }
 
     @Test
+    fun `failure does not expose an implausible cached fx series`() = runBlocking {
+        val snapshotCacheService = buildSnapshotCacheService()
+        snapshotCacheService.putSeries(
+            identity = "fx-history:USD",
+            from = LocalDate.parse("2026-08-28"),
+            to = LocalDate.parse("2026-09-01"),
+            prices = listOf(
+                net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint(
+                    date = LocalDate.parse("2026-08-28"),
+                    closePricePln = BigDecimal("385.00")
+                ),
+                net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint(
+                    date = LocalDate.parse("2026-09-01"),
+                    closePricePln = BigDecimal("3.85")
+                )
+            )
+        )
+        val server = FakeFxServer(fail = true)
+        server.start()
+
+        try {
+            val result = buildProvider(server.baseUrl, snapshotCacheService).dailyRateToPln(
+                currency = "USD",
+                from = LocalDate.parse("2026-08-28"),
+                to = LocalDate.parse("2026-09-01")
+            )
+
+            assertTrue(result is FxRateHistoryResult.Failure)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
     fun `failure does not expose a partially overlapping cached range as success`() = runBlocking {
         val snapshotCacheService = buildSnapshotCacheService()
         val successServer = FakeFxServer()

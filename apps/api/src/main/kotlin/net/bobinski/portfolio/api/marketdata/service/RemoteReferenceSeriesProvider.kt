@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.marketdata.service
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
+import net.bobinski.portfolio.api.marketdata.client.seriesQualityIssue
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import org.slf4j.LoggerFactory
@@ -256,6 +257,18 @@ class RemoteReferenceSeriesProvider(
     ): ReferenceSeriesResult.Success? {
         val cached = snapshotCacheService.lookupSeries(identity = identity, from = from, to = to)
         if (!cached.coversFullRangeOrCompletePrefix()) {
+            return null
+        }
+        cached.prices.seriesQualityIssue()?.let { issue ->
+            logger.warn(
+                "Refusing cached reference-series fallback for {} in {}..{} because it failed series quality " +
+                    "validation: {}. Run the read-model refresh after upstream recovery to replace the " +
+                    "affected range.",
+                identity,
+                from,
+                to,
+                issue.description
+            )
             return null
         }
         return ReferenceSeriesResult.Success(prices = cached.prices, fromCache = true)

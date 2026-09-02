@@ -14,10 +14,19 @@ Do not assume a large change is a market move until coverage is checked.
 4. Compare the current read-model revision with the latest successful snapshot.
 5. Check Stock Analyst readiness and the required `/v1/quote/{stock}` and
    `/v1/history/{stock}` paths.
+6. Compare the final historical close with the live quote. A roughly 50x/100x discontinuity in a
+   split-adjusted series is rejected by current versions; inspect older snapshot metadata and rebuild
+   the read models once the provider returns a corrected range.
 
 A missing FX conversion must preserve native quantities, but can make PLN cost/value fields partial.
 The UI should say `PARTIALLY_VALUED`; it must not present the remaining valued subset as a complete
 portfolio.
+
+An omitted observation in a successful refreshed range is treated as an upstream correction and is
+removed from the market-data cache when the provider marks the response fresh. Partial or stale
+responses cannot delete last-known-good points. If an older deployment keeps resurrecting that
+observation, upgrade before rebuilding; repeatedly refreshing the old union-only cache cannot remove
+it. Current releases also refuse a cached fallback that contains the same implausible discontinuity.
 
 ## Header says stale while quotes look current
 
