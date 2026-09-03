@@ -12,7 +12,7 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 The API and web Dockerfiles retain readable version tags but also pin every base image to an immutable manifest
 digest. The API compiles to its Java 21 target and runs on a separately pinned Java 25 JRE; neither runtime image
 updates packages from a moving operating-system repository during the build. CI and the web image activate Corepack's
-npm shim and verify that the exact `packageManager` version is in use before installing dependencies.
+npm shim; CI also verifies that the exact `packageManager` version is in use before installing dependencies.
 
 ## Dependency resolution
 

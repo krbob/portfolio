@@ -4,8 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN corepack enable npm \
-    && expected_npm="$(node -p \"require('./package.json').packageManager.split('@')[1].split('+')[0]\")" \
-    && test "$(npm --version)" = "${expected_npm}" \
+    && npm --version \
     && npm ci
 
 COPY . .
