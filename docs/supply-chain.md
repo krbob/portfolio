@@ -4,10 +4,10 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 
 ## Prescribed toolchain
 
-- JDK 21.0.11 (`.java-version` and CI; Gradle's Java 21 toolchain selects that installed JDK)
-- Node.js 24.20.0 (`.node-version`, the web build image and CI)
-- npm 11.16.0 (`packageManager`)
-- Gradle 9.7.1 with a verified wrapper distribution SHA-256
+- JDK (exact version in `.java-version` and CI; Gradle's Java toolchain selects that installed JDK)
+- Node.js (exact version aligned across `.node-version`, package metadata, the web build image and CI)
+- npm (exact version aligned between `packageManager`, `engines.npm` and the lockfile)
+- Gradle (exact version aligned between the wrapper and API build image, with a verified distribution SHA-256)
 
 The API and web Dockerfiles retain readable version tags but also pin every base image to an immutable manifest
 digest. The API compiles to its Java 21 target and runs on a separately pinned Java 25 JRE; neither runtime image
