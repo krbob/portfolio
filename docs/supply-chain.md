@@ -5,13 +5,14 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 ## Prescribed toolchain
 
 - JDK 21.0.11 (`.java-version` and CI; Gradle's Java 21 toolchain selects that installed JDK)
-- Node.js 24.18.0 (`.node-version` and CI)
+- Node.js 24.20.0 (`.node-version`, the web build image and CI)
 - npm 11.16.0 (`packageManager`)
-- Gradle 9.6.1 with a verified wrapper distribution SHA-256
+- Gradle 9.7.1 with a verified wrapper distribution SHA-256
 
 The API and web Dockerfiles retain readable version tags but also pin every base image to an immutable manifest
-digest. The API build and runtime use the same Java major version, and the runtime does not update packages from a
-moving operating-system repository during the build.
+digest. The API compiles to its Java 21 target and runs on a separately pinned Java 25 JRE; neither runtime image
+updates packages from a moving operating-system repository during the build. CI and the web image activate Corepack's
+npm shim and verify that the exact `packageManager` version is in use before installing dependencies.
 
 ## Dependency resolution
 
@@ -46,11 +47,17 @@ require `id-token: write` and `attestations: write`; build arguments are not use
 ## Maintenance policy
 
 All external GitHub Actions use full commit SHAs and all CI helper containers use immutable digests. Renovate inherits
-the shared monthly ecosystem policy: on the first day of each month it creates at most five dependency pull requests
-at once, and GitHub squash-merges each one as soon as required CI is green. Every update type is eligible, branches are
-rebased only to resolve conflicts, and releases with trustworthy timestamps are held for seven days; missing
-timestamps do not block an update indefinitely. Renovate's separate vulnerability-alert pull requests are disabled
-because they bypass schedules; vulnerable dependencies remain part of the normal monthly update run.
+the shared monthly ecosystem policy: on the first day of each month it creates dependency pull requests without a
+concurrency cap, and GitHub squash-merges each one as soon as required CI is green. Every update type is eligible,
+branches are rebased only to resolve conflicts, and releases with trustworthy timestamps are held for seven days;
+missing timestamps do not block an update indefinitely. Renovate's separate vulnerability-alert pull requests are
+disabled because they bypass schedules; vulnerable dependencies remain part of the normal monthly update run.
+Kotlin and Ktor updates are grouped so their shared Gradle version-catalog inputs are tested together. TypeScript 7
+and js-yaml 5 remain temporarily excluded until the frontend toolchain supports their breaking changes. Node.js and
+Gradle declarations are grouped with their respective build images to keep each toolchain update atomic.
+
+Required pull-request CI runs the structural supply-chain validator and builds both production Dockerfiles without
+pushing. This prevents a green source-only check from automerging an image that cannot be published from `main`.
 
 Run the local structural validator after editing Dockerfiles, workflows, tool versions, or Renovate policy:
 

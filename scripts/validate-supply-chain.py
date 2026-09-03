@@ -265,6 +265,17 @@ def validate_gradle() -> None:
     match = re.search(r"^distributionSha256Sum=([^\s]+)$", properties, re.MULTILINE)
     if not match or not SHA256.fullmatch(match.group(1)):
         fail("Gradle wrapper distributionSha256Sum is missing or malformed")
+    distribution_match = re.search(r"gradle-(\d+\.\d+(?:\.\d+)?)-bin\.zip", properties)
+    if not distribution_match:
+        fail("Gradle wrapper distribution URL is missing or malformed")
+    api_dockerfile = require_file("apps/api/Dockerfile").read_text(encoding="utf-8")
+    java_major = java_version.split(".", 1)[0]
+    if not re.search(
+        rf"^FROM gradle:{re.escape(distribution_match.group(1))}-jdk{re.escape(java_major)}@sha256:[0-9a-f]{{64}} AS build$",
+        api_dockerfile,
+        re.MULTILINE,
+    ):
+        fail("apps/api/Dockerfile Gradle and JDK build image must match the repository toolchain")
 
 
 def validate_node() -> None:
@@ -272,22 +283,50 @@ def validate_node() -> None:
     package = json.loads(require_file("apps/web/package.json").read_text(encoding="utf-8"))
     if package.get("engines", {}).get("node") != node_version:
         fail(".node-version and package.json engines.node differ")
-    if not re.fullmatch(r"npm@\d+\.\d+\.\d+", package.get("packageManager", "")):
+    package_manager = package.get("packageManager", "")
+    package_manager_match = re.fullmatch(r"npm@(\d+\.\d+\.\d+)(?:\+.+)?", package_manager)
+    if not package_manager_match:
         fail("packageManager must pin an exact npm version")
+    if package.get("engines", {}).get("npm") != package_manager_match.group(1):
+        fail("package.json packageManager and engines.npm differ")
     lock = json.loads(require_file("apps/web/package-lock.json").read_text(encoding="utf-8"))
     if lock.get("lockfileVersion") != 3:
         fail("package-lock.json must use lockfileVersion 3")
+    lock_engines = lock.get("packages", {}).get("", {}).get("engines", {})
+    if lock_engines != package.get("engines"):
+        fail("package-lock.json and package.json engines differ")
+
+    dockerfile = require_file("apps/web/Dockerfile").read_text(encoding="utf-8")
+    if not re.search(rf"^FROM node:{re.escape(node_version)}-alpine@sha256:[0-9a-f]{{64}} AS build$", dockerfile, re.MULTILINE):
+        fail("apps/web/Dockerfile Node image must match .node-version")
+    if "corepack enable npm" not in dockerfile:
+        fail("apps/web/Dockerfile must activate the packageManager-pinned npm")
 
 
 def validate_ci_toolchains() -> None:
-    workflow = require_file(".github/workflows/ci-verify.yml").read_text(encoding="utf-8")
     expected = {
         "JDK_VERSION": require_file(".java-version").read_text(encoding="utf-8").strip(),
         "NODE_VERSION": require_file(".node-version").read_text(encoding="utf-8").strip(),
     }
-    for variable, version in expected.items():
-        if not re.search(rf'^\s*{variable}:\s*"{re.escape(version)}"\s*$', workflow, re.MULTILINE):
-            fail(f"ci-verify.yml {variable} must match its repository version file")
+    workflow_paths = (".github/workflows/ci-verify.yml", ".github/workflows/ci-build.yml")
+    for workflow_path in workflow_paths:
+        workflow = require_file(workflow_path).read_text(encoding="utf-8")
+        for variable, version in expected.items():
+            if variable not in workflow:
+                continue
+            if not re.search(rf'^\s*{variable}:\s*"{re.escape(version)}"\s*$', workflow, re.MULTILINE):
+                fail(f"{workflow_path} {variable} must match its repository version file")
+        if "setup-node" in workflow and "corepack enable npm" not in workflow:
+            fail(f"{workflow_path} must activate the packageManager-pinned npm")
+
+    verify_workflow = require_file(".github/workflows/ci-verify.yml").read_text(encoding="utf-8")
+    if "python3 scripts/validate-supply-chain.py" not in verify_workflow:
+        fail("ci-verify.yml must run the supply-chain validator")
+    for context in ("./apps/api", "./apps/web"):
+        if not re.search(rf"^\s*context:\s*{re.escape(context)}\s*$", verify_workflow, re.MULTILINE):
+            fail(f"ci-verify.yml must build {context} without pushing")
+    if "docker/build-push-action@" not in verify_workflow or "push: false" not in verify_workflow:
+        fail("ci-verify.yml must perform no-push production image builds")
 
 
 def validate_renovate() -> None:
