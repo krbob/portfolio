@@ -5,6 +5,39 @@
   ],
   "packageRules": [
     {
+      "description": "Keep Kotlin compiler plugins and Ktor plugin and libraries compatible",
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchDepNames": [
+        "org.jetbrains.kotlin.jvm",
+        "org.jetbrains.kotlin.plugin.serialization",
+        "io.ktor.plugin",
+        "io.ktor:ktor-*"
+      ],
+      "groupName": "Kotlin and Ktor"
+    },
+    {
+      "description": "Hold TypeScript below 7 until the linting toolchain supports it",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "allowedVersions": "<7.0.0"
+    },
+    {
+      "description": "Hold js-yaml below 5 until its breaking changes are adopted",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "js-yaml"
+      ],
+      "allowedVersions": "<5.0.0"
+    },
+    {
       "description": "Group non-major frontend runtime dependency updates",
       "matchManagers": [
         "npm"
@@ -124,6 +157,20 @@
         "pin"
       ],
       "groupName": "Docker images"
+    },
+    {
+      "description": "Keep Node.js declarations and the web build image aligned",
+      "matchDepNames": [
+        "node"
+      ],
+      "groupName": "Node.js toolchain"
+    },
+    {
+      "description": "Keep the Gradle wrapper and API build image aligned",
+      "matchDepNames": [
+        "gradle"
+      ],
+      "groupName": "Gradle toolchain"
     }
   ]
 }

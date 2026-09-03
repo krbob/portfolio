@@ -5,7 +5,7 @@ on:
 
 env:
   JDK_VERSION: "21.0.11"
-  NODE_VERSION: "24.18.0"
+  NODE_VERSION: "24.20.0"
 
 jobs:
   infra:
@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate immutable supply-chain inputs
+        run: python3 scripts/validate-supply-chain.py
 
       - name: Validate compatibility manifest
         run: python3 scripts/validate-compatibility-manifest.py
@@ -127,6 +130,13 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
+      - name: Activate pinned npm
+        working-directory: apps/web
+        run: |
+          corepack enable npm
+          expected_npm="$(node -p "require('./package.json').packageManager.split('@')[1].split('+')[0]")"
+          test "$(npm --version)" = "${expected_npm}"
+
       - name: Install web dependencies
         working-directory: apps/web
         run: npm ci
@@ -162,3 +172,39 @@ jobs:
 
       - name: Verify generated API client is committed
         run: git diff --exit-code -- apps/web/src/api/generated/portfolio-api.d.ts
+
+  images:
+    name: Build ${{ matrix.name }} image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: API
+            slug: api
+            context: ./apps/api
+            dockerfile: ./apps/api/Dockerfile
+          - name: Web
+            slug: web
+            context: ./apps/web
+            dockerfile: ./apps/web/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Build production image without pushing
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          load: true
+          push: false
+          tags: portfolio-${{ matrix.slug }}:ci
+          cache-from: type=gha,scope=portfolio-${{ matrix.slug }}-verify
+          cache-to: type=gha,mode=max,scope=portfolio-${{ matrix.slug }}-verify

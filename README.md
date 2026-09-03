@@ -176,9 +176,9 @@ npm test
 npm run build
 ```
 
-Required CI runs deterministic source, API, web and generated OpenAPI checks. Docker smoke tests,
-SBOM generation and vulnerability scans remain available as explicit maintenance commands, but do
-not block dependency updates.
+Required CI runs deterministic source, API, web, generated OpenAPI and supply-chain checks, including
+no-push builds of both production images. Full-stack Docker smoke tests, SBOM generation and vulnerability
+scans remain available as explicit maintenance commands, but do not block dependency updates.
 
 ## Screenshot maintenance
 
