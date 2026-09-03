@@ -292,39 +292,8 @@ def validate_ci_toolchains() -> None:
 
 def validate_renovate() -> None:
     config = json.loads(require_file("renovate.json").read_text(encoding="utf-8"))
-    if config.get("branchPrefix") != "renovate/" or config.get("prCreation") != "immediate":
-        fail("Renovate must use explicit dependency branches and pull requests")
-    if config.get("automerge") is not True or config.get("automergeType") != "pr":
-        fail("Every Renovate update must be eligible for pull-request automerge")
-    if config.get("automergeStrategy") != "squash":
-        fail("Renovate must squash dependency pull requests")
-    if config.get("platformAutomerge") is not False:
-        fail("GitHub platform automerge must stay disabled to enforce the monthly window")
-    if config.get("ignoreTests") is not False:
-        fail("Renovate automerge must require passing tests")
-    if config.get("automergeSchedule") != ["* * 1-3 * *"]:
-        fail("Renovate may automerge only during the first three days of each month")
-    if config.get("rebaseWhen") != "behind-base-branch" or config.get("updateNotScheduled") is not True:
-        fail("Renovate branches must stay current outside the creation window")
-    if config.get("minimumReleaseAge") != "7 days":
-        fail("Renovate updates must retain a seven-day maturity delay")
-    if config.get("minimumReleaseAgeBehaviour") != "timestamp-optional":
-        fail("Renovate updates without release timestamps must remain eligible")
-    if "helpers:pinGitHubActionDigests" not in config.get("extends", []):
-        fail("Renovate must retain GitHub Action digest maintenance")
-    if config.get("timezone") != "Europe/Warsaw" or config.get("schedule") != ["at any time"]:
-        fail("Renovate must create mature dependency pull requests continuously")
-    if (
-        config.get("commitHourlyLimit") != 0
-        or config.get("prConcurrentLimit") != 0
-        or config.get("branchConcurrentLimit") != 0
-        or config.get("prHourlyLimit") != 0
-    ):
-        fail("Renovate branch and pull-request creation must remain unlimited")
-    if config.get("lockFileMaintenance", {}).get("automerge") is not True:
-        fail("Renovate lockfile maintenance must follow the automerge policy")
-    if config.get("vulnerabilityAlerts", {}).get("automerge") is not True:
-        fail("Renovate security updates must follow the automerge policy")
+    if config.get("extends") != ["github>krbob/renovate-config:monthly"]:
+        fail("Renovate must inherit the shared monthly update policy")
     if any(rule.get("automerge") is False for rule in config.get("packageRules", [])):
         fail("Renovate package rules must not disable automerge")
 
