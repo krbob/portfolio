@@ -56,7 +56,9 @@ missing timestamps do not block an update indefinitely. Renovate's separate vuln
 disabled because they bypass schedules; vulnerable dependencies remain part of the normal monthly update run.
 Kotlin and Ktor updates are grouped so their shared Gradle version-catalog inputs are tested together. TypeScript 7
 and js-yaml 5 remain temporarily excluded until the frontend toolchain supports their breaking changes. Node.js and
-Gradle declarations are grouped with their respective build images to keep each toolchain update atomic.
+Gradle declarations are grouped with their respective build images to keep each toolchain update atomic. The API
+runtime remains on Java 21; changing its major requires a coordinated repository-toolchain and container-health
+contract upgrade rather than an isolated base-image update.
 
 Required pull-request CI runs the structural supply-chain validator and builds both production Dockerfiles without
 pushing. This prevents a green source-only check from automerging an image that cannot be published from `main`.

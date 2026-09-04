@@ -353,10 +353,20 @@ def validate_ci_toolchains() -> None:
 
 def validate_renovate() -> None:
     config = json.loads(require_file("renovate.json").read_text(encoding="utf-8"))
+    java_major = require_file(".java-version").read_text(encoding="utf-8").strip().split(".", 1)[0]
     if config.get("extends") != ["github>krbob/renovate-config:monthly"]:
         fail("Renovate must inherit the shared monthly update policy")
-    if any(rule.get("automerge") is False for rule in config.get("packageRules", [])):
+    package_rules = config.get("packageRules", [])
+    if any(rule.get("automerge") is False for rule in package_rules):
         fail("Renovate package rules must not disable automerge")
+    java_runtime_rules = [
+        rule
+        for rule in package_rules
+        if "dockerfile" in rule.get("matchManagers", [])
+        and "eclipse-temurin" in rule.get("matchPackageNames", [])
+    ]
+    if not any(rule.get("allowedVersions") == f"/^{java_major}\\./" for rule in java_runtime_rules):
+        fail("Renovate must keep the API runtime on the repository Java major")
 
 
 def main() -> None:

@@ -159,6 +159,16 @@
       "groupName": "Docker images"
     },
     {
+      "description": "Keep the API runtime on Java 21 until a coordinated toolchain upgrade",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchPackageNames": [
+        "eclipse-temurin"
+      ],
+      "allowedVersions": "/^21\\./"
+    },
+    {
       "description": "Keep Node.js declarations and the web build image aligned",
       "matchDepNames": [
         "node"
