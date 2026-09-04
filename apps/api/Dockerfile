@@ -12,7 +12,7 @@ COPY src src
 RUN --mount=type=cache,target=/home/gradle/.gradle,uid=1000,gid=1000 \
     gradle --no-daemon installDist
 
-FROM eclipse-temurin:25.0.4_7-jre-noble@sha256:b4c93a50fc67612798db73d68ca3b0ee4ebdd51736e59cca370e689b9797037e
+FROM eclipse-temurin:21.0.12_8-jre-noble@sha256:96975602e131485862eb8cd32927face8a06d7591a5e865944b634a701d9df72
 
 WORKDIR /app
 
@@ -29,5 +29,9 @@ COPY --from=build --chown=${PORTFOLIO_UID}:${PORTFOLIO_GID} /workspace/build/ins
 USER ${PORTFOLIO_UID}:${PORTFOLIO_GID}
 
 EXPOSE 18082
+
+# The production Compose contract invokes curl; CI boots this image and verifies the health state.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 \
+    CMD ["curl", "-fsS", "http://127.0.0.1:18082/v1/health"]
 
 ENTRYPOINT ["/app/bin/portfolio-api"]

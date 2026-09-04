@@ -17,6 +17,7 @@ IMAGE_REPOSITORY = re.compile(
     r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]+)?"
     r"(?:/[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*)*$"
 )
+LOCAL_CI_IMAGES = {"portfolio-api:ci"}
 
 DOCKER_RUN_FLAG_OPTIONS = {
     "--detach",
@@ -211,7 +212,16 @@ def docker_run_image(tokens: list[str], start: int, location: str) -> str:
     return tokens[index].strip("'\"")
 
 
-def validate_helper_image(image: str, location: str) -> None:
+def validate_helper_image(image: str, location: str, command_tokens: list[str]) -> None:
+    if image in LOCAL_CI_IMAGES:
+        pull_disabled = "--pull=never" in command_tokens or any(
+            command_tokens[index:index + 2] == ["--pull", "never"]
+            for index in range(len(command_tokens) - 1)
+        )
+        if not pull_disabled:
+            fail(f"{location} locally built image must disable registry pulls: {image}")
+        return
+
     reference, separator, digest = image.partition("@sha256:")
     repository_tag, tag_separator, tag = reference.rpartition(":")
     if (
@@ -243,7 +253,7 @@ def validate_workflow_helper_images() -> None:
                     continue
                 location = f"{workflow.relative_to(ROOT)}:{line_number}"
                 image = docker_run_image(tokens, index + 2, location)
-                validate_helper_image(image, location)
+                validate_helper_image(image, location, tokens[index + 2:])
 
 
 def validate_dockerfiles() -> None:
@@ -276,6 +286,18 @@ def validate_gradle() -> None:
         re.MULTILINE,
     ):
         fail("apps/api/Dockerfile Gradle and JDK build image must match the repository toolchain")
+    if not re.search(
+        rf"^FROM eclipse-temurin:{re.escape(java_major)}\.[^\s@]+-jre-noble@sha256:[0-9a-f]{{64}}$",
+        api_dockerfile,
+        re.MULTILINE,
+    ):
+        fail("apps/api/Dockerfile runtime JRE major must match the repository toolchain")
+    if not re.search(
+        r'^\s*CMD \["curl", "-fsS", "http://127\.0\.0\.1:18082/v1/health"\]$',
+        api_dockerfile,
+        re.MULTILINE,
+    ):
+        fail("apps/api/Dockerfile must define the production API healthcheck")
 
 
 def validate_node() -> None:
