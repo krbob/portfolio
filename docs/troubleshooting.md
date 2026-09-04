@@ -69,6 +69,10 @@ curl -fsS http://127.0.0.1:4174/api/v1/meta
 For a remote deployment, use the corresponding protected public URLs. A rolling update must not
 start Portfolio until both providers and the Stock Analyst versioned route gate pass.
 
+If Docker reports `exec: "curl": executable file not found` for `portfolio-api`, the deployment Compose file is
+overriding the image-owned healthcheck with the retired curl command. Remove the API `healthcheck` block, recreate
+the API container and let Docker inherit the application-packaged Java probe from the image.
+
 ## Portfolio API logs are empty or too noisy
 
 Use the same Compose file set as the running deployment, then inspect recent output:

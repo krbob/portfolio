@@ -30,8 +30,8 @@ USER ${PORTFOLIO_UID}:${PORTFOLIO_GID}
 
 EXPOSE 18082
 
-# The production Compose contract invokes curl; CI boots this image and verifies the health state.
+# The probe is packaged with the application and only requires the Java runtime.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 \
-    CMD ["curl", "-fsS", "http://127.0.0.1:18082/v1/health"]
+    CMD ["java", "-cp", "/app/lib/*", "net.bobinski.portfolio.api.ApiHealthProbe"]
 
 ENTRYPOINT ["/app/bin/portfolio-api"]

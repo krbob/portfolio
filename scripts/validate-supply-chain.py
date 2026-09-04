@@ -293,11 +293,28 @@ def validate_gradle() -> None:
     ):
         fail("apps/api/Dockerfile runtime JRE major must match the repository toolchain")
     if not re.search(
-        r'^\s*CMD \["curl", "-fsS", "http://127\.0\.0\.1:18082/v1/health"\]$',
+        r'^\s*CMD \["java", "-cp", "/app/lib/\*", "net\.bobinski\.portfolio\.api\.ApiHealthProbe"\]$',
         api_dockerfile,
         re.MULTILINE,
     ):
-        fail("apps/api/Dockerfile must define the production API healthcheck")
+        fail("apps/api/Dockerfile must use the application-packaged API health probe")
+    require_file("apps/api/src/main/java/net/bobinski/portfolio/api/ApiHealthProbe.java")
+
+
+def validate_compose_healthchecks() -> None:
+    for compose_file in sorted(ROOT.glob("docker-compose*.yml")):
+        lines = compose_file.read_text(encoding="utf-8").splitlines()
+        try:
+            service_start = lines.index("  portfolio-api:") + 1
+        except ValueError:
+            continue
+        service_lines = []
+        for line in lines[service_start:]:
+            if re.match(r"^  [A-Za-z0-9_.-]+:\s*$", line):
+                break
+            service_lines.append(line)
+        if any(line.startswith("    healthcheck:") for line in service_lines):
+            fail(f"{compose_file.relative_to(ROOT)} must inherit the API image healthcheck")
 
 
 def validate_node() -> None:
@@ -374,6 +391,7 @@ def main() -> None:
     validate_workflow_helper_images()
     validate_dockerfiles()
     validate_gradle()
+    validate_compose_healthchecks()
     validate_node()
     validate_ci_toolchains()
     validate_renovate()
