@@ -11,6 +11,7 @@ import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioAlerts, usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
+import { formatDateTime } from '../lib/format'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
 import { appRoutes } from '../lib/routes'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
@@ -109,7 +110,7 @@ export function DashboardScreen() {
     )
   }
 
-  if (overviewQuery.isError) {
+  if (overviewQuery.isError && !overview) {
     return (
       <>
         <PageHeader title={t('dashboard.title')} />
@@ -140,9 +141,23 @@ export function DashboardScreen() {
       <PageHeader title={t('dashboard.title')}>
         <RefreshIndicator active={isRefreshing} />
         <span className="text-xs text-zinc-400">
-          {t('dashboard.asOf')} {overview.asOf} · {labelPortfolioValuationBasis(valuationState, language)}
+          {overview.valuationSnapshot
+            ? `${t('dashboard.valuationUpdatedAt')} ${formatDateTime(overview.valuationSnapshot.generatedAt)}`
+            : `${t('dashboard.asOf')} ${overview.asOf}`} · {labelPortfolioValuationBasis(valuationState, language)}
         </span>
       </PageHeader>
+
+      {overview.valuationSnapshot?.fromCache && overviewQuery.isFetching && (
+        <p role="status" className="mb-4 text-sm text-ui-text-muted">{t('dashboard.refreshingSavedValuation')}</p>
+      )}
+      {(overviewQuery.isError || overview.valuationSnapshot?.refreshFailed) && (
+        <p role="status" className="mb-4 text-sm text-ui-highlight">
+          {overview.valuationSnapshot?.fromCache || (overviewQuery.isError && !overview.valuationSnapshot?.refreshFailed)
+            ? t('dashboard.savedValuationRefreshFailed')
+            : t('dashboard.valuationRefreshFailed')}
+          {' '}<button type="button" className="underline" onClick={handleRetry}>{t('common.retry')}</button>
+        </p>
+      )}
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
 

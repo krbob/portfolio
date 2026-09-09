@@ -34,6 +34,7 @@ import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalSettingsServ
 import net.bobinski.portfolio.api.domain.service.PersistenceTransactionRunner
 import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ReadModelComputationCoordinator
+import net.bobinski.portfolio.api.readmodel.PortfolioOverviewSnapshotService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
 import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
@@ -229,6 +230,12 @@ fun appModule(
     }
     single { MarketDataSnapshotCacheService(operationalStateService = get()) }
     single { ReadModelComputationCoordinator() }
+    single {
+        PortfolioOverviewSnapshotService(
+            repository = get(), json = get(), clock = get(), coordinator = get(),
+            descriptors = get(), readModel = get(), marketDataEnabled = marketDataConfig.enabled
+        )
+    }
     single {
         ReadModelCacheService(
             repository = get(),

@@ -20,16 +20,21 @@ import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ValuationState
 import net.bobinski.portfolio.api.readmodel.isPortfolioAnalyticsHistoryPreferredForCache
 import net.bobinski.portfolio.api.readmodel.isPreferredForCache
+import net.bobinski.portfolio.api.readmodel.PortfolioOverviewSnapshotService
 
 internal fun Route.registerPortfolioReadModelRoutes(
     portfolioReadModelService: PortfolioReadModelService,
+    portfolioOverviewSnapshotService: PortfolioOverviewSnapshotService,
 ) {
     get("/overview") {
-        call.respond(portfolioReadModelService.overview().toResponse())
+        val preferCached = call.request.queryParameters["preferCached"]?.let { value ->
+            requireNotNull(value.toBooleanStrictOrNull()) { "preferCached must be true or false." }
+        } ?: false
+        call.respond(portfolioOverviewSnapshotService.overview(preferCached))
     }.documented(
         operationId = "getPortfolioOverview",
         summary = "Get portfolio overview",
-        description = "Returns the current overview totals, valuation basis and top-level portfolio metrics.",
+        description = "Returns overview totals and valuation timing. With preferCached=true, returns the last complete valuation of the same ledger immediately; refreshRequired requests a subsequent live read. A failed live refresh preserves a compatible complete snapshot and marks refreshFailed.",
         tag = "Portfolio"
     )
 

@@ -23,9 +23,17 @@ export const MARKET_DATA_SNAPSHOTS_QUERY_KEY = ['portfolio-market-data-snapshots
 const marketDataReads = new WeakMap<QueryClient, { active: number; generation: number }>()
 
 export function usePortfolioOverview({ enabled = true }: { enabled?: boolean } = {}) {
+  const queryClient = useQueryClient()
   return useMarketDataReadQuery({
     queryKey: PORTFOLIO_OVERVIEW_QUERY_KEY,
-    queryFn: fetchPortfolioOverview,
+    queryFn: async (signal) => {
+      const preview = await fetchPortfolioOverview({ preferCached: true, signal })
+      if (!preview.valuationSnapshot?.refreshRequired) return preview
+      // Publishing the preview keeps the page visible while this same query
+      // continues fetching. Cancellation also prevents stale writes after edits/logout.
+      if (!signal?.aborted) queryClient.setQueryData(PORTFOLIO_OVERVIEW_QUERY_KEY, preview)
+      return fetchPortfolioOverview({ signal })
+    },
     enabled,
   })
 }
@@ -117,7 +125,7 @@ export function useMarketDataSnapshots() {
 
 function useMarketDataReadQuery<T>(options: {
   queryKey: QueryKey
-  queryFn: () => Promise<T>
+  queryFn: (signal?: AbortSignal) => Promise<T>
   enabled?: boolean
   staleTime?: number
 }) {
@@ -125,10 +133,10 @@ function useMarketDataReadQuery<T>(options: {
   return useQuery({
     staleTime: LIVE_QUERY_STALE_TIME_MS,
     ...options,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const finishRead = beginMarketDataRead(queryClient)
       try {
-        return await options.queryFn()
+        return await options.queryFn(signal)
       } finally {
         await finishRead()
       }

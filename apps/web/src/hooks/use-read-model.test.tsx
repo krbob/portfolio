@@ -13,12 +13,75 @@ describe('read-model query coordination', () => {
     vi.restoreAllMocks()
   })
 
+  it.each([false, true])('shows a saved valuation during a slow refresh and preserves it on failure (%s)', async (failRefresh) => {
+    let finishRefresh: (() => void) | undefined
+    const saved = {
+      totalCurrentValuePln: '100.00',
+      valuationSnapshot: { generatedAt: '2026-09-09T10:00:00Z', fromCache: true, refreshRequired: true },
+    }
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).includes('preferCached=true')) return jsonResponse(saved)
+      return new Promise<Response>((resolve, reject) => {
+        finishRefresh = () => failRefresh
+          ? reject(new Error('Upstream unavailable'))
+          : resolve(jsonResponse({ ...saved, totalCurrentValuePln: '120.00', valuationSnapshot: {
+            generatedAt: '2026-09-09T10:05:00Z', fromCache: false, refreshRequired: false,
+          } }))
+      })
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => usePortfolioOverview(), { wrapper })
+    await waitFor(() => {
+      expect(result.current.data?.totalCurrentValuePln).toBe('100.00')
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.isFetching).toBe(true)
+      expect(finishRefresh).toBeTypeOf('function')
+    })
+    act(() => finishRefresh?.())
+    await waitFor(() => {
+      expect(result.current.isFetching).toBe(false)
+      expect(result.current.isError).toBe(failRefresh)
+      expect(result.current.data?.totalCurrentValuePln).toBe(failRefresh ? '100.00' : '120.00')
+    })
+    expect(result.current.data?.valuationSnapshot?.generatedAt).toBe(
+      failRefresh ? '2026-09-09T10:00:00Z' : '2026-09-09T10:05:00Z',
+    )
+  })
+
+  it('does not restore a cancelled preview after clearing the session query cache', async () => {
+    let finishPreview: (() => void) | undefined
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).includes('preferCached=true')) {
+        return new Promise<Response>((resolve) => {
+          finishPreview = () => resolve(jsonResponse({ totalCurrentValuePln: '100.00', valuationSnapshot: {
+            generatedAt: '2026-09-09T10:00:00Z', fromCache: true, refreshRequired: true,
+          } }))
+        })
+      }
+      expect(init?.signal?.aborted).toBe(true)
+      throw new DOMException('Aborted', 'AbortError')
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { unmount } = renderHook(() => usePortfolioOverview(), { wrapper })
+    await waitFor(() => expect(finishPreview).toBeTypeOf('function'))
+    unmount()
+    client.clear()
+    await act(async () => finishPreview?.())
+    expect(client.getQueryData(['portfolio-overview'])).toBeUndefined()
+  })
+
   it.each([false, true])('reads diagnostics once after six overlapping reads settle (last fails: %s)', async (lastFails) => {
     const finish = new Map<string, () => void>()
     let snapshotRequests = 0
     let finished = false
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const path = String(input).split('/portfolio/')[1]
+      const path = String(input).split('?')[0].split('/portfolio/')[1]
       if (path === 'market-data-snapshots') {
         snapshotRequests++
         return jsonResponse([{
@@ -85,7 +148,7 @@ describe('read-model query coordination', () => {
     let snapshotRequests = 0
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
+      const url = String(input).split('?')[0]
       if (url.endsWith('/portfolio/overview')) return jsonResponse({ totalCurrentValuePln: '100.00' })
       if (url.endsWith(`/portfolio/${path}`)) {
         return new Promise<Response>((resolve) => {
@@ -136,7 +199,7 @@ describe('read-model query coordination', () => {
     let snapshotRequests = 0
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
+      const url = String(input).split('?')[0]
       if (url.endsWith('/api/v1/portfolio/overview')) {
         return new Promise<Response>((resolve) => {
           finishOverview = () => resolve(jsonResponse({ totalCurrentValuePln: '100.00' }))
@@ -179,7 +242,7 @@ describe('read-model query coordination', () => {
     let snapshotRequests = 0
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input)
+      const url = String(input).split('?')[0]
       if (url.endsWith('/api/v1/portfolio/overview')) {
         return new Promise<Response>((resolve) => {
           finishOverview = () => resolve(jsonResponse({ totalCurrentValuePln: '100.00' }))

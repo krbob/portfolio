@@ -4,6 +4,18 @@ Start with `System -> Diagnostics`, then `System -> Market data`, then the Dashb
 panel. These views distinguish upstream availability, snapshot freshness, coverage gaps and
 portfolio calculation state.
 
+## Dashboard shows a saved valuation while loading
+
+This is expected during background refresh. The displayed calculation time belongs to the saved
+overview, not to the current request. The first successful overview creates that snapshot in SQLite;
+an empty cache or a changed ledger still requires a live calculation before values can be shown.
+Once saved, the preview also works in a new tab and after restarting the API.
+
+If the refresh fails, the dashboard retains the last complete valuation with a failure notice and
+a retry action. Check `System -> Market data` for the affected datasets. A status-bar failure count
+can initially describe a previous request; diagnostics refresh once active valuation and analytics
+reads finish. Saved overview values must not be interpreted as newly received exchange quotes.
+
 ## Portfolio value dropped unexpectedly
 
 Do not assume a large change is a market move until coverage is checked.

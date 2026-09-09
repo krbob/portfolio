@@ -211,6 +211,19 @@ export const appMessages = {
   },
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
+  'dashboard.valuationUpdatedAt': { pl: 'Wycena obliczona', en: 'Valuation calculated' },
+  'dashboard.refreshingSavedValuation': {
+    pl: 'Pokazujemy ostatnią poprawną wycenę. Aktualne dane są pobierane w tle.',
+    en: 'Showing the last complete valuation. Updating market data in the background.',
+  },
+  'dashboard.savedValuationRefreshFailed': {
+    pl: 'Nie udało się odświeżyć wyceny. Nadal pokazujemy ostatnie poprawne dane z podaną datą.',
+    en: 'The valuation could not be refreshed. The last complete data and their calculation time remain visible.',
+  },
+  'dashboard.valuationRefreshFailed': {
+    pl: 'Nie udało się pobrać pełnej wyceny. Dostępne dane mogą być niepełne.',
+    en: 'A complete valuation could not be retrieved. Available data may be incomplete.',
+  },
   'portfolioAlerts.title': { pl: 'Aktywne alerty', en: 'Active alerts' },
   'portfolioAlerts.countOne': { pl: '1 aktywny', en: '1 active' },
   'portfolioAlerts.countFew': { pl: 'aktywne', en: 'active' },

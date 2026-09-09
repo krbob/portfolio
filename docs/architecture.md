@@ -48,6 +48,16 @@ reuse a successful snapshot for that revision through a small bounded LRU; curre
 and allocation reuses that valuation so market prices are never retained by this layer. A cancelled caller does not
 cancel shared work, and failed computations are removed before a later retry.
 
+The API overview has a separate persistent preview in `read_model_cache`. A cache-preferred read
+returns the last complete valuation for the same canonical ledger with its calculation timestamp;
+the browser then performs a live read in the background when the preview requires refreshing.
+Concurrent live overview requests share the existing supervised computation coordinator. The saved
+envelope records a fingerprint of account, instrument and transaction contents, so deletes and
+restores with unchanged timestamps cannot reuse another ledger's valuation. Canonical inputs are
+checked again before publishing. Incomplete or failed refreshes retain the compatible complete
+snapshot. This preview survives restarts; it does not change the live valuation path used by holdings,
+allocation or contribution planning. See the [cache policy](configuration.md#browser-data-cache).
+
 ## Transfer and recoverability model
 
 Canonical state transfer is part of the product, while runtime operational state remains local to the installation.

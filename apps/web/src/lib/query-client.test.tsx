@@ -71,7 +71,7 @@ describe('browser query cache policy', () => {
     expect(Object.values(calls)).toEqual([1, 1, 1, 1])
 
     await returnAfter(30_000)
-    expect(calls['/api/v1/portfolio/overview']).toBe(2)
+    expect(calls['/api/v1/portfolio/overview?preferCached=true']).toBe(2)
     expect(calls['/api/v1/portfolio/history/daily']).toBe(1)
     expect(calls['/api/v1/accounts']).toBe(1)
     expect(calls['/api/v1/readiness/details']).toBe(1)
@@ -93,7 +93,7 @@ describe('browser query cache policy', () => {
       onlineManager.setOnline(true)
     })
     await waitFor(() => expect(client.isFetching()).toBe(0))
-    expect(calls['/api/v1/portfolio/overview']).toBe(2)
+    expect(calls['/api/v1/portfolio/overview?preferCached=true']).toBe(2)
     expect(calls['/api/v1/portfolio/history/daily']).toBe(1)
     expect(calls['/api/v1/accounts']).toBe(1)
     expect(calls['/api/v1/readiness/details']).toBe(1)
@@ -109,7 +109,7 @@ describe('browser query cache policy', () => {
         client.invalidateQueries({ queryKey: ['accounts'] }),
       ])
     })
-    expect(calls['/api/v1/portfolio/overview']).toBe(2)
+    expect(calls['/api/v1/portfolio/overview?preferCached=true']).toBe(2)
     expect(calls['/api/v1/portfolio/history/daily']).toBe(2)
     expect(calls['/api/v1/accounts']).toBe(2)
     expect(calls['/api/v1/readiness/details']).toBe(1)

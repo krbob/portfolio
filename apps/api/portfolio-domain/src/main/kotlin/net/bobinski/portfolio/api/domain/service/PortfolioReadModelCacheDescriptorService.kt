@@ -38,6 +38,14 @@ class PortfolioReadModelCacheDescriptorService(
         includeTargets = false
     )
 
+    suspend fun overviewDescriptor(): ReadModelCacheDescriptor = descriptor(
+        cacheKey = "portfolio.overview",
+        modelName = "OVERVIEW",
+        modelVersion = 1,
+        includeTargets = false,
+        fingerprintCanonicalInputs = true
+    )
+
     suspend fun dailyHistoryDescriptor(): ReadModelCacheDescriptor = descriptor(
         cacheKey = "portfolio.daily-history",
         modelName = "DAILY_HISTORY",
@@ -58,6 +66,7 @@ class PortfolioReadModelCacheDescriptorService(
         modelVersion: Int,
         preferenceUpdatedAt: Instant? = null,
         includeTargets: Boolean = true,
+        fingerprintCanonicalInputs: Boolean = false,
         parameters: Map<String, String> = emptyMap()
     ): ReadModelCacheDescriptor {
         val accounts = accountRepository.list()
@@ -88,7 +97,20 @@ class PortfolioReadModelCacheDescriptorService(
             inputsTo = today,
             sourceUpdatedAt = listOfNotNull(canonicalRevision, marketDataSnapshotUpdatedAt).maxOrNull(),
             canonicalRevision = canonicalRevision,
-            parameters = parameters.toSortedMap()
+            parameters = if (fingerprintCanonicalInputs) {
+                // Include contents and membership, so deletes and restored timestamps
+                // cannot reuse the overview of a different ledger.
+                val records = accounts.sortedBy { it.id }.map { it.toString() } +
+                    instruments.sortedBy { it.id }.map { it.toString() } +
+                    transactions.sortedBy { it.id }.map { it.toString() }
+                val content = records.joinToString("") { "${it.length}:$it" }
+                val fingerprint = MessageDigest.getInstance("SHA-256")
+                    .digest(content.toByteArray(Charsets.UTF_8))
+                    .joinToString("") { "%02x".format(it) }
+                parameters + ("canonicalInputs" to fingerprint)
+            } else {
+                parameters.toSortedMap()
+            }
         )
     }
 

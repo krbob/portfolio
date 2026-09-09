@@ -215,6 +215,27 @@ API responses are cached in memory per browser tab. A new tab or full page reloa
 empty data cache; the service worker caches the application shell and assets, not `/api/` responses.
 The web client continues to request API responses with HTTP `cache: no-store`.
 
+The dashboard additionally uses a persistent API overview snapshot in SQLite. After the first
+complete valuation has been saved, a new browser session or API restart can display it immediately.
+The calculation timestamp is shown beside the valuation. The web query first requests
+`GET /v1/portfolio/overview?preferCached=true`; if `valuationSnapshot.refreshRequired` is true, it
+publishes that preview and continues with a normal `GET /v1/portfolio/overview` while the page remains
+visible. The normal endpoint still attempts a live valuation. There is no extra polling loop.
+
+A saved preview requires matching account, instrument and transaction contents plus the market-data
+configuration. Edits, deletes and imports cannot reuse a snapshot of another ledger, including when
+imported timestamps are unchanged. A new date, changed source revision, or a calculation at least
+60 seconds old requires a refresh. A previous day's compatible snapshot retains its original date
+and timestamp while being refreshed. An empty/incompatible cache needs an initial live calculation.
+
+Only complete market valuations replace the saved overview (book-only valuation is also allowed
+when market data is explicitly disabled). A failed or partial live refresh preserves a compatible
+complete snapshot and sets `valuationSnapshot.refreshFailed`; the dashboard keeps the values visible
+with an explanatory message and retry action. A transport failure during background fetching also
+keeps the already displayed preview. Cancellation on navigation/session clearing cannot restore an
+abandoned response to the browser cache. `valuationSnapshot.generatedAt` is the time of calculation,
+not the time of the HTTP response or the exchange quote.
+
 Query freshness is configured in the web application:
 
 | Data | Fresh for |
@@ -234,7 +255,9 @@ seconds while a backup is running or post-change protection is pending.
 
 Concurrent valuation and analytics reads share one final diagnostics refresh after all settle,
 including failures. An initial diagnostics read can still show the previous state while those reads
-are running. This coordination and the freshness windows do not add a server-side valuation cache.
+are running. The overview snapshot is separate from those browser freshness windows and from the
+raw market-data fallback cache. It occupies one `portfolio.overview` row in `read_model_cache`, is
+excluded from portable JSON, and is removed by the existing read-model cache clear action.
 
 ## OpenAPI UI
 

@@ -27,6 +27,24 @@ import org.junit.jupiter.api.Test
 class PortfolioReadModelCacheDescriptorServiceTest {
 
     @Test
+    fun `overview fingerprint detects restored content and deleted accounts with unchanged timestamps`() = runBlocking {
+        val accounts = InMemoryAccountRepository()
+        val service = descriptorService("enabled=true", accounts)
+        val account = Account(
+            id = UUID.randomUUID(), name = "Brokerage", institution = "Broker", type = AccountType.BROKERAGE,
+            baseCurrency = "PLN", isActive = true, createdAt = fixedClock().instant(), updatedAt = fixedClock().instant()
+        )
+        accounts.save(account)
+        val original = service.overviewDescriptor()
+        accounts.save(account.copy(name = "Restored account"))
+        val restored = service.overviewDescriptor()
+        assertEquals(original.canonicalRevision, restored.canonicalRevision)
+        assertNotEquals(original.parameters, restored.parameters)
+        accounts.deleteAll()
+        assertNotEquals(restored.parameters, service.overviewDescriptor().parameters)
+    }
+
+    @Test
     fun `canonical mutation changes revision and invalidates the cached computation`() = runBlocking {
         val accountRepository = InMemoryAccountRepository()
         val appPreferenceRepository = InMemoryAppPreferenceRepository()
@@ -237,9 +255,12 @@ class PortfolioReadModelCacheDescriptorServiceTest {
         assertEquals(Instant.parse("2026-03-27T13:00:00Z"), changedDescriptor.sourceUpdatedAt)
     }
 
-    private fun descriptorService(marketDataCacheFingerprint: String): PortfolioReadModelCacheDescriptorService =
+    private fun descriptorService(
+        marketDataCacheFingerprint: String,
+        accounts: InMemoryAccountRepository = InMemoryAccountRepository()
+    ): PortfolioReadModelCacheDescriptorService =
         PortfolioReadModelCacheDescriptorService(
-            accountRepository = InMemoryAccountRepository(),
+            accountRepository = accounts,
             appPreferenceRepository = InMemoryAppPreferenceRepository(),
             operationalStateService = OperationalStateService(
                 repository = InMemoryOperationalStateRepository(),

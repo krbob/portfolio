@@ -229,7 +229,7 @@ export interface paths {
         };
         /**
          * Get portfolio overview
-         * @description Returns the current overview totals, valuation basis and top-level portfolio metrics.
+         * @description Returns overview totals and valuation timing. With preferCached=true, returns the last complete valuation of the same ledger immediately; refreshRequired requests a subsequent live read. A failed live refresh preserves a compatible complete snapshot and marks refreshFailed.
          */
         get: operations["getPortfolioOverview"];
         put?: never;
@@ -1227,6 +1227,13 @@ export interface components {
             amount: string;
             bookValuePln: string;
         };
+        /** ValuationSnapshotResponse */
+        ValuationSnapshotResponse: {
+            generatedAt: string;
+            fromCache: boolean;
+            refreshRequired: boolean;
+            refreshFailed?: boolean;
+        };
         /** PortfolioOverviewResponse */
         PortfolioOverviewResponse: {
             asOf: string;
@@ -1255,6 +1262,7 @@ export interface components {
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
             totalPreviousCloseValuePln?: string | null;
+            valuationSnapshot?: components["schemas"]["ValuationSnapshotResponse"] | null;
         };
         /** HoldingEdoLotResponse */
         HoldingEdoLotResponse: {
@@ -2562,7 +2570,9 @@ export interface operations {
     };
     getPortfolioOverview: {
         parameters: {
-            query?: never;
+            query?: {
+                preferCached?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

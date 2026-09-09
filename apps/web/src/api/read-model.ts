@@ -74,8 +74,11 @@ export type BenchmarkComparison =
 export type PortfolioAlert =
   paths['/v1/portfolio/alerts']['get']['responses'][200]['content']['application/json'][number]
 
-export function fetchPortfolioOverview() {
-  return requestJson<PortfolioOverview>('/api/v1/portfolio/overview')
+export function fetchPortfolioOverview({ preferCached = false, signal }: { preferCached?: boolean; signal?: AbortSignal } = {}) {
+  return requestJson<PortfolioOverview>(
+    `/api/v1/portfolio/overview${preferCached ? '?preferCached=true' : ''}`,
+    { signal },
+  )
 }
 
 export function fetchPortfolioHoldings() {

@@ -54,7 +54,16 @@ data class PortfolioOverviewResponse(
     val valuationIssueCount: Int,
     val missingFxTransactions: Int,
     val unsupportedCorrectionTransactions: Int,
-    val totalPreviousCloseValuePln: String? = null
+    val totalPreviousCloseValuePln: String? = null,
+    val valuationSnapshot: ValuationSnapshotResponse? = null
+)
+
+@Serializable
+data class ValuationSnapshotResponse(
+    val generatedAt: String,
+    val fromCache: Boolean,
+    val refreshRequired: Boolean,
+    val refreshFailed: Boolean = false
 )
 
 @Serializable
