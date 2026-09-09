@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import {
   fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
@@ -20,55 +20,42 @@ export const PORTFOLIO_OVERVIEW_QUERY_KEY = ['portfolio-overview'] as const
 export const MARKET_DATA_SNAPSHOTS_QUERY_KEY = ['portfolio-market-data-snapshots'] as const
 
 export function usePortfolioOverview() {
-  const queryClient = useQueryClient()
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: PORTFOLIO_OVERVIEW_QUERY_KEY,
-    queryFn: async () => {
-      const overview = await fetchPortfolioOverview()
-
-      // Fetching the overview can refresh upstream quotes and their persisted
-      // diagnostics. Cancel a snapshot request that started before the overview
-      // so its older response cannot win the race, then read the same state.
-      await queryClient.cancelQueries({ queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY })
-      void queryClient.invalidateQueries({
-        queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
-        refetchType: 'active',
-      })
-      return overview
-    },
+    queryFn: fetchPortfolioOverview,
   })
 }
 
 export function usePortfolioHoldings() {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-holdings'],
     queryFn: fetchPortfolioHoldings,
   })
 }
 
 export function usePortfolioAccounts() {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-accounts'],
     queryFn: fetchPortfolioAccounts,
   })
 }
 
 export function usePortfolioDailyHistory() {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-daily-history'],
     queryFn: fetchPortfolioDailyHistory,
   })
 }
 
 export function usePortfolioReturns() {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-returns'],
     queryFn: fetchPortfolioReturns,
   })
 }
 
 export function usePortfolioAllocation() {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-allocation'],
     queryFn: fetchPortfolioAllocation,
   })
@@ -76,7 +63,7 @@ export function usePortfolioAllocation() {
 
 export function usePortfolioAlerts() {
   const { language } = useI18n()
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-alerts', language],
     queryFn: () => fetchPortfolioAlerts(language),
   })
@@ -87,7 +74,7 @@ export function usePortfolioContributionPlan(
   revision = 0,
   { equitiesTargetWeightPct }: { equitiesTargetWeightPct?: string | null } = {},
 ) {
-  return useQuery({
+  return useMarketDataReadQuery({
     queryKey: ['portfolio-allocation-contribution-plan', amountPln ?? '', revision, equitiesTargetWeightPct ?? 'BASE'],
     queryFn: () => fetchPortfolioContributionPlan(amountPln ?? '', { equitiesTargetWeightPct }),
     enabled: amountPln != null,
@@ -118,5 +105,30 @@ export function useMarketDataSnapshots() {
   return useQuery({
     queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
     queryFn: ({ signal }) => fetchMarketDataSnapshots(signal),
+  })
+}
+
+function useMarketDataReadQuery<T>(options: {
+  queryKey: QueryKey
+  queryFn: () => Promise<T>
+  enabled?: boolean
+}) {
+  const queryClient = useQueryClient()
+  return useQuery({
+    ...options,
+    queryFn: async () => {
+      try {
+        return await options.queryFn()
+      } finally {
+        // Every valuation or analytics read can update upstream diagnostics,
+        // including a failed read. Discard any earlier status response and read
+        // the resulting state without delaying the portfolio response.
+        await queryClient.cancelQueries({ queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY })
+        void queryClient.invalidateQueries({
+          queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
+          refetchType: 'active',
+        })
+      }
+    },
   })
 }

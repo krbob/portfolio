@@ -42,6 +42,7 @@ class GoldApiClient(
                 operation = "history",
                 symbol = symbol,
                 statusCode = response.statusCode(),
+                retryAfter = response.headers().firstValue("Retry-After").orElse(null),
                 responseBodyPreview = responseBodyPreview(response.body())
             )
         }

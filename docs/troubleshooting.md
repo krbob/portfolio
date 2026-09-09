@@ -41,6 +41,33 @@ stale:
 
 Repeated stale status without an explained market closure or upstream incident requires action.
 
+The global status bar reloads its diagnostics after valuation and analytics requests finish,
+including failures. A slow history or returns request may finish after the overview; its resulting
+status must appear in the same tab without another browser reload.
+
+The headline summarizes Stock Analyst datasets with provenance. Sidebar runtime health also
+includes database, backups, authentication, EDO and the optional Gold API. Fresh Stock Analyst data
+can coexist with a Gold API rate-limit warning. Sidebar notices currently count both `WARN` and
+informational `INFO` checks, including optional password authentication being disabled.
+
+If Gold API returns `429`, inspect its readiness details for the last probe and earliest next check.
+Detailed readiness reuses that result for 15 minutes or a longer provider `Retry-After`, so repeated
+browser reloads do not spend more quota on the same diagnostic probe. Normal gold valuation reads
+have their own snapshot policy and still consume provider quota when a live fetch is needed.
+
+## CPI for the previous month is not published yet
+
+A completed calendar month does not mean its CPI has been published. Portfolio asks EDO Calculator
+for the latest available inflation window, then requests monthly points only through that boundary.
+It uses the actual publication coverage instead of assuming a fixed release day. For example,
+early September can legitimately show CPI through July; real returns use that same supported window.
+This is not a refresh failure. A portfolio with no published CPI month yet has no real return to show.
+
+Publication coverage is checked at most hourly during analytics reads, with concurrent requests
+sharing the result. Transport/provider failures remain failures: cached CPI is served as stale,
+and automatic attempts from reads wait five minutes before trying again. Coverage more than one
+completed month behind the current month remains an actionable coverage problem.
+
 ## USD, gold or TWR is unavailable
 
 These views need more than a current PLN quote:

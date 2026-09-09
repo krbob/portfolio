@@ -7,10 +7,14 @@ import java.net.InetSocketAddress
 import java.net.http.HttpClient
 import java.nio.charset.StandardCharsets
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
@@ -30,6 +34,67 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SystemReadinessServiceTest {
+    @Test
+    fun `reloads and concurrent tabs share the gold probe for fifteen minutes`() = runBlocking {
+        FakeMarketDataServer().use { server ->
+            server.start()
+            val clock = MutableReadinessClock()
+            val service = goldReadinessService(server, clock)
+            val results = List(12) { async { service.current().check("gold-market-data") } }.awaitAll()
+            assertTrue(results.all { it.status == ReadinessCheckStatus.PASS })
+            assertEquals(1, server.goldRequestCount)
+            assertEquals("2026-03-21T12:00:00Z", results.first().details["probeCheckedAt"])
+            assertEquals("2026-03-21T12:15:00Z", results.first().details["nextProbeAt"])
+
+            clock.advance(Duration.ofMinutes(15))
+            service.current()
+            assertEquals(2, server.goldRequestCount)
+        }
+    }
+
+    @Test
+    fun `gold rate limit stays visible and retries respect seconds or HTTP dates`() = runBlocking {
+        listOf("3600", "Sat, 21 Mar 2026 13:00:00 GMT").forEach { retryAfter ->
+            FakeMarketDataServer().use { server ->
+                server.goldStatus = 429
+                server.goldRetryAfter = retryAfter
+                server.start()
+                val clock = MutableReadinessClock()
+                val service = goldReadinessService(server, clock)
+                val first = service.current().check("gold-market-data")
+                assertEquals(ReadinessCheckStatus.WARN, first.status)
+                assertEquals("429", first.details["statusCode"])
+                assertEquals("2026-03-21T13:00:00Z", first.details["nextProbeAt"])
+
+                clock.advance(Duration.ofMinutes(15))
+                server.goldStatus = 200
+                assertEquals(ReadinessCheckStatus.WARN, service.current().check("gold-market-data").status)
+                assertEquals(1, server.goldRequestCount)
+
+                clock.advance(Duration.ofMinutes(45))
+                assertEquals(ReadinessCheckStatus.PASS, service.current().check("gold-market-data").status)
+                assertEquals(2, server.goldRequestCount)
+            }
+        }
+    }
+
+    private fun goldReadinessService(server: FakeMarketDataServer, clock: Clock) = SystemReadinessService(
+        persistenceConfig = persistenceConfig(),
+        backupConfig = backupConfig(),
+        marketDataConfig = marketDataConfig(server.baseUrl).copy(goldApiKey = "test-key"),
+        authConfig = authConfig(),
+        clock = clock,
+        goldApiClient = goldApiClient(server.baseUrl)
+    )
+
+    private class MutableReadinessClock : Clock() {
+        private var now = Instant.parse("2026-03-21T12:00:00Z")
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+        override fun withZone(zone: ZoneId): Clock = this
+        override fun instant(): Instant = now
+        fun advance(duration: Duration) { now = now.plus(duration) }
+    }
+
 
     @Test
     fun `readiness degrades when live market data probes fail`() = runBlocking {
@@ -265,9 +330,22 @@ private class FakeMarketDataServer(
 ) : AutoCloseable {
     private val stockAnalystRequests = AtomicInteger()
     private val edoCalculatorRequests = AtomicInteger()
+    private val goldRequests = AtomicInteger()
+    @Volatile var goldStatus: Int = 200
+    @Volatile var goldRetryAfter: String? = null
     private val server = HttpServer.create(InetSocketAddress(0), 0).apply {
         createContext("/v1/history", HistoryHandler(stockAnalystDelayMs, stockAnalystRequests))
         createContext("/v1/inflation/monthly", InflationHandler(edoCalculatorRequests))
+        createContext("/history") { exchange ->
+            goldRequests.incrementAndGet()
+            goldRetryAfter?.let { exchange.responseHeaders.set("Retry-After", it) }
+            val body = if (goldStatus == 200) {
+                """[{"day":"2025-01-02","avg_price":"2600.00"}]"""
+            } else {
+                """{"error":"Rate limit exceeded"}"""
+            }
+            respond(exchange, goldStatus, body)
+        }
         executor = null
     }
 
@@ -279,6 +357,9 @@ private class FakeMarketDataServer(
 
     val edoCalculatorRequestCount: Int
         get() = edoCalculatorRequests.get()
+
+    val goldRequestCount: Int
+        get() = goldRequests.get()
 
     fun start() {
         server.start()

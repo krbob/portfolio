@@ -111,6 +111,19 @@ Base URLs may contain a deployment prefix such as `/api`, but must not include a
 Portfolio calls only versioned `/v1` routes. `PORTFOLIO_STOCK_ANALYST_UI_URL` must be a browser-
 reachable root URL; it is not the server-to-server API address.
 
+### CPI availability and diagnostics
+
+Monthly CPI reads discover the latest published window through EDO Calculator. Within one API
+process, publication checks are reused for one hour and concurrent analytics reads share them.
+Failed CPI reads have a five-minute cooldown; last-known-good data remains explicitly stale during
+that cooldown. These fixed read-path limits are independent of the scheduler settings below.
+
+Detailed readiness shares the Gold API probe result across requests for 15 minutes, including failed
+checks, and honors a longer `Retry-After`. Its details include the actual probe time and earliest next
+check time. This process-local cache limits diagnostic calls against the provider's quota; current
+portfolio valuations keep their separate snapshot policy. Stock Analyst and EDO readiness checks
+still run on each detailed readiness request.
+
 ### Background recheck
 
 The recheck scheduler repairs missing or failed market-data ranges independently of the full read-

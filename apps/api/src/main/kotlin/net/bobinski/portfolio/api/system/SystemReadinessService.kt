@@ -4,11 +4,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.SQLException
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.sql.DataSource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
@@ -30,6 +35,9 @@ class SystemReadinessService(
     private val edoCalculatorClient: EdoCalculatorClient? = null,
     private val goldApiClient: GoldApiClient? = null
 ) {
+    private val goldProbeMutex = Mutex()
+    private var cachedGoldProbe: CachedGoldProbe? = null
+
     fun currentLocal(): SystemReadiness = readiness(localChecks())
 
     suspend fun current(): SystemReadiness {
@@ -230,28 +238,53 @@ class SystemReadinessService(
             )
         }
 
-        return probeCheck(
-            key = "gold-market-data",
-            label = "Gold data",
-            clientBound = goldApiClient != null,
-            unavailableMessage = "Gold API client is not bound in this application mode.",
-            probeDetails = mapOf(
-                "upstream" to "gold-api",
-                "operation" to "gold-history",
-                "symbol" to "XAU"
-            )
-        ) {
-            val history = goldApiClient!!.historyUsd(
-                apiKey = marketDataConfig.goldApiKey,
-                from = GOLD_PROBE_FROM,
-                to = GOLD_PROBE_TO
-            )
-            require(history.isNotEmpty()) {
-                "Gold API returned no spot XAU points."
-            }
-            "Responded with ${history.size} spot XAU points."
+        return goldProbeMutex.withLock {
+            cachedGoldProbe?.takeIf { it.nextProbeAt.isAfter(Instant.now(clock)) }?.let { return it.check }
+            val check = uncachedGoldProbeCheck()
+            val checkedAt = Instant.now(clock)
+            val nextProbeAt = nextGoldProbeAt(check, checkedAt)
+            val recorded = check.copy(details = check.details + mapOf(
+                "probeCheckedAt" to checkedAt.toString(),
+                "nextProbeAt" to nextProbeAt.toString()
+            ))
+            cachedGoldProbe = CachedGoldProbe(recorded, nextProbeAt)
+            recorded
         }
     }
+
+    private suspend fun uncachedGoldProbeCheck(): SystemReadinessCheck = probeCheck(
+        key = "gold-market-data",
+        label = "Gold data",
+        clientBound = goldApiClient != null,
+        unavailableMessage = "Gold API client is not bound in this application mode.",
+        probeDetails = mapOf(
+            "upstream" to "gold-api",
+            "operation" to "gold-history",
+            "symbol" to "XAU"
+        )
+    ) {
+        val history = goldApiClient!!.historyUsd(
+            apiKey = requireNotNull(marketDataConfig.goldApiKey),
+            from = GOLD_PROBE_FROM,
+            to = GOLD_PROBE_TO
+        )
+        require(history.isNotEmpty()) {
+            "Gold API returned no spot XAU points."
+        }
+        "Responded with ${history.size} spot XAU points."
+    }
+
+    private fun nextGoldProbeAt(check: SystemReadinessCheck, checkedAt: Instant): Instant {
+        val retryAfter = check.details["retryAfter"]
+        val retryAt = retryAfter?.toLongOrNull()?.takeIf { it > 0 }?.let {
+            runCatching { checkedAt.plusSeconds(it) }.getOrNull()
+        } ?: retryAfter?.let {
+            runCatching { ZonedDateTime.parse(it, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant() }.getOrNull()
+        }
+        return maxOf(checkedAt.plus(GOLD_PROBE_INTERVAL), retryAt ?: checkedAt)
+    }
+
+    private data class CachedGoldProbe(val check: SystemReadinessCheck, val nextProbeAt: Instant)
 
     @Suppress("TooGenericExceptionCaught")
     private suspend fun probeCheck(
@@ -333,6 +366,7 @@ class SystemReadinessService(
 
     private companion object {
         const val MARKET_DATA_PROBE_TIMEOUT_MS = 2_500L
+        val GOLD_PROBE_INTERVAL: Duration = Duration.ofMinutes(15)
         val MARKET_DATA_PROBE_FROM: LocalDate = LocalDate.of(2025, 1, 2)
         val MARKET_DATA_PROBE_TO: LocalDate = LocalDate.of(2025, 1, 10)
         val CPI_PROBE_FROM: YearMonth = YearMonth.of(2025, 1)

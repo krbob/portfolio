@@ -16,7 +16,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 internal object UpstreamTimeoutBudgets {
-    // stock-analyst has a 15 s backend request budget; Portfolio keeps 5 s for serialization and transfer.
+    // Stock Analyst allows 15 s attempts within an 18.5 s shared backend-operation budget.
+    // Portfolio bounds the public request, including any currency conversion, at 20 s.
     val STOCK_ANALYST: Duration = Duration.ofSeconds(20)
 
     // edo-calculator caps a domain operation at 8 s; Portfolio keeps 2 s for serialization and transfer.

@@ -173,7 +173,8 @@ fun appModule(
         RemoteInflationAdjustmentProvider(
             config = get(),
             edoCalculatorClient = get(),
-            snapshotCacheService = get()
+            snapshotCacheService = get(),
+            clock = get()
         )
     }
     single {

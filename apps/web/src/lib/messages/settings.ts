@@ -158,6 +158,7 @@ export const settingsMessages = {
   'readiness.blockingIssues': { pl: 'Blokery', en: 'Blocking issues' },
   'readiness.advisoryNotices': { pl: 'Uwagi', en: 'Advisory notices' },
   'readiness.checkedAt': { pl: 'Sprawdzone o', en: 'Checked at' },
+  'readiness.nextProbeAt': { pl: 'Ponowna kontrola najwcześniej', en: 'Next check no earlier than' },
   'readiness.upstreamDetails': { pl: 'Szczegóły upstreamu', en: 'Upstream details' },
   'readiness.checkStatusPass': { pl: 'OK', en: 'PASS' },
   'readiness.checkStatusWarn': { pl: 'UWAGA', en: 'WARN' },

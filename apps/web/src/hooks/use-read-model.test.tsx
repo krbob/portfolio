@@ -2,11 +2,66 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useMarketDataSnapshots, usePortfolioOverview } from './use-read-model'
+import { useMarketDataSnapshots, usePortfolioDailyHistory, usePortfolioOverview, usePortfolioReturns } from './use-read-model'
 
 describe('read-model query coordination', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it.each([
+    ['history/daily', usePortfolioDailyHistory],
+    ['returns', usePortfolioReturns],
+  ] as const)('updates diagnostics when %s repairs history after overview has finished', async (path, useAnalytics) => {
+    let finishAnalytics: (() => void) | undefined
+    let repaired = false
+    let snapshotRequests = 0
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/portfolio/overview')) return jsonResponse({ totalCurrentValuePln: '100.00' })
+      if (url.endsWith(`/portfolio/${path}`)) {
+        return new Promise<Response>((resolve) => {
+          finishAnalytics = () => {
+            repaired = true
+            resolve(jsonResponse({}))
+          }
+        })
+      }
+      if (url.endsWith('/portfolio/market-data-snapshots')) {
+        snapshotRequests++
+        return jsonResponse([{
+          ...quoteSnapshot('FRESH'),
+          identity: 'stock-history:VWRA.L',
+          status: repaired ? 'FRESH' : 'FAILED',
+        }])
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => ({
+      overview: usePortfolioOverview(),
+      analytics: useAnalytics(),
+      snapshots: useMarketDataSnapshots(),
+    }), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.overview.isSuccess).toBe(true)
+      expect(result.current.snapshots.data?.[0]?.status).toBe('FAILED')
+      expect(result.current.snapshots.isFetching).toBe(false)
+    })
+    const requestsBeforeRepair = snapshotRequests
+    act(() => finishAnalytics?.())
+
+    await waitFor(() => {
+      expect(result.current.analytics.isSuccess).toBe(true)
+      expect(result.current.snapshots.data?.[0]?.status).toBe('FRESH')
+    })
+    expect(snapshotRequests).toBeGreaterThan(requestsBeforeRepair)
   })
 
   it('refetches active market-data diagnostics after overview refreshes upstream quotes', async () => {

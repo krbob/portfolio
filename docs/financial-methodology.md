@@ -89,6 +89,9 @@ data gaps would make the chain misleading.
 
 Real PLN return divides the nominal total-return factor by the compounded inflation multiplier for
 the latest complete supported month window. Both MWRR and TWR variants are adjusted consistently.
+The upper boundary follows the CPI actually published by the provider, which can lag the last
+completed calendar month. Awaiting that publication does not mark the available CPI as stale;
+real returns stop at the published boundary. No release day is assumed in the calculation.
 If the inflation range is unavailable or invalid, real return is unavailable rather than silently
 falling back to nominal return.
 

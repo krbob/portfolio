@@ -2,7 +2,7 @@ import { useAppReadiness } from '../hooks/use-app-readiness'
 import { Card, SectionHeader } from './ui'
 import { formatDateTime } from '../lib/format'
 import { getActiveUiLanguage, type UiLanguage } from '../lib/i18n'
-import { t } from '../lib/messages'
+import { t, type MessageKey } from '../lib/messages'
 import { labelReadinessStatus } from '../lib/labels'
 import { badge, badgeVariants } from '../lib/styles'
 
@@ -69,7 +69,9 @@ export function SystemReadinessSection() {
                           <dt className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                             {labelDetailKey(key)}
                           </dt>
-                          <dd className="break-words font-mono text-xs text-zinc-300">{value}</dd>
+                          <dd className="break-words font-mono text-xs text-zinc-300">
+                            {key === 'probeCheckedAt' || key === 'nextProbeAt' ? formatDateTime(value) : value}
+                          </dd>
                         </div>
                       ))}
                     </dl>
@@ -123,13 +125,15 @@ function labelCheckStatus(status: string) {
 }
 
 function labelDetailKey(key: string) {
-  const keyMap: Record<string, 'readiness.detailUpstream' | 'readiness.detailOperation' | 'readiness.detailSymbol' | 'readiness.detailStatusCode' | 'readiness.detailResponseBody' | 'readiness.detailTimeoutMs'> = {
+  const keyMap: Record<string, MessageKey> = {
     upstream: 'readiness.detailUpstream',
     operation: 'readiness.detailOperation',
     symbol: 'readiness.detailSymbol',
     statusCode: 'readiness.detailStatusCode',
     responseBodyPreview: 'readiness.detailResponseBody',
     timeoutMs: 'readiness.detailTimeoutMs',
+    probeCheckedAt: 'readiness.checkedAt',
+    nextProbeAt: 'readiness.nextProbeAt',
   }
 
   const messageKey = keyMap[key]
