@@ -45,7 +45,23 @@ The global status bar reloads its diagnostics after valuation and analytics requ
 including failures. A slow history or returns request may finish after the overview; its resulting
 status must appear in the same tab without another browser reload.
 
-The headline summarizes Stock Analyst datasets with provenance. Sidebar runtime health also
+The headline combines the latest Portfolio refresh result with saved Stock Analyst provenance.
+A failed refresh with a previous successful response is stale fallback even when that saved
+response says its price was fresh. A first fetch failure without saved data is an error. Limited
+optional quote analytics alone do not degrade a fresh current price. The bar also follows any
+overview already loaded by the page: it cannot show fresh while that valuation remains stale or
+partially valued. Following the overview does not start additional valuation requests.
+
+Valuation coverage counts holdings with a usable value, including fallback values. Full coverage
+can therefore coexist with valuation issues; those issues are not necessarily missing valuations.
+The stale alert's successful-check timestamp uses `lastSuccessfulCheckAt`, not the time of a failed
+attempt. It describes the latest success across stored datasets, not the age of every fallback.
+
+After restarting an upstream, check the running image revision as well as container health. A
+restart retains the existing image; deploying a published fix requires fetching that image and
+recreating the container. Cold upstream caches can expose request timeouts that warm caches hide.
+
+Sidebar runtime health also
 includes database, backups, authentication, EDO and the optional Gold API. Fresh Stock Analyst data
 can coexist with a Gold API rate-limit warning. Sidebar notices currently count both `WARN` and
 informational `INFO` checks, including optional password authentication being disabled.

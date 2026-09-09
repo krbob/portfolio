@@ -1,4 +1,4 @@
-import type { MarketDataSnapshot } from '../api/read-model'
+import type { MarketDataSnapshot, PortfolioOverview } from '../api/read-model'
 
 type GeneratedProvenance = NonNullable<MarketDataSnapshot['provenance']>
 
@@ -21,12 +21,17 @@ export interface MarketDataProvenanceSummary {
 
 export function summarizeMarketDataProvenance(
   snapshots: MarketDataSnapshot[],
+  valuationState?: PortfolioOverview['valuationState'],
 ): MarketDataProvenanceSummary | null {
-  const withProvenance = snapshots.filter(
-    (snapshot): snapshot is MarketDataSnapshot & { provenance: GeneratedProvenance } =>
-      snapshot.provenance != null && isLiveMarketSnapshot(snapshot),
+  const marketSnapshots = snapshots.filter((snapshot) =>
+    isLiveMarketSnapshot(snapshot) && (snapshot.provenance != null || snapshot.identity.startsWith('stock-')),
   )
-  if (withProvenance.length === 0) return null
+  if (marketSnapshots.length === 0) return null
+
+  const withProvenance = marketSnapshots.filter(
+    (snapshot): snapshot is MarketDataSnapshot & { provenance: GeneratedProvenance } =>
+      snapshot.provenance != null,
+  )
 
   const provenance = withProvenance.map((snapshot) => snapshot.provenance)
   const coverageFrom = provenance.map((item) => cleanDate(item.coverageFrom ?? item.marketDate)).filter(isPresent)
@@ -35,7 +40,7 @@ export function summarizeMarketDataProvenance(
     .map((item) => cleanInstant(item.marketTimestamp) ?? cleanDate(item.marketDate))
     .filter(isPresent)
   return {
-    datasetCount: withProvenance.length,
+    datasetCount: marketSnapshots.length,
     sources: uniqueText(provenance.map((item) => item.source)),
     observedAt: latestTemporalValue(observations),
     retrievedAt: latestTemporalValue(provenance.map((item) => cleanInstant(item.retrievedAt)).filter(isPresent)),
@@ -44,8 +49,11 @@ export function summarizeMarketDataProvenance(
     currencies: uniqueText(provenance.map((item) => item.currency)),
     unitScales: [...new Set(provenance.map((item) => item.unitScale).filter(validUnitScale))].sort((a, b) => a - b),
     adjustments: uniqueText(provenance.map((item) => item.adjustment)),
-    status: worstStatus(withProvenance.map(headlineProvenanceStatus)),
-    refreshFailureCount: withProvenance.filter((snapshot) => snapshot.status === 'FAILED').length,
+    status: worstStatus([
+      ...marketSnapshots.map(effectiveSnapshotStatus),
+      valuationState === 'STALE' ? 'STALE' : valuationState === 'PARTIALLY_VALUED' ? 'PARTIAL' : 'FRESH',
+    ]),
+    refreshFailureCount: marketSnapshots.filter((snapshot) => snapshot.status === 'FAILED').length,
   }
 }
 
@@ -90,6 +98,23 @@ function headlineProvenanceStatus(
   return hasLimitedQuoteAnalytics(snapshot) ? 'FRESH' : normalizeStatus(snapshot.provenance.status)
 }
 
+function effectiveSnapshotStatus(snapshot: MarketDataSnapshot): MarketProvenanceStatus {
+  // Provenance describes the last accepted upstream response. Portfolio keeps it
+  // after a failed refresh, so it cannot override the current fallback state.
+  let refreshStatus: MarketProvenanceStatus
+  switch (snapshot.status) {
+    case 'FRESH': refreshStatus = 'FRESH'; break
+    case 'DELAYED':
+    case 'STALE': refreshStatus = 'STALE'; break
+    case 'FAILED':
+      refreshStatus = snapshot.provenance || snapshot.lastSuccessfulCheckAt ? 'STALE' : 'ERROR'
+      break
+    default: refreshStatus = 'UNKNOWN'
+  }
+  if (!snapshot.provenance) return refreshStatus === 'FRESH' ? 'UNKNOWN' : refreshStatus
+  return worstStatus([refreshStatus, headlineProvenanceStatus({ ...snapshot, provenance: snapshot.provenance })])
+}
+
 export function marketAnalyticsStatus(snapshot: MarketDataSnapshot): MarketAnalyticsStatus | null {
   if (!snapshot.identity.startsWith('stock-quote:') || !snapshot.provenance) return null
 
@@ -106,8 +131,7 @@ export function marketAnalyticsLimitations(snapshot: MarketDataSnapshot): string
 
 export function marketPriceStatus(snapshot: MarketDataSnapshot): MarketProvenanceStatus | null {
   if (!snapshot.identity.startsWith('stock-quote:') || !snapshot.provenance) return null
-  if (snapshot.provenance.priceStatus) return normalizeStatus(snapshot.provenance.priceStatus)
-  return hasLimitedQuoteAnalytics(snapshot) ? 'FRESH' : normalizeStatus(snapshot.provenance.status)
+  return effectiveSnapshotStatus(snapshot)
 }
 
 function uniqueText(values: Array<string | null | undefined>) {

@@ -19,10 +19,11 @@ import { useI18n } from '../lib/i18n'
 export const PORTFOLIO_OVERVIEW_QUERY_KEY = ['portfolio-overview'] as const
 export const MARKET_DATA_SNAPSHOTS_QUERY_KEY = ['portfolio-market-data-snapshots'] as const
 
-export function usePortfolioOverview() {
+export function usePortfolioOverview({ enabled = true }: { enabled?: boolean } = {}) {
   return useMarketDataReadQuery({
     queryKey: PORTFOLIO_OVERVIEW_QUERY_KEY,
     queryFn: fetchPortfolioOverview,
+    enabled,
   })
 }
 

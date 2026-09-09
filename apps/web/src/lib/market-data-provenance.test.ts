@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MarketDataSnapshot } from '../api/read-model'
-import { summarizeMarketDataProvenance } from './market-data-provenance'
+import { marketPriceStatus, summarizeMarketDataProvenance } from './market-data-provenance'
 
 describe('market data provenance', () => {
   it('summarizes generated snapshot provenance without using cache timestamps as market observations', () => {
@@ -36,13 +36,49 @@ describe('market data provenance', () => {
       currencies: ['PLN', 'USD'],
       unitScales: [1],
       adjustments: ['RAW', 'SPLIT_ADJUSTED'],
-      status: 'PARTIAL',
+      status: 'STALE',
       refreshFailureCount: 1,
     })
   })
 
-  it('returns null when the generated response contains no Stock provenance', () => {
-    expect(summarizeMarketDataProvenance([snapshotWithoutProvenance()])).toBeNull()
+  it('returns null when the generated response contains only non-Stock datasets', () => {
+    expect(summarizeMarketDataProvenance([{
+      ...snapshotWithoutProvenance(), identity: 'edo-history:2025-11-07|575|200',
+    }])).toBeNull()
+  })
+
+  it('shows stale fallback after seven failed refreshes despite fresh saved price provenance', () => {
+    const failed = Array.from({ length: 7 }, (_, index) => ({
+      ...snapshot({ status: 'PARTIAL', priceStatus: 'FRESH', analyticsStatus: 'PARTIAL' }, 'FAILED'),
+      identity: `stock-quote:SYMBOL${index}`,
+      failureCount: 1,
+    }))
+
+    expect(summarizeMarketDataProvenance(failed)).toMatchObject({
+      status: 'STALE', refreshFailureCount: 7, datasetCount: 7,
+    })
+    expect(marketPriceStatus(failed[0])).toBe('STALE')
+
+    const recovered = failed.map((item) => ({ ...item, status: 'FRESH', failureCount: 0 }))
+    expect(summarizeMarketDataProvenance(recovered)).toMatchObject({ status: 'FRESH', refreshFailureCount: 0 })
+  })
+
+  it.each(['STALE', 'DELAYED'])('honors local %s status even when saved provenance is fresh', (status) => {
+    expect(summarizeMarketDataProvenance([snapshot({ status: 'FRESH' }, status)])?.status).toBe('STALE')
+  })
+
+  it('reports a first fetch failure even before Stock provenance exists', () => {
+    const failed = { ...snapshotWithoutProvenance(), status: 'FAILED', failureCount: 1 }
+    expect(summarizeMarketDataProvenance([failed])).toMatchObject({
+      status: 'ERROR', refreshFailureCount: 1, datasetCount: 1, sources: [],
+    })
+  })
+
+  it('keeps a stale valuation visible until the overview itself recovers', () => {
+    const recoveredSnapshots = [snapshot({ status: 'FRESH' })]
+    expect(summarizeMarketDataProvenance(recoveredSnapshots, 'STALE')?.status).toBe('STALE')
+    expect(summarizeMarketDataProvenance(recoveredSnapshots, 'PARTIALLY_VALUED')?.status).toBe('PARTIAL')
+    expect(summarizeMarketDataProvenance(recoveredSnapshots, 'MARK_TO_MARKET')?.status).toBe('FRESH')
   })
 
   it('treats unknown upstream statuses conservatively', () => {

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
-import { useMarketDataSnapshots } from '../hooks/use-read-model'
+import { useMarketDataSnapshots, usePortfolioOverview } from '../hooks/use-read-model'
 import { formatDate, formatDateTime, formatNumber } from '../lib/format'
 import { formatMessage, t } from '../lib/messages'
 import {
@@ -10,9 +10,15 @@ import {
 
 export function MarketDataStatusBar() {
   const snapshotsQuery = useMarketDataSnapshots()
+  // Follow the valuation already loaded by the page without starting valuation
+  // requests on routes that only need market-data diagnostics.
+  const overviewQuery = usePortfolioOverview({ enabled: false })
   const summary = useMemo(
-    () => summarizeMarketDataProvenance(Array.isArray(snapshotsQuery.data) ? snapshotsQuery.data : []),
-    [snapshotsQuery.data],
+    () => summarizeMarketDataProvenance(
+      Array.isArray(snapshotsQuery.data) ? snapshotsQuery.data : [],
+      overviewQuery.data?.valuationState,
+    ),
+    [snapshotsQuery.data, overviewQuery.data?.valuationState],
   )
   if (!summary) return null
 

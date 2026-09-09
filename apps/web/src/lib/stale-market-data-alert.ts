@@ -32,7 +32,7 @@ export function buildStaleMarketDataAlert({
     return null
   }
 
-  const latestSnapshotAt = latestTimestamp(snapshots.map((snapshot) => snapshot.cachedAt))
+  const latestSnapshotAt = latestTimestamp(snapshots.map((snapshot) => snapshot.lastSuccessfulCheckAt))
   const upstreamWarning = readiness?.checks.find(
     (check) => check.status === 'WARN' && MARKET_DATA_WARNING_KEYS.has(check.key),
   )

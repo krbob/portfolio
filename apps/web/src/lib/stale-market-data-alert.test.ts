@@ -31,7 +31,7 @@ describe('buildStaleMarketDataAlert', () => {
     expect(alert?.upstreamLabel).toBe('Stock Analyst')
     expect(alert?.valuationCoverageLabel).toBe('4 / 5')
     expect(alert?.message).toContain('27')
-    expect(alert?.message).toContain('Otwarte luki wyceny: 2.')
+    expect(alert?.message).toContain('Problemy z wyceną: 2.')
   })
 
   it('builds the same alert copy in english when requested', () => {
@@ -43,7 +43,35 @@ describe('buildStaleMarketDataAlert', () => {
     })
 
     expect(alert?.title).toBe('Valuation is running on stale market data')
-    expect(alert?.message).toContain('Open valuation gaps: 2.')
+    expect(alert?.message).toContain('Valuation issues: 2.')
+  })
+
+  it('uses successful checks rather than a later failed attempt as the data timestamp', () => {
+    const successfulAt = '2026-03-27T08:30:00Z'
+    const alert = buildStaleMarketDataAlert({
+      overview: overview({ valuationState: 'STALE', activeHoldingCount: 8, valuedHoldingCount: 8, valuationIssueCount: 2 }),
+      snapshots: [{
+        ...snapshot('2026-03-27T09:30:00Z'),
+        status: 'FAILED',
+        lastSuccessfulCheckAt: successfulAt,
+        lastFailureAt: '2026-03-27T09:30:00Z',
+      }],
+      language: 'en',
+    })
+
+    expect(alert?.latestSnapshotAt).toBe(successfulAt)
+    expect(alert?.valuationCoverageLabel).toBe('8 / 8')
+    expect(alert?.message).toContain('Valuation issues: 2.')
+    expect(alert?.message).not.toContain('gaps')
+  })
+
+  it('does not fabricate a successful data timestamp for a first failed fetch', () => {
+    const alert = buildStaleMarketDataAlert({
+      overview: overview({ valuationState: 'STALE' }),
+      snapshots: [{ ...snapshot('2026-03-27T09:30:00Z'), status: 'FAILED', lastSuccessfulCheckAt: null }],
+      language: 'en',
+    })
+    expect(alert?.latestSnapshotAt).toBeNull()
   })
 })
 
