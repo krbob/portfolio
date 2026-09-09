@@ -41,9 +41,10 @@ stale:
 
 Repeated stale status without an explained market closure or upstream incident requires action.
 
-The global status bar reloads its diagnostics after valuation and analytics requests finish,
-including failures. A slow history or returns request may finish after the overview; its resulting
-status must appear in the same tab without another browser reload.
+The global status bar loads diagnostics initially, then reloads them once after all concurrent
+valuation and analytics requests settle, including failures. A slow history or returns request may
+finish after the overview; the final diagnostics wait for that request and appear in the same tab
+without another browser reload. An older diagnostics request is cancelled before the final read.
 
 The headline combines the latest Portfolio refresh result with saved Stock Analyst provenance.
 A failed refresh with a previous successful response is stale fallback even when that saved

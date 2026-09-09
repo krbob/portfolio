@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import {
   fetchMarketDataSnapshots,
   fetchPortfolioAccounts,
@@ -15,9 +15,12 @@ import {
   type ManualContributionPreviewPayload,
 } from '../api/read-model'
 import { useI18n } from '../lib/i18n'
+import { DEFAULT_QUERY_STALE_TIME_MS, LIVE_QUERY_STALE_TIME_MS } from '../lib/query-client'
 
 export const PORTFOLIO_OVERVIEW_QUERY_KEY = ['portfolio-overview'] as const
 export const MARKET_DATA_SNAPSHOTS_QUERY_KEY = ['portfolio-market-data-snapshots'] as const
+
+const marketDataReads = new WeakMap<QueryClient, { active: number; generation: number }>()
 
 export function usePortfolioOverview({ enabled = true }: { enabled?: boolean } = {}) {
   return useMarketDataReadQuery({
@@ -45,6 +48,7 @@ export function usePortfolioDailyHistory() {
   return useMarketDataReadQuery({
     queryKey: ['portfolio-daily-history'],
     queryFn: fetchPortfolioDailyHistory,
+    staleTime: DEFAULT_QUERY_STALE_TIME_MS,
   })
 }
 
@@ -52,6 +56,7 @@ export function usePortfolioReturns() {
   return useMarketDataReadQuery({
     queryKey: ['portfolio-returns'],
     queryFn: fetchPortfolioReturns,
+    staleTime: DEFAULT_QUERY_STALE_TIME_MS,
   })
 }
 
@@ -106,6 +111,7 @@ export function useMarketDataSnapshots() {
   return useQuery({
     queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
     queryFn: ({ signal }) => fetchMarketDataSnapshots(signal),
+    staleTime: LIVE_QUERY_STALE_TIME_MS,
   })
 }
 
@@ -113,23 +119,45 @@ function useMarketDataReadQuery<T>(options: {
   queryKey: QueryKey
   queryFn: () => Promise<T>
   enabled?: boolean
+  staleTime?: number
 }) {
   const queryClient = useQueryClient()
   return useQuery({
+    staleTime: LIVE_QUERY_STALE_TIME_MS,
     ...options,
     queryFn: async () => {
+      const finishRead = beginMarketDataRead(queryClient)
       try {
         return await options.queryFn()
       } finally {
-        // Every valuation or analytics read can update upstream diagnostics,
-        // including a failed read. Discard any earlier status response and read
-        // the resulting state without delaying the portfolio response.
-        await queryClient.cancelQueries({ queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY })
-        void queryClient.invalidateQueries({
-          queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
-          refetchType: 'active',
-        })
+        await finishRead()
       }
     },
   })
+}
+
+function beginMarketDataRead(queryClient: QueryClient) {
+  let reads = marketDataReads.get(queryClient)
+  if (!reads) {
+    reads = { active: 0, generation: 0 }
+    marketDataReads.set(queryClient, reads)
+  }
+  const batch = reads
+  batch.active++
+  batch.generation++
+
+  return async () => {
+    batch.active--
+    if (batch.active > 0) return
+
+    // Read the final diagnostics once all concurrent valuation/analytics reads
+    // settle, including failures. Cancel an older diagnostics response first.
+    const generation = batch.generation
+    await queryClient.cancelQueries({ queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY })
+    if (batch.active > 0 || batch.generation !== generation) return
+    void queryClient.invalidateQueries({
+      queryKey: MARKET_DATA_SNAPSHOTS_QUERY_KEY,
+      refetchType: 'active',
+    })
+  }
 }

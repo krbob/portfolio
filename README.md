@@ -21,6 +21,8 @@ models backed by SQLite.
 
 The calculation rules and data-quality boundaries are documented in
 [Financial methodology](docs/financial-methodology.md).
+Browser data reuse and refresh timing are described in the
+[cache policy](docs/configuration.md#browser-data-cache).
 
 ## Repository layout
 

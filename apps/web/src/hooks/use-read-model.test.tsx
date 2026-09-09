@@ -1,12 +1,79 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useMarketDataSnapshots, usePortfolioDailyHistory, usePortfolioOverview, usePortfolioReturns } from './use-read-model'
+import {
+  useMarketDataSnapshots, usePortfolioAccounts, usePortfolioAllocation,
+  usePortfolioDailyHistory, usePortfolioHoldings, usePortfolioOverview, usePortfolioReturns,
+} from './use-read-model'
 
 describe('read-model query coordination', () => {
   afterEach(() => {
+    cleanup()
     vi.restoreAllMocks()
+  })
+
+  it.each([false, true])('reads diagnostics once after six overlapping reads settle (last fails: %s)', async (lastFails) => {
+    const finish = new Map<string, () => void>()
+    let snapshotRequests = 0
+    let finished = false
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const path = String(input).split('/portfolio/')[1]
+      if (path === 'market-data-snapshots') {
+        snapshotRequests++
+        return jsonResponse([{
+          ...quoteSnapshot('FRESH'),
+          status: finished && !lastFails ? 'FRESH' : 'FAILED',
+        }])
+      }
+      return new Promise<Response>((resolve, reject) => {
+        finish.set(path, () => {
+          if (path === 'returns') {
+            finished = true
+            if (lastFails) {
+              reject(new Error('Upstream unavailable'))
+              return
+            }
+          }
+          resolve(jsonResponse({}))
+        })
+      })
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => ({
+      overview: usePortfolioOverview(),
+      holdings: usePortfolioHoldings(),
+      accounts: usePortfolioAccounts(),
+      allocation: usePortfolioAllocation(),
+      history: usePortfolioDailyHistory(),
+      returns: usePortfolioReturns(),
+      snapshots: useMarketDataSnapshots(),
+    }), { wrapper })
+    await waitFor(() => expect(result.current.snapshots.isSuccess).toBe(true))
+
+    act(() => {
+      for (const [path, complete] of finish) if (path !== 'returns') complete()
+    })
+    await waitFor(() => {
+      expect(result.current.overview.isSuccess).toBe(true)
+      expect(result.current.holdings.isSuccess).toBe(true)
+      expect(result.current.accounts.isSuccess).toBe(true)
+      expect(result.current.allocation.isSuccess).toBe(true)
+      expect(result.current.history.isSuccess).toBe(true)
+    })
+    expect(snapshotRequests).toBe(1)
+
+    act(() => finish.get('returns')?.())
+    await waitFor(() => {
+      expect(result.current.returns.isError).toBe(lastFails)
+      expect(result.current.returns.isSuccess).toBe(!lastFails)
+      expect(snapshotRequests).toBe(2)
+      expect(result.current.snapshots.isFetching).toBe(false)
+      expect(result.current.snapshots.data?.[0]?.status).toBe(lastFails ? 'FAILED' : 'FRESH')
+    })
   })
 
   it.each([

@@ -209,6 +209,33 @@ The browser always calls same-origin `/api`. `PORTFOLIO_API_UPSTREAM` is consume
 the container, not exposed to browser JavaScript. Keep chart attribution enabled unless your use of
 the chart library permits hiding it.
 
+### Browser data cache
+
+API responses are cached in memory per browser tab. A new tab or full page reload starts with an
+empty data cache; the service worker caches the application shell and assets, not `/api/` responses.
+The web client continues to request API responses with HTTP `cache: no-store`.
+
+Query freshness is configured in the web application:
+
+| Data | Fresh for |
+| --- | --- |
+| Current overview, holdings, account valuations, allocation, contribution plans, alerts and market-data diagnostics | 1 minute |
+| Daily history and returns | 5 minutes |
+| Other queries, including transactions, accounts, instruments and settings | 5 minutes by default |
+| Detailed system readiness | 5 minutes |
+| Application metadata | 1 minute |
+| Authentication session | 30 seconds |
+
+These windows control reuse on screen mounts, returning to a visible tab and reconnecting. They
+are not polling intervals. Returning to the app does not globally invalidate the cache. Mutations
+and explicit refresh actions still invalidate their affected queries immediately, even within the
+freshness window. Backup status retains its separate 30-second polling interval, shortened to five
+seconds while a backup is running or post-change protection is pending.
+
+Concurrent valuation and analytics reads share one final diagnostics refresh after all settle,
+including failures. An initial diagnostics read can still show the previous state while those reads
+are running. This coordination and the freshness windows do not add a server-side valuation cache.
+
 ## OpenAPI UI
 
 `PORTFOLIO_OPENAPI_UI_ENABLED` defaults to `false`. Keep it disabled on public deployments unless
