@@ -9,6 +9,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
@@ -31,6 +32,28 @@ import org.junit.jupiter.api.Test
 class RemoteCurrentInstrumentValuationProviderTest {
 
     @Test
+    fun `new FX date before next session omits previous close without probing empty history`() = runBlocking {
+        val historyRequests = AtomicInteger()
+        val server = startFakeStockAnalyst(
+            historyPricesJson = "[]",
+            nativeDate = "2026-05-01",
+            historyRequests = historyRequests
+        )
+
+        try {
+            val result = buildService(server.address.port).value(vwraInstrument()) as InstrumentValuationResult.Success
+
+            assertEquals(BigDecimal("661.95"), result.valuation.pricePerUnitPln)
+            assertEquals(BigDecimal("181.9700"), result.valuation.pricePerUnitNative)
+            assertEquals("2026-05-04", result.valuation.valuedAt.toString())
+            assertNull(result.valuation.previousClosePln)
+            assertEquals(0, historyRequests.get())
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
     fun `stock quote omits previous close when quote date has no trading-day history point`() = runBlocking {
         val server = startFakeStockAnalyst(historyPricesJson = "[]")
 
@@ -50,12 +73,14 @@ class RemoteCurrentInstrumentValuationProviderTest {
 
     @Test
     fun `stock quote keeps previous close when quote date has a trading-day history point`() = runBlocking {
+        val historyRequests = AtomicInteger()
         val server = startFakeStockAnalyst(
             historyPricesJson = """
                 [
                   {"date":"2026-05-04","open":660.0,"close":661.95,"low":657.0,"high":662.0,"volume":1000,"dividend":0.0}
                 ]
-            """.trimIndent()
+            """.trimIndent(),
+            historyRequests = historyRequests
         )
 
         try {
@@ -65,6 +90,7 @@ class RemoteCurrentInstrumentValuationProviderTest {
 
             assertEquals(BigDecimal("661.95"), result.valuation.pricePerUnitPln)
             assertEquals(BigDecimal("657.06"), result.valuation.previousClosePln)
+            assertEquals(1, historyRequests.get())
         } finally {
             server.stop(0)
         }
@@ -128,13 +154,19 @@ class RemoteCurrentInstrumentValuationProviderTest {
         )
     }
 
-    private fun startFakeStockAnalyst(historyPricesJson: String): HttpServer {
+    private fun startFakeStockAnalyst(
+        historyPricesJson: String,
+        nativeDate: String = "2026-05-04",
+        historyRequests: AtomicInteger = AtomicInteger()
+    ): HttpServer {
         val server = HttpServer.create(InetSocketAddress(0), 0)
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.path
             val query = exchange.requestURI.rawQuery.orEmpty()
+            if (path == "/v1/history/VWRA.L") historyRequests.incrementAndGet()
             when {
-                path == "/v1/quote/VWRA.L" && query.isBlank() -> exchange.respondJson(NATIVE_QUOTE)
+                path == "/v1/quote/VWRA.L" && query.isBlank() ->
+                    exchange.respondJson(NATIVE_QUOTE.replace("2026-05-04", nativeDate))
                 path == "/v1/quote/VWRA.L" && query == "currency=PLN" -> exchange.respondJson(PLN_QUOTE)
                 path == "/v1/history/VWRA.L" &&
                     query.contains("currency=PLN") &&
