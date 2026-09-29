@@ -19,7 +19,11 @@ new investor capital.
 - Stock and ETF quantities are valued with Stock Analyst quotes.
 - EDO holdings are valued per purchase lot by EDO Calculator and then aggregated.
 - Cash remains in its native currency and is converted to PLN when a suitable FX rate exists.
-- The daily change uses the upstream previous close when available.
+- The daily change uses the upstream previous close only when native and PLN quote
+  dates agree and a history bar confirms that trading day. A newer FX observation
+  can advance the PLN valuation date before the instrument's next session. In that
+  case the valuation remains available, previous close is omitted, and no empty
+  same-day history probe is sent. Matching dates still require the history check.
 
 Upstream prices carry source, market time/date, retrieval time, currency basis, adjustment and
 coverage metadata. A successful response may still be stale or partial; retrieval time alone does

@@ -98,7 +98,7 @@ class RemoteCurrentInstrumentValuationProvider(
             pricePerUnitPln = plnQuote.lastPrice.toBigDecimal().setScale(2, RoundingMode.HALF_UP),
             pricePerUnitNative = nativeQuote.lastPrice.toBigDecimal().setScale(4, RoundingMode.HALF_UP),
             valuedAt = plnQuote.date,
-            previousClosePln = trustedPreviousClosePln(symbol = symbol, plnQuote = plnQuote)
+            previousClosePln = trustedPreviousClosePln(symbol = symbol, nativeQuote = nativeQuote, plnQuote = plnQuote)
         )
         snapshotCacheService.putQuote(
             identity = stockQuoteIdentity(symbol),
@@ -109,9 +109,15 @@ class RemoteCurrentInstrumentValuationProvider(
     }
 
     // Quote-only previousClose can drift on exchange holidays; require a same-day history bar.
-    private suspend fun trustedPreviousClosePln(symbol: String, plnQuote: StockAnalystQuote) =
+    private suspend fun trustedPreviousClosePln(
+        symbol: String,
+        nativeQuote: StockAnalystQuote,
+        plnQuote: StockAnalystQuote
+    ) =
         plnQuote.previousClose?.takeIf {
-            hasTradingDayPrice(symbol = symbol, date = plnQuote.date)
+            // FX can advance the PLN valuation date while the exchange is still closed.
+            // A native quote from an earlier session already rules out a trusted same-day close.
+            nativeQuote.date == plnQuote.date && hasTradingDayPrice(symbol = symbol, date = plnQuote.date)
         }?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)
 
     @Suppress("SwallowedException")
