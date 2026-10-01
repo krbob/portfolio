@@ -19,7 +19,7 @@ swagger-parser = "2.1.48"
 cyclonedx = "3.4.1"
 jackson = "2.22.3"
 handlebars = "4.5.5"
-jose4j = "0.9.6"
+jose4j = "0.9.7"
 netty = "4.2.18.Final"
 
 [libraries]
