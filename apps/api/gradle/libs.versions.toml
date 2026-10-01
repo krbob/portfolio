@@ -1,6 +1,6 @@
 [versions]
-kotlin = "2.3.21"
-ktor = "3.5.0"
+kotlin = "2.4.20"
+ktor = "3.6.0"
 koin = "4.2.2"
 logback = "1.6.3"
 hikaricp = "7.1.0"
