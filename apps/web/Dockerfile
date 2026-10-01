@@ -11,7 +11,7 @@ COPY . .
 
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.31.3-alpine@sha256:f972e5322b9797dc2a6b830030094426437b1ae7032e4644496395336ac6fdac
+FROM nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:19c132c9ab02d3b783f478743dafc7a7f42e27aa7d2bdcbec1bb1128ca8f2a07
 
 ENV PORTFOLIO_API_UPSTREAM=http://portfolio-api:18082
 ENV PORTFOLIO_SHOW_CHART_ATTRIBUTION=true
