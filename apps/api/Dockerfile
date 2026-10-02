@@ -1,4 +1,4 @@
-FROM gradle:9.7.1-jdk21@sha256:c0ce93e022ea2e705332dabe090019c749356576fc8fe39c38129b2aae9ed68f AS build
+FROM gradle:9.8.0-jdk21@sha256:4debe478645a3ad9208f3403ac021859fdf4d1a819d59970d75309b098f28f76 AS build
 
 WORKDIR /workspace
 

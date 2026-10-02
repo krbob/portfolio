@@ -343,18 +343,21 @@ def validate_node() -> None:
 
 
 def validate_ci_toolchains() -> None:
-    expected = {
-        "JDK_VERSION": require_file(".java-version").read_text(encoding="utf-8").strip(),
-        "NODE_VERSION": require_file(".node-version").read_text(encoding="utf-8").strip(),
-    }
+    toolchains = (
+        ("setup-java", "java-version", ".java-version"),
+        ("setup-node", "node-version", ".node-version"),
+    )
     workflow_paths = (".github/workflows/ci-verify.yml", ".github/workflows/ci-build.yml")
     for workflow_path in workflow_paths:
         workflow = require_file(workflow_path).read_text(encoding="utf-8")
-        for variable, version in expected.items():
-            if variable not in workflow:
-                continue
-            if not re.search(rf'^\s*{variable}:\s*"{re.escape(version)}"\s*$', workflow, re.MULTILINE):
-                fail(f"{workflow_path} {variable} must match its repository version file")
+        for step in re.split(r"(?m)^      - ", workflow)[1:]:
+            for action, version_input, version_file in toolchains:
+                if f"uses: actions/{action}@" not in step:
+                    continue
+                if not re.search(
+                    rf"^          {version_input}-file: {re.escape(version_file)}$", step, re.MULTILINE
+                ) or re.search(rf"^          {version_input}:", step, re.MULTILINE):
+                    fail(f"{workflow_path} {action} must read {version_file} directly")
         if "setup-node" in workflow and "corepack enable npm" not in workflow:
             fail(f"{workflow_path} must activate the packageManager-pinned npm")
 
@@ -366,6 +369,23 @@ def validate_ci_toolchains() -> None:
             fail(f"ci-verify.yml must build {context} without pushing")
     if "docker/build-push-action@" not in verify_workflow or "push: false" not in verify_workflow:
         fail("ci-verify.yml must perform no-push production image builds")
+
+
+def validate_required_ci() -> None:
+    workflow = require_file(".github/workflows/ci-test.yml").read_text(encoding="utf-8")
+    gate = re.search(r"(?ms)^  ci-required:\n(.*?)(?=^  [\w-]+:|\Z)", workflow)
+    if not gate:
+        fail("ci-test.yml must expose the required ci-required job")
+    job = gate.group(1)
+    for required_line in (
+        "    needs: verify",
+        "    if: ${{ always() }}",
+        '        run: test "${{ needs.verify.result }}" = success',
+    ):
+        if required_line not in job.splitlines():
+            fail("ci-required must always run and fail unless verify succeeds")
+    if "continue-on-error:" in job:
+        fail("ci-required must not ignore verification failures")
 
 
 def validate_renovate() -> None:
@@ -394,6 +414,7 @@ def main() -> None:
     validate_compose_healthchecks()
     validate_node()
     validate_ci_toolchains()
+    validate_required_ci()
     validate_renovate()
     print("Supply-chain inputs verified: actions, helper and base images, and the Gradle wrapper are immutable.")
 

@@ -18,14 +18,14 @@
       "groupName": "Kotlin and Ktor"
     },
     {
-      "description": "Hold TypeScript below 7 until the linting toolchain supports it",
+      "description": "Keep TypeScript 5 until openapi-typescript supports TypeScript 6",
       "matchManagers": [
         "npm"
       ],
       "matchPackageNames": [
         "typescript"
       ],
-      "allowedVersions": "<7.0.0"
+      "allowedVersions": "<6.0.0"
     },
     {
       "description": "Hold js-yaml below 5 until its breaking changes are adopted",
@@ -173,14 +173,26 @@
       "matchDepNames": [
         "node"
       ],
-      "groupName": "Node.js toolchain"
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "groupName": "Node.js toolchain",
+      "minimumGroupSize": 3
     },
     {
       "description": "Keep the Gradle wrapper and API build image aligned",
       "matchDepNames": [
         "gradle"
       ],
-      "groupName": "Gradle toolchain"
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "groupName": "Gradle toolchain",
+      "minimumGroupSize": 2
     }
   ]
 }
