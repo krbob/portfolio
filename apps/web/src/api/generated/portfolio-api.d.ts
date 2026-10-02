@@ -1182,7 +1182,7 @@ export interface components {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-        };
+        } | null;
         /** InstrumentResponse */
         InstrumentResponse: {
             id: string;
@@ -1192,7 +1192,7 @@ export interface components {
             symbol?: string | null;
             currency: string;
             valuationSource: string;
-            edoTerms?: components["schemas"]["EdoTermsResponse"] | null;
+            edoTerms?: components["schemas"]["EdoTermsResponse"];
             isActive: boolean;
             createdAt: string;
             updatedAt: string;
@@ -1202,7 +1202,7 @@ export interface components {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-        };
+        } | null;
         /** CreateInstrumentRequest */
         CreateInstrumentRequest: {
             name: string;
@@ -1211,7 +1211,7 @@ export interface components {
             symbol?: string | null;
             currency: string;
             valuationSource: string;
-            edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
+            edoTerms?: components["schemas"]["EdoTermsRequest"];
         };
         /** UpdateInstrumentRequest */
         UpdateInstrumentRequest: {
@@ -1219,7 +1219,7 @@ export interface components {
             symbol?: string | null;
             currency: string;
             valuationSource: string;
-            edoTerms?: components["schemas"]["EdoTermsRequest"] | null;
+            edoTerms?: components["schemas"]["EdoTermsRequest"];
         };
         /** CurrencyAmountResponse */
         CurrencyAmountResponse: {
@@ -1233,7 +1233,7 @@ export interface components {
             fromCache: boolean;
             refreshRequired: boolean;
             refreshFailed?: boolean;
-        };
+        } | null;
         /** PortfolioOverviewResponse */
         PortfolioOverviewResponse: {
             asOf: string;
@@ -1262,7 +1262,7 @@ export interface components {
             missingFxTransactions: number;
             unsupportedCorrectionTransactions: number;
             totalPreviousCloseValuePln?: string | null;
-            valuationSnapshot?: components["schemas"]["ValuationSnapshotResponse"] | null;
+            valuationSnapshot?: components["schemas"]["ValuationSnapshotResponse"];
         };
         /** HoldingEdoLotResponse */
         HoldingEdoLotResponse: {
@@ -1375,7 +1375,7 @@ export interface components {
             annualizedMoneyWeightedReturn?: string | null;
             timeWeightedReturn?: string | null;
             annualizedTimeWeightedReturn?: string | null;
-        };
+        } | null;
         /** ReturnBreakdownResponse */
         ReturnBreakdownResponse: {
             openingValuePln: string;
@@ -1388,7 +1388,7 @@ export interface components {
             marketAndFxPln: string;
             netInvestmentResultPln: string;
             skippedFxTransactionCount: number;
-        };
+        } | null;
         /** BenchmarkComparisonResponse */
         BenchmarkComparisonResponse: {
             key: string;
@@ -1396,7 +1396,7 @@ export interface components {
             pinned: boolean;
             status: string;
             issue?: string | null;
-            nominalPln?: components["schemas"]["ReturnMetricResponse"] | null;
+            nominalPln?: components["schemas"]["ReturnMetricResponse"];
             excessTimeWeightedReturn?: string | null;
             excessAnnualizedTimeWeightedReturn?: string | null;
         };
@@ -1409,17 +1409,25 @@ export interface components {
             until: string;
             clippedToInception: boolean;
             dayCount: number;
-            nominalPln?: components["schemas"]["ReturnMetricResponse"] | null;
-            nominalUsd?: components["schemas"]["ReturnMetricResponse"] | null;
-            realPln?: components["schemas"]["ReturnMetricResponse"] | null;
+            nominalPln?: components["schemas"]["ReturnMetricResponse"];
+            nominalUsd?: components["schemas"]["ReturnMetricResponse"];
+            realPln?: components["schemas"]["ReturnMetricResponse"];
             inflationFrom?: string | null;
             inflationUntil?: string | null;
             inflationMultiplier?: string | null;
-            breakdown?: components["schemas"]["ReturnBreakdownResponse"] | null;
+            breakdown?: components["schemas"]["ReturnBreakdownResponse"];
             benchmarks: components["schemas"]["BenchmarkComparisonResponse"][];
         };
         /** RollingReturnObservationResponse */
         RollingReturnObservationResponse: {
+            from: string;
+            until: string;
+            dayCount: number;
+            totalReturn: string;
+            annualizedReturn?: string | null;
+        } | null;
+        /** RollingReturnObservationResponse2 */
+        RollingReturnObservationResponse2: {
             from: string;
             until: string;
             dayCount: number;
@@ -1432,13 +1440,21 @@ export interface components {
             label: string;
             years: number;
             observationCount: number;
-            latest?: components["schemas"]["RollingReturnObservationResponse"] | null;
-            best?: components["schemas"]["RollingReturnObservationResponse"] | null;
-            worst?: components["schemas"]["RollingReturnObservationResponse"] | null;
-            observations: components["schemas"]["RollingReturnObservationResponse"][];
+            latest?: components["schemas"]["RollingReturnObservationResponse"];
+            best?: components["schemas"]["RollingReturnObservationResponse"];
+            worst?: components["schemas"]["RollingReturnObservationResponse"];
+            observations: components["schemas"]["RollingReturnObservationResponse2"][];
         };
         /** DrawdownObservationResponse */
         DrawdownObservationResponse: {
+            date: string;
+            peakDate: string;
+            peakIndex: string;
+            index: string;
+            drawdown: string;
+        } | null;
+        /** DrawdownObservationResponse2 */
+        DrawdownObservationResponse2: {
             date: string;
             peakDate: string;
             peakIndex: string;
@@ -1458,9 +1474,9 @@ export interface components {
         };
         /** PortfolioDrawdownsResponse */
         PortfolioDrawdownsResponse: {
-            current?: components["schemas"]["DrawdownObservationResponse"] | null;
-            max?: components["schemas"]["DrawdownObservationResponse"] | null;
-            observations: components["schemas"]["DrawdownObservationResponse"][];
+            current?: components["schemas"]["DrawdownObservationResponse"];
+            max?: components["schemas"]["DrawdownObservationResponse"];
+            observations: components["schemas"]["DrawdownObservationResponse2"][];
             episodes: components["schemas"]["DrawdownEpisodeResponse"][];
         };
         /** PortfolioReturnsResponse */
@@ -1804,7 +1820,7 @@ export interface components {
             priceStatus?: string | null;
             analyticsStatus?: string | null;
             analyticsLimitations?: string[];
-        };
+        } | null;
         /** MarketDataSnapshotResponse */
         MarketDataSnapshotResponse: {
             snapshotType: string;
@@ -1814,7 +1830,7 @@ export interface components {
             sourceTo?: string | null;
             sourceAsOf?: string | null;
             pointCount?: number | null;
-            provenance?: components["schemas"]["MarketDataProvenanceResponse"] | null;
+            provenance?: components["schemas"]["MarketDataProvenanceResponse"];
             status: string;
             lastCheckedAt: string;
             lastSuccessfulCheckAt?: string | null;
@@ -1939,7 +1955,7 @@ export interface components {
             seriesMonth: string;
             firstPeriodRateBps: number;
             marginBps: number;
-        };
+        } | null;
         /** InstrumentSnapshotResponse */
         InstrumentSnapshotResponse: {
             id: string;
@@ -1949,7 +1965,7 @@ export interface components {
             symbol?: string | null;
             currency: string;
             valuationSource: string;
-            edoTerms?: components["schemas"]["EdoTermsSnapshotResponse"] | null;
+            edoTerms?: components["schemas"]["EdoTermsSnapshotResponse"];
             isActive: boolean;
             createdAt: string;
             updatedAt: string;

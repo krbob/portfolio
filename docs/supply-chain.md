@@ -4,8 +4,8 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 
 ## Prescribed toolchain
 
-- JDK (exact version in `.java-version` and CI; Gradle's Java toolchain selects that installed JDK)
-- Node.js (exact version aligned across `.node-version`, package metadata, the web build image and CI)
+- JDK (CI reads the exact version from `.java-version`; Gradle's Java toolchain selects that installed JDK)
+- Node.js (exact version aligned across `.node-version`, package metadata and the web build image; CI reads `.node-version`)
 - npm (exact version aligned between `packageManager`, `engines.npm` and the lockfile)
 - Gradle (exact version aligned between the wrapper and API build image, with a verified distribution SHA-256)
 
@@ -55,14 +55,23 @@ concurrency cap, and GitHub squash-merges each one as soon as required CI is gre
 branches are rebased only to resolve conflicts, and releases with trustworthy timestamps are held for seven days;
 missing timestamps do not block an update indefinitely. Renovate's separate vulnerability-alert pull requests are
 disabled because they bypass schedules; vulnerable dependencies remain part of the normal monthly update run.
-Kotlin and Ktor updates are grouped so their shared Gradle version-catalog inputs are tested together. TypeScript 7
-and js-yaml 5 remain temporarily excluded until the frontend toolchain supports their breaking changes. Node.js and
-Gradle declarations are grouped with their respective build images to keep each toolchain update atomic. The API
+The seven-day age applies to each release independently: frequent new releases do not reset the age of older
+versions. Renovate can select the newest eligible older release during the monthly window. New branches for releases
+that become eligible after that window wait for the next first-of-month run unless requested through the Dependency
+Dashboard. Existing branches can still be refreshed and merged outside that window.
+
+Kotlin and Ktor updates are grouped so their shared Gradle version-catalog inputs are tested together. TypeScript
+stays below 6 while openapi-typescript requires TypeScript 5; js-yaml 5 also remains excluded pending adoption.
+Node.js version updates wait for all three declarations (version file, package engine and Docker image); Gradle
+version updates wait for both the wrapper and Docker image. Digest-only image refreshes use the Docker images group
+without those minimum group sizes. Required CI verifies that the selected versions agree before merging. The API
 runtime remains on Java 21; changing its major requires a coordinated repository-toolchain and container-health
 contract upgrade rather than an isolated base-image update.
 
 Required pull-request CI runs the structural supply-chain validator and builds both production Dockerfiles without
-pushing. This prevents a green source-only check from automerging an image that cannot be published from `main`.
+pushing. Its required `ci-required` job runs even when verification fails or is cancelled, and succeeds only when
+verification succeeds. The validator checks this gate as well as the toolchain inputs. This prevents a skipped
+aggregate check from allowing automerge after failed verification.
 
 Run the local structural validator after editing Dockerfiles, workflows, tool versions, or Renovate policy:
 
