@@ -72,7 +72,9 @@ The UI is available at `http://127.0.0.1:4174` and the API at
 `http://127.0.0.1:18082`. Live market data, OpenAPI UI and authentication are disabled in this
 mode. SQLite data and JSON backups use separate named volumes. Compose bounds container logs with
 five rotated 10 MiB files; Portfolio API emits UTC console logs while omitting request bodies, query
-strings and routine health/metrics probes.
+strings and routine health/metrics probes. Prometheus metrics include upstream attempts, bounded
+capacity retries, dataset failures, cached fallback use and read-model refresh outcomes; see
+[configuration](docs/configuration.md#prometheus-metrics).
 
 With the Compose defaults, canonical changes are coalesced into a JSON backup after two quiet
 minutes, with a ten-minute due threshold from the first still-unprotected change. The worker checks

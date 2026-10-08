@@ -104,7 +104,10 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
-        cachedSeries(identity = identity, from = from, to = to)?.let { return it }
+        cachedSeries(identity = identity, from = from, to = to)?.let {
+            snapshotCacheService.recordFallback("PRICE_SERIES")
+            return it
+        }
         ReferenceSeriesResult.Failure(exception.message ?: "Reference market data request failed.")
     } catch (exception: CancellationException) {
         throw exception
@@ -127,7 +130,10 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
-        cachedSeries(identity = identity, from = from, to = to)?.let { return it }
+        cachedSeries(identity = identity, from = from, to = to)?.let {
+            snapshotCacheService.recordFallback("PRICE_SERIES")
+            return it
+        }
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected reference market data error.")
     }
 
@@ -183,7 +189,10 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
-        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let {
+            snapshotCacheService.recordFallback("PRICE_SERIES")
+            return it
+        }
         ReferenceSeriesResult.Failure(exception.message ?: "Gold spot history request failed.")
     } catch (exception: CancellationException) {
         throw exception
@@ -199,7 +208,10 @@ class RemoteReferenceSeriesProvider(
             to = to,
             exception = exception
         )
-        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let {
+            snapshotCacheService.recordFallback("PRICE_SERIES")
+            return it
+        }
         ReferenceSeriesResult.Failure(exception.message ?: "Unexpected gold spot history error.")
     }
 
@@ -233,7 +245,10 @@ class RemoteReferenceSeriesProvider(
             return fallbackResult
         }
 
-        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let { return it }
+        cachedSeries(identity = "reference:gold-pln", from = from, to = to)?.let {
+            snapshotCacheService.recordFallback("PRICE_SERIES")
+            return it
+        }
 
         val spotFailureMessage = (spotResult as? ReferenceSeriesResult.Failure)?.reason
             ?: "Gold spot history unavailable."

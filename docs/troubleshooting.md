@@ -179,8 +179,9 @@ import or restore.
 
 1. Confirm both upstream readiness endpoints.
 2. Check for `429`, retryable `503`, timeout and circuit-open metadata.
-3. Ensure Portfolio is not configured with a request concurrency above the Stock Analyst loader
-   budget.
+3. Compare upstream attempt errors with final dataset failures and fallback counters. Portfolio
+   retains its two request slots during bounded 503 backoff; other consumers can still exhaust
+   the shared Stock Analyst loader budget.
 4. Inspect whether a compatible last-known-good snapshot remains available.
 5. After the upstream recovers, trigger one refresh and verify that data quality returns to healthy.
 

@@ -160,6 +160,7 @@ class RemoteHistoricalInstrumentValuationProvider(
             )
             return null
         }
+        snapshotCacheService.recordFallback("PRICE_SERIES")
         return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)
     }
 

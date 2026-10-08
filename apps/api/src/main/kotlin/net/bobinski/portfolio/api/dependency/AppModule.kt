@@ -99,6 +99,8 @@ import net.bobinski.portfolio.api.system.SystemReadinessService
 import java.net.http.HttpClient
 import org.koin.dsl.module
 import java.time.Clock
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
+import net.bobinski.portfolio.api.monitoring.PortfolioMetricsService
 import javax.sql.DataSource
 import kotlinx.serialization.json.Json
 
@@ -114,6 +116,8 @@ fun appModule(
     repositoryBindingMode: RepositoryBindingMode = RepositoryBindingMode.SQLITE_RUNTIME
 ) = module {
     single<Clock> { Clock.systemUTC() }
+    single { PortfolioMetrics() }
+    single { PortfolioMetricsService(metrics = get(), snapshots = get(), cache = get(), refresh = get()) }
     single { config }
     single { marketDataConfig }
     single { marketDataRecheckConfig }
@@ -127,9 +131,9 @@ fun appModule(
             .connectTimeout(UpstreamTimeoutBudgets.CONNECT)
             .build()
     }
-    single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl) }
+    single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl, metrics = get()) }
     single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiUrl) }
-    single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl) }
+    single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl, metrics = get()) }
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
             config = get(),
@@ -228,12 +232,12 @@ fun appModule(
             legacyPreferenceRepository = get()
         )
     }
-    single { MarketDataSnapshotCacheService(operationalStateService = get()) }
+    single { MarketDataSnapshotCacheService(operationalStateService = get(), metrics = get()) }
     single { ReadModelComputationCoordinator() }
     single {
         PortfolioOverviewSnapshotService(
             repository = get(), json = get(), clock = get(), coordinator = get(),
-            descriptors = get(), readModel = get(), marketDataEnabled = marketDataConfig.enabled
+            descriptors = get(), readModel = get(), marketDataEnabled = marketDataConfig.enabled, metrics = get()
         )
     }
     single {
@@ -464,7 +468,8 @@ fun appModule(
             portfolioReturnsService = get(),
             portfolioAlertService = get(),
             auditLogService = get(),
-            clock = get()
+            clock = get(),
+            metrics = get()
         )
     }
     single {

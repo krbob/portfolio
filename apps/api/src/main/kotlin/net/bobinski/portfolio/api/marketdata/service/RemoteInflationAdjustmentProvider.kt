@@ -38,13 +38,19 @@ class RemoteInflationAdjustmentProvider(
             success
         } catch (exception: MarketDataClientException) {
             snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
-            snapshotCacheService.getCumulativeInflation(from)?.let { return it }
+            snapshotCacheService.getCumulativeInflation(from)?.let {
+                snapshotCacheService.recordFallback("INFLATION_WINDOW")
+                return it
+            }
             InflationAdjustmentResult.Failure(exception.message ?: "Inflation request failed.")
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
             snapshotCacheService.recordCumulativeInflationFailure(from = from, reason = exception.message)
-            snapshotCacheService.getCumulativeInflation(from)?.let { return it }
+            snapshotCacheService.getCumulativeInflation(from)?.let {
+                snapshotCacheService.recordFallback("INFLATION_WINDOW")
+                return it
+            }
             InflationAdjustmentResult.Failure(exception.message ?: "Unexpected inflation request error.")
         }
     }
@@ -128,7 +134,9 @@ class RemoteInflationAdjustmentProvider(
     }
 
     private suspend fun cachedOrFailure(from: YearMonth, until: YearMonth, reason: String): InflationSeriesResult =
-        snapshotCacheService.getMonthlyInflation(from, until) ?: InflationSeriesResult.Failure(reason)
+        snapshotCacheService.getMonthlyInflation(from, until)?.also {
+            snapshotCacheService.recordFallback("INFLATION_MONTHLY")
+        } ?: InflationSeriesResult.Failure(reason)
 
     private data class MonthlyAvailability(
         val from: YearMonth,

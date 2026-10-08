@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.marketdata.service
 import java.math.BigDecimal
 import java.security.MessageDigest
 import java.time.Clock
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -15,8 +16,11 @@ import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 
 class MarketDataSnapshotCacheService(
     private val operationalStateService: OperationalStateService,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    private val metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
+    fun recordFallback(type: String) = metrics.fallback(type)
+
     suspend fun getSeriesSnapshotSummary(identity: String): MarketDataSnapshotSummary? {
         val stored = getStoredSeries(identity)
         val metadata = getStoredMetadata(snapshotType = SnapshotPreferenceType.SERIES, identity = identity)
@@ -520,6 +524,7 @@ class MarketDataSnapshotCacheService(
         pointCount: Int?,
         provenance: MarketDataProvenanceMetadata? = null
     ) {
+        metrics.snapshotCheck(snapshotType.summaryType, true)
         val now = Instant.now(clock)
         val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
         val canonicalUpdatedAt = when {
@@ -559,6 +564,7 @@ class MarketDataSnapshotCacheService(
         pointCount: Int?,
         reason: String?
     ) {
+        metrics.snapshotCheck(snapshotType.summaryType, false)
         val now = Instant.now(clock)
         val previous = getStoredMetadata(snapshotType = snapshotType, identity = identity)
         val metadata = MarketDataSnapshotMetadata(

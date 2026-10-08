@@ -1,6 +1,8 @@
 package net.bobinski.portfolio.api.plugins
 
 import io.ktor.http.ContentType
+import org.koin.ktor.ext.get
+import net.bobinski.portfolio.api.monitoring.PortfolioMetricsService
 import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.Application
@@ -77,7 +79,7 @@ fun Application.configureRouting() {
         protectedRoute(this@configureRouting) {
             get("/metrics") {
                 call.respondText(
-                    metricsRegistry.scrape(),
+                    metricsRegistry.scrape() + call.application.get<PortfolioMetricsService>().scrape(),
                     ContentType.parse("text/plain; version=0.0.4; charset=utf-8")
                 )
             }.documented(
