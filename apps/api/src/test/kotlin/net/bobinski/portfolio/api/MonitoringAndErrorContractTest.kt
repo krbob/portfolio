@@ -173,6 +173,12 @@ class MonitoringAndErrorContractTest {
             body
         )
         assertTrue(body.contains("portfolio_http_request_duration_seconds_count"), body)
+        assertTrue(body.contains("portfolio_http_responses_total{status_class=\"5xx\"} 0"), body)
+        assertTrue(body.contains("portfolio_market_data_checks_total{type=\"QUOTE\",outcome=\"failure\"} 0"), body)
+        assertTrue(body.contains("portfolio_read_model_refresh_running 0"), body)
+        assertFalse(body.contains("portfolio_valuation_complete"), body)
+        assertTrue(body.lineSequence().filter { it.startsWith("portfolio_upstream_requests_total{") }
+            .all { it.endsWith(" 0") }, "Scraping must not call upstream providers.")
     }
 
     @Test

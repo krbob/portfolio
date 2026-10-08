@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.readmodel
 
 import java.time.Clock
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
@@ -26,7 +27,8 @@ class PortfolioOverviewSnapshotService(
     private val coordinator: ReadModelComputationCoordinator,
     private val descriptor: suspend () -> ReadModelCacheDescriptor,
     private val compute: suspend () -> PortfolioOverviewResponse,
-    private val marketDataEnabled: Boolean = true
+    private val marketDataEnabled: Boolean = true,
+    private val metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
     private val logger = LoggerFactory.getLogger(PortfolioOverviewSnapshotService::class.java)
     constructor(
@@ -36,10 +38,11 @@ class PortfolioOverviewSnapshotService(
         coordinator: ReadModelComputationCoordinator,
         descriptors: PortfolioReadModelCacheDescriptorService,
         readModel: PortfolioReadModelService,
-        marketDataEnabled: Boolean
+        marketDataEnabled: Boolean,
+        metrics: PortfolioMetrics = PortfolioMetrics()
     ) : this(repository, json, clock, coordinator, descriptors::overviewDescriptor, {
         readModel.overview().toResponse()
-    }, marketDataEnabled)
+    }, marketDataEnabled, metrics)
 
     // This is the fallback boundary for provider/computation failures; cancellation still propagates.
     @Suppress("TooGenericExceptionCaught")
@@ -59,6 +62,7 @@ class PortfolioOverviewSnapshotService(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
+                metrics.valuationFailed(Instant.now(clock))
                 logger.warn("Unable to refresh the portfolio overview.", exception)
                 requireSameInputs(before, descriptor())
                 cached?.response(refreshFailed = true) ?: throw exception
@@ -66,6 +70,7 @@ class PortfolioOverviewSnapshotService(
             val after = descriptor()
             requireSameInputs(before, after)
 
+            metrics.observeValuation(result, isCompleteValuation(result), Instant.now(clock))
             if (!isCompleteValuation(result)) {
                 cached?.response(refreshFailed = true) ?: result.withSnapshot(
                     generatedAt = Instant.now(clock), refreshFailed = true

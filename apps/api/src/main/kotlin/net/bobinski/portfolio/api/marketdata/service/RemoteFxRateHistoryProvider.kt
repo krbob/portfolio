@@ -79,6 +79,7 @@ class RemoteFxRateHistoryProvider(
             )
             return null
         }
+        snapshotCacheService.recordFallback("PRICE_SERIES")
         return FxRateHistoryResult.Success(prices = cached.prices, fromCache = true)
     }
 

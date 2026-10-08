@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.marketdata.client
 
 import kotlinx.serialization.json.Json
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import net.bobinski.portfolio.api.domain.model.EdoLotTerms
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorApiErrorResponsePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorContractPaths
@@ -17,9 +18,10 @@ import java.time.YearMonth
 class EdoCalculatorClient(
     httpClient: HttpClient,
     private val json: Json,
-    private val baseUrl: String
+    private val baseUrl: String,
+    metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
-    private val transport = UpstreamHttpTransport(httpClient)
+    private val transport = UpstreamHttpTransport(httpClient, metrics)
 
     suspend fun unitValueInPln(terms: EdoLotTerms, asOf: LocalDate? = null): EdoUnitValue {
         val path = if (asOf == null) {

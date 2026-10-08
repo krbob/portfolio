@@ -1,6 +1,7 @@
 package net.bobinski.portfolio.api.readmodel
 
 import java.time.Clock
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -50,7 +51,8 @@ class ReadModelRefreshService(
     private val portfolioReturnsService: PortfolioReturnsService,
     private val portfolioAlertService: PortfolioAlertService? = null,
     private val auditLogService: AuditLogService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
     private val logger = LoggerFactory.getLogger(ReadModelRefreshService::class.java)
     private val mutex = Mutex()
@@ -120,6 +122,7 @@ class ReadModelRefreshService(
 
             val finishedAt = Instant.now(clock)
             val durationMs = finishedAt.toEpochMilli() - startedAt.toEpochMilli()
+            metrics.refresh(trigger.name, if (analyticsRefresh.snapshotsPersisted) "success" else "degraded")
             lastSuccessAt = finishedAt
             lastFailureAt = null
             lastFailureMessage = null
@@ -150,6 +153,7 @@ class ReadModelRefreshService(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
+            metrics.refresh(trigger.name, "failure")
             val failedAt = Instant.now(clock)
             val durationMs = failedAt.toEpochMilli() - startedAt.toEpochMilli()
             lastFailureAt = failedAt

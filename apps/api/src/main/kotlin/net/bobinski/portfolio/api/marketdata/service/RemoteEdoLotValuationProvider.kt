@@ -158,6 +158,7 @@ class RemoteEdoLotValuationProvider(
 
     private suspend fun cachedQuoteResult(lotTerms: EdoLotTerms): InstrumentValuationResult.Success? {
         val cached = snapshotCacheService.getQuote(identity = edoQuoteIdentity(lotTerms)) ?: return null
+        snapshotCacheService.recordFallback("QUOTE")
         return InstrumentValuationResult.Success(valuation = cached, fromCache = true)
     }
 
@@ -170,6 +171,7 @@ class RemoteEdoLotValuationProvider(
         if (!cached.coversFullRangeOrCompletePrefix()) {
             return null
         }
+        snapshotCacheService.recordFallback("PRICE_SERIES")
         return HistoricalInstrumentValuationResult.Success(prices = cached.prices, fromCache = true)
     }
 

@@ -108,6 +108,16 @@ information is summarized in `Data -> Backups`.
 | `PORTFOLIO_BOND_BENCHMARK_SYMBOL` | `ETFBTBSP.WA` | Built-in bond reference series |
 
 Base URLs may contain a deployment prefix such as `/api`, but must not include an operation path.
+
+Stock Analyst requests share two in-flight slots. A classified retryable HTTP 503
+`SERVICE_UNAVAILABLE` can be retried at most three times, respecting `Retry-After` (seconds or
+HTTP date), with a minimum 1/2/4-second backoff and up to 250 ms jitter. A slot stays occupied
+during backoff. All attempts and waits share the original 20-second request budget; waiting to
+acquire a slot is outside that budget. A delay that cannot fit leaves the original error intact.
+429, unclassified proxy errors, malformed retry headers, other HTTP errors and decode failures
+are not retried. EDO keeps its 10-second budget without HTTP response retries. Caller cancellation
+cancels the request or wait immediately. These limits are fixed in code.
+
 Portfolio calls only versioned `/v1` routes. `PORTFOLIO_STOCK_ANALYST_UI_URL` must be a browser-
 reachable root URL; it is not the server-to-server API address.
 
@@ -263,3 +273,32 @@ excluded from portable JSON, and is removed by the existing read-model cache cle
 
 `PORTFOLIO_OPENAPI_UI_ENABLED` defaults to `false`. Keep it disabled on public deployments unless
 interactive API documentation is intentionally exposed.
+
+## Prometheus metrics
+
+`/metrics` (through the web proxy: `/api/metrics`) reads local operational state only. Scraping
+never calls a market-data provider or rebuilds a valuation. Authentication follows the existing
+single-user session policy. Counters are process-local and reset on restart; all bounded series
+start at zero so Prometheus can observe the first event after its initial scrape.
+
+- `portfolio_http_responses_total`: HTTP status classes, with 429 separate from other 4xx.
+- `portfolio_upstream_requests_total`: Stock Analyst/EDO HTTP attempts by provider, operation and
+  outcome, including diagnostics. `portfolio_upstream_retries_total` counts actual retries.
+- `portfolio_market_data_checks_total`: completed dataset refresh outcomes after retries, grouped
+  by snapshot type. Includes ETF/FX, EDO, gold and inflation snapshot updates.
+- `portfolio_market_data_fallbacks_total`: accepted older snapshot data after a failure; normal
+  fresh CPI/gold cache reuse does not increment it. Attempts, dataset checks and fallback uses
+  are different stages and must not be summed as user operations.
+- `portfolio_market_data_snapshots`: persisted last-check states, including inactive and historical
+  datasets. FRESH means the last check succeeded, not that its market date is today.
+- `portfolio_valuation_*`: completeness, holding/issue counts and attempt/success timestamps from
+  live overview calculations in this process. Missing before the first observation; serving a
+  cached preview does not advance them. Timestamps describe calculation time, not quote age.
+- `portfolio_read_model_refreshes_total`: success, degraded (not published) or failure by trigger.
+  Scheduler gauges expose configured cadence, running state and last run/success/failure/duration.
+- `portfolio_read_model_generated_timestamp_seconds`: latest persisted calculation time per model,
+  preserved across restarts. It does not certify compatibility with the current ledger.
+
+Metric labels never contain account IDs, instrument symbols, purchase dates, URLs or error text.
+Use the application audit log for per-instrument failures. HTTP latency remains a sum/count
+summary: it supports averages, not percentile calculations.

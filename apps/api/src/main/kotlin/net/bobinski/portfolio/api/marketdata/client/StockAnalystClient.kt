@@ -4,6 +4,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystApiErrorPayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystContractPaths
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystDataProvenancePayload
@@ -20,9 +21,10 @@ import org.slf4j.LoggerFactory
 class StockAnalystClient(
     httpClient: HttpClient,
     private val json: Json,
-    private val baseUrl: String
+    private val baseUrl: String,
+    metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
-    private val transport = UpstreamHttpTransport(httpClient)
+    private val transport = UpstreamHttpTransport(httpClient, metrics)
 
     suspend fun quote(symbol: String, currency: String? = null): StockAnalystQuote {
         val payload = getWithLegacyRouteFallback(
@@ -193,7 +195,8 @@ class StockAnalystClient(
         timeout = UpstreamTimeoutBudgets.STOCK_ANALYST,
         context = context,
         decodeSuccess = decodeSuccess,
-        decodeError = ::decodeError
+        decodeError = ::decodeError,
+        retryBusy = true
     )
 
     private fun decodeError(body: String): UpstreamErrorEnvelope? = runCatching {

@@ -135,6 +135,7 @@ class RemoteCurrentInstrumentValuationProvider(
     private suspend fun cachedQuoteResult(instrument: Instrument): InstrumentValuationResult.Success? {
         val symbol = instrument.symbol ?: return null
         val cached = snapshotCacheService.getQuote(stockQuoteIdentity(symbol)) ?: return null
+        snapshotCacheService.recordFallback("QUOTE")
         return InstrumentValuationResult.Success(valuation = cached, fromCache = true)
     }
 

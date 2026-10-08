@@ -1,6 +1,15 @@
 package net.bobinski.portfolio.api.marketdata.client
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
+import java.io.IOException
+import java.net.http.HttpTimeoutException
+import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.random.Random
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.net.URI
@@ -40,31 +49,73 @@ internal data class UpstreamRequestContext(
 )
 
 internal class UpstreamHttpTransport(
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
     suspend fun <T> get(
         uri: URI,
         timeout: Duration,
         context: UpstreamRequestContext,
         decodeSuccess: (String) -> T,
-        decodeError: (String) -> UpstreamErrorEnvelope?
+        decodeError: (String) -> UpstreamErrorEnvelope?,
+        retryBusy: Boolean = false
     ): T = withContext(Dispatchers.IO) {
-        val request = HttpRequest.newBuilder()
-            .uri(uri)
-            .timeout(timeout)
-            .header("Accept", "application/json")
-            .GET()
-            .build()
-        val response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString()).awaitCancellable()
-        if (response.statusCode() !in 200..299) {
+        val startedAt = System.nanoTime()
+        val result = withTimeoutOrNull(timeout.toMillis()) {
+            var retries = 0
+            while (true) {
+                try {
+                    return@withTimeoutOrNull Result.success(
+                        request(uri, timeout, context, decodeSuccess, decodeError)
+                    )
+                } catch (exception: MarketDataClientException) {
+                    val remainingMillis = timeout.toMillis() - (System.nanoTime() - startedAt) / 1_000_000
+                    val waitMillis = if (retryBusy) busyRetryDelayMillis(exception, retries) else null
+                    if (waitMillis == null || waitMillis + MIN_ATTEMPT_MILLIS >= remainingMillis) throw exception
+                    // The caller keeps its concurrency permit during backoff, preventing a burst
+                    // of subsequent portfolio requests while existing Yahoo loaders finish.
+                    delay(waitMillis)
+                    metrics.upstreamRetry(context.upstream, context.operation)
+                    retries++
+                }
+            }
+            @Suppress("UNREACHABLE_CODE")
+            error("Unreachable upstream retry loop")
+        }
+        if (result == null) {
+            metrics.upstreamRequest(context.upstream, context.operation, "timeout")
+            throw HttpTimeoutException("${context.upstream} ${context.operation} exceeded its total request budget.")
+        }
+        result.getOrThrow()
+    }
+
+    private suspend fun <T> request(
+        uri: URI,
+        timeout: Duration,
+        context: UpstreamRequestContext,
+        decodeSuccess: (String) -> T,
+        decodeError: (String) -> UpstreamErrorEnvelope?
+    ): T {
+        val request = HttpRequest.newBuilder().uri(uri).timeout(timeout)
+            .header("Accept", "application/json").GET().build()
+        val response = send(request, context)
+        val status = response.statusCode()
+        metrics.upstreamRequest(context.upstream, context.operation, when {
+            status in 200..299 -> "success"
+            status == 429 -> "http_429"
+            status in 400..499 -> "http_4xx"
+            status in 500..599 -> "http_5xx"
+            else -> "other"
+        })
+        if (status !in 200..299) {
             val envelope = runCatching { decodeError(response.body()) }.getOrNull()
             val responseRequestId = response.headers().firstValue(REQUEST_ID_HEADER).orElse(null)
             throw MarketDataClientException(
-                message = buildFailureMessage(context, response.statusCode(), envelope?.error),
+                message = buildFailureMessage(context, status, envelope?.error),
                 upstream = context.upstream,
                 operation = context.operation,
                 symbol = context.subject,
-                statusCode = response.statusCode(),
+                statusCode = status,
                 upstreamError = envelope?.error,
                 errorCode = envelope?.errorCode,
                 retryable = envelope?.retryable,
@@ -73,7 +124,20 @@ internal class UpstreamHttpTransport(
                 responseBodyPreview = responseBodyPreview(response.body())
             )
         }
-        decodeSuccess(response.body())
+        return decodeSuccess(response.body())
+    }
+
+    private suspend fun send(
+        request: HttpRequest,
+        context: UpstreamRequestContext
+    ): HttpResponse<String> = try {
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString()).awaitCancellable()
+    } catch (exception: HttpTimeoutException) {
+        metrics.upstreamRequest(context.upstream, context.operation, "timeout")
+        throw exception
+    } catch (exception: IOException) {
+        metrics.upstreamRequest(context.upstream, context.operation, "transport_error")
+        throw exception
     }
 
     private fun buildFailureMessage(
@@ -96,6 +160,7 @@ internal class UpstreamHttpTransport(
     }
 
     private companion object {
+        const val MIN_ATTEMPT_MILLIS = 250L
         const val REQUEST_ID_HEADER = "X-Request-ID"
         const val RETRY_AFTER_HEADER = "Retry-After"
     }
@@ -136,3 +201,22 @@ internal fun buildUpstreamUri(
 
 private fun encodeUrlComponent(value: String): String =
     URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
+
+/** Only classified capacity errors qualify; 429, proxy errors and decode failures fail fast. */
+internal fun busyRetryDelayMillis(error: MarketDataClientException, retries: Int, now: Instant = Instant.now()): Long? {
+    if (retries >= 3) return null
+    if (error.statusCode != 503 || error.retryable != true || error.errorCode != "SERVICE_UNAVAILABLE") return null
+    val advertisedMillis = retryAfterMillis(error.retryAfter, now) ?: return null
+    if (advertisedMillis >= UpstreamTimeoutBudgets.STOCK_ANALYST.toMillis()) return null
+    return maxOf(advertisedMillis, 1_000L shl retries) + Random.nextLong(0, 251)
+}
+
+internal fun retryAfterMillis(value: String?, now: Instant): Long? {
+    if (value == null) return 0
+    val seconds = value.trim().toLongOrNull()
+    if (seconds != null) return seconds.takeIf { it >= 0 && it <= Long.MAX_VALUE / 1_000 }?.times(1_000)
+    return runCatching {
+        val at = ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant()
+        Duration.between(now, at).toMillis().coerceAtLeast(0)
+    }.getOrNull()
+}

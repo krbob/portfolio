@@ -41,8 +41,15 @@ internal val RequestMetricsPlugin = createApplicationPlugin(
 internal class RequestMetricsRegistry {
     private val samples = ConcurrentHashMap<MetricKey, MetricSample>()
     private val seriesLock = Any()
+    private val responses = listOf("1xx", "2xx", "3xx", "4xx", "429", "5xx", "other").associateWith { LongAdder() }
 
     fun record(method: String, route: String, status: Int, durationNanos: Long) {
+        val statusClass = when {
+            status == 429 -> "429"
+            status in 100..599 -> "${status / 100}xx"
+            else -> "other"
+        }
+        responses.getValue(statusClass).increment()
         val requestedKey = MetricKey(method, route, status)
         val sample = samples[requestedKey] ?: synchronized(seriesLock) {
             samples[requestedKey] ?: when {
@@ -54,6 +61,11 @@ internal class RequestMetricsRegistry {
     }
 
     fun scrape(): String = buildString {
+        appendLine("# HELP portfolio_http_responses_total Completed API responses by status class, initialized to zero.")
+        appendLine("# TYPE portfolio_http_responses_total counter")
+        responses.forEach { (status, count) ->
+            appendLine("portfolio_http_responses_total{status_class=\"$status\"} ${count.sum()}")
+        }
         appendLine("# HELP portfolio_http_requests_total Completed API requests.")
         appendLine("# TYPE portfolio_http_requests_total counter")
         orderedSamples().forEach { (key, sample) ->

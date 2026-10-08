@@ -351,12 +351,12 @@ class UpstreamClientErrorContractTest {
     }
 
     @Test
-    fun `stock client preserves the common error envelope and never retries an HTTP response`() {
+    fun `stock client preserves the error envelope when retry-after exceeds the total budget`() {
         val requests = AtomicInteger()
         val server = errorServer("/v1/quote/AAPL") { exchange ->
             requests.incrementAndGet()
             exchange.responseHeaders.add("X-Request-ID", "header-request")
-            exchange.responseHeaders.add("Retry-After", "3")
+            exchange.responseHeaders.add("Retry-After", "120")
             exchange.respond(
                 status = 503,
                 body = errorBody(
@@ -383,7 +383,7 @@ class UpstreamClientErrorContractTest {
             assertEquals("SERVICE_UNAVAILABLE", exception.errorCode)
             assertEquals(true, exception.retryable)
             assertEquals("body-request", exception.requestId)
-            assertEquals("3", exception.retryAfter)
+            assertEquals("120", exception.retryAfter)
             assertEquals("Loader capacity exhausted", exception.upstreamError)
             assertTrue(exception.responseBodyPreview!!.contains("SERVICE_UNAVAILABLE"))
             assertEquals(1, requests.get())
