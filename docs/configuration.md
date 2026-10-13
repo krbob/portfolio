@@ -32,6 +32,11 @@ They do not contain request or response bodies, cookies, authorization values or
 Routine `/v1/health` and `/metrics` requests are excluded; `/v1/readiness` remains visible because a
 degraded readiness result requires investigation.
 
+Portfolio Web's Nginx access log excludes only 2xx responses on `/healthz` and
+`/api/metrics`, including requests with query parameters. Other statuses on those
+paths and all other application requests remain logged; the Nginx error log is
+unchanged. This does not alter healthcheck or Prometheus scrape intervals.
+
 All supplied Compose stacks use Docker's `local` logging driver with five 10 MiB rotated files per
 container. Rotation belongs to the container runtime; do not add an application file appender or
 mount a second log directory into the API container. Inspect current output with:

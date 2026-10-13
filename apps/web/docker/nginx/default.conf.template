@@ -1,6 +1,15 @@
+# Keep failed probes and all application traffic visible in the access log.
+map "${DOLLAR}uri:${DOLLAR}status" ${DOLLAR}portfolio_access_loggable {
+    default 1;
+    ~^/healthz:2[0-9][0-9]$ 0;
+    ~^/api/metrics:2[0-9][0-9]$ 0;
+}
+
 server {
     listen 4174;
     server_name _;
+
+    access_log /var/log/nginx/access.log main if=${DOLLAR}portfolio_access_loggable;
 
     root /usr/share/nginx/html;
     index index.html;

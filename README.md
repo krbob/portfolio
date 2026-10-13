@@ -75,6 +75,8 @@ five rotated 10 MiB files; Portfolio API emits UTC console logs while omitting r
 strings and routine health/metrics probes. Prometheus metrics include upstream attempts, bounded
 capacity retries, dataset failures, cached fallback use and read-model refresh outcomes; see
 [configuration](docs/configuration.md#prometheus-metrics).
+Portfolio Web omits successful (2xx) `/healthz` and `/api/metrics` requests from its
+Nginx access log; other statuses and application requests remain visible.
 
 With the Compose defaults, canonical changes are coalesced into a JSON backup after two quiet
 minutes, with a ten-minute due threshold from the first still-unprotected change. The worker checks
