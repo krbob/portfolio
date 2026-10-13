@@ -155,6 +155,19 @@ class RemoteInflationAdjustmentProviderTest {
         }
     }
 
+    @Test
+    fun `invalid historical CPI cache is rebuilt from the provider`() = runBlocking {
+        Fixture().use { fixture ->
+            val from = YearMonth.of(2026, 4)
+            val until = from.plusMonths(1)
+            fixture.cache.putMonthlyInflation(listOf(MonthlyInflationPoint(from, java.math.BigDecimal.ZERO)))
+            val result = fixture.provider.monthlySeries(from, until) as InflationSeriesResult.Success
+            assertTrue(result.points.all { it.multiplier.signum() > 0 })
+            assertEquals(1, fixture.availabilityRequests)
+            assertEquals(listOf(until), fixture.monthlyEnds)
+        }
+    }
+
     private class Fixture : AutoCloseable {
         val clock = MutableClock(Instant.parse("2026-09-09T09:00:00Z"))
         private val json = AppJsonFactory.create()

@@ -68,9 +68,16 @@ class RemoteInflationAdjustmentProvider(
     private suspend fun historicalCachedSeries(from: YearMonth, until: YearMonth): InflationSeriesResult.Success? {
         // A complete historical window does not need a probe for newer publications.
         if (until > YearMonth.now(clock).minusMonths(1)) return null
-        return snapshotCacheService.getMonthlyInflation(from, until)
-            ?.takeIf { it.from == from && it.until == until }
-            ?.copy(fromCache = false)
+        return try {
+            snapshotCacheService.getMonthlyInflation(from, until)
+                ?.takeIf { it.from == from && it.until == until && it.points.all { point -> point.multiplier.signum() > 0 } }
+                ?.copy(fromCache = false)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // Rebuild malformed legacy cache entries from the provider.
+            null
+        }
     }
 
     private suspend fun loadMonthlySeries(from: YearMonth, untilExclusive: YearMonth): InflationSeriesResult {
