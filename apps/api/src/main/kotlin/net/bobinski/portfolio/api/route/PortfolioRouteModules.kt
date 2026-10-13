@@ -16,11 +16,12 @@ import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
-import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
 import net.bobinski.portfolio.api.domain.service.ValuationState
 import net.bobinski.portfolio.api.readmodel.isPortfolioAnalyticsHistoryPreferredForCache
 import net.bobinski.portfolio.api.readmodel.isPreferredForCache
 import net.bobinski.portfolio.api.readmodel.PortfolioOverviewSnapshotService
+import net.bobinski.portfolio.api.readmodel.ReadModelSnapshotService
+import net.bobinski.portfolio.api.readmodel.SnapshotCandidate
 
 internal fun Route.registerPortfolioReadModelRoutes(
     portfolioReadModelService: PortfolioReadModelService,
@@ -58,16 +59,16 @@ internal fun Route.registerPortfolioReadModelRoutes(
 }
 
 internal fun Route.registerPortfolioAnalyticsRoutes(
-    readModelCacheService: ReadModelCacheService,
     portfolioReadModelCacheDescriptorService: PortfolioReadModelCacheDescriptorService,
     portfolioAllocationService: PortfolioAllocationService,
     portfolioHistoryService: PortfolioHistoryService,
+    snapshots: ReadModelSnapshotService,
     portfolioReturnsService: PortfolioReturnsService,
 ) {
     registerPortfolioAnalyticsReadModelRoutes(
-        readModelCacheService = readModelCacheService,
         portfolioReadModelCacheDescriptorService = portfolioReadModelCacheDescriptorService,
         portfolioHistoryService = portfolioHistoryService,
+        snapshots = snapshots,
         portfolioReturnsService = portfolioReturnsService
     )
 
@@ -103,52 +104,46 @@ internal fun Route.registerPortfolioAnalyticsRoutes(
 }
 
 internal fun Route.registerPortfolioAnalyticsReadModelRoutes(
-    readModelCacheService: ReadModelCacheService,
     portfolioReadModelCacheDescriptorService: PortfolioReadModelCacheDescriptorService,
     portfolioHistoryService: PortfolioHistoryService,
+    snapshots: ReadModelSnapshotService,
     portfolioReturnsService: PortfolioReturnsService,
 ) {
     get("/history/daily") {
-        val descriptor = portfolioReadModelCacheDescriptorService.dailyHistoryDescriptor()
-        call.respond(
-            readModelCacheService.getOrComputeStaleIfError(
-                descriptor = descriptor,
-                serializer = PortfolioDailyHistoryResponse.serializer(),
-                descriptorAfterCompute = portfolioReadModelCacheDescriptorService::dailyHistoryDescriptor,
-                isAcceptable = PortfolioDailyHistoryResponse::isPreferredForCache
-            ) {
-                portfolioHistoryService.dailyHistory(forceRefresh = true)
-                    .toResponse()
-            }
-        )
+        val result = snapshots.read(
+            preferCached = call.prefersCachedReadModel(),
+            serializer = PortfolioDailyHistoryResponse.serializer(),
+            descriptor = { portfolioReadModelCacheDescriptorService.previewDescriptor("daily-history") }
+        ) {
+            val history = portfolioHistoryService.dailyHistory(forceRefresh = true).toResponse()
+            SnapshotCandidate(history, history.isPreferredForCache())
+        }
+        call.snapshotHeaders(result)
+        call.respond(result.value)
     }.documented(
         operationId = "getPortfolioDailyHistory",
         summary = "Get daily portfolio history",
-        description = "Returns the cached or freshly computed daily portfolio history read model.",
+        description = "Returns daily history. preferCached=true returns a complete snapshot of the same portfolio immediately. X-Read-Model-* headers report generation time, cache origin, refreshRequired and refreshFailed; request a live read when refresh is required.",
         tag = "Portfolio"
-    )
+    ) { snapshotReadDocumentation() }
 
     get("/returns") {
-        val descriptor = portfolioReadModelCacheDescriptorService.returnsDescriptor()
-        var computedHistoryIsPreferred = false
-        call.respond(
-            readModelCacheService.getOrComputeStaleIfError(
-                descriptor = descriptor,
-                serializer = PortfolioReturnsResponse.serializer(),
-                descriptorAfterCompute = portfolioReadModelCacheDescriptorService::returnsDescriptor,
-                shouldPersist = { computedHistoryIsPreferred }
-            ) {
-                val history = portfolioHistoryService.dailyHistory(forceRefresh = true)
-                computedHistoryIsPreferred = history.isPreferredForCache()
-                portfolioReturnsService.returns(history).toResponse()
-            }
-        )
+        val result = snapshots.read(
+            preferCached = call.prefersCachedReadModel(),
+            serializer = PortfolioReturnsResponse.serializer(),
+            descriptor = { portfolioReadModelCacheDescriptorService.previewDescriptor("returns") }
+        ) {
+            val history = portfolioHistoryService.dailyHistory(forceRefresh = true)
+            SnapshotCandidate(portfolioReturnsService.returns(history).toResponse(), history.isPreferredForCache())
+        }
+        call.snapshotHeaders(result)
+        call.respond(result.value)
     }.documented(
         operationId = "getPortfolioReturns",
         summary = "Get portfolio returns",
-        description = "Returns aggregated portfolio return metrics and benchmark comparisons.",
+        description = "Returns portfolio returns. preferCached=true returns a complete snapshot of the same portfolio immediately. X-Read-Model-* headers report generation time, cache origin, refreshRequired and refreshFailed; request a live read when refresh is required.",
         tag = "Portfolio"
-    )
+    ) { snapshotReadDocumentation() }
 }
 
 internal fun PortfolioDailyHistoryResponse.isPreferredForCache(): Boolean =

@@ -129,6 +129,18 @@ If Docker reports `exec: "curl": executable file not found` for `portfolio-api`,
 overriding the image-owned healthcheck with the retired curl command. Remove the API `healthcheck` block, recreate
 the API container and let Docker inherit the application-packaged Java probe from the image.
 
+## Successful Portfolio responses are slow
+
+Check `durationMs` even for HTTP 200. Compare the API latency histogram and counters for responses
+over 5/20 seconds with upstream queue and request histograms. Stock Analyst permits two simultaneous
+client operations; queue waiting happens before the transport timeout. A total response over
+20 seconds is therefore not proof of an HTTP timeout. Upstream request duration includes retries.
+
+History, returns and alerts show the last compatible result while a browser refresh runs. The
+displayed generation time belongs to that result, not to the request. A cold cache or a canonical
+edit requires an initial computation. Failed refreshes show a retry action and preserve compatible
+data. Alert GET requests never dispatch notifications.
+
 ## Portfolio API logs are empty or too noisy
 
 Use the same Compose file set as the running deployment, then inspect recent output:

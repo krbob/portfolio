@@ -56,7 +56,12 @@ envelope records a fingerprint of account, instrument and transaction contents, 
 restores with unchanged timestamps cannot reuse another ledger's valuation. Canonical inputs are
 checked again before publishing. Incomplete or failed refreshes retain the compatible complete
 snapshot. This preview survives restarts; it does not change the live valuation path used by holdings,
-allocation or contribution planning. See the [cache policy](configuration.md#browser-data-cache).
+allocation or contribution planning. History, returns and alerts also have persistent complete
+previews, with canonical contents, effective targets and benchmark settings in the fingerprint.
+Alert settings and locale isolate alert previews. Their body contracts stay stable while response
+headers carry generation and refresh metadata. A failed background browser read keeps the displayed
+result. These small, fixed sets of rows are separate from scheduled/manual analytics caches and
+never accumulate one row per ledger revision. See the [cache policy](configuration.md#browser-data-cache).
 
 ## Transfer and recoverability model
 

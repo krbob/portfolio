@@ -51,6 +51,42 @@ describe('read-model query coordination', () => {
     )
   })
 
+  it.each([false, true])('displays complete history while refreshing and preserves its time on failure (%s)', async (failRefresh) => {
+    let finish: (() => void) | undefined
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const saved = { points: [{ date: '2026-10-12' }] }
+      if (String(input).includes('preferCached=true')) return new Response(JSON.stringify(saved), {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Read-Model-Generated-At': '2026-10-12T10:00:00Z',
+          'X-Read-Model-From-Cache': 'true',
+          'X-Read-Model-Refresh-Required': 'true',
+        },
+      })
+      return new Promise<Response>((resolve, reject) => {
+        finish = () => failRefresh ? reject(new Error('Unavailable')) : resolve(new Response(JSON.stringify({ points: [{ date: '2026-10-13' }] }), {
+          headers: { 'X-Read-Model-Generated-At': '2026-10-13T10:00:00Z' },
+        }))
+      })
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const { result } = renderHook(() => usePortfolioDailyHistory(), { wrapper })
+    await waitFor(() => {
+      expect(result.current.data?.points[0].date).toBe('2026-10-12')
+      expect(result.current.isFetching).toBe(true)
+      expect(result.current.isLoading).toBe(false)
+      expect(finish).toBeTypeOf('function')
+    })
+    act(() => finish?.())
+    await waitFor(() => {
+      expect(result.current.isFetching).toBe(false)
+      expect(result.current.isError).toBe(failRefresh)
+    })
+    expect(result.current.data?.points[0].date).toBe(failRefresh ? '2026-10-12' : '2026-10-13')
+    expect(result.current.snapshot?.generatedAt).toBe(failRefresh ? '2026-10-12T10:00:00Z' : '2026-10-13T10:00:00Z')
+  })
+
   it('does not restore a cancelled preview after clearing the session query cache', async () => {
     let finishPreview: (() => void) | undefined
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {

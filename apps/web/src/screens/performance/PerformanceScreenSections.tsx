@@ -166,7 +166,7 @@ export function ReturnsTab({
     )
   }
 
-  if (returnsQuery.isError) {
+  if (returnsQuery.isError && !data) {
     return (
       <ErrorState
         title={t('performanceSections.returnsErrorTitle')}

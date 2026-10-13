@@ -167,7 +167,7 @@ describe('PerformanceScreen', () => {
     expect(screen.queryByRole('option', { name: /miks docelowy/i })).not.toBeInTheDocument()
   })
 
-  it('renders rolling returns and drawdowns on the returns tab', async () => {
+  it.each([false, true])('keeps returns visible, including after a failed preview refresh (%s)', async (failRefresh) => {
     setLanguage('pl')
     globalThis.fetch = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
@@ -222,6 +222,7 @@ describe('PerformanceScreen', () => {
       }
 
       if (url.includes('/api/v1/portfolio/returns')) {
+        if (failRefresh && url.includes('preferCached=false')) throw new Error('Unavailable')
         return new Response(
           JSON.stringify({
             asOf: '2026-03-27',
@@ -309,7 +310,11 @@ describe('PerformanceScreen', () => {
               ],
             },
           }),
-          { status: 200 },
+          { status: 200, headers: {
+            'X-Read-Model-Generated-At': '2026-03-27T10:00:00Z',
+            'X-Read-Model-From-Cache': String(failRefresh),
+            'X-Read-Model-Refresh-Required': String(failRefresh),
+          } },
         )
       }
 
@@ -348,6 +353,7 @@ describe('PerformanceScreen', () => {
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Zwroty' }))
 
+    if (failRefresh) await screen.findByRole('button', { name: 'Ponów' })
     expect(await screen.findByText('Rolling TWR i obsunięcia')).toBeInTheDocument()
     expect(screen.getByText('1Y rolling TWR')).toBeInTheDocument()
     expect(screen.getAllByText('+12,00%').length).toBeGreaterThan(0)

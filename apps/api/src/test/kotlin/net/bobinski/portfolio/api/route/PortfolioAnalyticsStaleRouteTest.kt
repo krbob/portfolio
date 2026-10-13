@@ -30,7 +30,8 @@ import net.bobinski.portfolio.api.domain.service.PortfolioBenchmarkSettingsServi
 import net.bobinski.portfolio.api.domain.service.PortfolioHistoryService
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
-import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
+import net.bobinski.portfolio.api.domain.service.ReadModelComputationCoordinator
+import net.bobinski.portfolio.api.readmodel.ReadModelSnapshotService
 import net.bobinski.portfolio.api.domain.service.TransactionFxConversionService
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
@@ -71,7 +72,7 @@ class PortfolioAnalyticsStaleRouteTest {
                 routing {
                     route("/v1/portfolio") {
                         registerPortfolioAnalyticsReadModelRoutes(
-                            readModelCacheService = fixture.readModelCacheService,
+                            snapshots = fixture.snapshots,
                             portfolioReadModelCacheDescriptorService = fixture.descriptorService,
                             portfolioHistoryService = fixture.historyService,
                             portfolioReturnsService = fixture.returnsService
@@ -108,7 +109,7 @@ class PortfolioAnalyticsStaleRouteTest {
                 routing {
                     route("/v1/portfolio") {
                         registerPortfolioAnalyticsReadModelRoutes(
-                            readModelCacheService = fixture.readModelCacheService,
+                            snapshots = fixture.snapshots,
                             portfolioReadModelCacheDescriptorService = fixture.descriptorService,
                             portfolioHistoryService = fixture.historyService,
                             portfolioReturnsService = fixture.returnsService
@@ -138,7 +139,7 @@ class PortfolioAnalyticsStaleRouteTest {
             )
 
             fixture.advanceMarketRevisionAndDegradeProvider()
-            val mismatchedDescriptor = fixture.descriptorService.dailyHistoryDescriptor()
+            val mismatchedDescriptor = fixture.descriptorService.previewDescriptor("daily-history")
             val healthyHistorySnapshot = healthySnapshots.getValue(HISTORY_CACHE_KEY)
             assertTrue(mismatchedDescriptor.sourceUpdatedAt!! > healthyHistorySnapshot.sourceUpdatedAt!!)
             assertEquals(healthyHistorySnapshot.inputsFrom, mismatchedDescriptor.inputsFrom)
@@ -232,7 +233,8 @@ class PortfolioAnalyticsStaleRouteTest {
             benchmarkSettingsService = benchmarkSettingsService,
             clock = clock
         )
-        val readModelCacheService = ReadModelCacheService(
+        val snapshots = ReadModelSnapshotService(
+            coordinator = ReadModelComputationCoordinator(),
             repository = cacheRepository,
             json = json,
             clock = clock
@@ -429,7 +431,7 @@ class PortfolioAnalyticsStaleRouteTest {
     }
 
     companion object {
-        private const val HISTORY_CACHE_KEY = "portfolio.daily-history"
+        private const val HISTORY_CACHE_KEY = "portfolio.daily-history.preview"
         private val ACCOUNT_ID = UUID.fromString("11111111-1111-1111-1111-111111111112")
         private val INSTRUMENT_ID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaab1")
         private val FROM = LocalDate.parse("2026-03-18")

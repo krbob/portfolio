@@ -13,6 +13,8 @@ import {
   fetchReadModelCacheSnapshots,
   fetchPortfolioReturns,
   type ManualContributionPreviewPayload,
+  type ReadModelResponse,
+  type ReadModelReadOptions,
 } from '../api/read-model'
 import { useI18n } from '../lib/i18n'
 import { DEFAULT_QUERY_STALE_TIME_MS, LIVE_QUERY_STALE_TIME_MS } from '../lib/query-client'
@@ -53,17 +55,17 @@ export function usePortfolioAccounts() {
 }
 
 export function usePortfolioDailyHistory() {
-  return useMarketDataReadQuery({
+  return useReadModelSnapshotQuery({
     queryKey: ['portfolio-daily-history'],
-    queryFn: fetchPortfolioDailyHistory,
+    fetch: fetchPortfolioDailyHistory,
     staleTime: DEFAULT_QUERY_STALE_TIME_MS,
   })
 }
 
 export function usePortfolioReturns() {
-  return useMarketDataReadQuery({
+  return useReadModelSnapshotQuery({
     queryKey: ['portfolio-returns'],
-    queryFn: fetchPortfolioReturns,
+    fetch: fetchPortfolioReturns,
     staleTime: DEFAULT_QUERY_STALE_TIME_MS,
   })
 }
@@ -77,9 +79,9 @@ export function usePortfolioAllocation() {
 
 export function usePortfolioAlerts() {
   const { language } = useI18n()
-  return useMarketDataReadQuery({
+  return useReadModelSnapshotQuery({
     queryKey: ['portfolio-alerts', language],
-    queryFn: () => fetchPortfolioAlerts(language),
+    fetch: (options) => fetchPortfolioAlerts(language, options),
   })
 }
 
@@ -121,6 +123,25 @@ export function useMarketDataSnapshots() {
     queryFn: ({ signal }) => fetchMarketDataSnapshots(signal),
     staleTime: LIVE_QUERY_STALE_TIME_MS,
   })
+}
+
+function useReadModelSnapshotQuery<T>(options: {
+  queryKey: QueryKey
+  fetch: (options: ReadModelReadOptions) => Promise<ReadModelResponse<T>>
+  staleTime?: number
+}) {
+  const queryClient = useQueryClient()
+  const query = useMarketDataReadQuery({
+    queryKey: options.queryKey,
+    staleTime: options.staleTime ?? LIVE_QUERY_STALE_TIME_MS,
+    queryFn: async (signal) => {
+      const preview = await options.fetch({ preferCached: true, signal })
+      if (!preview.snapshot?.refreshRequired) return preview
+      if (!signal?.aborted) queryClient.setQueryData(options.queryKey, preview)
+      return options.fetch({ signal })
+    },
+  })
+  return { ...query, data: query.data?.value, snapshot: query.data?.snapshot }
 }
 
 function useMarketDataReadQuery<T>(options: {

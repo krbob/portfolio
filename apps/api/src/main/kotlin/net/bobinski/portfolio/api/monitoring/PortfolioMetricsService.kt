@@ -14,7 +14,7 @@ class PortfolioMetricsService(
 ) {
     suspend fun scrape(): String {
         val saved = snapshots.listSnapshots()
-        val models = cache.list().filter { it.modelName in setOf("OVERVIEW", "DAILY_HISTORY", "RETURNS") }
+        val models = cache.list().filter { it.modelName in setOf("OVERVIEW", "DAILY_HISTORY", "RETURNS", "DAILY_HISTORY_PREVIEW", "RETURNS_PREVIEW", "ALERTS_PREVIEW") }
         val status = refresh.status()
         return buildString {
             append(metrics.scrape())

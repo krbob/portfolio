@@ -73,8 +73,11 @@ The UI is available at `http://127.0.0.1:4174` and the API at
 mode. SQLite data and JSON backups use separate named volumes. Compose bounds container logs with
 five rotated 10 MiB files; Portfolio API emits UTC console logs while omitting request bodies, query
 strings and routine health/metrics probes. Prometheus metrics include upstream attempts, bounded
-capacity retries, dataset failures, cached fallback use and read-model refresh outcomes; see
+capacity retries, queue and request latency histograms, slow successful responses, dataset failures,
+cached fallback use and read-model refresh outcomes; see
 [configuration](docs/configuration.md#prometheus-metrics).
+History, returns and alerts display saved compatible results with their generation time while the
+browser refreshes them in the background. See [cache policy](docs/configuration.md#browser-data-cache).
 Portfolio Web omits successful (2xx) `/healthz` and `/api/metrics` requests from its
 Nginx access log; other statuses and application requests remain visible.
 

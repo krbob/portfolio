@@ -8,14 +8,14 @@ import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescript
 import net.bobinski.portfolio.api.domain.service.PortfolioReadModelService
 import net.bobinski.portfolio.api.domain.service.PortfolioReturnsService
 import net.bobinski.portfolio.api.domain.service.PortfolioWithdrawalService
-import net.bobinski.portfolio.api.domain.service.ReadModelCacheService
+import net.bobinski.portfolio.api.readmodel.ReadModelSnapshotService
 import net.bobinski.portfolio.api.readmodel.PortfolioOverviewSnapshotService
 import org.koin.ktor.ext.inject
 
 fun Route.portfolioRoute() {
+    val snapshots: ReadModelSnapshotService by inject()
     val portfolioReadModelService: PortfolioReadModelService by inject()
     val portfolioOverviewSnapshotService: PortfolioOverviewSnapshotService by inject()
-    val readModelCacheService: ReadModelCacheService by inject()
     val portfolioReadModelCacheDescriptorService: PortfolioReadModelCacheDescriptorService by inject()
     val portfolioAllocationService: PortfolioAllocationService by inject()
     val portfolioHistoryService: PortfolioHistoryService by inject()
@@ -28,10 +28,10 @@ fun Route.portfolioRoute() {
             portfolioOverviewSnapshotService = portfolioOverviewSnapshotService,
         )
         registerPortfolioAnalyticsRoutes(
-            readModelCacheService = readModelCacheService,
             portfolioReadModelCacheDescriptorService = portfolioReadModelCacheDescriptorService,
             portfolioAllocationService = portfolioAllocationService,
             portfolioHistoryService = portfolioHistoryService,
+            snapshots = snapshots,
             portfolioReturnsService = portfolioReturnsService,
         )
         registerPortfolioWithdrawalPlanRoute(portfolioWithdrawalService)

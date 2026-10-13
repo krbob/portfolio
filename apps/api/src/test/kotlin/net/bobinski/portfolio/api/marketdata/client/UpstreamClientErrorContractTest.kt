@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
+import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -32,7 +33,8 @@ class UpstreamClientErrorContractTest {
         }
 
         try {
-            val transport = UpstreamHttpTransport(HttpClient.newHttpClient())
+            val metrics = PortfolioMetrics()
+            val transport = UpstreamHttpTransport(HttpClient.newHttpClient(), metrics)
             val startedAt = System.nanoTime()
 
             assertThrows<TimeoutCancellationException> {
@@ -56,6 +58,7 @@ class UpstreamClientErrorContractTest {
             val elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis()
             assertTrue(elapsedMs < 900, "Caller deadline took ${elapsedMs} ms to cancel the request.")
             assertEquals(1, requests.get())
+            assertTrue(metrics.scrape().contains("portfolio_upstream_request_duration_seconds_count{upstream=\"other\",operation=\"other\"} 1"))
         } finally {
             server.stop(0)
         }

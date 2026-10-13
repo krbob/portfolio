@@ -17,6 +17,15 @@ class PortfolioMetrics {
     private val refreshes = MetricCounter("portfolio_read_model_refreshes_total", "Background or manual analytics refresh outcomes.",
         mapOf("trigger" to listOf("STARTUP", "SCHEDULED", "MANUAL"), "outcome" to listOf("success", "degraded", "failure")))
 
+    private val timings = listOf("queue", "request").associateWith {
+        UPSTREAMS.flatMap { upstream -> OPERATIONS.map { operation -> upstream to operation } }
+            .associateWith { DurationHistogram() }
+    }
+
+    fun upstreamDuration(upstream: String, operation: String, phase: String, nanos: Long) {
+        timings.getValue(phase).getValue(upstream.bounded(UPSTREAMS) to operation.bounded(OPERATIONS)).record(nanos)
+    }
+
     @Volatile private var valuation: ValuationObservation? = null
 
     fun upstreamRequest(upstream: String, operation: String, outcome: String) =
@@ -46,6 +55,14 @@ class PortfolioMetrics {
 
     fun scrape(): String = buildString {
         listOf(requests, retries, checks, fallbacks, refreshes).forEach { append(it.scrape()) }
+        timings.forEach { (phase, samples) ->
+            val name = "portfolio_upstream_${phase}_duration_seconds"
+            appendLine("# HELP $name Upstream $phase duration; request includes retries and decoding, queue precedes the request budget.")
+            appendLine("# TYPE $name histogram")
+            samples.forEach { (key, histogram) ->
+                append(histogram.scrape(name, "upstream=\"${key.first}\",operation=\"${key.second}\""))
+            }
+        }
         valuation?.let { observation ->
             gauge("portfolio_valuation_last_attempt_timestamp_seconds", observation.attemptedAt)
             observation.lastSuccessAt?.let { gauge("portfolio_valuation_last_success_timestamp_seconds", it) }

@@ -1,7 +1,6 @@
 package net.bobinski.portfolio.api.marketdata.client
 
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
@@ -22,7 +21,7 @@ class StockAnalystClient(
     httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String,
-    metrics: PortfolioMetrics = PortfolioMetrics()
+    private val metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
     private val transport = UpstreamHttpTransport(httpClient, metrics)
 
@@ -156,26 +155,36 @@ class StockAnalystClient(
         context: UpstreamRequestContext,
         decodeSuccess: (String) -> T,
         decodeLegacySuccess: (String) -> T
-    ): T = requestSemaphore.withPermit {
+    ): T {
+        val queuedAt = System.nanoTime()
         try {
-            get(
-                path = versionedPath,
-                pathParameters = pathParameters,
-                queryParameters = queryParameters,
-                context = context,
-                decodeSuccess = decodeSuccess
-            )
-        } catch (exception: MarketDataClientException) {
-            if (!exception.isRouteNotFound()) {
-                throw exception
+            requestSemaphore.acquire()
+        } finally {
+            metrics.upstreamDuration(context.upstream, context.operation, "queue", System.nanoTime() - queuedAt)
+        }
+        try {
+            return try {
+                get(
+                    path = versionedPath,
+                    pathParameters = pathParameters,
+                    queryParameters = queryParameters,
+                    context = context,
+                    decodeSuccess = decodeSuccess
+                )
+            } catch (exception: MarketDataClientException) {
+                if (!exception.isRouteNotFound()) {
+                    throw exception
+                }
+                get(
+                    path = legacyPath,
+                    pathParameters = pathParameters,
+                    queryParameters = queryParameters,
+                    context = context,
+                    decodeSuccess = decodeLegacySuccess
+                )
             }
-            get(
-                path = legacyPath,
-                pathParameters = pathParameters,
-                queryParameters = queryParameters,
-                context = context,
-                decodeSuccess = decodeLegacySuccess
-            )
+        } finally {
+            requestSemaphore.release()
         }
     }
 

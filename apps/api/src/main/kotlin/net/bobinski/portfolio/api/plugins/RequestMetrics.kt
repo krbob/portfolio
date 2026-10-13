@@ -6,8 +6,8 @@ import io.ktor.server.application.hooks.ResponseSent
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.util.AttributeKey
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import net.bobinski.portfolio.api.monitoring.DurationHistogram
 import java.util.concurrent.atomic.LongAdder
 
 internal class RequestMetricsConfig {
@@ -41,6 +41,9 @@ internal val RequestMetricsPlugin = createApplicationPlugin(
 internal class RequestMetricsRegistry {
     private val samples = ConcurrentHashMap<MetricKey, MetricSample>()
     private val seriesLock = Any()
+    private val slowResponses = (STATIC_ROUTES + "unmatched").associateWith {
+        listOf(5, 20).associateWith { LongAdder() }
+    }
     private val responses = listOf("1xx", "2xx", "3xx", "4xx", "429", "5xx", "other").associateWith { LongAdder() }
 
     fun record(method: String, route: String, status: Int, durationNanos: Long) {
@@ -50,6 +53,8 @@ internal class RequestMetricsRegistry {
             else -> "other"
         }
         responses.getValue(statusClass).increment()
+        val slow = slowResponses.getValue(if (route in slowResponses) route else "unmatched")
+        slow.forEach { (seconds, count) -> if (durationNanos > seconds * 1_000_000_000L) count.increment() }
         val requestedKey = MetricKey(method, route, status)
         val sample = samples[requestedKey] ?: synchronized(seriesLock) {
             samples[requestedKey] ?: when {
@@ -66,25 +71,25 @@ internal class RequestMetricsRegistry {
         responses.forEach { (status, count) ->
             appendLine("portfolio_http_responses_total{status_class=\"$status\"} ${count.sum()}")
         }
+        appendLine("# HELP portfolio_http_slow_responses_total Responses exceeding the threshold, including successful responses; initialized to zero.")
+        appendLine("# TYPE portfolio_http_slow_responses_total counter")
+        slowResponses.toSortedMap().forEach { (route, thresholds) ->
+            thresholds.forEach { (seconds, count) ->
+                appendLine("portfolio_http_slow_responses_total{route=\"$route\",threshold_seconds=\"$seconds\"} ${count.sum()}")
+            }
+        }
         appendLine("# HELP portfolio_http_requests_total Completed API requests.")
         appendLine("# TYPE portfolio_http_requests_total counter")
         orderedSamples().forEach { (key, sample) ->
             append("portfolio_http_requests_total")
             append(key.labels())
             append(' ')
-            appendLine(sample.count.sum())
+            appendLine(sample.count())
         }
         appendLine("# HELP portfolio_http_request_duration_seconds API request latency.")
-        appendLine("# TYPE portfolio_http_request_duration_seconds summary")
+        appendLine("# TYPE portfolio_http_request_duration_seconds histogram")
         orderedSamples().forEach { (key, sample) ->
-            append("portfolio_http_request_duration_seconds_sum")
-            append(key.labels())
-            append(' ')
-            appendLine(String.format(Locale.ROOT, "%.9f", sample.totalNanos.sum() / NANOS_PER_SECOND))
-            append("portfolio_http_request_duration_seconds_count")
-            append(key.labels())
-            append(' ')
-            appendLine(sample.count.sum())
+            append(sample.scrape("portfolio_http_request_duration_seconds", key.labels().removeSurrounding("{", "}")))
         }
     }
 
@@ -106,15 +111,7 @@ private data class MetricKey(
     fun labels(): String = "{method=\"$method\",route=\"$route\",status=\"$status\"}"
 }
 
-private class MetricSample {
-    val count = LongAdder()
-    val totalNanos = LongAdder()
-
-    fun record(durationNanos: Long) {
-        count.increment()
-        totalNanos.add(durationNanos)
-    }
-}
+private typealias MetricSample = DurationHistogram
 
 private fun HttpMethod.metricLabel(): String = when (this) {
     HttpMethod.Get -> "GET"
@@ -134,7 +131,6 @@ private fun String.normalizedRoute(): String = when {
     else -> "unmatched"
 }
 
-private const val NANOS_PER_SECOND = 1_000_000_000.0
 private const val MAX_METRIC_SERIES = 256
 private val REQUEST_STARTED_AT_NANOS = AttributeKey<Long>("portfolio-request-metrics-started-at")
 private val METRICS_RECORDED = AttributeKey<Boolean>("portfolio-request-metrics-recorded")

@@ -16,7 +16,7 @@ describe('portfolio alert locale', () => {
     await fetchPortfolioAlerts('en')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/portfolio/alerts',
+      '/api/v1/portfolio/alerts?preferCached=false',
       expect.objectContaining({
         headers: expect.objectContaining({ 'Accept-Language': 'en' }),
       }),

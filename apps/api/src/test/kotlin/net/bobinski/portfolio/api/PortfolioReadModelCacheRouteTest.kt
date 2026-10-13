@@ -33,15 +33,19 @@ class PortfolioReadModelCacheRouteTest {
         }
 
         val historyResponse = client.get("/v1/portfolio/history/daily")
+        val preview = client.get("/v1/portfolio/history/daily?preferCached=true")
+        assertEquals(historyResponse.bodyAsText(), preview.bodyAsText())
+        assertEquals("true", preview.headers["X-Read-Model-From-Cache"])
+        assertEquals(historyResponse.headers["X-Read-Model-Generated-At"], preview.headers["X-Read-Model-Generated-At"])
         val returnsResponse = client.get("/v1/portfolio/returns")
         val cacheResponse = client.get("/v1/portfolio/read-model-cache")
 
         assertEquals(HttpStatusCode.OK, historyResponse.status)
         assertEquals(HttpStatusCode.OK, returnsResponse.status)
         assertEquals(HttpStatusCode.OK, cacheResponse.status)
-        assertTrue(cacheResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.daily-history\""))
-        assertTrue(cacheResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.returns\""))
-        assertTrue(cacheResponse.bodyAsText().contains("\"invalidationReason\": \"CACHE_MISS\""))
+        assertTrue(cacheResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.daily-history.preview\""))
+        assertTrue(cacheResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.returns.preview\""))
+        assertTrue(cacheResponse.bodyAsText().contains("\"invalidationReason\": \"EXPLICIT_REFRESH\""))
     }
 
     @Test
@@ -58,7 +62,7 @@ class PortfolioReadModelCacheRouteTest {
 
         assertEquals(HttpStatusCode.OK, historyResponse.status)
         assertEquals(HttpStatusCode.OK, beforeClearResponse.status)
-        assertTrue(beforeClearResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.daily-history\""))
+        assertTrue(beforeClearResponse.bodyAsText().contains("\"cacheKey\": \"portfolio.daily-history.preview\""))
 
         assertEquals(HttpStatusCode.OK, clearResponse.status)
         assertTrue(clearResponse.bodyAsText().contains("\"clearedSnapshotCount\": 1"))

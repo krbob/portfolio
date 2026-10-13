@@ -36,10 +36,12 @@ class PortfolioReadModelCacheDescriptorServiceTest {
         )
         accounts.save(account)
         val original = service.overviewDescriptor()
+        val preview = service.previewDescriptor("daily-history")
         accounts.save(account.copy(name = "Restored account"))
         val restored = service.overviewDescriptor()
         assertEquals(original.canonicalRevision, restored.canonicalRevision)
         assertNotEquals(original.parameters, restored.parameters)
+        assertNotEquals(preview.parameters, service.previewDescriptor("daily-history").parameters)
         accounts.deleteAll()
         assertNotEquals(restored.parameters, service.overviewDescriptor().parameters)
     }

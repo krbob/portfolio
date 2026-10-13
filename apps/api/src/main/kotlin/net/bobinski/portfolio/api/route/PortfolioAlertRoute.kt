@@ -9,6 +9,10 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import net.bobinski.portfolio.api.domain.service.PortfolioReadModelCacheDescriptorService
+import net.bobinski.portfolio.api.readmodel.ReadModelSnapshotService
+import net.bobinski.portfolio.api.readmodel.SnapshotCandidate
 import net.bobinski.portfolio.api.notification.LocalizedPortfolioAlert
 import net.bobinski.portfolio.api.notification.PortfolioAlertDispatchResult
 import net.bobinski.portfolio.api.notification.PortfolioLocale
@@ -22,17 +26,28 @@ import org.koin.ktor.ext.inject
 
 fun Route.portfolioAlertRoute() {
     val alertService: PortfolioAlertService by inject()
+    val snapshots: ReadModelSnapshotService by inject()
+    val descriptors: PortfolioReadModelCacheDescriptorService by inject()
     val alertSettingsService: PortfolioAlertSettingsService by inject()
 
     get("/v1/portfolio/alerts") {
         val locale = PortfolioLocale.fromAcceptLanguage(call.request.header(HttpHeaders.AcceptLanguage))
-        call.respond(alertService.currentAlerts().map { alert -> alert.localize(locale).toResponse() })
+        val result = snapshots.read(
+            preferCached = call.prefersCachedReadModel(),
+            serializer = ListSerializer(PortfolioAlertResponse.serializer()),
+            descriptor = { descriptors.previewDescriptor("alerts.${locale.name.lowercase()}",
+                mapOf("alertSettings" to alertSettingsService.settings().toString())) }
+        ) {
+            SnapshotCandidate(alertService.currentAlerts().map { it.localize(locale).toResponse() })
+        }
+        call.snapshotHeaders(result)
+        call.respond(result.value)
     }.documented(
         operationId = "listPortfolioAlerts",
         summary = "List active portfolio alerts",
-        description = "Returns current portfolio risk, allocation, benchmark and market-data alerts.",
+        description = "Returns portfolio alerts. preferCached=true returns the last complete evaluation of the same portfolio and settings. X-Read-Model-* headers report generation time, cache origin and refresh state. Reading alerts never dispatches push notifications.",
         tag = "Portfolio"
-    )
+    ) { snapshotReadDocumentation() }
 
     get("/v1/portfolio/alert-settings") {
         call.respond(alertSettingsService.settings().toResponse())

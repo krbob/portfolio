@@ -1,3 +1,4 @@
+import { ReadModelSnapshotStatus } from '../components/ReadModelSnapshotStatus'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import { EmptyState, ErrorState, FadeIn, LoadingState, RefreshIndicator, StatCard, TabBar } from '../components/ui'
@@ -163,6 +164,8 @@ export function PerformanceScreen() {
       <PageHeader title={t('performance.title')}>
         <RefreshIndicator active={isRefreshing} />
       </PageHeader>
+      <ReadModelSnapshotStatus label={language === 'pl' ? 'Historia' : 'History'} snapshot={historyQuery.snapshot} isFetching={historyQuery.isFetching} isError={historyQuery.isError} onRetry={() => void historyQuery.refetch()} />
+      <ReadModelSnapshotStatus label={language === 'pl' ? 'Zwroty' : 'Returns'} snapshot={returnsQuery.snapshot} isFetching={returnsQuery.isFetching} isError={returnsQuery.isError} onRetry={() => void returnsQuery.refetch()} />
 
       <FadeIn>
       <p className="mb-4 max-w-4xl text-sm leading-6 text-ui-text-muted">

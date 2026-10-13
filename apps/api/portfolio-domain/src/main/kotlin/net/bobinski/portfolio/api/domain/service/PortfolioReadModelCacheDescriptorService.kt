@@ -60,6 +60,17 @@ class PortfolioReadModelCacheDescriptorService(
         preferenceUpdatedAt = preferenceUpdatedAt(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
     )
 
+    suspend fun previewDescriptor(model: String, parameters: Map<String, String> = emptyMap()): ReadModelCacheDescriptor {
+        val benchmark = appPreferenceRepository.get(PortfolioBenchmarkSettingsService.PREFERENCE_KEY)
+        return descriptor(
+            cacheKey = "portfolio.$model.preview",
+            modelName = "${model.substringBefore('.').replace('-', '_').uppercase()}_PREVIEW",
+            modelVersion = when (model) { "daily-history" -> 12; "returns" -> 9; else -> 1 },
+            fingerprintCanonicalInputs = true,
+            parameters = parameters + ("benchmarkSettings" to benchmark?.valueJson.orEmpty())
+        )
+    }
+
     private suspend fun descriptor(
         cacheKey: String,
         modelName: String,
@@ -102,7 +113,8 @@ class PortfolioReadModelCacheDescriptorService(
                 // cannot reuse the overview of a different ledger.
                 val records = accounts.sortedBy { it.id }.map { it.toString() } +
                     instruments.sortedBy { it.id }.map { it.toString() } +
-                    transactions.sortedBy { it.id }.map { it.toString() }
+                    transactions.sortedBy { it.id }.map { it.toString() } +
+                    targetPhases.sortedBy { it.id }.map { it.toString() }
                 val content = records.joinToString("") { "${it.length}:$it" }
                 val fingerprint = MessageDigest.getInstance("SHA-256")
                     .digest(content.toByteArray(Charsets.UTF_8))

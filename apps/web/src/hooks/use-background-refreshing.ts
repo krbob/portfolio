@@ -1,5 +1,3 @@
-import type { UseQueryResult } from '@tanstack/react-query'
-
-export function useBackgroundRefreshing(queries: UseQueryResult[]): boolean {
+export function useBackgroundRefreshing(queries: Array<{ isFetching: boolean; isLoading: boolean }>): boolean {
   return queries.some((q) => q.isFetching && !q.isLoading)
 }

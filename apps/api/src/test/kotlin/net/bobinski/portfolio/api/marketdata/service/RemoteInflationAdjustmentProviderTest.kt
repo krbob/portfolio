@@ -140,6 +140,21 @@ class RemoteInflationAdjustmentProviderTest {
         }
     }
 
+    @Test
+    fun `complete historical CPI window avoids publication probes after cache expiry`() = runBlocking {
+        Fixture().use { fixture ->
+            val end = YearMonth.of(2026, 5)
+            fixture.provider.monthlySeries(NOVEMBER, end)
+            fixture.clock.advance(Duration.ofHours(2))
+            fixture.unavailable = true
+            val result = fixture.provider.monthlySeries(NOVEMBER, end) as InflationSeriesResult.Success
+            assertEquals(end, result.until)
+            assertFalse(result.fromCache)
+            assertEquals(1, fixture.availabilityRequests)
+            assertEquals(listOf(end), fixture.monthlyEnds)
+        }
+    }
+
     private class Fixture : AutoCloseable {
         val clock = MutableClock(Instant.parse("2026-09-09T09:00:00Z"))
         private val json = AppJsonFactory.create()

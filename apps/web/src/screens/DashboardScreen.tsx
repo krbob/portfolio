@@ -1,3 +1,4 @@
+import { ReadModelSnapshotStatus } from '../components/ReadModelSnapshotStatus'
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import type { PortfolioDailyHistoryPoint } from '../api/read-model'
@@ -146,6 +147,9 @@ export function DashboardScreen() {
             : `${t('dashboard.asOf')} ${overview.asOf}`} · {labelPortfolioValuationBasis(valuationState, language)}
         </span>
       </PageHeader>
+      <ReadModelSnapshotStatus label={language === 'pl' ? 'Historia' : 'History'} snapshot={historyQuery.snapshot} isFetching={historyQuery.isFetching} isError={historyQuery.isError} onRetry={() => void historyQuery.refetch()} />
+      <ReadModelSnapshotStatus label={language === 'pl' ? 'Zwroty' : 'Returns'} snapshot={returnsQuery.snapshot} isFetching={returnsQuery.isFetching} isError={returnsQuery.isError} onRetry={() => void returnsQuery.refetch()} />
+      <ReadModelSnapshotStatus label={language === 'pl' ? 'Alerty' : 'Alerts'} snapshot={alertsQuery.snapshot} isFetching={alertsQuery.isFetching} isError={alertsQuery.isError} onRetry={() => void alertsQuery.refetch()} />
 
       {overview.valuationSnapshot?.fromCache && overviewQuery.isFetching && (
         <p role="status" className="mb-4 text-sm text-ui-text-muted">{t('dashboard.refreshingSavedValuation')}</p>

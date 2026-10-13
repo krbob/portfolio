@@ -289,7 +289,7 @@ export interface paths {
         };
         /**
          * Get daily portfolio history
-         * @description Returns the cached or freshly computed daily portfolio history read model.
+         * @description Returns daily history. preferCached=true returns a complete snapshot of the same portfolio immediately. X-Read-Model-* headers report generation time, cache origin, refreshRequired and refreshFailed; request a live read when refresh is required.
          */
         get: operations["getPortfolioDailyHistory"];
         put?: never;
@@ -309,7 +309,7 @@ export interface paths {
         };
         /**
          * Get portfolio returns
-         * @description Returns aggregated portfolio return metrics and benchmark comparisons.
+         * @description Returns portfolio returns. preferCached=true returns a complete snapshot of the same portfolio immediately. X-Read-Model-* headers report generation time, cache origin, refreshRequired and refreshFailed; request a live read when refresh is required.
          */
         get: operations["getPortfolioReturns"];
         put?: never;
@@ -409,7 +409,7 @@ export interface paths {
         };
         /**
          * List active portfolio alerts
-         * @description Returns current portfolio risk, allocation, benchmark and market-data alerts.
+         * @description Returns portfolio alerts. preferCached=true returns the last complete evaluation of the same portfolio and settings. X-Read-Model-* headers report generation time, cache origin and refresh state. Reading alerts never dispatches push notifications.
          */
         get: operations["listPortfolioAlerts"];
         put?: never;
@@ -2645,7 +2645,10 @@ export interface operations {
     };
     getPortfolioDailyHistory: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Return a complete compatible preview; follow refreshRequired with a live read. Defaults to false. */
+                preferCached?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2654,6 +2657,11 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description UTC generation time of the returned result, retained on fallback. */
+                    "X-Read-Model-Generated-At": string;
+                    "X-Read-Model-From-Cache": boolean;
+                    "X-Read-Model-Refresh-Required": boolean;
+                    "X-Read-Model-Refresh-Failed": boolean;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2664,7 +2672,10 @@ export interface operations {
     };
     getPortfolioReturns: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Return a complete compatible preview; follow refreshRequired with a live read. Defaults to false. */
+                preferCached?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2673,6 +2684,11 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description UTC generation time of the returned result, retained on fallback. */
+                    "X-Read-Model-Generated-At": string;
+                    "X-Read-Model-From-Cache": boolean;
+                    "X-Read-Model-Refresh-Required": boolean;
+                    "X-Read-Model-Refresh-Failed": boolean;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2770,7 +2786,10 @@ export interface operations {
     };
     listPortfolioAlerts: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Return a complete compatible preview; follow refreshRequired with a live read. Defaults to false. */
+                preferCached?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2779,6 +2798,11 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description UTC generation time of the returned result, retained on fallback. */
+                    "X-Read-Model-Generated-At": string;
+                    "X-Read-Model-From-Cache": boolean;
+                    "X-Read-Model-Refresh-Required": boolean;
+                    "X-Read-Model-Refresh-Failed": boolean;
                     [name: string]: unknown;
                 };
                 content: {

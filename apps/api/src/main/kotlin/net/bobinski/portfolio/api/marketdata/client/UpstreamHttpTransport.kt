@@ -61,32 +61,36 @@ internal class UpstreamHttpTransport(
         retryBusy: Boolean = false
     ): T = withContext(Dispatchers.IO) {
         val startedAt = System.nanoTime()
-        val result = withTimeoutOrNull(timeout.toMillis()) {
-            var retries = 0
-            while (true) {
-                try {
-                    return@withTimeoutOrNull Result.success(
-                        request(uri, timeout, context, decodeSuccess, decodeError)
-                    )
-                } catch (exception: MarketDataClientException) {
-                    val remainingMillis = timeout.toMillis() - (System.nanoTime() - startedAt) / 1_000_000
-                    val waitMillis = if (retryBusy) busyRetryDelayMillis(exception, retries) else null
-                    if (waitMillis == null || waitMillis + MIN_ATTEMPT_MILLIS >= remainingMillis) throw exception
-                    // The caller keeps its concurrency permit during backoff, preventing a burst
-                    // of subsequent portfolio requests while existing Yahoo loaders finish.
-                    delay(waitMillis)
-                    metrics.upstreamRetry(context.upstream, context.operation)
-                    retries++
+        try {
+            val result = withTimeoutOrNull(timeout.toMillis()) {
+                var retries = 0
+                while (true) {
+                    try {
+                        return@withTimeoutOrNull Result.success(
+                            request(uri, timeout, context, decodeSuccess, decodeError)
+                        )
+                    } catch (exception: MarketDataClientException) {
+                        val remainingMillis = timeout.toMillis() - (System.nanoTime() - startedAt) / 1_000_000
+                        val waitMillis = if (retryBusy) busyRetryDelayMillis(exception, retries) else null
+                        if (waitMillis == null || waitMillis + MIN_ATTEMPT_MILLIS >= remainingMillis) throw exception
+                        // The caller keeps its concurrency permit during backoff, preventing a burst
+                        // of subsequent portfolio requests while existing Yahoo loaders finish.
+                        delay(waitMillis)
+                        metrics.upstreamRetry(context.upstream, context.operation)
+                        retries++
+                    }
                 }
+                @Suppress("UNREACHABLE_CODE")
+                error("Unreachable upstream retry loop")
             }
-            @Suppress("UNREACHABLE_CODE")
-            error("Unreachable upstream retry loop")
+            if (result == null) {
+                metrics.upstreamRequest(context.upstream, context.operation, "timeout")
+                throw HttpTimeoutException("${context.upstream} ${context.operation} exceeded its total request budget.")
+            }
+            result.getOrThrow()
+        } finally {
+            metrics.upstreamDuration(context.upstream, context.operation, "request", System.nanoTime() - startedAt)
         }
-        if (result == null) {
-            metrics.upstreamRequest(context.upstream, context.operation, "timeout")
-            throw HttpTimeoutException("${context.upstream} ${context.operation} exceeded its total request budget.")
-        }
-        result.getOrThrow()
     }
 
     private suspend fun <T> request(

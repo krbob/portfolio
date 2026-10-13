@@ -1,5 +1,5 @@
 import type { components, paths } from './generated/portfolio-api'
-import { requestJson } from './http'
+import { requestJson, requestResponse } from './http'
 import type { UiLanguage } from '../lib/i18n'
 
 export type PortfolioOverview =
@@ -89,22 +89,43 @@ export function fetchPortfolioAccounts() {
   return requestJson<PortfolioAccountSummary[]>('/api/v1/portfolio/accounts')
 }
 
-export function fetchPortfolioDailyHistory() {
-  return requestJson<PortfolioDailyHistory>('/api/v1/portfolio/history/daily')
+export function fetchPortfolioDailyHistory(options: ReadModelReadOptions = {}) {
+  return requestReadModel<PortfolioDailyHistory>('/api/v1/portfolio/history/daily', options)
 }
 
-export function fetchPortfolioReturns() {
-  return requestJson<PortfolioReturns>('/api/v1/portfolio/returns')
+export function fetchPortfolioReturns(options: ReadModelReadOptions = {}) {
+  return requestReadModel<PortfolioReturns>('/api/v1/portfolio/returns', options)
 }
 
 export function fetchPortfolioAllocation() {
   return requestJson<PortfolioAllocationSummary>('/api/v1/portfolio/allocation')
 }
 
-export function fetchPortfolioAlerts(language: UiLanguage) {
-  return requestJson<PortfolioAlert[]>('/api/v1/portfolio/alerts', {
-    headers: { 'Accept-Language': language },
-  })
+export function fetchPortfolioAlerts(language: UiLanguage, options: ReadModelReadOptions = {}) {
+  return requestReadModel<PortfolioAlert[]>('/api/v1/portfolio/alerts', options, { 'Accept-Language': language })
+}
+
+export interface ReadModelSnapshot {
+  generatedAt: string
+  fromCache: boolean
+  refreshRequired: boolean
+  refreshFailed: boolean
+}
+export interface ReadModelResponse<T> { value: T; snapshot?: ReadModelSnapshot }
+export interface ReadModelReadOptions { preferCached?: boolean; signal?: AbortSignal }
+
+async function requestReadModel<T>(path: string, { preferCached = false, signal }: ReadModelReadOptions, headers = {}): Promise<ReadModelResponse<T>> {
+  const response = await requestResponse(`${path}?preferCached=${preferCached}`, { signal, headers })
+  const generatedAt = response.headers.get('X-Read-Model-Generated-At')
+  return {
+    value: await response.json() as T,
+    snapshot: generatedAt ? {
+      generatedAt,
+      fromCache: response.headers.get('X-Read-Model-From-Cache') === 'true',
+      refreshRequired: response.headers.get('X-Read-Model-Refresh-Required') === 'true',
+      refreshFailed: response.headers.get('X-Read-Model-Refresh-Failed') === 'true',
+    } : undefined,
+  }
 }
 
 export function fetchPortfolioContributionPlan(

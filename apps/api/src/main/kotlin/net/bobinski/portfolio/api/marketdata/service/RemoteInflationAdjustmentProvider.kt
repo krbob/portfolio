@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.marketdata.service
 
+import net.bobinski.portfolio.api.marketdata.client.MonthlyInflationSeries
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
 import net.bobinski.portfolio.api.marketdata.client.MarketDataClientException
 import net.bobinski.portfolio.api.marketdata.config.MarketDataConfig
@@ -58,6 +59,20 @@ class RemoteInflationAdjustmentProvider(
     override suspend fun monthlySeries(from: YearMonth, untilExclusive: YearMonth): InflationSeriesResult =
         monthlyMutex.withLock { loadMonthlySeries(from, untilExclusive) }
 
+    private fun validMonthlySeries(series: MonthlyInflationSeries, from: YearMonth, until: YearMonth): Boolean {
+        val expected = generateSequence(from) { it.plusMonths(1) }.takeWhile { it < until }.toList()
+        return series.from == from && series.until == until && series.points.map { it.month } == expected &&
+            series.points.all { it.multiplier.signum() > 0 }
+    }
+
+    private suspend fun historicalCachedSeries(from: YearMonth, until: YearMonth): InflationSeriesResult.Success? {
+        // A complete historical window does not need a probe for newer publications.
+        if (until > YearMonth.now(clock).minusMonths(1)) return null
+        return snapshotCacheService.getMonthlyInflation(from, until)
+            ?.takeIf { it.from == from && it.until == until }
+            ?.copy(fromCache = false)
+    }
+
     private suspend fun loadMonthlySeries(from: YearMonth, untilExclusive: YearMonth): InflationSeriesResult {
         if (!config.enabled) {
             return InflationSeriesResult.Failure("Market data integration is disabled.")
@@ -65,6 +80,7 @@ class RemoteInflationAdjustmentProvider(
         if (from >= untilExclusive) {
             return InflationSeriesResult.Failure("Inflation window must contain at least one month.")
         }
+        historicalCachedSeries(from, untilExclusive)?.let { return it }
         if (failedUntil?.isAfter(Instant.now(clock)) == true) {
             return cachedOrFailure(from, untilExclusive, failureReason ?: "CPI provider is temporarily unavailable.")
         }
@@ -81,10 +97,9 @@ class RemoteInflationAdjustmentProvider(
                 return cached.copy(fromCache = false)
             }
             val series = edoCalculatorClient.monthlyInflation(from = from, untilExclusive = effectiveUntil)
-            val expectedMonths = generateSequence(from) { it.plusMonths(1) }.takeWhile { it < effectiveUntil }.toList()
-            check(series.from == from && series.until == effectiveUntil &&
-                series.points.map { it.month } == expectedMonths && series.points.all { it.multiplier.signum() > 0 }
-            ) { "CPI provider returned an incomplete or invalid monthly series." }
+            check(validMonthlySeries(series, from, effectiveUntil)) {
+                "CPI provider returned an incomplete or invalid monthly series."
+            }
             val success = InflationSeriesResult.Success(
                 from = series.from,
                 until = series.until,

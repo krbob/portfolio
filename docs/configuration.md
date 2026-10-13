@@ -251,6 +251,24 @@ keeps the already displayed preview. Cancellation on navigation/session clearing
 abandoned response to the browser cache. `valuationSnapshot.generatedAt` is the time of calculation,
 not the time of the HTTP response or the exchange quote.
 
+History, returns and alerts use the same two-stage browser flow on their existing endpoints.
+Their JSON bodies remain unchanged; `preferCached=true` opts into the preview. Response headers
+`X-Read-Model-Generated-At`, `X-Read-Model-From-Cache`, `X-Read-Model-Refresh-Required` and
+`X-Read-Model-Refresh-Failed` carry the result's generation time and refresh state. History and
+returns preserve the established last-good analytics quality checks; incomplete bootstrap results
+are returned but never saved as a successful preview. Failed refreshes retain a compatible result
+and its original timestamp. Alerts are evaluated without sending push notifications.
+
+These previews also fingerprint effective target phases and benchmark settings; alerts additionally
+fingerprint alert settings and keep separate Polish/English results. At most one preview per model
+(and alert language) is persisted, independent of ledger revisions. They survive restarts and
+midnight and are cleared with the read-model cache. Scheduled/manual analytics refresh remains a
+separate process: the browser's live read updates the displayed preview, without another polling
+loop. Cold or incompatible caches still require a live computation.
+
+Complete stored CPI windows ending at least one month before the current month bypass the
+publication probe. Recent windows retain the hourly publication check and outage backoff.
+
 Query freshness is configured in the web application:
 
 | Data | Fresh for |
@@ -283,7 +301,7 @@ interactive API documentation is intentionally exposed.
 
 `/metrics` (through the web proxy: `/api/metrics`) reads local operational state only. Scraping
 never calls a market-data provider or rebuilds a valuation. Authentication follows the existing
-single-user session policy. Counters are process-local and reset on restart; all bounded series
+single-user session policy. Counters are process-local and reset on restart; fixed-label counter series
 start at zero so Prometheus can observe the first event after its initial scrape.
 
 - `portfolio_http_responses_total`: HTTP status classes, with 429 separate from other 4xx.
@@ -305,5 +323,18 @@ start at zero so Prometheus can observe the first event after its initial scrape
   preserved across restarts. It does not certify compatibility with the current ledger.
 
 Metric labels never contain account IDs, instrument symbols, purchase dates, URLs or error text.
-Use the application audit log for per-instrument failures. HTTP latency remains a sum/count
-summary: it supports averages, not percentile calculations.
+Use the application audit log for per-instrument failures.
+
+- `portfolio_http_request_duration_seconds` is a histogram, preserving its existing sum/count
+  series and adding cumulative buckets including exact 5 s and 20 s boundaries. It includes 200s.
+- `portfolio_http_slow_responses_total` is initialized to zero per normalized route and threshold
+  (`5`/`20` seconds), so alerts can detect a single event after the initial scrape. Counts overlap:
+  a response over 20 seconds also exceeds 5 seconds.
+- `portfolio_upstream_queue_duration_seconds` measures permit waiting in the Stock Analyst client,
+  before its transport budget. Cancelled waits are recorded too.
+- `portfolio_upstream_request_duration_seconds` measures a whole transport operation, including
+  retry backoff and decoding, but excluding the concurrency queue. Failures and cancellations
+  contribute durations. Neither histogram labels include symbols or URLs.
+
+For small traffic volumes, use slow-response counts alongside p95. A successful HTTP status does
+not imply an acceptable response time.
