@@ -293,12 +293,16 @@ def validate_gradle() -> None:
     ):
         fail("apps/api/Dockerfile runtime JRE major must match the repository toolchain")
     if not re.search(
-        r'^\s*CMD \["java", "-cp", "/app/lib/\*", "net\.bobinski\.portfolio\.api\.ApiHealthProbe"\]$',
+        r'^\s*CMD \["/app/bin/healthcheck"\]$',
         api_dockerfile,
         re.MULTILINE,
     ):
-        fail("apps/api/Dockerfile must use the application-packaged API health probe")
-    require_file("apps/api/src/main/java/net/bobinski/portfolio/api/ApiHealthProbe.java")
+        fail("apps/api/Dockerfile must use the image-owned lightweight API health probe")
+    if "RUN /usr/bin/curl --version" not in api_dockerfile:
+        fail("apps/api/Dockerfile must verify the health probe's curl dependency during the build")
+    if "COPY --chmod=0755 docker/healthcheck.sh /app/bin/healthcheck" not in api_dockerfile:
+        fail("apps/api/Dockerfile must install the executable API health probe")
+    require_file("apps/api/docker/healthcheck.sh")
 
 
 def validate_compose_healthchecks() -> None:

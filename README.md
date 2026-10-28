@@ -96,6 +96,9 @@ may need a one-time ownership repair before the updated API starts:
 sh scripts/fix-volume-ownership.sh
 ```
 
+The API image includes a lightweight HTTP healthcheck with a build-verified curl dependency. It checks the local
+`/v1/health` every ten seconds without launching another JVM; Compose should inherit the image's command.
+
 ### Remote market-data services
 
 Set the public or private upstream base URLs; do not append an operation path:

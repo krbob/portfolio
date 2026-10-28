@@ -46,9 +46,11 @@ order does not protect already-running services from a mixed-version rollout.
 
 Cross-project `depends_on` has no effect. Apply the same sequence explicitly:
 
-The Portfolio API image owns its healthcheck. Deployment-specific Compose definitions must inherit it; remove any
-legacy `portfolio-api.healthcheck` override that invokes `curl` before adopting an API image whose base runtime no
-longer happens to include that command.
+The Portfolio API image owns `/app/bin/healthcheck`. Deployment-specific Compose definitions must inherit it;
+remove legacy `portfolio-api.healthcheck` overrides. The image verifies its curl dependency during the build.
+The probe requires HTTP 200 from the local `/v1/health`, does not follow redirects or use proxies, and limits
+connection setup to one second and the whole request to two seconds. Docker keeps the ten-second interval,
+three-second outer timeout, ten-second start period and twelve-failure threshold.
 
 1. Pull and recreate `stock-analyst-backend-yfinance`; wait for its health check.
 2. Pull and recreate `stock-analyst` and `edo-calculator`.

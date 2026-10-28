@@ -11,9 +11,13 @@ Portfolio treats build inputs and deployable images as separate trust boundaries
 
 The API and web Dockerfiles retain readable version tags but also pin every base image to an immutable manifest
 digest. The API build and runtime use Java 21, and neither runtime image updates packages from a moving
-operating-system repository during the build. The API image owns its HTTP healthcheck through an application-packaged
-probe that requires only the Java runtime; Compose definitions inherit it instead of duplicating or replacing its
-command. Required CI starts the production image and waits for Docker to report it healthy. CI and the web image
+operating-system repository during the build. The API image owns `/app/bin/healthcheck`, a lightweight shell/curl
+probe that avoids starting a JVM every ten seconds. The digest-pinned runtime must provide `/usr/bin/curl`;
+the Dockerfile runs that binary during the build, so a base-image update that removes it fails before publication.
+Compose definitions inherit the probe instead of duplicating or replacing its command. Probe tests cover exact
+HTTP 200, redirects, HTTP errors, refused connections, timeouts and independence from proxy/curlrc settings.
+Required CI also starts the production image, rejects an unavailable endpoint and waits for Docker to report it
+healthy. CI and the web image
 activate Corepack's npm shim; CI also verifies that the exact `packageManager` version is in use before installing
 dependencies.
 

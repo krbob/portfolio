@@ -19,19 +19,21 @@ WORKDIR /app
 ARG PORTFOLIO_UID=10001
 ARG PORTFOLIO_GID=10001
 
-RUN groupadd --gid "${PORTFOLIO_GID}" portfolio \
+RUN /usr/bin/curl --version \
+    && groupadd --gid "${PORTFOLIO_GID}" portfolio \
     && useradd --uid "${PORTFOLIO_UID}" --gid portfolio --home-dir /app --no-create-home --shell /usr/sbin/nologin portfolio \
     && mkdir -p /srv/portfolio/data /srv/portfolio/backups \
     && chown -R portfolio:portfolio /app /srv/portfolio
 
 COPY --from=build --chown=${PORTFOLIO_UID}:${PORTFOLIO_GID} /workspace/build/install/portfolio-api/ /app/
+COPY --chmod=0755 docker/healthcheck.sh /app/bin/healthcheck
 
 USER ${PORTFOLIO_UID}:${PORTFOLIO_GID}
 
 EXPOSE 18082
 
-# The probe is packaged with the application and only requires the Java runtime.
+# The image guarantees curl availability at build time; probes do not start a JVM.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 \
-    CMD ["java", "-cp", "/app/lib/*", "net.bobinski.portfolio.api.ApiHealthProbe"]
+    CMD ["/app/bin/healthcheck"]
 
 ENTRYPOINT ["/app/bin/portfolio-api"]
