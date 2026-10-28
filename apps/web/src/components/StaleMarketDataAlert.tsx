@@ -24,13 +24,13 @@ export function StaleMarketDataAlert({ alert }: { alert: StaleMarketDataAlertMod
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to={appRoutes.system.diagnostics} className={btnGhost}>
+            <Link to={`${appRoutes.system.diagnostics}#data-quality`} className={btnGhost}>
               {t('staleAlert.openDataQuality')}
             </Link>
             <Link to={appRoutes.system.marketData} className={btnGhost}>
               {t('staleAlert.openMarketData')}
             </Link>
-            <Link to={appRoutes.system.diagnostics} className={btnGhost}>
+            <Link to={`${appRoutes.system.diagnostics}#readiness`} className={btnGhost}>
               {t('staleAlert.openHealth')}
             </Link>
           </div>

@@ -104,7 +104,7 @@ describe('TransactionsSection', () => {
     )
 
     expect(screen.getByText('Brak jeszcze kont')).toBeInTheDocument()
-    expect(screen.getByText(/na ekranie Konta/)).toBeInTheDocument()
+    expect(screen.getByText(/Portfel → Konta/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Przejdź do Kont' })).toHaveAttribute('href', '/portfolio/accounts')
   })
 })

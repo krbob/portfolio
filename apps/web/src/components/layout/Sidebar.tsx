@@ -112,7 +112,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
               : formatMessage(t('layout.healthSummary'), { blockers: blockingChecks, notices: advisoryChecks })}
         </p>
         <NavLink
-          to={appRoutes.system.diagnostics}
+          to={`${appRoutes.system.diagnostics}#readiness`}
           onClick={onNavigate}
           className="mt-2 inline-flex text-xs font-medium text-ui-text-muted transition-colors hover:text-ui-text"
         >

@@ -39,7 +39,7 @@ describe('PortfolioSetupGuideSection', () => {
           status: 'warning',
           action: {
             kind: 'route',
-            to: '/system/diagnostics',
+            to: '/system/diagnostics#readiness',
             label: 'Open health',
           },
         },
@@ -56,6 +56,6 @@ describe('PortfolioSetupGuideSection', () => {
 
     expect(screen.getByRole('heading', { name: /next steps/i })).toBeInTheDocument()
     expect(screen.getByText(/runtime readiness/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/system/diagnostics')
+    expect(screen.getByRole('link', { name: /open health/i })).toHaveAttribute('href', '/system/diagnostics#readiness')
   })
 })

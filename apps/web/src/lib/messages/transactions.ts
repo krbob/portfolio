@@ -239,13 +239,13 @@ export const transactionMessages = {
   'transactionsOrch.loadingDescription': { pl: 'Pobieranie kont, instrumentów, wierszy dziennika i zapisanych profili importu.', en: 'Fetching accounts, instruments, journal rows and saved import profiles.' },
   'transactionsOrch.errorTitle': { pl: 'Transakcje niedostępne', en: 'Transactions unavailable' },
   'transactionsOrch.errorDescription': {
-    pl: 'Nie udało się załadować obszaru transakcji. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.',
-    en: 'The canonical transaction workspace could not load. Retry now or verify runtime health in Settings.',
+    pl: 'Nie udało się załadować obszaru transakcji. Spróbuj ponownie albo sprawdź stan systemu w System → Diagnostyka.',
+    en: 'The transaction workspace could not load. Retry now or check system health in System → Diagnostics.',
   },
   'transactionsOrch.noAccountsTitle': { pl: 'Brak jeszcze kont', en: 'No accounts available yet' },
   'transactionsOrch.noAccountsDescription': {
-    pl: 'Utwórz konto maklerskie albo rejestr obligacji na ekranie Konta, zanim zaczniesz zapisywać transakcje.',
-    en: 'Create your brokerage or bond account on the Accounts screen before recording transactions.',
+    pl: 'Utwórz konto maklerskie albo rejestr obligacji w Portfel → Konta, zanim zaczniesz zapisywać transakcje.',
+    en: 'Create your brokerage or bond account in Portfolio → Accounts before recording transactions.',
   },
   'transactionsOrch.goToAccounts': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'transactionsOrch.eyebrow': { pl: 'Model zapisu', en: 'Write model' },

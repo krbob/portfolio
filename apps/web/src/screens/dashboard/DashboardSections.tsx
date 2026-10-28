@@ -499,7 +499,7 @@ export function DashboardDataQualityCard({
           </p>
         ))}
       </div>
-      <Link to={appRoutes.system.diagnostics} className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
+      <Link to={`${appRoutes.system.diagnostics}#data-quality`} className="mt-4 inline-flex text-sm font-medium text-amber-300 transition-colors hover:text-amber-200">
         {t('dashboardSections.openDataQuality')}
       </Link>
     </div>

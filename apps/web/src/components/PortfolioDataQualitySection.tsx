@@ -1,10 +1,12 @@
+import { Link } from 'react-router-dom'
 import { Card, ErrorState, LoadingState, SectionHeader } from './ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { notApplicableLabel } from '../lib/availability'
 import { formatDateTime } from '../lib/format'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
-import { badge, badgeVariants } from '../lib/styles'
+import { appRoutes } from '../lib/routes'
+import { badge, badgeVariants, btnGhost } from '../lib/styles'
 
 export function PortfolioDataQualitySection() {
   const { language } = useI18n()
@@ -78,9 +80,17 @@ export function PortfolioDataQualitySection() {
           </div>
 
           {summary.checks.some((check) => check.status === 'WARN') ? (
-            <p className="mt-4 text-sm text-zinc-400">
-              {t('dataQuality.upstreamHint')}
-            </p>
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-zinc-400">{t('dataQuality.upstreamHint')}</p>
+              <div className="flex flex-wrap gap-2">
+                <Link to={appRoutes.system.audit} className={btnGhost}>
+                  {t('dataQuality.openAudit')}
+                </Link>
+                <Link to={`${appRoutes.system.diagnostics}#readiness`} className={btnGhost}>
+                  {t('dataQuality.openReadiness')}
+                </Link>
+              </div>
+            </div>
           ) : null}
         </div>
       )}

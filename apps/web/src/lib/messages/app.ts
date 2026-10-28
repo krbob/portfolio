@@ -54,8 +54,8 @@ export const appMessages = {
   },
   'mobile.howToInstall': { pl: 'Jak zainstalować', en: 'How to install' },
   'mobile.installViaBrowser': {
-    pl: 'Na tej przeglądarce możesz użyć przycisku instalacji powyżej.',
-    en: 'This browser can install the app directly with the button above.',
+    pl: 'Użyj przycisku „Zainstaluj”, aby dodać aplikację w tej przeglądarce.',
+    en: 'Use the Install button to add the app in this browser.',
   },
   'mobile.installViaIos': {
     pl: 'Na iPhonie lub iPadzie użyj Udostępnij, a potem Dodaj do ekranu głównego.',
@@ -100,8 +100,8 @@ export const appMessages = {
   },
   'mobile.notificationsOffTitle': { pl: 'Powiadomienia są gotowe do włączenia', en: 'Notifications are ready to enable' },
   'mobile.notificationsOffDescription': {
-    pl: 'Po włączeniu ta przeglądarka może odbierać pushe dla alertów aktywnych w konfiguracji powiadomień.',
-    en: 'After enabling, this browser can receive pushes for alerts active in notification settings.',
+    pl: 'Po włączeniu ta przeglądarka może odbierać powiadomienia o alertach aktywnych w System → Powiadomienia.',
+    en: 'After enabling, this browser can receive pushes for alerts active in System → Notifications.',
   },
   'mobile.notificationsOnTitle': { pl: 'Powiadomienia są włączone', en: 'Notifications are enabled' },
   'mobile.notificationsOnDescription': {
@@ -162,8 +162,8 @@ export const appMessages = {
   },
   'performance.errorTitle': { pl: 'Wyniki niedostępne', en: 'Performance unavailable' },
   'performance.errorDescription': {
-    pl: 'Nie udało się wczytać historii i zwrotów. Spróbuj ponownie albo sprawdź bazę danych oraz gotowość źródeł rynkowych.',
-    en: 'History and return read models could not load. Retry now or inspect storage and market-data readiness.',
+    pl: 'Nie udało się wczytać historii i zwrotów. Spróbuj ponownie albo sprawdź gotowość środowiska w System → Diagnostyka.',
+    en: 'History and returns could not load. Retry now or check Runtime readiness in System → Diagnostics.',
   },
   'performance.emptyTitle': { pl: 'Brak danych o wynikach', en: 'No performance data yet' },
   'performance.emptyDescription': {
@@ -201,13 +201,13 @@ export const appMessages = {
   },
   'dashboard.errorTitle': { pl: 'Pulpit niedostępny', en: 'Dashboard unavailable' },
   'dashboard.errorDescription': {
-    pl: 'Nie udało się wczytać podsumowania portfela. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.',
-    en: 'Portfolio overview could not load. Retry now or inspect system health in Settings.',
+    pl: 'Nie udało się wczytać podsumowania portfela. Spróbuj ponownie albo sprawdź stan systemu w System → Diagnostyka.',
+    en: 'Portfolio overview could not load. Retry now or check system health in System → Diagnostics.',
   },
   'dashboard.welcomeTitle': { pl: 'Witaj w Portfolio', en: 'Welcome to Portfolio' },
   'dashboard.welcomeDescription': {
-    pl: 'Dodaj konto na ekranie Konta, instrument na ekranie Instrumenty i zapisz pierwszą transakcję, aby rozpocząć śledzenie portfela.',
-    en: 'Add an account on the Accounts screen, add an instrument on the Instruments screen, and record your first transaction to start tracking the portfolio.',
+    pl: 'Dodaj konto w Portfel → Konta, instrument w Strategia → Instrumenty i zapisz pierwszą transakcję w Transakcjach, aby rozpocząć śledzenie portfela.',
+    en: 'Add an account in Portfolio → Accounts, add an instrument in Strategy → Instruments, and record your first transaction in Transactions to start tracking the portfolio.',
   },
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
@@ -271,8 +271,8 @@ export const appMessages = {
   'ui.unavailable': { pl: 'Niedostępne', en: 'Unavailable' },
   'ui.errorTitle': { pl: 'Coś poszło nie tak', en: 'Something went wrong' },
   'ui.errorDescription': {
-    pl: 'Portfolio nie może teraz wczytać tych danych. Spróbuj ponownie albo sprawdź stan systemu w Ustawieniach.',
-    en: 'Portfolio could not load this data right now. Retry or check the system status in Settings.',
+    pl: 'Portfolio nie może teraz wczytać tych danych. Spróbuj ponownie albo sprawdź stan systemu w System → Diagnostyka.',
+    en: 'Portfolio could not load this data right now. Retry or check system health in System → Diagnostics.',
   },
   'ui.loadingEyebrow': { pl: 'Ładowanie', en: 'Loading' },
   'ui.loadingTitle': { pl: 'Ładowanie portfela', en: 'Loading portfolio' },

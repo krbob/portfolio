@@ -184,7 +184,7 @@ function buildReadinessItem(
       status: 'info',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#readiness`,
         label: t('setup.openHealth'),
       },
     }
@@ -198,7 +198,7 @@ function buildReadinessItem(
       status: 'warning',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#readiness`,
         label: t('setup.openHealth'),
       },
     }
@@ -213,7 +213,7 @@ function buildReadinessItem(
       status: 'warning',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#readiness`,
         label: t('setup.openHealth'),
       },
     }
@@ -228,7 +228,7 @@ function buildReadinessItem(
       status: 'info',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#readiness`,
         label: t('setup.openHealth'),
       },
     }
@@ -241,7 +241,7 @@ function buildReadinessItem(
     status: 'done',
     action: {
       kind: 'route',
-      to: appRoutes.system.diagnostics,
+      to: `${appRoutes.system.diagnostics}#readiness`,
       label: t('setup.openHealth'),
     },
   }
@@ -256,7 +256,7 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
       status: 'info',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#data-quality`,
         label: t('setup.openDataQuality'),
       },
     }
@@ -272,7 +272,7 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
       status: 'warning',
       action: {
         kind: 'route',
-        to: appRoutes.system.diagnostics,
+        to: `${appRoutes.system.diagnostics}#data-quality`,
         label: t('setup.openDataQuality'),
       },
     }
@@ -285,7 +285,7 @@ function buildDataQualityItem(warningCount: number | undefined, isLoading: boole
     status: 'done',
     action: {
       kind: 'route',
-      to: appRoutes.system.diagnostics,
+      to: `${appRoutes.system.diagnostics}#data-quality`,
       label: t('setup.openDataQuality'),
     },
   }

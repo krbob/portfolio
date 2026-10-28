@@ -12,7 +12,7 @@ export function SystemReadinessSection() {
   const readiness = readinessQuery.data
 
   return (
-    <Card>
+    <Card as="section" id="readiness">
       <SectionHeader
         eyebrow={t('readiness.eyebrow')}
         title={t('readiness.title')}
