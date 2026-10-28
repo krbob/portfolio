@@ -125,9 +125,14 @@ curl -fsS http://127.0.0.1:4174/api/v1/meta
 For a remote deployment, use the corresponding protected public URLs. A rolling update must not
 start Portfolio until both providers and the Stock Analyst versioned route gate pass.
 
-If Docker reports `exec: "curl": executable file not found` for `portfolio-api`, the deployment Compose file is
-overriding the image-owned healthcheck with the retired curl command. Remove the API `healthcheck` block, recreate
-the API container and let Docker inherit the application-packaged Java probe from the image.
+If Docker reports a missing healthcheck executable for `portfolio-api`, inspect both the deployed image and any
+Compose `healthcheck` override. Current images own `/app/bin/healthcheck` and verify `/usr/bin/curl` during the build.
+Remove obsolete API overrides and recreate the container from a verified image so it inherits the packaged probe.
+
+Older images started a separate JVM every ten seconds for the healthcheck. That startup work can account for
+several percent of one CPU core even while the API is idle. Current images use a lightweight HTTP probe. Check
+`docker inspect --format '{{json .Config.Healthcheck}}' portfolio-api` to identify the active command; the main
+application process and healthcheck processes are both included in container CPU metrics.
 
 ## Successful Portfolio responses are slow
 

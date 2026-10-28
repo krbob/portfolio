@@ -26,6 +26,9 @@ jobs:
       - name: Validate documentation
         run: python3 scripts/validate-documentation.py
 
+      - name: Test API HTTP health probe
+        run: python3 scripts/test-api-healthcheck.py
+
       - name: Validate development Compose examples
         run: |
           docker compose -f docker-compose.full-stack.example.yml config --quiet
@@ -69,7 +72,7 @@ jobs:
           docker run --rm -i hadolint/hadolint:v2.14.0@sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e hadolint --failure-threshold error - < apps/web/Dockerfile
 
       - name: ShellCheck scripts
-        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d scripts/*.sh
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d scripts/*.sh apps/api/docker/*.sh
 
   api:
     name: API tests
@@ -211,6 +214,11 @@ jobs:
           container_name="portfolio-api-health-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           docker run --detach --name "$container_name" --pull never portfolio-api:ci
           trap 'docker rm --force "$container_name" >/dev/null 2>&1 || true' EXIT
+
+          if docker exec "$container_name" /app/bin/healthcheck http://127.0.0.1:1/v1/health; then
+            echo "API health probe accepted an unavailable endpoint." >&2
+            exit 1
+          fi
 
           for _ in $(seq 1 20); do
             health_status="$(docker inspect --format '{{.State.Health.Status}}' "$container_name")"
