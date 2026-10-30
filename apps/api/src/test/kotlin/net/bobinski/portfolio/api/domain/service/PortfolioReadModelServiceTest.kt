@@ -4,6 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.domain.model.Account
@@ -17,6 +18,7 @@ import net.bobinski.portfolio.api.domain.model.TransactionType
 import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.CurrentValuationContext
 import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryProvider
 import net.bobinski.portfolio.api.marketdata.service.FxRateHistoryResult
@@ -31,6 +33,8 @@ import net.bobinski.portfolio.api.persistence.inmemory.InMemoryOperationalStateR
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryPortfolioTargetRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -45,12 +49,20 @@ import java.util.concurrent.atomic.AtomicInteger
 class PortfolioReadModelServiceTest {
 
     @Test
-    fun `parallel overview and holdings share one valued snapshot`() = runBlocking {
+    fun `parallel overview and holdings share one prioritized snapshot including transaction fx`() = runBlocking {
         val fixture = portfolioFixture(coalesceComputations = true)
         fixture.accountRepository.save(account())
         val vwce = etfInstrument(name = "VWCE", symbol = "VWCE.DE")
         fixture.instrumentRepository.save(vwce)
-        fixture.transactionRepository.save(depositTransaction())
+        fixture.transactionRepository.save(depositTransaction(grossAmount = "500.00", currency = "USD"))
+        fixture.fxRateProvider.values["USD"] = FxRateHistoryResult.Success(
+            prices = listOf(pricePoint(date = "2026-03-01", closePricePln = "4.00"))
+        )
+        val fxLoads = AtomicInteger()
+        fixture.fxRateProvider.beforeLoad = {
+            assertNotNull(currentCoroutineContext()[CurrentValuationContext.Key])
+            fxLoads.incrementAndGet()
+        }
         fixture.transactionRepository.save(
             buyTransaction(
                 instrumentId = vwce.id,
@@ -68,6 +80,7 @@ class PortfolioReadModelServiceTest {
         val valuationStarted = CompletableDeferred<Unit>()
         val releaseValuation = CompletableDeferred<Unit>()
         fixture.valuationProvider.beforeValue = {
+            assertNotNull(currentCoroutineContext()[CurrentValuationContext.Key])
             valuationStarted.complete(Unit)
             releaseValuation.await()
         }
@@ -82,6 +95,8 @@ class PortfolioReadModelServiceTest {
         assertEquals(BigDecimal("2195.00"), overview.await().totalCurrentValuePln)
         assertEquals(BigDecimal("1200.00"), holdings.await().single().currentValuePln)
         assertEquals(1, fixture.valuationProvider.invocationCount)
+        assertEquals(1, fxLoads.get())
+        assertNull(currentCoroutineContext()[CurrentValuationContext.Key])
     }
 
     @Test
@@ -870,13 +885,16 @@ class PortfolioReadModelServiceTest {
 
     private class FakeFxRateHistoryProvider : FxRateHistoryProvider {
         val values: MutableMap<String, FxRateHistoryResult> = linkedMapOf()
+        var beforeLoad: suspend () -> Unit = {}
 
         override suspend fun dailyRateToPln(
             currency: String,
             from: LocalDate,
             to: LocalDate
-        ): FxRateHistoryResult = values[currency]
-            ?: FxRateHistoryResult.Failure("No fake FX history for $currency.")
+        ): FxRateHistoryResult {
+            beforeLoad()
+            return values[currency] ?: FxRateHistoryResult.Failure("No fake FX history for $currency.")
+        }
     }
 
     private companion object {

@@ -14,8 +14,15 @@ data class MarketDataConfig(
     val usdPlnSymbol: String,
     val goldBenchmarkSymbol: String,
     val equityBenchmarkSymbol: String,
-    val bondBenchmarkSymbol: String
+    val bondBenchmarkSymbol: String,
+    val stockAnalystMaxConcurrentRequests: Int = 2
 ) {
+    init {
+        require(stockAnalystMaxConcurrentRequests > 0) {
+            "PORTFOLIO_STOCK_ANALYST_MAX_CONCURRENT_REQUESTS must be a positive integer"
+        }
+    }
+
     companion object {
         fun from(config: ApplicationConfig, env: (String) -> String? = System::getenv): MarketDataConfig = MarketDataConfig(
             enabled = readSetting("PORTFOLIO_MARKET_DATA_ENABLED", config, "portfolio.marketData.enabled", env)
@@ -33,6 +40,16 @@ data class MarketDataConfig(
                 "portfolio.marketData.stockAnalystUiUrl",
                 env
             )?.takeIf { it.isNotBlank() },
+            stockAnalystMaxConcurrentRequests = readSetting(
+                "PORTFOLIO_STOCK_ANALYST_MAX_CONCURRENT_REQUESTS",
+                config,
+                "portfolio.marketData.stockAnalystMaxConcurrentRequests",
+                env
+            )?.let { value ->
+                requireNotNull(value.toIntOrNull()) {
+                    "PORTFOLIO_STOCK_ANALYST_MAX_CONCURRENT_REQUESTS must be a positive integer"
+                }
+            } ?: 2,
             edoCalculatorApiUrl = readSetting(
                 "PORTFOLIO_EDO_CALCULATOR_API_URL",
                 config,

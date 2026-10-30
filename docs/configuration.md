@@ -102,6 +102,7 @@ information is summarized in `Data -> Backups`.
 | --- | --- | --- |
 | `PORTFOLIO_MARKET_DATA_ENABLED` | `false` | Enable all external valuation integrations |
 | `PORTFOLIO_STOCK_ANALYST_API_URL` | `http://127.0.0.1:18080` | Stock/ETF/FX/benchmark API base URL |
+| `PORTFOLIO_STOCK_ANALYST_MAX_CONCURRENT_REQUESTS` | `2` | Positive integer limiting concurrent Stock Analyst requests across valuation and analytics |
 | `PORTFOLIO_STOCK_ANALYST_UI_URL` | empty | Optional browser URL used by the app switcher |
 | `PORTFOLIO_EDO_CALCULATOR_API_URL` | `http://127.0.0.1:18081` | EDO API base URL |
 | `PORTFOLIO_GOLD_API_URL` | `https://api.gold-api.com` | Optional spot-gold API base URL |
@@ -114,14 +115,33 @@ information is summarized in `Data -> Backups`.
 
 Base URLs may contain a deployment prefix such as `/api`, but must not include an operation path.
 
-Stock Analyst requests share two in-flight slots. A classified retryable HTTP 503
+Stock Analyst requests share two in-flight slots by default. Set
+`PORTFOLIO_STOCK_ANALYST_MAX_CONCURRENT_REQUESTS` to tune that shared limit; changes require an API
+restart. Invalid or non-positive values fail startup. Increasing the limit can reduce queue time
+when upstream data is cached, but a single cold request can start multiple Yahoo loaders. Compare
+queue latency, upstream retries and failures with both warm and cold caches before raising it.
+The default two requests match the adapter's default four-loader capacity for requests that each
+start two loaders; the adapter keeps its own independent capacity protection.
+
+One slot is reserved for current valuation: with the default limit of two, analytics and background
+market-data reads can occupy at most one slot, while valuation may use both when available. The
+reservation covers the whole valued snapshot, including transaction FX, native and PLN quotes,
+and the history used to verify previous close. It also applies when concurrent overview, holdings,
+accounts and allocation reads share a computation. It does not depend on the upstream endpoint name.
+Analytics waits for its own admission before occupying shared capacity, so queued history requests
+cannot consume the reserved slot. Both permits are released on failure or cancellation; retries
+and legacy-route fallback retain them until the request finishes. Analytics-only refreshes may
+take longer because the reserved slot stays available for an arriving valuation. With a total
+limit of one, all requests serialize and no slot can be reserved.
+
+A classified retryable HTTP 503
 `SERVICE_UNAVAILABLE` can be retried at most three times, respecting `Retry-After` (seconds or
 HTTP date), with a minimum 1/2/4-second backoff and up to 250 ms jitter. A slot stays occupied
 during backoff. All attempts and waits share the original 20-second request budget; waiting to
 acquire a slot is outside that budget. A delay that cannot fit leaves the original error intact.
 429, unclassified proxy errors, malformed retry headers, other HTTP errors and decode failures
 are not retried. EDO keeps its 10-second budget without HTTP response retries. Caller cancellation
-cancels the request or wait immediately. These limits are fixed in code.
+cancels the request or wait immediately. Timeout and retry limits are fixed in code.
 
 Portfolio calls only versioned `/v1` routes. `PORTFOLIO_STOCK_ANALYST_UI_URL` must be a browser-
 reachable root URL; it is not the server-to-server API address.

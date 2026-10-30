@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import net.bobinski.portfolio.api.marketdata.service.CurrentValuationContext
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -128,10 +129,19 @@ class StockAnalystClientCompatibilityTest {
 
     @Test
     fun `all client instances share a two-request concurrency limit`() {
+        assertConcurrencyLimit(2)
+    }
+
+    @Test
+    fun `configured limiter allows four requests and bounds shared clients`() {
+        assertConcurrencyLimit(4, StockAnalystRequestLimiter(4))
+    }
+
+    private fun assertConcurrencyLimit(limit: Int, limiter: StockAnalystRequestLimiter? = null) {
         val activeRequests = AtomicInteger()
         val maximumActiveRequests = AtomicInteger()
         val totalRequests = AtomicInteger()
-        val firstBatchStarted = CountDownLatch(2)
+        val firstBatchStarted = CountDownLatch(limit)
         val releaseRequests = CountDownLatch(1)
         val server = FixtureServer {
             route("/v1/quote/") { exchange ->
@@ -152,18 +162,25 @@ class StockAnalystClientCompatibilityTest {
         }
 
         try {
-            val clients = List(3) { client(server) }
+            val clients = List(3) {
+                if (limiter == null) client(server) else StockAnalystClient(
+                    httpClient = HttpClient.newHttpClient(),
+                    json = AppJsonFactory.create(),
+                    baseUrl = server.baseUrl,
+                    requestLimiter = limiter
+                )
+            }
             val quotes = runBlocking {
                 val requests = (1..9).map { index ->
-                    async(Dispatchers.Default) {
+                    async(Dispatchers.Default + CurrentValuationContext) {
                         clients[index % clients.size].quote("STOCK$index")
                     }
                 }
                 try {
                     assertTrue(firstBatchStarted.await(5, TimeUnit.SECONDS))
                     Thread.sleep(150)
-                    assertEquals(2, activeRequests.get())
-                    assertEquals(2, totalRequests.get())
+                    assertEquals(limit, activeRequests.get())
+                    assertEquals(limit, totalRequests.get())
                 } finally {
                     releaseRequests.countDown()
                 }
@@ -172,7 +189,7 @@ class StockAnalystClientCompatibilityTest {
 
             assertEquals(9, quotes.size)
             assertEquals(9, totalRequests.get())
-            assertEquals(2, maximumActiveRequests.get())
+            assertEquals(limit, maximumActiveRequests.get())
         } finally {
             releaseRequests.countDown()
             server.close()

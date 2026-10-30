@@ -39,6 +39,7 @@ portfolio:
   marketData:
     enabled: false
     stockAnalystApiUrl: "http://127.0.0.1:18080"
+    stockAnalystMaxConcurrentRequests: 2
     stockAnalystUiUrl: ""
     edoCalculatorApiUrl: "http://127.0.0.1:18081"
     usdPlnSymbol: "PLN=X"

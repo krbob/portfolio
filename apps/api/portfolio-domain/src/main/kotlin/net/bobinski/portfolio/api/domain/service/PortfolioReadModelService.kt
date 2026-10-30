@@ -3,6 +3,7 @@ package net.bobinski.portfolio.api.domain.service
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AssetClass
 import net.bobinski.portfolio.api.domain.model.Instrument
@@ -14,6 +15,7 @@ import net.bobinski.portfolio.api.domain.repository.AccountRepository
 import net.bobinski.portfolio.api.domain.repository.InstrumentRepository
 import net.bobinski.portfolio.api.domain.repository.TransactionRepository
 import net.bobinski.portfolio.api.marketdata.service.CurrentInstrumentValuationProvider
+import net.bobinski.portfolio.api.marketdata.service.CurrentValuationContext
 import net.bobinski.portfolio.api.marketdata.service.EdoLotValuationProvider
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuation
 import net.bobinski.portfolio.api.marketdata.service.InstrumentValuationFailureType
@@ -195,7 +197,7 @@ class PortfolioReadModelService(
         }
     }
 
-    private suspend fun computeValuedSnapshot(): PortfolioValuationSnapshot {
+    private suspend fun computeValuedSnapshot(): PortfolioValuationSnapshot = withContext(CurrentValuationContext) {
         val ledgerSnapshot = buildLedgerSnapshot()
         val valuations = valueInstruments(
             ledgerSnapshot.holdings.map(MutableHolding::instrument).filter { it.kind != InstrumentKind.BOND_EDO }
@@ -208,7 +210,7 @@ class PortfolioReadModelService(
             }
         }
 
-        return PortfolioValuationSnapshot(
+        PortfolioValuationSnapshot(
             accounts = ledgerSnapshot.accounts,
             instruments = ledgerSnapshot.instruments,
             holdings = holdings,

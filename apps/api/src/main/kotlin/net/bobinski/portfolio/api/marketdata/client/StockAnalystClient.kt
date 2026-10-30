@@ -1,6 +1,5 @@
 package net.bobinski.portfolio.api.marketdata.client
 
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.monitoring.PortfolioMetrics
@@ -21,7 +20,8 @@ class StockAnalystClient(
     httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String,
-    private val metrics: PortfolioMetrics = PortfolioMetrics()
+    private val metrics: PortfolioMetrics = PortfolioMetrics(),
+    private val requestLimiter: StockAnalystRequestLimiter = defaultRequestLimiter
 ) {
     private val transport = UpstreamHttpTransport(httpClient, metrics)
 
@@ -157,34 +157,36 @@ class StockAnalystClient(
         decodeLegacySuccess: (String) -> T
     ): T {
         val queuedAt = System.nanoTime()
+        var admitted = false
         try {
-            requestSemaphore.acquire()
-        } finally {
-            metrics.upstreamDuration(context.upstream, context.operation, "queue", System.nanoTime() - queuedAt)
-        }
-        try {
-            return try {
-                get(
-                    path = versionedPath,
-                    pathParameters = pathParameters,
-                    queryParameters = queryParameters,
-                    context = context,
-                    decodeSuccess = decodeSuccess
-                )
-            } catch (exception: MarketDataClientException) {
-                if (!exception.isRouteNotFound()) {
-                    throw exception
+            return requestLimiter.withPermit {
+                admitted = true
+                metrics.upstreamDuration(context.upstream, context.operation, "queue", System.nanoTime() - queuedAt)
+                try {
+                    get(
+                        path = versionedPath,
+                        pathParameters = pathParameters,
+                        queryParameters = queryParameters,
+                        context = context,
+                        decodeSuccess = decodeSuccess
+                    )
+                } catch (exception: MarketDataClientException) {
+                    if (!exception.isRouteNotFound()) {
+                        throw exception
+                    }
+                    get(
+                        path = legacyPath,
+                        pathParameters = pathParameters,
+                        queryParameters = queryParameters,
+                        context = context,
+                        decodeSuccess = decodeLegacySuccess
+                    )
                 }
-                get(
-                    path = legacyPath,
-                    pathParameters = pathParameters,
-                    queryParameters = queryParameters,
-                    context = context,
-                    decodeSuccess = decodeLegacySuccess
-                )
             }
         } finally {
-            requestSemaphore.release()
+            if (!admitted) {
+                metrics.upstreamDuration(context.upstream, context.operation, "queue", System.nanoTime() - queuedAt)
+            }
         }
     }
 
@@ -244,7 +246,7 @@ class StockAnalystClient(
         // Stock Analyst backend's default four-loader bulkhead.
         const val MAX_CONCURRENT_REQUESTS = 2
         const val QUALITY_REPAIR_PADDING_DAYS = 7L
-        val requestSemaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
+        val defaultRequestLimiter = StockAnalystRequestLimiter(MAX_CONCURRENT_REQUESTS)
         val logger = LoggerFactory.getLogger(StockAnalystClient::class.java)
     }
 }

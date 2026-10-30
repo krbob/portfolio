@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.dependency
 
+import net.bobinski.portfolio.api.marketdata.client.StockAnalystRequestLimiter
 import net.bobinski.portfolio.api.auth.config.AuthConfig
 import net.bobinski.portfolio.api.backup.config.BackupConfig
 import net.bobinski.portfolio.api.domain.repository.AppPreferenceRepository
@@ -132,7 +133,15 @@ fun appModule(
             .connectTimeout(UpstreamTimeoutBudgets.CONNECT)
             .build()
     }
-    single { StockAnalystClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.stockAnalystApiUrl, metrics = get()) }
+    single {
+        StockAnalystClient(
+            httpClient = get(),
+            json = get(),
+            baseUrl = marketDataConfig.stockAnalystApiUrl,
+            metrics = get(),
+            requestLimiter = StockAnalystRequestLimiter(marketDataConfig.stockAnalystMaxConcurrentRequests)
+        )
+    }
     single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiUrl) }
     single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl, metrics = get()) }
     single<CurrentInstrumentValuationProvider> {
