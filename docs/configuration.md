@@ -252,7 +252,10 @@ The web client continues to request API responses with HTTP `cache: no-store`.
 
 The dashboard additionally uses a persistent API overview snapshot in SQLite. After the first
 complete valuation has been saved, a new browser session or API restart can display it immediately.
-The calculation timestamp is shown beside the valuation. The web query first requests
+The dashboard's fixed-size Data freshness control shows refresh activity or failure; when idle it
+shows the valuation calculation timestamp. Opening it displays calculation times for valuation,
+history, returns and alerts, with saved-data explanations and retry actions for failures. These
+status updates do not add or remove rows above the dashboard cards. The web query first requests
 `GET /v1/portfolio/overview?preferCached=true`; if `valuationSnapshot.refreshRequired` is true, it
 publishes that preview and continues with a normal `GET /v1/portfolio/overview` while the page remains
 visible. The normal endpoint still attempts a live valuation. There is no extra polling loop.
@@ -273,7 +276,8 @@ and timestamp while being refreshed. An empty/incompatible cache needs an initia
 Only complete market valuations replace the saved overview (book-only valuation is also allowed
 when market data is explicitly disabled). A failed or partial live refresh preserves a compatible
 complete snapshot and sets `valuationSnapshot.refreshFailed`; the dashboard keeps the values visible
-with an explanatory message and retry action. A transport failure during background fetching also
+and marks the Data freshness control as failed, with an explanatory message and retry action in its
+details. A transport failure during background fetching also
 keeps the already displayed preview. Cancellation on navigation/session clearing cannot restore an
 abandoned response to the browser cache. `valuationSnapshot.generatedAt` is the time of calculation,
 not the time of the HTTP response or the exchange quote.

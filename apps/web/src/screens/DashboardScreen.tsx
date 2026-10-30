@@ -1,4 +1,3 @@
-import { ReadModelSnapshotStatus } from '../components/ReadModelSnapshotStatus'
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
 import type { PortfolioDailyHistoryPoint, PortfolioOverview } from '../api/read-model'
@@ -8,7 +7,6 @@ import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { usePortfolioDataQuality } from '../hooks/use-portfolio-data-quality'
 import { useStaleMarketDataAlert } from '../hooks/use-stale-market-data-alert'
-import { useBackgroundRefreshing } from '../hooks/use-background-refreshing'
 import { usePortfolioAlerts, usePortfolioAllocation, usePortfolioOverview, usePortfolioDailyHistory, usePortfolioReturns } from '../hooks/use-read-model'
 import { useI18n } from '../lib/i18n'
 import { t } from '../lib/messages'
@@ -16,7 +14,8 @@ import { formatDateTime } from '../lib/format'
 import { labelPortfolioValuationBasis } from '../lib/portfolio-presentation'
 import { appRoutes } from '../lib/routes'
 import { isBookOnlyValuationState, isMarketValuationState } from '../lib/valuation'
-import { FadeIn, RefreshIndicator } from '../components/ui'
+import { FadeIn } from '../components/ui'
+import { DashboardDataStatus } from './dashboard/DashboardDataStatus'
 import {
   DashboardAllocationBar,
   DashboardDataQualityCard,
@@ -92,7 +91,6 @@ function DashboardContent({ overview, overviewQuery }: {
   const alertsQuery = usePortfolioAlerts()
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
-  const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, allocationQuery, alertsQuery])
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
@@ -151,31 +149,44 @@ function DashboardContent({ overview, overviewQuery }: {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
   }
 
+  const valuationFailed = overviewQuery.isError || Boolean(overview.valuationSnapshot?.refreshFailed)
+  const valuationDescription = `${overview.valuationSnapshot
+    ? `${t('dashboard.valuationUpdatedAt')} ${formatDateTime(overview.valuationSnapshot.generatedAt)}`
+    : `${t('dashboard.asOf')} ${overview.asOf}`} · ${labelPortfolioValuationBasis(valuationState, language)}`
+
   return (
     <>
       <PageHeader title={t('dashboard.title')}>
-        <RefreshIndicator active={isRefreshing} />
-        <span className="text-xs text-zinc-400">
-          {overview.valuationSnapshot
-            ? `${t('dashboard.valuationUpdatedAt')} ${formatDateTime(overview.valuationSnapshot.generatedAt)}`
-            : `${t('dashboard.asOf')} ${overview.asOf}`} · {labelPortfolioValuationBasis(valuationState, language)}
-        </span>
+        <DashboardDataStatus
+          valuationDate={overview.valuationSnapshot ? formatDateTime(overview.valuationSnapshot.generatedAt) : overview.asOf}
+          valuationDescription={valuationDescription}
+          items={[
+            {
+              label: t('dashboard.dataValuation'),
+              generatedAt: overview.valuationSnapshot?.generatedAt,
+              isFetching: overviewQuery.isFetching,
+              failed: valuationFailed,
+              description: valuationFailed
+                ? t(overview.valuationSnapshot?.fromCache || (overviewQuery.isError && !overview.valuationSnapshot?.refreshFailed)
+                  ? 'dashboard.savedValuationRefreshFailed' : 'dashboard.valuationRefreshFailed')
+                : overview.valuationSnapshot?.fromCache && overviewQuery.isFetching
+                  ? t('dashboard.refreshingSavedValuation') : undefined,
+              onRetry: handleRetry,
+            },
+            ...[
+              { label: t('dashboard.dataHistory'), query: historyQuery },
+              { label: t('dashboard.dataReturns'), query: returnsQuery },
+              { label: t('dashboard.dataAlerts'), query: alertsQuery },
+            ].map(({ label, query }) => ({
+              label,
+              generatedAt: query.snapshot?.generatedAt,
+              isFetching: query.isFetching,
+              failed: query.isError || Boolean(query.snapshot?.refreshFailed),
+              onRetry: () => void query.refetch(),
+            })),
+          ]}
+        />
       </PageHeader>
-      <ReadModelSnapshotStatus label={language === 'pl' ? 'Historia' : 'History'} snapshot={historyQuery.snapshot} isFetching={historyQuery.isFetching} isError={historyQuery.isError} onRetry={() => void historyQuery.refetch()} />
-      <ReadModelSnapshotStatus label={language === 'pl' ? 'Zwroty' : 'Returns'} snapshot={returnsQuery.snapshot} isFetching={returnsQuery.isFetching} isError={returnsQuery.isError} onRetry={() => void returnsQuery.refetch()} />
-      <ReadModelSnapshotStatus label={language === 'pl' ? 'Alerty' : 'Alerts'} snapshot={alertsQuery.snapshot} isFetching={alertsQuery.isFetching} isError={alertsQuery.isError} onRetry={() => void alertsQuery.refetch()} />
-
-      {overview.valuationSnapshot?.fromCache && overviewQuery.isFetching && (
-        <p role="status" className="mb-4 text-sm text-ui-text-muted">{t('dashboard.refreshingSavedValuation')}</p>
-      )}
-      {(overviewQuery.isError || overview.valuationSnapshot?.refreshFailed) && (
-        <p role="status" className="mb-4 text-sm text-ui-highlight">
-          {overview.valuationSnapshot?.fromCache || (overviewQuery.isError && !overview.valuationSnapshot?.refreshFailed)
-            ? t('dashboard.savedValuationRefreshFailed')
-            : t('dashboard.valuationRefreshFailed')}
-          {' '}<button type="button" className="underline" onClick={handleRetry}>{t('common.retry')}</button>
-        </p>
-      )}
 
       <StaleMarketDataAlert alert={staleAlert.alert} />
 

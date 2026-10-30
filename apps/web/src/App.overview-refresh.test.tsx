@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -64,6 +65,7 @@ describe('dashboard saved valuation', () => {
     expect(queryClient.getQueryData(['portfolio-daily-history'])).toBeUndefined()
     expect(queryClient.getQueryData(['portfolio-returns'])).toBeUndefined()
     if (savedPreview) {
+      await userEvent.click(screen.getByRole('button', { name: 'Aktualność danych' }))
       expect(screen.getByText(/Pokazujemy ostatnią poprawną wycenę/)).toBeInTheDocument()
     }
     await act(async () => pending.forEach((finish) => finish()))
@@ -98,6 +100,7 @@ describe('dashboard saved valuation', () => {
         <App />
       </QueryClientProvider></I18nProvider></MemoryRouter>,
     )
+    await userEvent.click(await screen.findByRole('button', { name: 'Aktualność danych' }))
     expect(await screen.findByText(/Pokazujemy ostatnią poprawną wycenę/)).toBeInTheDocument()
     expect(screen.getByText(/Wycena obliczona/)).toBeInTheDocument()
     expect(screen.queryByText(/Budujemy aktualny obraz portfela/)).not.toBeInTheDocument()

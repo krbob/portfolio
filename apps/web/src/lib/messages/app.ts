@@ -212,6 +212,13 @@ export const appMessages = {
   'dashboard.welcomeAction': { pl: 'Przejdź do Kont', en: 'Go to Accounts' },
   'dashboard.asOf': { pl: 'Stan na', en: 'As of' },
   'dashboard.valuationUpdatedAt': { pl: 'Wycena obliczona', en: 'Valuation calculated' },
+  'dashboard.dataStatus': { pl: 'Aktualność danych', en: 'Data freshness' },
+  'dashboard.dataRefreshFailed': { pl: 'Błąd odświeżania', en: 'Refresh failed' },
+  'dashboard.dataTimestampUnavailable': { pl: 'Data obliczenia jeszcze niedostępna', en: 'Calculation time not yet available' },
+  'dashboard.dataValuation': { pl: 'Wycena', en: 'Valuation' },
+  'dashboard.dataHistory': { pl: 'Historia', en: 'History' },
+  'dashboard.dataReturns': { pl: 'Zwroty', en: 'Returns' },
+  'dashboard.dataAlerts': { pl: 'Alerty', en: 'Alerts' },
   'dashboard.refreshingSavedValuation': {
     pl: 'Pokazujemy ostatnią poprawną wycenę. Aktualne dane są pobierane w tle.',
     en: 'Showing the last complete valuation. Updating market data in the background.',

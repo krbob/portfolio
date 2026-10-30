@@ -46,7 +46,111 @@ test('dashboard keeps attention-panel spacing and the neutral dark palette @smok
   expect(twrBox!.y + twrBox!.height).toBeLessThanOrEqual(1080)
 })
 
-async function mockDashboardApi(page: Page) {
+for (const width of [393, 1920]) {
+  for (const refreshFailed of [false, true]) {
+    test(`dashboard status updates keep cards in place (${width}px, refresh failed: ${refreshFailed})`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 1080 })
+      const analytics = ['/history/daily', '/returns', '/alerts']
+      const requested = new Set<string>()
+      const gates = new Map<string, { promise: Promise<void>; release: () => void }>()
+      for (const key of [...analytics.flatMap((path) => [`${path}:preview`, `${path}:live`]), '/overview:live']) {
+        let release!: () => void
+        const promise = new Promise<void>((resolve) => { release = resolve })
+        gates.set(key, { promise, release })
+      }
+      await mockDashboardApi(page, async (url, body) => {
+        const preview = url.searchParams.get('preferCached') === 'true'
+        const path = analytics.find((path) => url.pathname.endsWith(`/portfolio${path}`))
+          ?? (url.pathname.endsWith('/portfolio/overview') ? '/overview' : undefined)
+        if (!path) return { body }
+        const key = `${path}:${preview ? 'preview' : 'live'}`
+        requested.add(key)
+        await gates.get(key)?.promise
+        const snapshot = {
+          generatedAt: preview || refreshFailed ? '2026-07-13T08:00:00Z' : '2026-07-13T08:05:00Z',
+          fromCache: preview || refreshFailed,
+          refreshRequired: preview,
+          refreshFailed: !preview && refreshFailed,
+        }
+        return path === '/overview'
+          ? { body: { ...(body as object), valuationSnapshot: snapshot } }
+          : {
+            body: path === '/alerts' ? [] : body,
+            headers: {
+              'X-Read-Model-Generated-At': snapshot.generatedAt,
+              'X-Read-Model-From-Cache': String(snapshot.fromCache),
+              'X-Read-Model-Refresh-Required': String(snapshot.refreshRequired),
+              'X-Read-Model-Refresh-Failed': String(snapshot.refreshFailed),
+            },
+          }
+      })
+
+      try {
+        await page.goto('/')
+        await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important; }' })
+        const status = page.getByRole('button', { name: 'Aktualność danych', exact: true })
+        await expect(status).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Są otwarte punkty konfiguracji lub zaufania do danych' })).toBeVisible()
+        const card = page.getByText('Zmiana dzienna', { exact: true }).locator('..')
+        await expect(card).toBeVisible()
+        const initialCard = (await card.boundingBox())!
+        const initialStatus = (await status.boundingBox())!
+
+        async function expectStablePosition() {
+          await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+          const currentCard = (await card.boundingBox())!
+          const currentStatus = (await status.boundingBox())!
+          expect(currentCard.y).toBeCloseTo(initialCard.y, 1)
+          expect(currentStatus.height).toBe(initialStatus.height)
+          expect(currentStatus.width).toBe(initialStatus.width)
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        }
+
+        for (const path of analytics) {
+          await expect.poll(() => requested.has(`${path}:preview`)).toBe(true)
+          gates.get(`${path}:preview`)!.release()
+          await expect.poll(() => requested.has(`${path}:live`)).toBe(true)
+          await expectStablePosition()
+        }
+        for (const path of ['/overview', ...analytics]) {
+          const finished = page.waitForResponse((response) => {
+            const url = new URL(response.url())
+            return url.pathname.endsWith(`/portfolio${path}`) && url.searchParams.get('preferCached') !== 'true'
+          })
+          gates.get(`${path}:live`)!.release()
+          await finished
+          await expectStablePosition()
+        }
+        if (refreshFailed) await expect(status).toContainText('Błąd odświeżania')
+        else await expect(status).not.toContainText('Odświeżanie')
+        await page.screenshot({ path: testInfo.outputPath('dashboard-status.png') })
+
+        await status.click()
+        const dialog = page.getByRole('dialog', { name: 'Aktualność danych' })
+        await expect(dialog).toBeVisible()
+        await expect(dialog.locator('time')).toHaveCount(4)
+        for (const label of ['Wycena', 'Historia', 'Zwroty', 'Alerty']) {
+          await expect(dialog.getByText(label, { exact: true })).toBeVisible()
+          if (refreshFailed) await expect(dialog.getByRole('button', { name: `Ponów: ${label}`, exact: true })).toBeVisible()
+        }
+        await page.screenshot({ path: testInfo.outputPath('dashboard-status-details.png') })
+        await page.keyboard.press('Escape')
+        await expect(dialog).not.toBeVisible()
+        await expect(status).toBeFocused()
+        await expectStablePosition()
+      } finally {
+        for (const gate of gates.values()) gate.release()
+      }
+    })
+  }
+}
+
+interface DashboardMockResponse {
+  body: unknown
+  headers?: Record<string, string>
+}
+
+async function mockDashboardApi(page: Page, transform?: (url: URL, body: unknown) => Promise<DashboardMockResponse>) {
   await page.route('**/api/v1/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname
     let body: unknown
@@ -158,9 +262,11 @@ async function mockDashboardApi(page: Page) {
       body = []
     }
 
+    const response = transform ? await transform(new URL(route.request().url()), body) : { body }
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify(body),
+      headers: response.headers,
+      body: JSON.stringify(response.body),
     })
   })
 }
