@@ -64,6 +64,7 @@ class OperationalStateRepositoryParityTest {
         val second = entry("portfolio.market-data.quote.second", "{\"value\":2}", "2026-03-27T10:05:00Z")
         repository.save(first)
         repository.save(second)
+        repository.save(entry("unrelated.state", "{}", "2026-03-27T10:30:00Z"))
         val insertIfAbsent = repository.saveIfAbsent(
             entry(first.key, "{\"value\":0}", "2026-03-20T10:00:00Z")
         )
@@ -78,13 +79,18 @@ class OperationalStateRepositoryParityTest {
             entry(first.key, "{\"value\":999}", "2026-03-27T10:20:00Z")
         )
 
+        val revisions = repository.listRevisionsByPrefix("portfolio.market-data.quote.")
+        assertEquals(mapOf(first.key to newest.updatedAt, second.key to second.updatedAt), revisions)
+        assertEquals(emptyMap<String, Instant>(), repository.listRevisionsByPrefix("missing."))
+
         return RepositoryResult(
             insertIfAbsent = insertIfAbsent,
             staleResult = staleResult,
             newestResult = newestResult,
             equalTimestampResult = equalTimestampResult,
             current = repository.get(first.key),
-            listed = repository.listByPrefix("portfolio.market-data.quote.")
+            listed = repository.listByPrefix("portfolio.market-data.quote."),
+            revisions = revisions
         )
     }
 
@@ -129,7 +135,8 @@ class OperationalStateRepositoryParityTest {
         val newestResult: OperationalStateEntry,
         val equalTimestampResult: OperationalStateEntry,
         val current: OperationalStateEntry?,
-        val listed: List<OperationalStateEntry>
+        val listed: List<OperationalStateEntry>,
+        val revisions: Map<String, Instant>
     )
 
     private data class ConditionalDeleteResult(

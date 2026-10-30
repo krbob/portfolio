@@ -237,6 +237,13 @@ The calculation timestamp is shown beside the valuation. The web query first req
 publishes that preview and continues with a normal `GET /v1/portfolio/overview` while the page remains
 visible. The normal endpoint still attempts a live valuation. There is no extra polling loop.
 
+The dashboard starts history, returns, allocation and alert queries after the first overview is
+available (including a saved preview), so those computations do not compete with the initial
+headline valuation. The current value and daily change remain visible while analytics load.
+API source-revision checks read only market-data payload keys and timestamps, plus their small
+metadata records; a covering SQLite index avoids reading historical series JSON. Legacy preference
+entries still migrate on first access, and cache compatibility and freshness rules remain unchanged.
+
 A saved preview requires matching account, instrument and transaction contents plus the market-data
 configuration. Edits, deletes and imports cannot reuse a snapshot of another ledger, including when
 imported timestamps are unchanged. A new date, changed source revision, or a calculation at least

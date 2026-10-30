@@ -44,16 +44,25 @@ class OperationalStateService(
     suspend fun listByPrefix(prefix: String): List<OperationalStateEntry> {
         val entriesByKey = repository.listByPrefix(prefix)
             .associateByTo(mutableMapOf(), OperationalStateEntry::key)
+        migrateLegacyEntries(prefix).forEach { migrated -> entriesByKey[migrated.key] = migrated }
+        return entriesByKey.values.sortedBy(OperationalStateEntry::key)
+    }
+
+    suspend fun listRevisionsByPrefix(prefix: String): Map<String, Instant> {
+        val revisions = repository.listRevisionsByPrefix(prefix).toMutableMap()
+        migrateLegacyEntries(prefix).forEach { migrated -> revisions[migrated.key] = migrated.updatedAt }
+        return revisions
+    }
+
+    private suspend fun migrateLegacyEntries(prefix: String): List<OperationalStateEntry> =
         legacyPreferenceRepository
             ?.listByPrefix(prefix)
             .orEmpty()
-            .forEach { preference ->
+            .map { preference ->
                 val migrated = repository.saveIfNewer(preference.toOperationalStateEntry())
-                entriesByKey[migrated.key] = migrated
                 legacyPreferenceRepository?.deleteIfUnchanged(preference)
+                migrated
             }
-        return entriesByKey.values.sortedBy(OperationalStateEntry::key)
-    }
 
     fun <T> decodeOrNull(
         entry: OperationalStateEntry,

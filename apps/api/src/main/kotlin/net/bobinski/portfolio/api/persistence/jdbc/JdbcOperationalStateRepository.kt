@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.persistence.jdbc
 
+import java.time.Instant
 import net.bobinski.portfolio.api.domain.model.OperationalStateEntry
 import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
 
@@ -37,6 +38,27 @@ class JdbcOperationalStateRepository(
                     buildList {
                         while (resultSet.next()) {
                             add(resultSet.toOperationalStateEntry())
+                        }
+                    }
+                }
+            }
+        }
+
+    override suspend fun listRevisionsByPrefix(prefix: String): Map<String, Instant> =
+        connectionManager.withConnection { connection ->
+            connection.prepareStatement(
+                """
+                select state_key, updated_at
+                from operational_state
+                where state_key like ?
+                order by state_key asc
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, "$prefix%")
+                statement.executeQuery().use { resultSet ->
+                    buildMap {
+                        while (resultSet.next()) {
+                            put(resultSet.getString("state_key"), resultSet.instant("updated_at"))
                         }
                     }
                 }

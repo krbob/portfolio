@@ -132,7 +132,7 @@ class PortfolioReadModelCacheDescriptorService(
         (baseVersion * FINGERPRINT_MODULUS) + marketDataFingerprint()
 
     private suspend fun marketDataSnapshotCanonicalUpdatedAt(): Instant? {
-        val payloads = operationalStateService.listByPrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
+        val payloads = operationalStateService.listRevisionsByPrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
         if (payloads.isEmpty()) {
             return null
         }
@@ -148,12 +148,12 @@ class PortfolioReadModelCacheDescriptorService(
             )
 
         return payloads.asSequence()
-            .mapNotNull { preference ->
-                val suffix = preference.key.removePrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
+            .map { (key, updatedAt) ->
+                val suffix = key.removePrefix(MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX)
                 metadataBySuffix[suffix]
                     ?.canonicalUpdatedAt
                     ?.let(Instant::parse)
-                    ?: preference.updatedAt
+                    ?: updatedAt
             }
             .maxOrNull()
     }

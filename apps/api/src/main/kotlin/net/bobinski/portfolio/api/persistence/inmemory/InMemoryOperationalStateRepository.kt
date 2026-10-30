@@ -1,5 +1,6 @@
 package net.bobinski.portfolio.api.persistence.inmemory
 
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 import net.bobinski.portfolio.api.domain.model.OperationalStateEntry
 import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
@@ -13,6 +14,12 @@ class InMemoryOperationalStateRepository : OperationalStateRepository {
         .values
         .filter { entry -> entry.key.startsWith(prefix) }
         .sortedBy(OperationalStateEntry::key)
+
+    override suspend fun listRevisionsByPrefix(prefix: String): Map<String, Instant> = state.get()
+        .values
+        .filter { entry -> entry.key.startsWith(prefix) }
+        .sortedBy(OperationalStateEntry::key)
+        .associate { entry -> entry.key to entry.updatedAt }
 
     override suspend fun save(entry: OperationalStateEntry): OperationalStateEntry {
         state.updateAndGet { current -> current + (entry.key to entry) }

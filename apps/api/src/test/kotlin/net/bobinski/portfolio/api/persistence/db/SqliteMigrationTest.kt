@@ -21,7 +21,7 @@ class SqliteMigrationTest {
         try {
             PersistenceResources(sqlitePersistenceConfig(databasePath.toString())).use { resources ->
                 resources.dataSource.connection.use { connection ->
-                    assertEquals(14, appliedMigrationCount(connection))
+                    assertEquals(15, appliedMigrationCount(connection))
                     assertTrue(tableExists(connection, "accounts"))
                     assertTrue(tableExists(connection, "instruments"))
                     assertTrue(tableExists(connection, "edo_terms"))
@@ -220,7 +220,7 @@ class SqliteMigrationTest {
 
     private fun assertLegacyWebPushLocale(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(14, appliedMigrationCount(connection))
+            assertEquals(15, appliedMigrationCount(connection))
             connection.prepareStatement(
                 "select locale from web_push_subscriptions where endpoint = ?"
             ).use { statement ->
@@ -260,7 +260,7 @@ class SqliteMigrationTest {
 
     private fun assertOperationalStateMigration(dataSource: javax.sql.DataSource) {
         dataSource.connection.use { connection ->
-            assertEquals(14, appliedMigrationCount(connection))
+            assertEquals(15, appliedMigrationCount(connection))
             assertEquals(
                 listOf("portfolio.benchmark-settings"),
                 storedKeys(connection, table = "app_preferences", keyColumn = "preference_key")

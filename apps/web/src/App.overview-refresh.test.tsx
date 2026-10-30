@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { I18nProvider } from './lib/i18n'
+import { formatCurrencyPln, formatSignedCurrencyPln } from './lib/format'
 import { createAppFetchMock, createStorageMock, createTestQueryClient } from './test/app-smoke-fixtures'
 
 describe('dashboard saved valuation', () => {
@@ -18,6 +19,54 @@ describe('dashboard saved valuation', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  it.each([false, true])('shows headline values before slow analytics finish (saved preview: %s)', async (savedPreview) => {
+    const fallback = createAppFetchMock()
+    const overview = await (await fallback('/api/v1/portfolio/overview')).json()
+    overview.totalPreviousCloseValuePln = '10400.00'
+    overview.valuationSnapshot = {
+      generatedAt: '2026-09-09T10:00:00Z', fromCache: savedPreview, refreshRequired: savedPreview,
+    }
+    const analyticsPaths = ['/history/daily', '/returns', '/allocation', '/alerts']
+    const requestedAnalytics = new Set<string>()
+    const pending: Array<() => void> = []
+    let finishOverview: (() => void) | undefined
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = String(input)
+      if (url.includes('/portfolio/overview?preferCached=true')) {
+        return new Promise<Response>((resolve) => {
+          finishOverview = () => resolve(new Response(JSON.stringify(overview)))
+        })
+      }
+      const analyticsPath = analyticsPaths.find((path) => url.includes(`/portfolio${path}`))
+      if (analyticsPath || url.endsWith('/portfolio/overview')) {
+        if (analyticsPath) requestedAnalytics.add(analyticsPath)
+        return new Promise<Response>((resolve) => {
+          pending.push(() => void fallback(input).then(resolve))
+        })
+      }
+      return fallback(input)
+    })
+    const queryClient = createTestQueryClient()
+    render(
+      <MemoryRouter><I18nProvider><QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider></I18nProvider></MemoryRouter>,
+    )
+    await waitFor(() => expect(finishOverview).toBeTypeOf('function'))
+    expect(requestedAnalytics.size).toBe(0)
+
+    await act(async () => finishOverview?.())
+    expect(await screen.findByText(formatCurrencyPln('10550.00'), { normalizer: (value) => value })).toBeInTheDocument()
+    expect(screen.getByText(formatSignedCurrencyPln(150), { normalizer: (value) => value })).toBeInTheDocument()
+    await waitFor(() => expect([...requestedAnalytics].sort()).toEqual([...analyticsPaths].sort()))
+    expect(queryClient.getQueryData(['portfolio-daily-history'])).toBeUndefined()
+    expect(queryClient.getQueryData(['portfolio-returns'])).toBeUndefined()
+    if (savedPreview) {
+      expect(screen.getByText(/Pokazujemy ostatnią poprawną wycenę/)).toBeInTheDocument()
+    }
+    await act(async () => pending.forEach((finish) => finish()))
   })
 
   it.each([false, true])('keeps the dashboard visible during refresh and on failure (%s)', async (fails) => {

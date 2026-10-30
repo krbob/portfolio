@@ -134,6 +134,26 @@ class OperationalStateServiceTest {
     }
 
     @Test
+    fun `revision listing reconciles legacy payloads and preserves the newest timestamp`() = runBlocking {
+        val legacyRepository = InMemoryAppPreferenceRepository()
+        val operationalRepository = InMemoryOperationalStateRepository()
+        val prefix = OperationalStateKeys.MARKET_DATA_SNAPSHOT_PREFIX
+        val older = Instant.parse("2026-03-20T11:00:00Z")
+        val newer = Instant.parse("2026-03-26T11:00:00Z")
+        operationalRepository.save(OperationalStateEntry("${prefix}current", "{}", newer))
+        operationalRepository.save(OperationalStateEntry("${prefix}legacy", "{}", older))
+        legacyRepository.save(AppPreference("${prefix}current", "{}", older))
+        legacyRepository.save(AppPreference("${prefix}legacy", "{\"new\":true}", newer))
+        legacyRepository.save(AppPreference("${prefix}missing", "{}", newer))
+
+        val revisions = service(operationalRepository, legacyRepository).listRevisionsByPrefix(prefix)
+
+        assertEquals(mapOf("${prefix}current" to newer, "${prefix}legacy" to newer, "${prefix}missing" to newer), revisions)
+        assertEquals("{\"new\":true}", operationalRepository.get("${prefix}legacy")?.valueJson)
+        assertEquals(emptyList<AppPreference>(), legacyRepository.listByPrefix(prefix))
+    }
+
+    @Test
     fun `concurrent late legacy write is not deleted and is reconciled on the next read`() = runBlocking {
         val delegate = InMemoryAppPreferenceRepository()
         val operationalRepository = InMemoryOperationalStateRepository()

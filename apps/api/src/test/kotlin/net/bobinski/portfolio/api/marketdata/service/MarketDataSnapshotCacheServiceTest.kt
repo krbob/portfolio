@@ -760,7 +760,7 @@ class MarketDataSnapshotCacheServiceTest {
 
 private class DelayedOperationalStateRepository(
     private val delegate: OperationalStateRepository
-) : OperationalStateRepository {
+) : OperationalStateRepository by delegate {
     override suspend fun get(key: String): OperationalStateEntry? = delegate.get(key).also { delay(25) }
 
     override suspend fun listByPrefix(prefix: String): List<OperationalStateEntry> = delegate.listByPrefix(prefix)

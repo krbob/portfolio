@@ -1,7 +1,7 @@
 import { ReadModelSnapshotStatus } from '../components/ReadModelSnapshotStatus'
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/layout'
-import type { PortfolioDailyHistoryPoint } from '../api/read-model'
+import type { PortfolioDailyHistoryPoint, PortfolioOverview } from '../api/read-model'
 import { DashboardSetupBanner } from '../components/DashboardSetupBanner'
 import { PortfolioAlertsPanel } from '../components/PortfolioAlertsPanel'
 import { StaleMarketDataAlert } from '../components/StaleMarketDataAlert'
@@ -29,9 +29,63 @@ import {
 type DashboardRange = '1Y' | 'MAX'
 
 export function DashboardScreen() {
+  const overviewQuery = usePortfolioOverview()
+  const overview = overviewQuery.data
+
+  function handleRetry() {
+    void overviewQuery.refetch()
+  }
+
+  if (overviewQuery.isLoading) {
+    return (
+      <>
+        <PageHeader title={t('dashboard.title')} />
+        <LoadingState
+          title={t('dashboard.loadingTitle')}
+          description={t('dashboard.loadingDescription')}
+          blocks={4}
+        />
+      </>
+    )
+  }
+
+  if (overviewQuery.isError && !overview) {
+    return (
+      <>
+        <PageHeader title={t('dashboard.title')} />
+        <ErrorState
+          title={t('dashboard.errorTitle')}
+          description={t('dashboard.errorDescription')}
+          onRetry={handleRetry}
+        />
+      </>
+    )
+  }
+
+  if (!overview) {
+    return (
+      <>
+        <PageHeader title={t('dashboard.title')} />
+        <EmptyState
+          title={t('dashboard.welcomeTitle')}
+          description={t('dashboard.welcomeDescription')}
+          action={{ label: t('dashboard.welcomeAction'), to: appRoutes.portfolio.accounts }}
+        />
+      </>
+    )
+  }
+
+  // Mount analytics only once the headline valuation can be displayed. This also
+  // works with a saved preview while its live refresh is still running.
+  return <DashboardContent overview={overview} overviewQuery={overviewQuery} />
+}
+
+function DashboardContent({ overview, overviewQuery }: {
+  overview: PortfolioOverview
+  overviewQuery: ReturnType<typeof usePortfolioOverview>
+}) {
   const { language } = useI18n()
   const [range, setRange] = useState<DashboardRange>('1Y')
-  const overviewQuery = usePortfolioOverview()
   const historyQuery = usePortfolioDailyHistory()
   const returnsQuery = usePortfolioReturns()
   const allocationQuery = usePortfolioAllocation()
@@ -39,7 +93,6 @@ export function DashboardScreen() {
   const dataQuality = usePortfolioDataQuality()
   const staleAlert = useStaleMarketDataAlert()
   const isRefreshing = useBackgroundRefreshing([overviewQuery, historyQuery, returnsQuery, allocationQuery, alertsQuery])
-  const overview = overviewQuery.data
 
   const allPoints = useMemo(() => historyQuery.data?.points ?? [], [historyQuery.data?.points])
   const allPeriods = useMemo(() => returnsQuery.data?.periods ?? [], [returnsQuery.data?.periods])
@@ -96,45 +149,6 @@ export function DashboardScreen() {
 
   function handleRetry() {
     void Promise.all([overviewQuery.refetch(), historyQuery.refetch()])
-  }
-
-  if (overviewQuery.isLoading) {
-    return (
-      <>
-        <PageHeader title={t('dashboard.title')} />
-        <LoadingState
-          title={t('dashboard.loadingTitle')}
-          description={t('dashboard.loadingDescription')}
-          blocks={4}
-        />
-      </>
-    )
-  }
-
-  if (overviewQuery.isError && !overview) {
-    return (
-      <>
-        <PageHeader title={t('dashboard.title')} />
-        <ErrorState
-          title={t('dashboard.errorTitle')}
-          description={t('dashboard.errorDescription')}
-          onRetry={handleRetry}
-        />
-      </>
-    )
-  }
-
-  if (!overview) {
-    return (
-      <>
-        <PageHeader title={t('dashboard.title')} />
-        <EmptyState
-          title={t('dashboard.welcomeTitle')}
-          description={t('dashboard.welcomeDescription')}
-          action={{ label: t('dashboard.welcomeAction'), to: appRoutes.portfolio.accounts }}
-        />
-      </>
-    )
   }
 
   return (

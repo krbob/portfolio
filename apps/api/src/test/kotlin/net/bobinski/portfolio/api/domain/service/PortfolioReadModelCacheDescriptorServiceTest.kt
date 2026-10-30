@@ -7,9 +7,13 @@ import java.time.ZoneOffset
 import kotlinx.coroutines.runBlocking
 import net.bobinski.portfolio.api.domain.model.Account
 import net.bobinski.portfolio.api.domain.model.AccountType
+import net.bobinski.portfolio.api.domain.model.OperationalStateEntry
+import net.bobinski.portfolio.api.domain.repository.OperationalStateRepository
 import net.bobinski.portfolio.api.config.AppJsonFactory
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotCacheService
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotMetadata
+import net.bobinski.portfolio.api.marketdata.service.MarketDataSnapshotPreferences
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAccountRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryAppPreferenceRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryInstrumentRepository
@@ -25,6 +29,43 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PortfolioReadModelCacheDescriptorServiceTest {
+
+    @Test
+    fun `overview checks source revisions without loading historical payloads`() = runBlocking {
+        val delegate = InMemoryOperationalStateRepository()
+        val payloadPrefix = MarketDataSnapshotPreferences.PAYLOAD_KEY_PREFIX
+        val metadataPrefix = MarketDataSnapshotPreferences.METADATA_KEY_PREFIX
+        val repository = object : OperationalStateRepository by delegate {
+            override suspend fun listByPrefix(prefix: String): List<OperationalStateEntry> {
+                check(prefix != payloadPrefix) { "Descriptor must not load market data payloads." }
+                return delegate.listByPrefix(prefix)
+            }
+        }
+        val operational = OperationalStateService(repository, AppJsonFactory.create(), fixedClock())
+        val canonical = Instant.parse("2026-03-19T12:00:00Z")
+        delegate.save(OperationalStateEntry("${payloadPrefix}series", "large historical payload", fixedClock().instant()))
+        operational.put("${metadataPrefix}series", MarketDataSnapshotMetadata.serializer(), MarketDataSnapshotMetadata(
+            snapshotType = "SERIES", identity = "series", status = "FRESH",
+            lastCheckedAt = fixedClock().instant().toString(), canonicalUpdatedAt = canonical.toString()
+        ))
+        // A failed check without a usable payload must not advance the source revision.
+        operational.put("${metadataPrefix}orphan", MarketDataSnapshotMetadata.serializer(), MarketDataSnapshotMetadata(
+            snapshotType = "SERIES", identity = "orphan", status = "ERROR",
+            lastCheckedAt = fixedClock().instant().toString(), canonicalUpdatedAt = fixedClock().instant().toString()
+        ))
+        val service = descriptorService("enabled=true", operational = operational)
+        assertEquals(canonical, service.overviewDescriptor().sourceUpdatedAt)
+
+        // Legacy snapshots without metadata still use their payload timestamp.
+        val legacyRevision = canonical.plusSeconds(60)
+        delegate.save(OperationalStateEntry("${payloadPrefix}legacy", "{}", legacyRevision))
+        assertEquals(legacyRevision, service.overviewDescriptor().sourceUpdatedAt)
+
+        val changed = legacyRevision.plusSeconds(60)
+        delegate.save(OperationalStateEntry("${payloadPrefix}broken", "{}", changed))
+        delegate.save(OperationalStateEntry("${metadataPrefix}broken", "invalid json", changed))
+        assertEquals(changed, service.overviewDescriptor().sourceUpdatedAt)
+    }
 
     @Test
     fun `overview fingerprint detects restored content and deleted accounts with unchanged timestamps`() = runBlocking {
@@ -259,16 +300,17 @@ class PortfolioReadModelCacheDescriptorServiceTest {
 
     private fun descriptorService(
         marketDataCacheFingerprint: String,
-        accounts: InMemoryAccountRepository = InMemoryAccountRepository()
+        accounts: InMemoryAccountRepository = InMemoryAccountRepository(),
+        operational: OperationalStateService = OperationalStateService(
+            repository = InMemoryOperationalStateRepository(),
+            json = AppJsonFactory.create(),
+            clock = fixedClock()
+        )
     ): PortfolioReadModelCacheDescriptorService =
         PortfolioReadModelCacheDescriptorService(
             accountRepository = accounts,
             appPreferenceRepository = InMemoryAppPreferenceRepository(),
-            operationalStateService = OperationalStateService(
-                repository = InMemoryOperationalStateRepository(),
-                json = AppJsonFactory.create(),
-                clock = fixedClock()
-            ),
+            operationalStateService = operational,
             instrumentRepository = InMemoryInstrumentRepository(),
             portfolioTargetRepository = InMemoryPortfolioTargetRepository(),
             transactionRepository = InMemoryTransactionRepository(),
