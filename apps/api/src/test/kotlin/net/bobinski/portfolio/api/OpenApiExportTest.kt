@@ -5,6 +5,8 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -36,6 +38,9 @@ class OpenApiExportTest {
         assertTrue(body.contains("marketTimestamp"))
         assertTrue(body.contains("coverageFrom"))
         assertTrue(body.contains("unitScale"))
+        val catalog = Json.parseToJsonElement(body).jsonObject.getValue("paths").jsonObject
+            .getValue("/v1/instruments/edo-series").jsonObject.getValue("get").jsonObject
+        assertEquals(setOf("200", "503"), catalog.getValue("responses").jsonObject.keys)
 
         val outputPath = Path.of(
             System.getProperty("portfolio.openapi.outputPath")

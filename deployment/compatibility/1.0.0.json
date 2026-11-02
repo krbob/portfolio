@@ -31,7 +31,7 @@
       "kind": "generated-openapi-client",
       "consumer": "portfolio-web",
       "path": "apps/web/src/api/generated/portfolio-api.d.ts",
-      "sha256": "02b999cf1c7f5948617c3fbcc5659c863b4738081f57123b1d827d78a574a14f"
+      "sha256": "2c74a39341b5445a5e4c324673fa0ca839c0c2c695a926eee143011aa5b28519"
     },
     {
       "id": "stock-analyst-v1",
@@ -45,9 +45,9 @@
       "id": "edo-calculator-v1",
       "kind": "openapi",
       "consumer": "portfolio-api",
-      "sourceCommit": "20b098ec88212c3f9623d51d528405a6d51eb09c",
+      "sourceCommit": "df0c47f8fade9d06d4785fa2ea81681a1efcb051",
       "path": "apps/api/contracts/upstream/edo-calculator-v1.yaml",
-      "sha256": "5dd2185351f5ed4a98cae9f8fb790969687ebf4d29f26ce2fb859f7590e0c936"
+      "sha256": "d17e47758bc5fd71c7d7494dd689dacde62cd832a19d9ad9ddd82a88f6a75d44"
     },
     {
       "id": "stock-ecosystem-ui",

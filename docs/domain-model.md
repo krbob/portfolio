@@ -22,6 +22,14 @@ Represents something the portfolio can value or transact against.
 Legacy exports and databases may still contain `BENCHMARK_GOLD` or `MANUAL` instrument values. They
 remain readable and portable, but new instruments cannot select those unsupported configurations.
 
+New EDO instruments can select an emission from EDO Calculator's verified catalog. The form fills
+the series name, issue month, first-year rate and later-year margin; rates are stored as exact integer
+basis points in the existing typed `edoTerms`. The selected terms become canonical instrument data
+and travel with JSON exports and backups. Catalog refreshes never rewrite saved instruments.
+Editing an existing EDO starts with its saved terms; replacing them from the catalog is explicit.
+Manual entry remains available for emissions missing from the catalog or during provider outages.
+The transaction's purchase date remains separate from the emission month.
+
 ### Transaction
 
 Represents a canonical portfolio event.

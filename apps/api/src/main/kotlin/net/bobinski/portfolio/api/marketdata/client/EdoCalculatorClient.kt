@@ -9,11 +9,15 @@ import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorEdo
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorEdoResponsePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorInflationResponsePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorMonthlyInflationSeriesResponsePayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorEdoSeriesCatalogPayload
+import net.bobinski.portfolio.api.marketdata.model.EdoSeriesCatalogResponse
+import net.bobinski.portfolio.api.marketdata.model.EdoSeriesResponse
 import net.bobinski.portfolio.api.marketdata.model.HistoricalPricePoint
 import java.math.BigDecimal
 import java.net.http.HttpClient
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.Locale
 
 class EdoCalculatorClient(
     httpClient: HttpClient,
@@ -22,6 +26,45 @@ class EdoCalculatorClient(
     metrics: PortfolioMetrics = PortfolioMetrics()
 ) {
     private val transport = UpstreamHttpTransport(httpClient, metrics)
+
+    suspend fun seriesCatalog(): EdoSeriesCatalogResponse = transport.get(
+        uri = buildUpstreamUri(baseUrl = baseUrl, pathTemplate = EdoCalculatorContractPaths.SERIES_CATALOG),
+        timeout = UpstreamTimeoutBudgets.EDO_CALCULATOR,
+        context = context("series-catalog", "EDO"),
+        decodeSuccess = { body -> decodeCatalog(body) },
+        decodeError = ::decodeError
+    )
+
+    private fun decodeCatalog(body: String): EdoSeriesCatalogResponse {
+        val payload = json.decodeFromString<EdoCalculatorEdoSeriesCatalogPayload>(body)
+        val updatedAt = LocalDate.parse(payload.updatedAt)
+        require(payload.series.isNotEmpty()) { "Empty EDO emission catalog." }
+        require(payload.series.map { it.code }.distinct().size == payload.series.size) { "Duplicate EDO series." }
+        val series = payload.series.map { source ->
+            val start = LocalDate.parse(source.saleStart)
+            val month = YearMonth.from(start)
+            require(start.dayOfMonth == 1 && LocalDate.parse(source.saleEnd) == month.atEndOfMonth()) {
+                "Invalid emission sale dates."
+            }
+            val expectedCode = "EDO%02d%02d".format(Locale.ROOT, month.monthValue, (month.year + 10) % 100)
+            require(source.code == expectedCode) { "Emission code does not match sale dates." }
+            require(LocalDate.parse(source.verifiedAt) <= updatedAt) { "Invalid emission verification date." }
+            val sourceUri = java.net.URI(source.sourceUrl)
+            require(sourceUri.scheme == "https" && sourceUri.host == "www.obligacjeskarbowe.pl") {
+                "Invalid emission source URL."
+            }
+            EdoSeriesResponse(
+                source.code, month.toString(), source.saleStart, source.saleEnd,
+                source.firstPeriodRate.toBasisPoints(), source.margin.toBasisPoints(),
+                source.sourceUrl, source.verifiedAt
+            )
+        }.sortedByDescending { it.seriesMonth }
+        return EdoSeriesCatalogResponse(payload.updatedAt, series)
+    }
+
+    private fun String.toBasisPoints(): Int = toBigDecimal().movePointRight(2).intValueExact().also {
+        require(it in 0..100_000) { "Emission rate outside supported bounds." }
+    }
 
     suspend fun unitValueInPln(terms: EdoLotTerms, asOf: LocalDate? = null): EdoUnitValue {
         val path = if (asOf == null) {

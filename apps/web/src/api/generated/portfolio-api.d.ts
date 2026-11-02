@@ -176,6 +176,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/instruments/edo-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List verified EDO emissions
+         * @description Returns emission terms from edo-calculator for instrument creation. Cached terms may be returned with stale=true during an upstream outage. Saved instruments retain their own terms.
+         */
+        get: operations["getEdoSeriesCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/instruments": {
         parameters: {
             query?: never;
@@ -1154,7 +1174,7 @@ export interface components {
         ErrorResponse: {
             error: string;
             /** @enum {string} */
-            errorCode: "INVALID_REQUEST" | "ROUTE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "RESOURCE_NOT_FOUND" | "AUTHENTICATION_REQUIRED" | "INVALID_CREDENTIALS" | "RATE_LIMITED" | "ALERT_EVALUATION_FAILED" | "INTERNAL_ERROR";
+            errorCode: "INVALID_REQUEST" | "ROUTE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "RESOURCE_NOT_FOUND" | "AUTHENTICATION_REQUIRED" | "INVALID_CREDENTIALS" | "RATE_LIMITED" | "ALERT_EVALUATION_FAILED" | "EDO_CATALOG_UNAVAILABLE" | "INTERNAL_ERROR";
             retryable: boolean;
             requestId: string;
             message: string;
@@ -1176,6 +1196,23 @@ export interface components {
             institution: string;
             type: string;
             baseCurrency: string;
+        };
+        /** EdoSeriesResponse */
+        EdoSeriesResponse: {
+            code: string;
+            seriesMonth: string;
+            saleStart: string;
+            saleEnd: string;
+            firstPeriodRateBps: number;
+            marginBps: number;
+            sourceUrl: string;
+            verifiedAt: string;
+        };
+        /** EdoSeriesCatalogResponse */
+        EdoSeriesCatalogResponse: {
+            updatedAt: string;
+            series: components["schemas"]["EdoSeriesResponse"][];
+            stale?: boolean;
         };
         /** EdoTermsResponse */
         EdoTermsResponse: {
@@ -2513,6 +2550,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    getEdoSeriesCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EdoSeriesCatalogResponse"];
+                };
+            };
+            /** @description No cached emission catalog is available, or market data is disabled. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

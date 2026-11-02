@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Card, SectionHeader } from './ui'
 import { useCreateInstrument, useUpdateInstrument, useInstruments } from '../hooks/use-write-model'
+import { useEdoSeriesCatalog } from '../hooks/use-edo-series-catalog'
 import { buildEdoSeriesName, edoYearOptions } from '../lib/edo-series'
 import { getActiveUiLanguage } from '../lib/i18n'
 import { t } from '../lib/messages'
@@ -32,8 +33,8 @@ const initialForm = {
   currency: 'USD',
   valuationSource: 'STOCK_ANALYST',
   seriesMonth: currentSeriesMonth,
-  firstPeriodRateBps: '650',
-  marginBps: '200',
+  firstPeriodRateBps: '',
+  marginBps: '',
 }
 
 function supportedValuationSource(kind: string) {
@@ -51,12 +52,33 @@ export function InstrumentsSection() {
   const updateInstrumentMutation = useUpdateInstrument()
   const [form, setForm] = useState(initialForm)
   const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null)
+  const [edoMode, setEdoMode] = useState<'catalog' | 'manual'>('catalog')
+  const [selectedEdoCode, setSelectedEdoCode] = useState('')
 
   const isEditing = editingInstrumentId !== null
   const editingInstrument = instrumentsQuery.data?.find(
     (instrument) => instrument.id === editingInstrumentId,
   )
   const isEdo = form.kind === 'BOND_EDO'
+  const usesCatalog = isEdo && edoMode === 'catalog'
+  const catalogQuery = useEdoSeriesCatalog(usesCatalog)
+  const selectedSeries = selectedEdoCode
+    ? catalogQuery.data?.series.find((series) => series.code === selectedEdoCode)
+    : catalogQuery.data?.series[0]
+  const effectiveForm = usesCatalog && selectedSeries
+    ? {
+        ...form,
+        name: selectedSeries.code,
+        seriesMonth: selectedSeries.seriesMonth,
+        firstPeriodRateBps: String(selectedSeries.firstPeriodRateBps),
+        marginBps: String(selectedSeries.marginBps),
+      }
+    : form
+  const catalogSelectionMissing = usesCatalog && !selectedSeries
+  const formatRate = (bps: number) => (bps / 100).toLocaleString(language, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
   const supportedSource = supportedValuationSource(form.kind)
   const hasLegacyValuationSource =
     isEditing && supportedSource !== null && form.valuationSource !== supportedSource
@@ -102,6 +124,8 @@ export function InstrumentsSection() {
 
   function handleEditClick(instrument: NonNullable<typeof instrumentsQuery.data>[number]) {
     setEditingInstrumentId(instrument.id)
+    setEdoMode('manual')
+    setSelectedEdoCode(instrument.edoTerms ? buildEdoSeriesName(instrument.edoTerms.seriesMonth) : '')
     setForm({
       name: instrument.name,
       kind: instrument.kind,
@@ -110,23 +134,26 @@ export function InstrumentsSection() {
       currency: instrument.currency,
       valuationSource: instrument.valuationSource,
       seriesMonth: instrument.edoTerms?.seriesMonth ?? currentSeriesMonth,
-      firstPeriodRateBps: String(instrument.edoTerms?.firstPeriodRateBps ?? 650),
-      marginBps: String(instrument.edoTerms?.marginBps ?? 200),
+      firstPeriodRateBps: String(instrument.edoTerms?.firstPeriodRateBps ?? ''),
+      marginBps: String(instrument.edoTerms?.marginBps ?? ''),
     })
   }
 
   function handleCancelEdit() {
     setEditingInstrumentId(null)
     setForm(initialForm)
+    setEdoMode('catalog')
+    setSelectedEdoCode('')
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (catalogSelectionMissing) return
     const edoTerms = isEdo
       ? {
-          seriesMonth: form.seriesMonth,
-          firstPeriodRateBps: Number(form.firstPeriodRateBps),
-          marginBps: Number(form.marginBps),
+          seriesMonth: effectiveForm.seriesMonth,
+          firstPeriodRateBps: Number(effectiveForm.firstPeriodRateBps),
+          marginBps: Number(effectiveForm.marginBps),
         }
       : null
 
@@ -134,23 +161,20 @@ export function InstrumentsSection() {
       updateInstrumentMutation.mutate(
         {
           id: editingInstrumentId,
-          name: form.name,
+          name: effectiveForm.name,
           symbol: form.symbol || null,
           currency: form.currency,
           valuationSource: form.valuationSource,
           edoTerms,
         },
         {
-          onSuccess: () => {
-            setForm(initialForm)
-            setEditingInstrumentId(null)
-          },
+          onSuccess: handleCancelEdit,
         },
       )
     } else {
       createInstrumentMutation.mutate(
         {
-          name: form.name,
+          name: effectiveForm.name,
           kind: form.kind,
           assetClass: form.assetClass,
           symbol: form.symbol || null,
@@ -159,7 +183,7 @@ export function InstrumentsSection() {
           edoTerms,
         },
         {
-          onSuccess: () => setForm(initialForm),
+          onSuccess: handleCancelEdit,
         },
       )
     }
@@ -185,7 +209,7 @@ export function InstrumentsSection() {
           <input
             aria-label={t('instruments.name')}
             className={input}
-            value={form.name}
+            value={catalogSelectionMissing ? '' : effectiveForm.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             placeholder="VWCE"
             readOnly={isEdo}
@@ -223,7 +247,7 @@ export function InstrumentsSection() {
             onChange={(event) =>
               setForm((current) => ({ ...current, assetClass: event.target.value }))
             }
-            disabled={isEditing}
+            disabled={isEditing || isEdo}
           >
             <option value="EQUITIES">{labelAssetClass('EQUITIES')}</option>
             <option value="BONDS">{labelAssetClass('BONDS')}</option>
@@ -257,6 +281,7 @@ export function InstrumentsSection() {
               setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
             }
             maxLength={3}
+            readOnly={isEdo}
             required
           />
         </div>
@@ -292,11 +317,75 @@ export function InstrumentsSection() {
         </div>
 
         {isEdo && (
+          <div className="col-span-full space-y-3 rounded-lg border border-ui-border p-4">
+            {usesCatalog ? (
+              <>
+                <label className={labelClass} htmlFor="edo-series">{t('instruments.edoSeries')}</label>
+                <select
+                  id="edo-series"
+                  className={input}
+                  value={selectedSeries?.code ?? ''}
+                  onChange={(event) => setSelectedEdoCode(event.target.value)}
+                  disabled={!catalogQuery.data?.series.length}
+                  required
+                >
+                  {!selectedSeries && <option value="">{t('instruments.chooseSeries')}</option>}
+                  {catalogQuery.data?.series.map((series) => (
+                    <option key={series.code} value={series.code}>{series.code} · {series.seriesMonth}</option>
+                  ))}
+                </select>
+                {catalogQuery.isLoading && <p role="status" className="text-sm text-ui-text-muted">{t('instruments.catalogLoading')}</p>}
+                {(catalogQuery.isError || catalogQuery.data?.series.length === 0) && (
+                  <div role="alert" className="space-y-2">
+                    <p className="text-sm text-ui-text-muted">{t('instruments.catalogUnavailable')}</p>
+                    <button type="button" className={btnSecondary} disabled={catalogQuery.isFetching} onClick={() => void catalogQuery.refetch()}>
+                      {t('instruments.retryCatalog')}
+                    </button>
+                  </div>
+                )}
+                {catalogQuery.data?.stale && <p role="status" className="text-sm text-ui-text-muted">{t('instruments.catalogStale')}</p>}
+                {selectedSeries && (
+                  <>
+                    <dl className="grid gap-3 sm:grid-cols-2 text-sm">
+                      <div><dt className="text-ui-text-muted">{t('instruments.catalogFirstRate')}</dt><dd>{formatRate(selectedSeries.firstPeriodRateBps)}%</dd></div>
+                      <div><dt className="text-ui-text-muted">{t('instruments.catalogMargin')}</dt><dd>{formatRate(selectedSeries.marginBps)} {t('instruments.percentagePoints')}</dd></div>
+                    </dl>
+                    <p className="text-xs text-ui-text-muted">
+                      {t('instruments.catalogSale')}: {selectedSeries.saleStart} – {selectedSeries.saleEnd}.{' '}
+                      <a className="underline" href={selectedSeries.sourceUrl} target="_blank" rel="noreferrer">{t('instruments.catalogSource')}</a>
+                    </p>
+                  </>
+                )}
+                <p className="text-xs text-ui-text-muted">{t('instruments.catalogSavedTerms')}</p>
+              </>
+            ) : (
+              <p className="text-sm text-ui-text-muted">{t(isEditing ? 'instruments.savedEdoTerms' : 'instruments.manualEdoTerms')}</p>
+            )}
+            <button
+              type="button"
+              className={btnSecondary}
+              onClick={() => {
+                if (usesCatalog) {
+                  setForm(effectiveForm)
+                  setEdoMode('manual')
+                } else {
+                  setSelectedEdoCode(buildEdoSeriesName(form.seriesMonth))
+                  setEdoMode('catalog')
+                }
+              }}
+            >
+              {t(usesCatalog ? 'instruments.enterTermsManually' : 'instruments.chooseFromCatalog')}
+            </button>
+          </div>
+        )}
+
+        {isEdo && !usesCatalog && (
           <>
             <div>
               <span className={labelClass}>{t('instruments.seriesMonth')}</span>
               <div className="grid grid-cols-2 gap-2">
                 <select
+                  aria-label={t('instruments.seriesMonth')}
                   className={input}
                   value={form.seriesMonth.split('-')[1] ?? '01'}
                   onChange={(event) => {
@@ -310,6 +399,7 @@ export function InstrumentsSection() {
                   ))}
                 </select>
                 <select
+                  aria-label={t('instruments.seriesYear')}
                   className={input}
                   value={form.seriesMonth.split('-')[0]}
                   onChange={(event) => {
@@ -328,6 +418,7 @@ export function InstrumentsSection() {
             <div>
               <span className={labelClass}>{t('instruments.firstPeriodRate')}</span>
               <input
+                aria-label={t('instruments.firstPeriodRate')}
                 className={input}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -345,6 +436,7 @@ export function InstrumentsSection() {
             <div>
               <span className={labelClass}>{t('instruments.margin')}</span>
               <input
+                aria-label={t('instruments.margin')}
                 className={input}
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -359,7 +451,7 @@ export function InstrumentsSection() {
         )}
 
         <div className="col-span-full flex items-center gap-3 mt-2">
-          <button className={btnPrimary} type="submit" disabled={activeMutation.isPending}>
+          <button className={btnPrimary} type="submit" disabled={activeMutation.isPending || catalogSelectionMissing}>
             {activeMutation.isPending
               ? t('common.saving')
               : isEditing

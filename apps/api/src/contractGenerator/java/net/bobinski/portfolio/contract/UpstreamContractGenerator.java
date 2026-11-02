@@ -64,6 +64,8 @@ public final class UpstreamContractGenerator {
             "EdoCalculator",
             Path.of(arguments[1]),
             projections(
+                projection("EdoSeriesCatalog", "updatedAt", "series"),
+                projection("EdoSeries", "code", "saleStart", "saleEnd", "firstPeriodRate", "margin", "sourceUrl", "verifiedAt"),
                 projection("EdoResponse", "asOf", "edoValue"),
                 projection("EdoValue", "totalValue", "periods"),
                 projection("EdoPeriodBreakdown", "daysInPeriod", "daysElapsed", "ratePercent"),
@@ -75,6 +77,7 @@ public final class UpstreamContractGenerator {
                 projection("ApiErrorResponse", "error", "errorCode", "retryable", "requestId")
             ),
             operations(
+                operation("SERIES_CATALOG", "getEdoSeriesCatalog"),
                 operation("CURRENT_VALUE", "getCurrentEdoValue"),
                 operation("VALUE_AT_DATE", "getEdoValueAtDate"),
                 operation("HISTORY", "getEdoValueHistory"),
@@ -191,6 +194,10 @@ public final class UpstreamContractGenerator {
                 return generatedClassName(contract.prefix(), referencedName);
             }
             return kotlinType(schema(contract.openApi(), referencedName), contract);
+        }
+
+        if (schema.getAllOf() != null && schema.getAllOf().size() == 1) {
+            return kotlinType(schema.getAllOf().getFirst(), contract);
         }
 
         String type = schema.getType();

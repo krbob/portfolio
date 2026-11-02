@@ -7,6 +7,9 @@ export type Account =
 export type Instrument =
   components['schemas']['InstrumentResponse']
 
+export type EdoSeriesCatalog =
+  components['schemas']['EdoSeriesCatalogResponse']
+
 export type Transaction =
   components['schemas']['TransactionResponse']
 
@@ -197,6 +200,10 @@ export function createAccount(payload: CreateAccountPayload) {
 
 export function listInstruments() {
   return requestJson<Instrument[]>('/api/v1/instruments')
+}
+
+export function getEdoSeriesCatalog() {
+  return requestJson<EdoSeriesCatalog>('/api/v1/instruments/edo-series')
 }
 
 export function createInstrument(payload: CreateInstrumentPayload) {
