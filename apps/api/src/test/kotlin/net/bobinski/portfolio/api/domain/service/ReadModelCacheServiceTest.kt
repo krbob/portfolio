@@ -315,6 +315,27 @@ class ReadModelCacheServiceTest {
         assertEquals(ReadModelCacheInvalidationReason.EXPLICIT_REFRESH, snapshot.invalidationReason)
     }
 
+    @Test
+    fun `malformed cache payload is still rebuilt and persisted`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(repository, AppJsonFactory.create(), fixedClock())
+        val descriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z"))
+        service.getOrCompute(descriptor, CachedPayload.serializer()) { CachedPayload("cached") }
+        repository.save(repository.list().single().copy(payloadJson = "{broken", payloadSizeBytes = 7))
+        var computeCount = 0
+
+        val result = service.getOrCompute(descriptor, CachedPayload.serializer()) {
+            computeCount += 1
+            CachedPayload("rebuilt")
+        }
+        val snapshot = repository.list().single()
+
+        assertEquals(CachedPayload("rebuilt"), result)
+        assertEquals(1, computeCount)
+        assertEquals(ReadModelCacheInvalidationReason.PAYLOAD_DECODE_FAILED, snapshot.invalidationReason)
+        assertEquals(result, AppJsonFactory.create().decodeFromString(CachedPayload.serializer(), snapshot.payloadJson))
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `cache decode does not turn cancellation into a rebuild`(wrapped: Boolean) = runBlocking {
