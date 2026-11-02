@@ -7,6 +7,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorApiErrorResponsePayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorContractPaths
 import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorEdoResponsePayload
+import net.bobinski.portfolio.api.marketdata.contract.generated.EdoCalculatorEdoSeriesPayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystApiErrorPayload
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystContractPaths
 import net.bobinski.portfolio.api.marketdata.contract.generated.StockAnalystDataProvenancePayload
@@ -30,6 +31,7 @@ class UpstreamOpenApiConsumerContractTest {
         assertEquals(EdoCalculatorContractPaths.CURRENT_VALUE, edoCalculator.pathFor("getCurrentEdoValue"))
         assertEquals(EdoCalculatorContractPaths.VALUE_AT_DATE, edoCalculator.pathFor("getEdoValueAtDate"))
         assertEquals(EdoCalculatorContractPaths.HISTORY, edoCalculator.pathFor("getEdoValueHistory"))
+        assertEquals(EdoCalculatorContractPaths.SERIES_CATALOG, edoCalculator.pathFor("getEdoSeriesCatalog"))
         assertEquals(
             EdoCalculatorContractPaths.INFLATION_SINCE,
             edoCalculator.pathFor("getCumulativeInflationSince")
@@ -39,6 +41,10 @@ class UpstreamOpenApiConsumerContractTest {
 
     @Test
     fun `generated projections retain every field consumed by Portfolio`() {
+        assertEquals(
+            setOf("code", "saleStart", "saleEnd", "firstPeriodRate", "margin", "sourceUrl", "verifiedAt"),
+            EdoCalculatorEdoSeriesPayload.serializer().descriptor.elementNames()
+        )
         assertEquals(
             setOf("symbol", "currency", "date", "lastPrice", "previousClose", "provenance"),
             StockAnalystQuotePayload.serializer().descriptor.elementNames()

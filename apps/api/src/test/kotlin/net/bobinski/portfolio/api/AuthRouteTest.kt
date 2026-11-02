@@ -37,6 +37,7 @@ class AuthRouteTest {
 
         val sessionStateResponse = client.get("/v1/auth/session")
         val unauthorizedAccountsResponse = client.get("/v1/accounts")
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/instruments/edo-series").status)
         val invalidLoginResponse = client.post("/v1/auth/session") {
             contentType(ContentType.Application.Json)
             setBody("""{"password":"wrong-pass"}""")

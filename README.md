@@ -14,7 +14,7 @@ models backed by SQLite.
 - daily history and performance in PLN, USD and gold
 - MWRR, TWR, inflation-adjusted return through the latest published CPI month and effective-dated benchmark comparisons
 - ETF, stock, FX and benchmark data through Stock Analyst
-- Polish EDO bond valuation through EDO Calculator
+- Polish EDO bond valuation and automatic emission-term selection through EDO Calculator
 - explicit fresh, stale, partial and unavailable market-data states
 - JSON export/import, scheduled and post-change backups, restore preview and an audit trail
 - optional single-user password authentication and an installable PWA

@@ -146,6 +146,23 @@ cancels the request or wait immediately. Timeout and retry limits are fixed in c
 Portfolio calls only versioned `/v1` routes. `PORTFOLIO_STOCK_ANALYST_UI_URL` must be a browser-
 reachable root URL; it is not the server-to-server API address.
 
+### EDO emission catalog
+
+With market data enabled, `GET /v1/instruments/edo-series` loads the verified emission catalog from
+`/v1/edo/series` at `PORTFOLIO_EDO_CALCULATOR_API_URL`. The Portfolio route uses the same authentication
+as other instrument routes. EDO Calculator must provide this versioned catalog endpoint; an older
+image without it is handled as an unavailable catalog. Update the provider before Portfolio.
+
+Each Portfolio API process caches a validated catalog for one hour and shares concurrent fetches.
+On refresh failure it returns the last good catalog with `stale=true` and retries on the next read
+after one minute. The cache is in memory and is lost on restart. Without a cached catalog, or with
+market data disabled, the route returns HTTP 503 with `EDO_CATALOG_UNAVAILABLE`; the form still allows
+manual entry. No scheduler or additional environment variables are required. Browser catalog queries
+stay fresh for one minute and fetch only while selecting an emission.
+
+Selected emission terms are saved with the instrument. Cache refreshes, provider upgrades and
+outages do not alter previously saved terms or affect JSON backup/import compatibility.
+
 ### CPI availability and diagnostics
 
 Monthly CPI reads discover the latest published window through EDO Calculator. Within one API

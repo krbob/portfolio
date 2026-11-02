@@ -105,6 +105,17 @@ class FixtureHandler(BaseHTTPRequestHandler):
         self.respond({"error": "unknown stock fixture path"}, HTTPStatus.NOT_FOUND)
 
     def edo_response(self, parsed) -> None:
+        if parsed.path == "/v1/edo/series":
+            self.respond({
+                "updatedAt": "2025-01-01",
+                "series": [{
+                    "code": "EDO0135", "saleStart": "2025-01-01", "saleEnd": "2025-01-31",
+                    "firstPeriodRate": "6.55", "margin": "2.00",
+                    "sourceUrl": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-10-letnie-edo/edo0135/",
+                    "verifiedAt": "2025-01-01",
+                }],
+            })
+            return
         if parsed.path in {"/health", "/healthz", "/readyz"}:
             self.respond({"status": "UP"})
             return

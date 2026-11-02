@@ -42,6 +42,7 @@ import net.bobinski.portfolio.api.domain.service.TransactionCsvImportService
 import net.bobinski.portfolio.api.domain.service.TransactionImportProfileService
 import net.bobinski.portfolio.api.domain.service.TransactionService
 import net.bobinski.portfolio.api.marketdata.client.EdoCalculatorClient
+import net.bobinski.portfolio.api.marketdata.service.EdoSeriesCatalogService
 import net.bobinski.portfolio.api.marketdata.client.GoldApiClient
 import net.bobinski.portfolio.api.marketdata.client.StockAnalystClient
 import net.bobinski.portfolio.api.marketdata.client.UpstreamTimeoutBudgets
@@ -144,6 +145,13 @@ fun appModule(
     }
     single { GoldApiClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.goldApiUrl) }
     single { EdoCalculatorClient(httpClient = get(), json = get(), baseUrl = marketDataConfig.edoCalculatorApiUrl, metrics = get()) }
+    single {
+        EdoSeriesCatalogService(
+            fetchCatalog = { get<EdoCalculatorClient>().seriesCatalog() },
+            clock = get(),
+            enabled = marketDataConfig.enabled
+        )
+    }
     single<CurrentInstrumentValuationProvider> {
         RemoteCurrentInstrumentValuationProvider(
             config = get(),

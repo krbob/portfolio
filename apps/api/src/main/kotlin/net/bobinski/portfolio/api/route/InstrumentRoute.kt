@@ -17,14 +17,22 @@ import net.bobinski.portfolio.api.domain.model.ValuationSource
 import net.bobinski.portfolio.api.domain.service.CreateInstrumentCommand
 import net.bobinski.portfolio.api.domain.service.InstrumentService
 import net.bobinski.portfolio.api.domain.service.UpdateInstrumentCommand
-import java.util.UUID
+import net.bobinski.portfolio.api.marketdata.service.EdoCatalogUnavailableException
+import net.bobinski.portfolio.api.marketdata.service.EdoSeriesCatalogService
+import net.bobinski.portfolio.api.plugins.ApiErrorCode
+import net.bobinski.portfolio.api.plugins.ErrorResponse
+import net.bobinski.portfolio.api.plugins.respondError
 import org.koin.ktor.ext.inject
 import java.time.YearMonth
+import java.util.UUID
+import kotlin.reflect.typeOf
 
 fun Route.instrumentRoute() {
     val instrumentService: InstrumentService by inject()
 
     route("/v1/instruments") {
+        edoSeriesCatalogRoute()
+
         get {
             call.respond(instrumentService.list().map { it.toResponse() })
         }.documented(
@@ -80,6 +88,36 @@ fun Route.instrumentRoute() {
                     "be retained while editing metadata or migrated to the source supported by the instrument kind.",
                 tag = "Instruments"
             )
+        }
+    }
+}
+
+private fun Route.edoSeriesCatalogRoute() {
+    val edoCatalogService: EdoSeriesCatalogService by inject()
+    get("/edo-series") {
+        try {
+            call.respond(edoCatalogService.catalog())
+        } catch (_: EdoCatalogUnavailableException) {
+            call.respondError(
+                HttpStatusCode.ServiceUnavailable,
+                "EDO emission catalog is unavailable.",
+                ApiErrorCode.EDO_CATALOG_UNAVAILABLE,
+                retryable = true
+            )
+        }
+    }.documented(
+        operationId = "getEdoSeriesCatalog",
+        summary = "List verified EDO emissions",
+        description = "Returns emission terms from edo-calculator for instrument creation. " +
+            "Cached terms may be returned with stale=true during an upstream outage. " +
+            "Saved instruments retain their own terms.",
+        tag = "Instruments"
+    ) {
+        responses {
+            response(HttpStatusCode.ServiceUnavailable.value) {
+                description = "No cached emission catalog is available, or market data is disabled."
+                schema = buildSchema(typeOf<ErrorResponse>())
+            }
         }
     }
 }
