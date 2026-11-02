@@ -13,16 +13,21 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import net.bobinski.portfolio.api.config.AppJsonFactory
+import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 import net.bobinski.portfolio.api.persistence.inmemory.InMemoryReadModelCacheRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ReadModelCacheServiceTest {
 
@@ -310,28 +315,98 @@ class ReadModelCacheServiceTest {
         assertEquals(ReadModelCacheInvalidationReason.EXPLICIT_REFRESH, snapshot.invalidationReason)
     }
 
-    @Test
-    fun `cache decode does not turn cancellation into a rebuild`() {
-        val service = ReadModelCacheService(
-            repository = InMemoryReadModelCacheRepository(),
-            json = AppJsonFactory.create(),
-            clock = fixedClock()
-        )
-        val descriptor = descriptor(sourceUpdatedAt = Instant.parse("2026-03-14T00:00:00Z"))
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `cache decode does not turn cancellation into a rebuild`(wrapped: Boolean) = runBlocking {
+        for (skipFirstRead in listOf(false, true)) {
+            val stored = InMemoryReadModelCacheRepository()
+            val descriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z"))
+            ReadModelCacheService(stored, AppJsonFactory.create(), fixedClock())
+                .getOrCompute(descriptor, CachedPayload.serializer()) { CachedPayload("cached") }
+            val snapshot = stored.list().single()
+            var readCount = 0
+            var saveCount = 0
+            var computeCount = 0
+            val repository = object : ReadModelCacheRepository by stored {
+                override suspend fun get(cacheKey: String): ReadModelCacheSnapshot? =
+                    if (skipFirstRead && readCount++ == 0) null else stored.get(cacheKey)
 
-        runBlocking {
-            service.getOrCompute(descriptor, CachedPayload.serializer()) {
-                CachedPayload(value = "cached")
+                override suspend fun save(snapshot: ReadModelCacheSnapshot) {
+                    saveCount += 1
+                    stored.save(snapshot)
+                }
             }
-        }
+            val service = ReadModelCacheService(repository, AppJsonFactory.create(), fixedClock())
+            val cancellation = CancellationException("Read-model decode cancelled.")
 
-        assertThrows(CancellationException::class.java) {
+            val thrown = assertThrows(CancellationException::class.java) {
+                runBlocking {
+                    service.getOrCompute(descriptor, CancellingPayloadSerializer(cancellation, wrapped)) {
+                        computeCount += 1
+                        CachedPayload("must-not-rebuild")
+                    }
+                }
+            }
+
+            assertEquals(cancellation.message, thrown.message)
+            assertEquals(0, computeCount)
+            assertEquals(0, saveCount)
+            assertEquals(snapshot, stored.list().single())
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `stale cache decode and snapshot lookup preserve cancellation`(wrapped: Boolean) = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(repository, AppJsonFactory.create(), fixedClock())
+        val descriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z"))
+        service.getOrCompute(descriptor, CachedPayload.serializer()) { CachedPayload("cached") }
+        val snapshot = repository.list().single()
+        val cancellation = CancellationException("Read-model decode cancelled.")
+        val serializer = CancellingPayloadSerializer(cancellation, wrapped)
+        var computeCount = 0
+
+        val staleFailure = assertThrows(CancellationException::class.java) {
             runBlocking {
-                service.getOrCompute(descriptor, CancellingPayloadSerializer) {
-                    CachedPayload(value = "must-not-rebuild")
+                service.getOrComputeStaleIfError(descriptor, serializer) {
+                    computeCount += 1
+                    CachedPayload("must-not-rebuild")
                 }
             }
         }
+        val lookupFailure = assertThrows(CancellationException::class.java) {
+            runBlocking { service.hasCompatibleAcceptableSnapshot(descriptor, serializer) { true } }
+        }
+
+        assertSame(cancellation, staleFailure)
+        assertSame(cancellation, lookupFailure)
+        assertEquals(0, computeCount)
+        assertEquals(snapshot, repository.list().single())
+    }
+
+    @Test
+    fun `stale fallback does not hide wrapped cancellation during refresh`() = runBlocking {
+        val repository = InMemoryReadModelCacheRepository()
+        val service = ReadModelCacheService(repository, AppJsonFactory.create(), fixedClock())
+        val descriptor = descriptor(Instant.parse("2026-03-14T00:00:00Z"))
+        service.getOrCompute(descriptor, CachedPayload.serializer()) { CachedPayload("cached") }
+        val snapshot = repository.list().single()
+        val cancellation = CancellationException("Refresh cancelled.")
+
+        val thrown = assertThrows(CancellationException::class.java) {
+            runBlocking {
+                service.getOrComputeStaleIfError(
+                    descriptor.copy(sourceUpdatedAt = descriptor.sourceUpdatedAt!!.plusSeconds(60)),
+                    CachedPayload.serializer()
+                ) {
+                    throw SerializationException("Wrapped refresh failure", cancellation)
+                }
+            }
+        }
+
+        assertSame(cancellation, thrown)
+        assertEquals(snapshot, repository.list().single())
     }
 
     @Test
@@ -628,11 +703,18 @@ class ReadModelCacheServiceTest {
     @Serializable
     private data class CachedPayload(val value: String)
 
-    private object CancellingPayloadSerializer : KSerializer<CachedPayload> {
+    private class CancellingPayloadSerializer(
+        private val cancellation: CancellationException,
+        private val wrapped: Boolean
+    ) : KSerializer<CachedPayload> {
         override val descriptor: SerialDescriptor = CachedPayload.serializer().descriptor
 
         override fun deserialize(decoder: Decoder): CachedPayload =
-            throw CancellationException("Read-model decode cancelled.")
+            throw if (wrapped) {
+                SerializationException("Wrapped decode failure", IllegalStateException("Nested failure", cancellation))
+            } else {
+                cancellation
+            }
 
         override fun serialize(encoder: Encoder, value: CachedPayload) {
             CachedPayload.serializer().serialize(encoder, value)

@@ -2,10 +2,10 @@
   "name": "portfolio-web",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "npm@12.1.0",
+  "packageManager": "npm@12.2.1",
   "engines": {
-    "node": "24.21.0",
-    "npm": "12.1.0"
+    "node": "24.22.1",
+    "npm": "12.2.1"
   },
   "type": "module",
   "scripts": {
@@ -29,14 +29,14 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
+    "@axe-core/playwright": "4.14.0",
     "@eslint/js": "^10.0.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.10.1",
+    "@types/node": "^26.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
