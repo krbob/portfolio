@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.bobinski.portfolio.api.domain.repository.ReadModelCacheRepository
 
@@ -23,7 +24,7 @@ class ReadModelCacheService(
         val cached = repository.get(descriptor.storageKey())
         if (cached != null && cached.matches(descriptor)) {
             try {
-                return json.decodeFromString(serializer, cached.payloadJson)
+                return decodePayload(serializer, cached.payloadJson)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: Exception) {
@@ -35,7 +36,7 @@ class ReadModelCacheService(
             val latest = repository.get(descriptor.storageKey())
             if (latest != null && latest.matches(descriptor)) {
                 try {
-                    return@run json.decodeFromString(serializer, latest.payloadJson)
+                    return@run decodePayload(serializer, latest.payloadJson)
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (_: Exception) {
@@ -88,7 +89,8 @@ class ReadModelCacheService(
         }
 
         val failure = checkNotNull(attempted.exceptionOrNull())
-        if (failure is CancellationException || failure !is Exception) {
+        failure.rethrowCancellation()
+        if (failure !is Exception) {
             throw failure
         }
         return latestAcceptableOrNull(
@@ -201,11 +203,18 @@ class ReadModelCacheService(
         )
     }
 
+    private fun <T> decodePayload(serializer: KSerializer<T>, payloadJson: String): T = try {
+        json.decodeFromString(serializer, payloadJson)
+    } catch (exception: SerializationException) {
+        exception.rethrowCancellation()
+        throw exception
+    }
+
     private fun <T> ReadModelCacheSnapshot.decodeAcceptableOrNull(
         serializer: KSerializer<T>,
         isAcceptable: (T) -> Boolean
     ): T? = try {
-        json.decodeFromString(serializer, payloadJson).takeIf(isAcceptable)
+        decodePayload(serializer, payloadJson).takeIf(isAcceptable)
     } catch (exception: CancellationException) {
         throw exception
     } catch (_: Exception) {
@@ -228,6 +237,16 @@ class ReadModelCacheService(
 
     private companion object {
         const val PERSISTENT_COMPUTATION = "persistent:read-model"
+    }
+}
+
+private fun Throwable.rethrowCancellation() {
+    // JSON decoders can wrap exceptions raised by a custom serializer.
+    val visited = mutableSetOf<Throwable>()
+    var current: Throwable? = this
+    while (current != null && visited.add(current)) {
+        if (current is CancellationException) throw current
+        current = current.cause
     }
 }
 
