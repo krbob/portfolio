@@ -67,6 +67,13 @@ partially valued. Following the overview does not start additional valuation req
 
 Valuation coverage counts holdings with a usable value, including fallback values. Full coverage
 can therefore coexist with valuation issues; those issues are not necessarily missing valuations.
+
+The delayed-market-data push alert is triggered by a `STALE` portfolio valuation, not by a missing
+valuation count. It can correctly report 9 of 9 valued positions when at least one uses stale data.
+Its message explicitly distinguishes available valuations from data freshness. Open the alert's
+Market data destination and inspect the affected holdings to identify the stale dataset; the push
+message alone does not identify which provider or position was delayed.
+
 The stale alert's successful-check timestamp uses `lastSuccessfulCheckAt`, not the time of a failed
 attempt. It describes the latest success across stored datasets, not the age of every fallback.
 
