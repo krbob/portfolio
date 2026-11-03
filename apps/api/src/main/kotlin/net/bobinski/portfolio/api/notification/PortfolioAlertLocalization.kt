@@ -76,9 +76,9 @@ fun PortfolioAlert.localize(locale: PortfolioLocale): LocalizedPortfolioAlert {
 private fun PortfolioAlertContent.localize(locale: PortfolioLocale): Pair<String, String> = when (this) {
     is PortfolioAlertContent.MarketDataStale -> when (locale) {
         PortfolioLocale.PL -> "Dane rynkowe są opóźnione" to
-            "Pełną wycenę ma $valuedHoldingCount z $activeHoldingCount aktywnych pozycji."
+            "Wycena portfela korzysta ze starszych danych. Wyceniono $valuedHoldingCount z $activeHoldingCount pozycji."
         PortfolioLocale.EN -> "Market data is delayed" to
-            "Full valuations are available for $valuedHoldingCount of $activeHoldingCount active positions."
+            "The portfolio valuation uses older data. $valuedHoldingCount of $activeHoldingCount positions have valuations."
     }
 
     is PortfolioAlertContent.AllocationDrift -> when (locale) {
