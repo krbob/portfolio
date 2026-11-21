@@ -173,13 +173,15 @@ jobs:
         run: git diff --exit-code -- apps/web/src/api/generated/portfolio-api.d.ts
 
   images:
-    name: Build ${{ matrix.name }} image
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.name }} image on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        slug: [api, web]
         include:
           - name: API
             slug: api
@@ -205,8 +207,8 @@ jobs:
           load: true
           push: false
           tags: portfolio-${{ matrix.slug }}:ci
-          cache-from: type=gha,scope=portfolio-${{ matrix.slug }}-verify
-          cache-to: type=gha,mode=max,scope=portfolio-${{ matrix.slug }}-verify
+          cache-from: type=gha,scope=portfolio-${{ matrix.slug }}-${{ matrix.runner }}-verify
+          cache-to: type=gha,mode=max,scope=portfolio-${{ matrix.slug }}-${{ matrix.runner }}-verify
 
       - name: Verify API container health
         if: matrix.slug == 'api'
@@ -238,3 +240,13 @@ jobs:
           docker inspect --format '{{json .State.Health}}' "$container_name"
           docker logs "$container_name"
           exit 1
+
+      - name: Verify web container health
+        if: matrix.slug == 'web'
+        run: |
+          container_name="portfolio-web-health-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker run --detach --name "$container_name" --pull never \
+            -e PORTFOLIO_API_UPSTREAM=http://127.0.0.1:18082 \
+            -p 127.0.0.1:4174:4174 portfolio-web:ci
+          trap 'docker rm --force "$container_name" >/dev/null' EXIT
+          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:4174/healthz

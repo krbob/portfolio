@@ -17,7 +17,7 @@ IMAGE_REPOSITORY = re.compile(
     r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]+)?"
     r"(?:/[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*)*$"
 )
-LOCAL_CI_IMAGES = {"portfolio-api:ci"}
+LOCAL_CI_IMAGES = {"portfolio-api:ci", "portfolio-web:ci"}
 
 DOCKER_RUN_FLAG_OPTIONS = {
     "--detach",

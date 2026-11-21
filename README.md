@@ -62,6 +62,8 @@ docker compose -f docker-compose.full-stack.example.yml down --volumes
 
 ### Local application
 
+For Apple silicon, the [Apple container quick start](docs/runbook.md#apple-container-on-macos) builds and runs the API and web UI locally.
+
 ```bash
 docker compose --profile app up -d --build
 curl -fsS http://127.0.0.1:18082/v1/health
