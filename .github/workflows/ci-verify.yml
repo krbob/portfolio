@@ -249,4 +249,4 @@ jobs:
             -e PORTFOLIO_API_UPSTREAM=http://127.0.0.1:18082 \
             -p 127.0.0.1:4174:4174 portfolio-web:ci
           trap 'docker rm --force "$container_name" >/dev/null' EXIT
-          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:4174/healthz
+          curl --fail --retry 15 --retry-all-errors --retry-delay 1 http://127.0.0.1:4174/healthz
