@@ -47,6 +47,10 @@ keeps external vulnerability databases and scanner releases from blocking tested
 
 ## Published-image evidence
 
+The API and web release jobs build both `linux/amd64` and `linux/arm64`. CI builds each image on native
+runners for both architectures and checks the API and web health endpoints on each. Use the published image index
+digest in the deployment compatibility manifest so the same release works on both platforms.
+
 Release builds use BuildKit with maximum provenance and an attached image SBOM. After GHCR returns the immutable image
 digest, GitHub Artifact Attestations signs a second provenance statement bound to that subject digest. Publishing jobs
 require `id-token: write` and `attestations: write`; build arguments are not used for secrets.

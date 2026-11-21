@@ -213,3 +213,44 @@ the consumer order: frontends, Portfolio API, providers, then the market backend
 readiness and contract gates after each stage. If a database migration or canonical state change is
 not backward compatible, stop and use the release-specific recovery procedure instead of starting
 an older API against newer state.
+
+## Apple container on macOS
+
+For a local evaluation on Apple silicon, build the two ARM64 images from the repository root.
+Allow the builder 6 GiB of memory for Gradle and the frontend toolchain.
+
+```bash
+container system start
+container build --memory 6G -t portfolio-api:apple-local apps/api
+container build --memory 6G -t portfolio-web:apple-local apps/web
+```
+
+Create the local network and two volumes once. Initialize the mount points with the API's UID
+before its first start. The data and backups stay in these volumes when you recreate the services.
+
+```bash
+container network create portfolio-apple
+container volume create portfolio-apple-data
+container volume create portfolio-apple-backups
+container run --rm --user 0:0 --entrypoint /usr/bin/chown \
+  -v portfolio-apple-data:/srv/portfolio/data -v portfolio-apple-backups:/srv/portfolio/backups \
+  portfolio-api:apple-local 10001:10001 /srv/portfolio/data /srv/portfolio/backups
+```
+
+Start the API, then use its current address for the web proxy. These commands require `jq`.
+
+```bash
+container run -d --rm --name portfolio-api --network portfolio-apple \
+  -v portfolio-apple-data:/srv/portfolio/data -v portfolio-apple-backups:/srv/portfolio/backups \
+  -e PORTFOLIO_DATABASE_PATH=/srv/portfolio/data/portfolio.db \
+  -e PORTFOLIO_BACKUPS_ENABLED=true -e PORTFOLIO_BACKUPS_DIRECTORY=/srv/portfolio/backups \
+  portfolio-api:apple-local
+api_ip=$(container inspect portfolio-api | jq -er '.[0].status.networks[0].ipv4Address | split("/")[0]')
+curl --fail --retry 30 --retry-all-errors --retry-delay 1 "http://${api_ip}:18082/v1/health"
+container run -d --rm --name portfolio-web --network portfolio-apple -p 127.0.0.1:4174:4174 \
+  -e PORTFOLIO_API_UPSTREAM="http://${api_ip}:18082" portfolio-web:apple-local
+curl --fail --retry 30 --retry-all-errors --retry-delay 1 http://127.0.0.1:4174/api/v1/health
+```
+
+Open <http://127.0.0.1:4174>. Stop the services with `container stop portfolio-web portfolio-api`.
+If you recreate the API, read its address again when starting the web container.
