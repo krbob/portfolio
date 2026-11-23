@@ -1,5 +1,36 @@
 import { expect, test, type Page } from '@playwright/test'
 
+test('iPad header stays opaque during scroll and both drawer actions can be tapped', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 })
+  await mockDashboardApi(page, async (url, body) => ({
+    body: url.pathname.endsWith('/meta')
+      ? { ...(body as object), stockAnalystUiUrl: 'https://stocks.example/' }
+      : body,
+  }))
+  await page.goto('/')
+  const header = page.locator('header').filter({ has: page.getByRole('button', { name: /otwórz nawigację/i }) })
+  await expect(header.getByRole('link', { name: /stock analyst/i })).toBeVisible()
+  await expect(page.getByText('YTD TWRR')).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  const before = await header.screenshot()
+  await page.mouse.move(410, 850)
+  await page.mouse.wheel(0, 720)
+  await expect.poll(() => page.evaluate(() => Math.max(window.scrollY, document.querySelector('main')!.scrollTop))).toBeGreaterThan(100)
+  expect(await header.screenshot()).toEqual(before)
+
+  await header.getByRole('button', { name: /otwórz nawigację/i }).click()
+  const drawer = page.getByRole('dialog', { name: /nawigacja/i })
+  const charts = drawer.getByRole('link', { name: /stock analyst/i })
+  const close = drawer.getByRole('button', { name: /zamknij nawigację/i })
+  await expect(close).toBeFocused()
+  await charts.click({ trial: true })
+  const chartsBox = (await charts.boundingBox())!
+  const closeBox = (await close.boundingBox())!
+  expect(closeBox.x).toBeGreaterThanOrEqual(chartsBox.x + chartsBox.width)
+  await close.click()
+  await expect(drawer).toBeHidden()
+})
+
 test('dashboard keeps attention-panel spacing and the neutral dark palette @smoke', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   await mockDashboardApi(page)

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getActiveUiLanguage } from '../../lib/i18n'
 import { t } from '../../lib/messages'
-import { IconClose, IconMenu } from '../ui/icons'
+import { IconMenu } from '../ui/icons'
 import { useDialogFocus } from '../ui/use-dialog-focus'
 import { QuickAddTransactionButton } from '../QuickAddTransactionButton'
 import { MarketDataStatusBar } from '../MarketDataStatusBar'
@@ -151,11 +151,11 @@ export function Layout({ children }: { children: ReactNode }) {
         aria-hidden={isMobileNavVisible ? true : undefined}
         inert={isMobileNavVisible ? true : undefined}
       >
-        <header className="sticky top-0 z-30 border-b border-ui-border bg-ui-canvas/95 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 border-b border-ui-border bg-ui-canvas lg:hidden">
           <div
             className="flex items-center gap-3 px-4 py-3"
             style={{
-              paddingTop: 'max(0.75rem, var(--safe-top))',
+              paddingTop: 'calc(0.75rem + var(--safe-top))',
               paddingLeft: 'max(1rem, var(--safe-left))',
               paddingRight: 'max(1rem, var(--safe-right))',
             }}
@@ -236,14 +236,6 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-hidden={isMobileNavVisible ? undefined : true}
             tabIndex={-1}
           >
-            <button
-              type="button"
-              onClick={closeMobileNav}
-              className="absolute right-3 top-3 rounded-ui-control p-2 text-ui-text-muted hover:text-ui-text"
-              aria-label={t('layout.closeNavigation')}
-            >
-              <IconClose />
-            </button>
             <Sidebar onNavigate={closeMobileNav} />
           </aside>
         </>

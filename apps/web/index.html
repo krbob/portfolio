@@ -2,11 +2,10 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=contain" />
     <meta name="theme-color" content="#09090b" />
     <meta name="description" content="Portfolio is a self-hosted tracker for long-term ETF and bond investors." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Portfolio" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -14,6 +13,7 @@
     <title>Portfolio</title>
   </head>
   <body>
+    <div class="pwa-status-bar" aria-hidden="true"></div>
     <div id="root"></div>
     <script src="/runtime-config.js"></script>
     <script type="module" src="/src/main.tsx"></script>

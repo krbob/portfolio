@@ -4,6 +4,7 @@ import { useAppMeta } from '../../hooks/use-app-meta'
 import { useAppReadiness } from '../../hooks/use-app-readiness'
 import { useAuthSession, useLogout } from '../../hooks/use-auth-session'
 import { StatusDot } from '../ui/StatusDot'
+import { IconClose } from '../ui/icons'
 import { btnGhost } from '../../lib/styles'
 import { appRoutes } from '../../lib/routes'
 import { navSections, type NavItem } from './navigation'
@@ -79,8 +80,19 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   return (
     <nav className={`flex h-full min-h-0 w-full flex-col bg-ui-surface/90 ${className}`} aria-label={t('layout.navigation')}>
       <div className="flex items-center justify-between gap-3 px-5 py-6">
-        <h1 className="text-xl font-bold tracking-tight text-ui-text">Portfolio</h1>
+        <h1 className="mr-auto truncate text-xl font-bold tracking-tight text-ui-text">Portfolio</h1>
         <AppSwitcher compact onNavigate={onNavigate} />
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={onNavigate}
+            data-dialog-autofocus
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-ui-control text-ui-text-muted hover:text-ui-text"
+            aria-label={t('layout.closeNavigation')}
+          >
+            <IconClose />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3">
