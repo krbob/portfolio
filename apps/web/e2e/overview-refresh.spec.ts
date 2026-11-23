@@ -24,19 +24,21 @@ for (const fails of [false, true]) {
       })
     })
     await page.goto('/')
-    const refreshing = page.getByText('Pokazujemy ostatnią poprawną wycenę.', { exact: false })
-    const timestamp = page.getByText('Wycena obliczona', { exact: false })
+    await expect(page.getByText('Wartość portfela', { exact: true }).first()).toBeVisible()
+    await page.getByRole('button', { name: 'Aktualność danych' }).click()
+    const details = page.getByRole('dialog', { name: 'Aktualność danych' })
+    const refreshing = details.getByText('Pokazujemy ostatnią poprawną wycenę.', { exact: false })
+    const timestamp = details.getByText('Wycena', { exact: true }).locator('..').locator('time')
     await expect(refreshing).toBeVisible()
     await expect(timestamp).toBeVisible()
-    const savedTimestamp = await timestamp.innerText()
-    await expect(page.locator('main')).toContainText(/wartość|value/i)
+    await expect(timestamp).toHaveAttribute('datetime', '2026-03-20T10:00:00Z')
     releaseRefresh()
     await expect(refreshing).not.toBeVisible()
     if (fails) {
-      await expect(page.getByText('Nie udało się odświeżyć wyceny.', { exact: false })).toBeVisible()
-      await expect(timestamp).toHaveText(savedTimestamp)
+      await expect(details.getByText('Nie udało się odświeżyć wyceny.', { exact: false })).toBeVisible()
+      await expect(timestamp).toHaveAttribute('datetime', '2026-03-20T10:00:00Z')
     } else {
-      await expect(timestamp).not.toHaveText(savedTimestamp)
+      await expect(timestamp).toHaveAttribute('datetime', '2026-03-20T10:05:00Z')
     }
   })
 }

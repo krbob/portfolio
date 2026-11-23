@@ -28,7 +28,6 @@ export function DashboardDataStatus({ items, valuationDate, valuationDescription
   return <>
     <button
       type="button"
-      aria-label={t('dashboard.dataStatus')}
       aria-haspopup="dialog"
       aria-expanded={open}
       onClick={() => setOpen(true)}

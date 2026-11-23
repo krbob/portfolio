@@ -65,7 +65,7 @@ describe('dashboard saved valuation', () => {
     expect(queryClient.getQueryData(['portfolio-daily-history'])).toBeUndefined()
     expect(queryClient.getQueryData(['portfolio-returns'])).toBeUndefined()
     if (savedPreview) {
-      await userEvent.click(screen.getByRole('button', { name: 'Aktualność danych' }))
+      await userEvent.click(screen.getByRole('button', { name: /^Aktualność danych/ }))
       expect(screen.getByText(/Pokazujemy ostatnią poprawną wycenę/)).toBeInTheDocument()
     }
     await act(async () => pending.forEach((finish) => finish()))
@@ -100,7 +100,7 @@ describe('dashboard saved valuation', () => {
         <App />
       </QueryClientProvider></I18nProvider></MemoryRouter>,
     )
-    await userEvent.click(await screen.findByRole('button', { name: 'Aktualność danych' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Aktualność danych/ }))
     expect(await screen.findByText(/Pokazujemy ostatnią poprawną wycenę/)).toBeInTheDocument()
     expect(screen.getByText(/Wycena obliczona/)).toBeInTheDocument()
     expect(screen.queryByText(/Budujemy aktualny obraz portfela/)).not.toBeInTheDocument()

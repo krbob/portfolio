@@ -34,6 +34,7 @@ export const tr = 'border-b border-ui-border/50 last:border-0'
 
 // Badge
 export const badge = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium'
+const blueBadge = 'bg-ui-action/15 text-ui-text'
 
 // Badge variants
 export const badgeVariants = {
@@ -41,8 +42,8 @@ export const badgeVariants = {
   success: 'bg-ui-positive/15 text-ui-positive',
   warning: 'bg-ui-highlight/15 text-ui-highlight',
   error: 'bg-ui-danger/15 text-ui-danger',
-  info: 'bg-ui-action/15 text-ui-action',
-  equity: 'bg-ui-action/15 text-ui-action',
+  info: blueBadge,
+  equity: blueBadge,
   bond: 'bg-ui-highlight/15 text-ui-highlight',
   cash: 'bg-ui-text-muted/15 text-ui-text-muted',
 } as const
@@ -52,7 +53,7 @@ export const txBadgeVariants = {
   BUY: 'bg-ui-positive/15 text-ui-positive',
   SELL: 'bg-ui-negative/15 text-ui-negative',
   REDEEM: 'bg-ui-negative/15 text-ui-negative',
-  DEPOSIT: 'bg-ui-action/15 text-ui-action',
+  DEPOSIT: blueBadge,
   WITHDRAWAL: 'bg-ui-highlight/15 text-ui-highlight',
   FEE: 'bg-ui-text-muted/15 text-ui-text-muted',
   TAX: 'bg-ui-text-muted/15 text-ui-text-muted',
@@ -63,7 +64,7 @@ export const txBadgeVariants = {
 // Valuation status badge colors
 export const valuationBadgeVariants: Record<string, string> = {
   VALUED: 'bg-ui-positive/15 text-ui-positive',
-  STALE: 'bg-ui-action/15 text-ui-action',
+  STALE: blueBadge,
   BOOK_ONLY: 'bg-ui-highlight/15 text-ui-highlight',
   UNAVAILABLE: 'bg-ui-danger/15 text-ui-danger',
 }

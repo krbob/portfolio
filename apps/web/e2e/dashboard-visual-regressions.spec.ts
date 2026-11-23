@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-test('iPad header stays opaque during scroll and both drawer actions can be tapped', async ({ page }) => {
+test('iPad header stays opaque during scroll and both drawer actions can be tapped @smoke', async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 })
   await mockDashboardApi(page, async (url, body) => ({
     body: url.pathname.endsWith('/meta')
@@ -119,7 +119,7 @@ for (const width of [393, 1920]) {
       try {
         await page.goto('/')
         await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important; }' })
-        const status = page.getByRole('button', { name: 'Aktualność danych', exact: true })
+        const status = page.getByRole('button', { name: /^Aktualność danych/ })
         await expect(status).toBeVisible()
         await expect(page.getByRole('heading', { name: 'Są otwarte punkty konfiguracji lub zaufania do danych' })).toBeVisible()
         const card = page.getByText('Zmiana dzienna', { exact: true }).locator('..')
